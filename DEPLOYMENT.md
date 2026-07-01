@@ -33,10 +33,13 @@ BOT_TOKEN=
 BOT_USERNAME=
 MINI_APP_URL=
 WEBHOOK_URL=
+FRONTEND_ORIGIN=
 DATABASE_URL=
 SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 ADMIN_TELEGRAM_ID=
+TELEGRAM_AUTH_MAX_AGE_SECONDS=86400
+ALLOW_UNVERIFIED_TELEGRAM_WEBAPP=false
 PORT=4000
 ```
 
@@ -46,8 +49,11 @@ Notes:
 - `BOT_USERNAME` is the bot username without `@`.
 - `MINI_APP_URL` is the deployed frontend HTTPS URL.
 - `WEBHOOK_URL` is the deployed backend HTTPS URL, with no trailing slash.
+- `FRONTEND_ORIGIN` is the deployed frontend origin, for example `https://your-mini-app.netlify.app`.
 - `SUPABASE_SERVICE_ROLE_KEY` must only be used on the backend.
 - `ADMIN_TELEGRAM_ID` is your numeric Telegram user ID.
+- `TELEGRAM_AUTH_MAX_AGE_SECONDS` controls how long Telegram WebApp auth data is accepted.
+- Keep `ALLOW_UNVERIFIED_TELEGRAM_WEBAPP=false` in production.
 
 ### Frontend Mini App
 
@@ -92,6 +98,7 @@ After deploy, copy the Netlify HTTPS URL and set it as:
 
 ```text
 MINI_APP_URL=https://your-mini-app.netlify.app
+FRONTEND_ORIGIN=https://your-mini-app.netlify.app
 ```
 
 in the backend service.
@@ -112,7 +119,7 @@ Install command: pnpm install --frozen-lockfile
 
 Add the frontend environment variables from this guide.
 
-After deploy, copy the Vercel HTTPS URL and set it as `MINI_APP_URL` in the backend service.
+After deploy, copy the Vercel HTTPS URL and set it as `MINI_APP_URL` and `FRONTEND_ORIGIN` in the backend service.
 
 ## 5. Deploy Backend Bot/API To Render
 
@@ -137,6 +144,16 @@ WEBHOOK_URL=https://your-backend.onrender.com
 
 Then redeploy or restart the service so the webhook is configured.
 
+The backend exposes these deployment checks:
+
+```text
+GET https://your-backend.onrender.com/health
+POST https://your-backend.onrender.com/api/users/sync
+POST https://your-backend.onrender.com/api/payments/invoice-link
+```
+
+Mini App API requests must include the `x-telegram-init-data` header. The frontend sends this automatically from `window.Telegram.WebApp.initData`.
+
 ## 6. Deploy Backend Bot/API To Railway
 
 Create a new Railway service from the GitHub repository.
@@ -158,6 +175,8 @@ WEBHOOK_URL=https://your-backend.up.railway.app
 ```
 
 Then redeploy or restart the service so the webhook is configured.
+
+The backend validates Telegram Mini App users with `initData`, then writes users, progress, payments, and premium access through Supabase using the service role key.
 
 ## 7. Deploy Website
 
@@ -237,5 +256,7 @@ The schema is safe to run multiple times. It uses `create table if not exists`, 
 - Frontend service has `VITE_API_URL` and `VITE_BOT_USERNAME`.
 - BotFather Mini App URL points to the deployed frontend.
 - Backend `WEBHOOK_URL` points to the deployed backend.
+- Backend `FRONTEND_ORIGIN` points to the deployed frontend origin.
 - Supabase schema has been run.
 - Telegram Stars payments are tested from the bot using `/plans`.
+- Telegram Stars payments are tested from the Mini App pricing screen.

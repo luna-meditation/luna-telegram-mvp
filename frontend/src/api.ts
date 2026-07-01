@@ -23,16 +23,26 @@ export type ProfileStats = {
   calmScore: number;
 };
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+function telegramHeaders(initData?: string) {
+  const headers: Record<string, string> = {};
+
+  if (initData) {
+    headers['x-telegram-init-data'] = initData;
+  }
+
+  return headers;
+}
+
+async function request<T>(path: string, options?: RequestInit, initData?: string): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...telegramHeaders(initData) },
     ...options
   });
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
   return response.json() as Promise<T>;
 }
 
-export async function syncUser(user: TelegramWebAppUser) {
+export async function syncUser(user: TelegramWebAppUser, initData?: string) {
   return request('/api/users/sync', {
     method: 'POST',
     body: JSON.stringify({
@@ -42,11 +52,11 @@ export async function syncUser(user: TelegramWebAppUser) {
       last_name: user.last_name,
       language_code: user.language_code
     })
-  });
+  }, initData);
 }
 
-export async function getAccess(telegramId: number): Promise<AccessState> {
-  return request(`/api/access/${telegramId}`);
+export async function getAccess(initData?: string): Promise<AccessState> {
+  return request('/api/access/me', undefined, initData);
 }
 
 export async function getPractices(): Promise<Practice[]> {
@@ -58,25 +68,24 @@ export async function getPractices(): Promise<Practice[]> {
   }
 }
 
-export async function createInvoice(input: { chatId: number; telegramId: number; plan: 'monthly' | 'lifetime' }) {
-  return request('/api/payments/invoice', {
+export async function createInvoiceLink(plan: 'monthly' | 'lifetime', initData?: string) {
+  return request<{ invoiceLink: string }>('/api/payments/invoice-link', {
     method: 'POST',
-    body: JSON.stringify(input)
-  });
+    body: JSON.stringify({ plan })
+  }, initData);
 }
 
 export async function completePractice(input: {
-  telegram_id: number;
   practice_id: string;
   mood_before?: string;
   mood_after?: string;
-}) {
+}, initData?: string) {
   return request('/api/progress', {
     method: 'POST',
     body: JSON.stringify(input)
-  });
+  }, initData);
 }
 
-export async function getProfile(telegramId: number): Promise<ProfileStats> {
-  return request(`/api/profile/${telegramId}`);
+export async function getProfile(initData?: string): Promise<ProfileStats> {
+  return request('/api/profile/me', undefined, initData);
 }

@@ -57,6 +57,34 @@ export async function sendStarsInvoice(chatId: number, telegramId: number, planI
   });
 }
 
+export async function createStarsInvoiceLink(telegramId: number, planId: PlanId) {
+  const plan = plans[planId];
+
+  return bot.telegram.createInvoiceLink({
+    title: `Luna ${plan.title}`,
+    description:
+      planId === 'monthly'
+        ? 'Unlock Luna premium meditations and breathing practices for 30 days.'
+        : 'Unlock Luna premium meditations and breathing practices forever.',
+    payload: invoicePayload(planId, telegramId),
+    provider_token: '',
+    currency: 'XTR',
+    prices: [{ label: plan.title, amount: plan.amountStars }]
+  });
+}
+
+export async function configureTelegramBot() {
+  await bot.telegram.setMyCommands([
+    { command: 'start', description: 'Start Luna' },
+    { command: 'app', description: 'Open Luna App' },
+    { command: 'plans', description: 'View premium plans' },
+    { command: 'library', description: 'Open practice library' },
+    { command: 'profile', description: 'View your Luna profile' },
+    { command: 'help', description: 'Show Luna help' },
+    { command: 'admin', description: 'Admin stats' }
+  ]);
+}
+
 bot.start(async (ctx) => {
   await ensureUser(ctx);
   await ctx.reply(

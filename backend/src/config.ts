@@ -6,9 +6,12 @@ const envSchema = z.object({
   BOT_USERNAME: z.string().min(1),
   MINI_APP_URL: z.string().url(),
   WEBHOOK_URL: z.string().url().optional(),
+  FRONTEND_ORIGIN: z.string().url().optional(),
   SUPABASE_URL: z.string().url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
   ADMIN_TELEGRAM_ID: z.coerce.number().optional(),
+  TELEGRAM_AUTH_MAX_AGE_SECONDS: z.coerce.number().default(86400),
+  ALLOW_UNVERIFIED_TELEGRAM_WEBAPP: z.coerce.boolean().default(false),
   PORT: z.coerce.number().default(4000)
 });
 

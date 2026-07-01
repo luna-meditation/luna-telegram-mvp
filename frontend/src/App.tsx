@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import {
   completePractice,
-  createInvoice,
+  createInvoiceLink,
   getAccess,
   getPractices,
   getProfile,
@@ -40,7 +40,7 @@ function getTelegram() {
 function App() {
   const telegram = getTelegram();
   const user = telegram?.initDataUnsafe.user ?? fallbackUser;
-  const chatId = telegram?.initDataUnsafe.chat?.id ?? user.id;
+  const initData = telegram?.initData;
   const [page, setPage] = useState<Page>('home');
   const [mood, setMood] = useState<Mood>('Calm');
   const [practices, setPractices] = useState<Practice[]>(samplePractices);
@@ -57,11 +57,11 @@ function App() {
 
     async function boot() {
       try {
-        await syncUser(user);
+        await syncUser(user, initData);
         const [practiceList, accessState, profileStats] = await Promise.all([
           getPractices(),
-          getAccess(user.id),
-          getProfile(user.id).catch(() => null)
+          getAccess(initData),
+          getProfile(initData).catch(() => null)
         ]);
         setPractices(practiceList);
         setAccess(accessState);
@@ -72,7 +72,16 @@ function App() {
     }
 
     void boot();
-  }, [telegram, user]);
+  }, [initData, telegram, user]);
+
+  const refreshAccount = async () => {
+    const [accessState, profileStats] = await Promise.all([
+      getAccess(initData),
+      getProfile(initData).catch(() => null)
+    ]);
+    setAccess(accessState);
+    setProfile(profileStats);
+  };
 
   const recommended = useMemo(() => {
     if (mood === 'Tired') return practices.find((practice) => practice.title.includes('Sleep')) ?? practices[0];
@@ -103,8 +112,27 @@ function App() {
   const buyPlan = async (plan: 'monthly' | 'lifetime') => {
     setPaymentMessage('Creating Telegram Stars invoice...');
     try {
-      await createInvoice({ chatId, telegramId: user.id, plan });
-      setPaymentMessage('Invoice sent in Telegram. Complete payment there to unlock access.');
+      const { invoiceLink } = await createInvoiceLink(plan, initData);
+
+      if (telegram?.openInvoice) {
+        telegram.openInvoice(invoiceLink, (status) => {
+          if (status === 'paid') {
+            setPaymentMessage('Payment successful. Your Luna access is unlocked.');
+            void refreshAccount();
+            return;
+          }
+
+          if (status === 'cancelled') {
+            setPaymentMessage('Payment cancelled. You can restart checkout anytime.');
+            return;
+          }
+
+          setPaymentMessage('Payment is pending. Your access will update automatically after Telegram confirms it.');
+        });
+      } else {
+        telegram?.openTelegramLink(invoiceLink);
+        setPaymentMessage('Invoice opened in Telegram. Complete payment there to unlock access.');
+      }
     } catch {
       const botUsername = import.meta.env.VITE_BOT_USERNAME;
       setPaymentMessage('Open the bot and use /plans to complete your Telegram Stars purchase.');
@@ -116,11 +144,10 @@ function App() {
     setProgress(100);
     try {
       await completePractice({
-        telegram_id: user.id,
         practice_id: selectedPractice.id,
         mood_before: mood,
         mood_after: 'Calm'
-      });
+      }, initData);
     } catch {
       // Progress can still be shown locally if the backend is not configured yet.
     }
