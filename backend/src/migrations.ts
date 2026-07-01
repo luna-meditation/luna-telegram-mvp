@@ -4,19 +4,6 @@ import { env } from './config.js';
 const meditationPlatformMigration = `
 create extension if not exists pgcrypto;
 
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values (
-  'meditations',
-  'meditations',
-  true,
-  104857600,
-  array['audio/mpeg', 'audio/mp3', 'image/jpeg', 'image/png', 'image/webp']
-)
-on conflict (id) do update set
-  public = excluded.public,
-  file_size_limit = excluded.file_size_limit,
-  allowed_mime_types = excluded.allowed_mime_types;
-
 create table if not exists public.categories (
   id uuid primary key default gen_random_uuid(),
   name text not null unique,
@@ -100,16 +87,12 @@ alter table public.streaks enable row level security;
 
 drop policy if exists "Categories are readable" on public.categories;
 drop policy if exists "Meditations are readable" on public.meditations;
-drop policy if exists "Meditation storage is readable" on storage.objects;
 
 create policy "Categories are readable" on public.categories
   for select using (true);
 
 create policy "Meditations are readable" on public.meditations
   for select using (true);
-
-create policy "Meditation storage is readable" on storage.objects
-  for select using (bucket_id = 'meditations');
 
 insert into public.categories (name, slug, sort_order)
 values

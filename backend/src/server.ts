@@ -8,7 +8,6 @@ import {
   createMeditation,
   deleteCategory,
   deleteMeditation,
-  ensureStorageBucket,
   getCategories,
   getFavorites,
   getHistory,
@@ -303,7 +302,6 @@ app.use((error: unknown, _req: express.Request, res: express.Response, next: exp
 app.listen(env.PORT, async () => {
   console.log(`Luna backend listening on ${env.PORT}`);
   await runMigrations();
-  await ensureStorageBucket();
   await configureTelegramBot();
 
   if (env.WEBHOOK_URL) {

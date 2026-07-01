@@ -79,16 +79,6 @@ export async function getPractices() {
   return data ?? [];
 }
 
-export async function ensureStorageBucket() {
-  const { error } = await supabase.storage.createBucket('meditations', {
-    public: true,
-    fileSizeLimit: 104857600,
-    allowedMimeTypes: ['audio/mpeg', 'audio/mp3', 'image/jpeg', 'image/png', 'image/webp']
-  });
-
-  if (error && !/already exists/i.test(error.message)) throw error;
-}
-
 export async function getCategories() {
   const { data, error } = await supabase
     .from('categories')

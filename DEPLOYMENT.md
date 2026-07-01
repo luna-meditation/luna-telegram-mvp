@@ -55,7 +55,8 @@ Notes:
 - `ADMIN_TELEGRAM_ID` is your numeric Telegram user ID.
 - `TELEGRAM_AUTH_MAX_AGE_SECONDS` controls how long Telegram WebApp auth data is accepted.
 - Keep `ALLOW_UNVERIFIED_TELEGRAM_WEBAPP=false` in production.
-- Keep `RUN_MIGRATIONS=true` so the backend applies Luna SQL migrations on startup.
+- Keep `RUN_MIGRATIONS=true` so the backend applies Luna database table migrations on startup.
+- Supabase Storage is not seeded during backend startup. Create the `meditations` bucket with `database/schema.sql` or `database/migrations/001_meditation_platform.sql`; files are uploaded only from the hidden admin page.
 
 ### Frontend Mini App
 
