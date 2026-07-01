@@ -119,6 +119,13 @@ function App() {
       } catch {
         setMeditations([]);
       }
+
+      try {
+        await checkAdmin(initData);
+        setAdminStatus('allowed');
+      } catch {
+        setAdminStatus('denied');
+      }
     }
 
     void boot();
@@ -270,7 +277,18 @@ function App() {
         )}
 
         {page === 'profile' && (
-          <ProfilePage profile={profile} access={access} firstName={user.first_name ?? 'Luna'} username={user.username} onRestore={refreshAccount} />
+          <ProfilePage
+            profile={profile}
+            access={access}
+            firstName={user.first_name ?? 'Luna'}
+            username={user.username}
+            showAdminButton={adminStatus === 'allowed'}
+            onAdmin={() => {
+              window.history.pushState({}, '', '/admin');
+              setPage('admin');
+            }}
+            onRestore={refreshAccount}
+          />
         )}
 
         {page === 'player' && selectedMeditation && (
@@ -643,7 +661,23 @@ function IconButton({ label, children, onClick }: { label: string; children: Rea
   return <button aria-label={label} onClick={onClick} className="grid h-12 w-12 place-items-center rounded-full bg-cream/10 text-cream">{children}</button>;
 }
 
-function ProfilePage({ profile, access, firstName, username, onRestore }: { profile: ProfileStats | null; access: AccessState; firstName: string; username?: string; onRestore: () => void }) {
+function ProfilePage({
+  profile,
+  access,
+  firstName,
+  username,
+  showAdminButton,
+  onAdmin,
+  onRestore
+}: {
+  profile: ProfileStats | null;
+  access: AccessState;
+  firstName: string;
+  username?: string;
+  showAdminButton: boolean;
+  onAdmin: () => void;
+  onRestore: () => void;
+}) {
   const activeUntil = access.user?.active_until ? new Date(access.user.active_until).toLocaleDateString() : 'Not active';
   return (
     <div className="space-y-4">
@@ -670,6 +704,11 @@ function ProfilePage({ profile, access, firstName, username, onRestore }: { prof
             {rewardMilestones.map((days) => <span key={days} className={`rounded-full px-2 py-2 ${profile?.rewards?.[days] ? 'bg-gold text-night' : 'bg-cream/10 text-cream/60'}`}>{days}d</span>)}
           </div>
         </div>
+        {showAdminButton && (
+          <button onClick={onAdmin} className="mt-5 w-full rounded-2xl bg-gold px-5 py-4 font-semibold text-night">
+            Admin
+          </button>
+        )}
         <button onClick={onRestore} className="mt-5 w-full rounded-2xl bg-cream px-5 py-4 font-semibold text-night">Restore purchases</button>
         <button className="mt-3 w-full rounded-2xl bg-cream/10 px-5 py-4 text-sm text-cream/60">Logout</button>
       </div>
