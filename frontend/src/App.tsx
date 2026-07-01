@@ -37,6 +37,7 @@ import {
   updateMeditation,
   uploadAdminAsset,
   type AccessState,
+  type AdminDebugInfo,
   type Category,
   type Meditation,
   type MeditationPayload,
@@ -83,6 +84,7 @@ function App() {
   const [selectedMeditation, setSelectedMeditation] = useState<Meditation | null>(null);
   const [paymentMessage, setPaymentMessage] = useState('');
   const [adminStatus, setAdminStatus] = useState<'checking' | 'allowed' | 'denied'>('checking');
+  const [adminDebug, setAdminDebug] = useState<AdminDebugInfo | null>(null);
   const [adminMeditations, setAdminMeditations] = useState<Meditation[]>([]);
 
   const refreshAccount = async () => {
@@ -132,6 +134,7 @@ function App() {
         console.info('[Luna admin debug]', fallback);
         return fallback;
       });
+      setAdminDebug(debug);
       console.info('[Luna admin debug]', debug);
 
       try {
@@ -161,6 +164,7 @@ function App() {
         console.info('[Luna admin debug]', fallback);
         return fallback;
       });
+      setAdminDebug(debug);
       console.info('[Luna admin debug]', debug);
 
       try {
@@ -312,6 +316,8 @@ function App() {
             firstName={user.first_name ?? 'Luna'}
             username={user.username}
             showAdminButton={adminStatus === 'allowed'}
+            adminDebug={adminDebug}
+            hasInitData={Boolean(initData)}
             onAdmin={() => {
               window.history.pushState({}, '', '/admin');
               setPage('admin');
@@ -696,6 +702,8 @@ function ProfilePage({
   firstName,
   username,
   showAdminButton,
+  adminDebug,
+  hasInitData,
   onAdmin,
   onRestore
 }: {
@@ -704,6 +712,8 @@ function ProfilePage({
   firstName: string;
   username?: string;
   showAdminButton: boolean;
+  adminDebug: AdminDebugInfo | null;
+  hasInitData: boolean;
   onAdmin: () => void;
   onRestore: () => void;
 }) {
@@ -740,7 +750,27 @@ function ProfilePage({
         )}
         <button onClick={onRestore} className="mt-5 w-full rounded-2xl bg-cream px-5 py-4 font-semibold text-night">Restore purchases</button>
         <button className="mt-3 w-full rounded-2xl bg-cream/10 px-5 py-4 text-sm text-cream/60">Logout</button>
+        <div className="mt-5 rounded-2xl border border-gold/20 bg-night/60 p-4 text-left">
+          <p className="mb-3 text-sm font-semibold text-gold">Temporary admin debug</p>
+          <div className="space-y-2 text-xs text-cream/75">
+            <DebugRow label="telegramUserId" value={adminDebug?.telegramUserId ?? 'null'} />
+            <DebugRow label="adminTelegramId" value={adminDebug?.adminTelegramId ?? 'null'} />
+            <DebugRow label="isAdmin" value={adminDebug ? String(adminDebug.isAdmin) : 'unknown'} />
+            <DebugRow label="authenticationStatus" value={adminDebug?.authenticationStatus ?? 'not_loaded'} />
+            <DebugRow label="authenticationError" value={adminDebug?.authenticationError ?? 'null'} />
+            <DebugRow label="hasInitData" value={String(hasInitData)} />
+          </div>
+        </div>
       </div>
+    </div>
+  );
+}
+
+function DebugRow({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="shrink-0 text-lavender">{label}</span>
+      <span className="break-all text-right font-mono text-cream">{value}</span>
     </div>
   );
 }
