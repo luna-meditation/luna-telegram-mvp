@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BookOpen,
+  CheckCircle,
   Crown,
   Download,
+  Edit3,
   Heart,
   Home,
+  Image,
   Lock,
   Pause,
   Play,
@@ -20,7 +23,9 @@ import {
   createMeditation,
   deleteMeditation,
   getAccess,
+  checkAdmin,
   getCategories,
+  getAdminMeditations,
   getFavorites,
   getHistory,
   getMeditations,
@@ -28,6 +33,7 @@ import {
   saveHistory,
   setFavorite,
   syncUser,
+  updateMeditation,
   uploadAdminAsset,
   type AccessState,
   type Category,
@@ -63,7 +69,7 @@ function App() {
   const telegram = getTelegram();
   const user = telegram?.initDataUnsafe.user ?? fallbackUser;
   const initData = telegram?.initData;
-  const [page, setPage] = useState<Page>(window.location.hash === '#admin' ? 'admin' : 'home');
+  const [page, setPage] = useState<Page>(window.location.pathname === '/admin' || window.location.hash === '#admin' ? 'admin' : 'home');
   const [mood, setMood] = useState<Mood>('Calm');
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
@@ -75,6 +81,8 @@ function App() {
   const [profile, setProfile] = useState<ProfileStats | null>(null);
   const [selectedMeditation, setSelectedMeditation] = useState<Meditation | null>(null);
   const [paymentMessage, setPaymentMessage] = useState('');
+  const [adminStatus, setAdminStatus] = useState<'checking' | 'allowed' | 'denied'>('checking');
+  const [adminMeditations, setAdminMeditations] = useState<Meditation[]>([]);
 
   const refreshAccount = async () => {
     const [accessState, profileStats, historyList, favoriteList] = await Promise.all([
@@ -95,6 +103,11 @@ function App() {
     setMeditations(meditationList);
   };
 
+  const refreshAdmin = async () => {
+    const meditationList = await getAdminMeditations(initData);
+    setAdminMeditations(meditationList);
+  };
+
   useEffect(() => {
     telegram?.ready();
     telegram?.expand();
@@ -110,6 +123,22 @@ function App() {
 
     void boot();
   }, [initData, telegram, user]);
+
+  useEffect(() => {
+    if (page !== 'admin') return;
+
+    async function bootAdmin() {
+      try {
+        await checkAdmin(initData);
+        setAdminStatus('allowed');
+        await Promise.all([refreshLibrary(), refreshAdmin()]);
+      } catch {
+        setAdminStatus('denied');
+      }
+    }
+
+    void bootAdmin();
+  }, [initData, page]);
 
   const historyByMeditation = useMemo(() => {
     return new Map(history.map((item) => [item.meditation_id, item]));
@@ -256,9 +285,19 @@ function App() {
           />
         )}
 
-        {page === 'admin' && <AdminPage categories={categories} meditations={decoratedMeditations} initData={initData} onRefresh={refreshLibrary} />}
+        {page === 'admin' && (
+          <AdminPage
+            status={adminStatus}
+            categories={categories}
+            meditations={adminMeditations}
+            initData={initData}
+            onRefresh={async () => {
+              await Promise.all([refreshLibrary(), refreshAdmin()]);
+            }}
+          />
+        )}
 
-        <Nav active={page} onChange={setPage} />
+        {page !== 'admin' && <Nav active={page} onChange={setPage} />}
       </section>
     </main>
   );
@@ -638,50 +677,340 @@ function ProfilePage({ profile, access, firstName, username, onRestore }: { prof
   );
 }
 
-function AdminPage({ categories, meditations, initData, onRefresh }: { categories: Category[]; meditations: Meditation[]; initData?: string; onRefresh: () => Promise<void> }) {
-  const [form, setForm] = useState<MeditationPayload>({ title: '', description: '', category: categories[0]?.slug ?? 'sleep', duration: 600, cover_image: '', audio_file: '', premium: false, mood: 'Calm' });
+const emptyMeditationForm = (category = 'sleep'): MeditationPayload => ({
+  title: '',
+  subtitle: '',
+  description: '',
+  category,
+  duration: 600,
+  cover_image: '',
+  audio_file: '',
+  premium: false,
+  published: true,
+  mood: 'Calm'
+});
+
+function AdminPage({
+  status,
+  categories,
+  meditations,
+  initData,
+  onRefresh
+}: {
+  status: 'checking' | 'allowed' | 'denied';
+  categories: Category[];
+  meditations: Meditation[];
+  initData?: string;
+  onRefresh: () => Promise<void>;
+}) {
+  const [form, setForm] = useState<MeditationPayload>(emptyMeditationForm(categories[0]?.slug));
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [audioProgress, setAudioProgress] = useState(0);
+  const [coverProgress, setCoverProgress] = useState(0);
   const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    if (!form.category && categories[0]?.slug) {
+      setForm((current) => ({ ...current, category: categories[0].slug }));
+    }
+  }, [categories, form.category]);
+
+  if (status === 'checking') return <EmptyState title="Checking access" body="Confirming your Telegram admin session." />;
+  if (status === 'denied') return <EmptyState title="Access denied" body="This admin dashboard is available only to the Luna admin." />;
+
+  const reset = () => {
+    setEditingId(null);
+    setForm(emptyMeditationForm(categories[0]?.slug));
+    setAudioProgress(0);
+    setCoverProgress(0);
+    setMessage('');
+    setError('');
+  };
+
+  const friendlyUploadError = (kind: 'audio' | 'cover', file: File) => {
+    if (kind === 'audio' && (!(file.type === 'audio/mpeg' || file.type === 'audio/mp3') || !/\.mp3$/i.test(file.name))) {
+      return 'Please choose an MP3 audio file.';
+    }
+
+    if (kind === 'cover' && !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      return 'Please choose a JPG, PNG, or WebP cover image.';
+    }
+
+    return '';
+  };
+
+  const detectDuration = (file: File) => {
+    const audio = new Audio();
+    const url = URL.createObjectURL(file);
+    audio.preload = 'metadata';
+    audio.src = url;
+    audio.onloadedmetadata = () => {
+      if (Number.isFinite(audio.duration)) {
+        setForm((current) => ({ ...current, duration: Math.round(audio.duration) }));
+      }
+      URL.revokeObjectURL(url);
+    };
+    audio.onerror = () => URL.revokeObjectURL(url);
+  };
 
   const upload = async (kind: 'audio' | 'cover', file?: File) => {
     if (!file) return;
-    const result = await uploadAdminAsset(kind, file, initData);
-    setForm((current) => ({ ...current, [kind === 'audio' ? 'audio_file' : 'cover_image']: result.publicUrl }));
+    setError('');
+    setMessage('');
+
+    const validationError = friendlyUploadError(kind, file);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    try {
+      if (kind === 'audio') {
+        detectDuration(file);
+        setAudioProgress(1);
+      } else {
+        setCoverProgress(1);
+      }
+
+      const result = await uploadAdminAsset(kind, file, initData, (progress) => {
+        if (kind === 'audio') setAudioProgress(progress);
+        else setCoverProgress(progress);
+      });
+
+      setForm((current) => ({ ...current, [kind === 'audio' ? 'audio_file' : 'cover_image']: result.publicUrl }));
+      setMessage(`${kind === 'audio' ? 'Audio' : 'Cover'} uploaded successfully.`);
+    } catch (uploadError) {
+      setError(uploadError instanceof Error ? uploadError.message : 'Upload failed. Please try again.');
+    }
+  };
+
+  const save = async () => {
+    setError('');
+    setMessage('');
+
+    if (!form.title.trim()) {
+      setError('Title is required.');
+      return;
+    }
+
+    if (!form.audio_file || !form.cover_image) {
+      setError('Upload both an MP3 audio file and a cover image before saving.');
+      return;
+    }
+
+    try {
+      if (editingId) {
+        await updateMeditation(editingId, form, initData);
+        setMessage('Meditation updated.');
+      } else {
+        await createMeditation(form, initData);
+        setMessage('Meditation created. Published items appear in Library immediately.');
+      }
+
+      await onRefresh();
+      reset();
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : 'Could not save meditation.');
+    }
+  };
+
+  const edit = (meditation: Meditation) => {
+    setEditingId(meditation.id);
+    setForm({
+      title: meditation.title,
+      subtitle: meditation.subtitle ?? '',
+      description: meditation.description,
+      category: meditation.category,
+      duration: meditation.duration,
+      cover_image: meditation.cover_image,
+      audio_file: meditation.audio_file,
+      premium: meditation.premium,
+      published: meditation.published,
+      mood: meditation.mood
+    });
+    setMessage('Editing meditation.');
+    setError('');
+  };
+
+  const togglePublished = async (meditation: Meditation) => {
+    await updateMeditation(meditation.id, { published: !meditation.published }, initData);
+    await onRefresh();
   };
 
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-semibold">Admin</h2>
-      <div className="rounded-3xl border border-cream/15 bg-white/10 p-5 backdrop-blur-xl">
-        <label className="text-sm text-lavender">Upload MP3</label>
-        <input type="file" accept="audio/mpeg,audio/mp3" onChange={(event) => void upload('audio', event.target.files?.[0])} className="mt-2 w-full text-sm" />
-        <label className="mt-4 block text-sm text-lavender">Upload cover</label>
-        <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void upload('cover', event.target.files?.[0])} className="mt-2 w-full text-sm" />
-        {(['title', 'description', 'audio_file', 'cover_image'] as const).map((field) => (
-          <input key={field} value={form[field]} onChange={(event) => setForm({ ...form, [field]: event.target.value })} placeholder={field.replace('_', ' ')} className="mt-3 w-full rounded-2xl bg-night/70 px-4 py-3 text-sm outline-none" />
-        ))}
-        <div className="mt-3 grid grid-cols-2 gap-3">
-          <select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} className="rounded-2xl bg-night px-4 py-3 text-sm">
-            {categories.map((item) => <option key={item.slug} value={item.slug}>{item.name}</option>)}
-          </select>
-          <select value={form.mood} onChange={(event) => setForm({ ...form, mood: event.target.value as MeditationPayload['mood'] })} className="rounded-2xl bg-night px-4 py-3 text-sm">
-            {moods.map((item) => <option key={item} value={item}>{item}</option>)}
-          </select>
-          <input type="number" value={form.duration} onChange={(event) => setForm({ ...form, duration: Number(event.target.value) })} className="rounded-2xl bg-night px-4 py-3 text-sm" />
-          <label className="flex items-center gap-2 rounded-2xl bg-night px-4 py-3 text-sm"><input type="checkbox" checked={form.premium} onChange={(event) => setForm({ ...form, premium: event.target.checked })} /> Premium</label>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.28em] text-lavender/70">Hidden CMS</p>
+          <h2 className="text-2xl font-semibold">Luna Admin</h2>
         </div>
-        <button onClick={async () => {
-          await createMeditation(form, initData);
-          setMessage('Meditation saved.');
-          await onRefresh();
-        }} className="mt-4 w-full rounded-2xl bg-gold px-4 py-3 font-semibold text-night"><Upload className="mr-2 inline" size={16} />Create meditation</button>
-        {message && <p className="mt-3 text-sm text-lavender">{message}</p>}
+        <button onClick={reset} className="rounded-full bg-cream/10 px-4 py-2 text-sm">New</button>
       </div>
-      {meditations.map((meditation) => (
-        <div key={meditation.id} className="flex items-center justify-between rounded-2xl bg-cream/10 p-3">
-          <span className="truncate text-sm">{meditation.title}</span>
-          <button onClick={async () => { await deleteMeditation(meditation.id, initData); await onRefresh(); }} className="text-sm text-gold">Delete</button>
+
+      <div className="rounded-3xl border border-cream/15 bg-white/10 p-5 shadow-glow backdrop-blur-xl">
+        <div className="grid gap-3">
+          <DropUpload
+            title="MP3 audio"
+            body="Drag an MP3 here or tap to upload"
+            icon={<Upload />}
+            accept="audio/mpeg,audio/mp3,.mp3"
+            progress={audioProgress}
+            onFile={(file) => upload('audio', file)}
+          />
+          <DropUpload
+            title="Cover image"
+            body="Drag JPG, PNG, or WebP cover here"
+            icon={<Image />}
+            accept="image/jpeg,image/png,image/webp"
+            progress={coverProgress}
+            onFile={(file) => upload('cover', file)}
+          />
         </div>
-      ))}
+
+        <div className="mt-4 grid gap-3">
+          <AdminInput label="Title" value={form.title} onChange={(value) => setForm({ ...form, title: value })} />
+          <AdminInput label="Subtitle" value={form.subtitle} onChange={(value) => setForm({ ...form, subtitle: value })} />
+          <label className="text-sm text-lavender">
+            Description
+            <textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} className="mt-2 min-h-28 w-full rounded-2xl bg-night/70 px-4 py-3 text-sm text-cream outline-none" />
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="text-sm text-lavender">
+              Category
+              <select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} className="mt-2 w-full rounded-2xl bg-night px-4 py-3 text-sm text-cream">
+                {categories.map((item) => <option key={item.slug} value={item.slug}>{item.name}</option>)}
+              </select>
+            </label>
+            <label className="text-sm text-lavender">
+              Mood
+              <select value={form.mood} onChange={(event) => setForm({ ...form, mood: event.target.value as MeditationPayload['mood'] })} className="mt-2 w-full rounded-2xl bg-night px-4 py-3 text-sm text-cream">
+                {moods.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="text-sm text-lavender">
+              Duration seconds
+              <input type="number" min={1} value={form.duration} onChange={(event) => setForm({ ...form, duration: Number(event.target.value) })} className="mt-2 w-full rounded-2xl bg-night/70 px-4 py-3 text-sm text-cream outline-none" />
+            </label>
+            <div className="grid gap-2 pt-7">
+              <Toggle label={form.premium ? 'Premium' : 'Free'} checked={form.premium} onChange={(checked) => setForm({ ...form, premium: checked })} />
+              <Toggle label={form.published ? 'Published' : 'Draft'} checked={form.published} onChange={(checked) => setForm({ ...form, published: checked })} />
+            </div>
+          </div>
+        </div>
+
+        <AdminPreview form={form} />
+
+        {error && <p className="mt-4 rounded-2xl bg-red-500/15 p-3 text-sm text-red-100">{error}</p>}
+        {message && <p className="mt-4 rounded-2xl bg-lavender/15 p-3 text-sm text-cream">{message}</p>}
+
+        <button onClick={save} className="mt-4 w-full rounded-2xl bg-gold px-4 py-3 font-semibold text-night">
+          <CheckCircle className="mr-2 inline" size={16} />{editingId ? 'Save changes' : 'Create meditation'}
+        </button>
+      </div>
+
+      <div className="space-y-3">
+        <h3 className="text-lg font-semibold">Meditations</h3>
+        {meditations.length ? meditations.map((meditation) => (
+          <article key={meditation.id} className="rounded-3xl border border-cream/15 bg-white/10 p-3 backdrop-blur-xl">
+            <div className="flex gap-3">
+              <img src={meditation.cover_image} alt="" className="h-20 w-20 rounded-2xl object-cover" />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <h4 className="truncate font-semibold">{meditation.title}</h4>
+                  <span className={`rounded-full px-2 py-1 text-[10px] ${meditation.published ? 'bg-gold text-night' : 'bg-cream/10 text-cream/60'}`}>
+                    {meditation.published ? 'Published' : 'Draft'}
+                  </span>
+                </div>
+                <p className="mt-1 line-clamp-1 text-xs text-lavender">{meditation.subtitle || meditation.category}</p>
+                <audio src={meditation.audio_file} controls className="mt-2 w-full" />
+              </div>
+            </div>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <button onClick={() => edit(meditation)} className="rounded-2xl bg-cream/10 px-3 py-2 text-sm"><Edit3 className="mr-1 inline" size={14} />Edit</button>
+              <button onClick={() => void togglePublished(meditation)} className="rounded-2xl bg-cream/10 px-3 py-2 text-sm">{meditation.published ? 'Unpublish' : 'Publish'}</button>
+              <button onClick={async () => { await deleteMeditation(meditation.id, initData); await onRefresh(); }} className="rounded-2xl bg-gold px-3 py-2 text-sm font-semibold text-night">Delete</button>
+            </div>
+          </article>
+        )) : <EmptyState title="No meditations" body="Upload audio and cover files, then create your first meditation." />}
+      </div>
+    </div>
+  );
+}
+
+function AdminInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="text-sm text-lavender">
+      {label}
+      <input value={value} onChange={(event) => onChange(event.target.value)} className="mt-2 w-full rounded-2xl bg-night/70 px-4 py-3 text-sm text-cream outline-none" />
+    </label>
+  );
+}
+
+function DropUpload({ title, body, icon, accept, progress, onFile }: { title: string; body: string; icon: React.ReactNode; accept: string; progress: number; onFile: (file: File) => void }) {
+  const [dragging, setDragging] = useState(false);
+
+  return (
+    <label
+      onDragOver={(event) => {
+        event.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={() => setDragging(false)}
+      onDrop={(event) => {
+        event.preventDefault();
+        setDragging(false);
+        const file = event.dataTransfer.files[0];
+        if (file) onFile(file);
+      }}
+      className={`block cursor-pointer rounded-3xl border border-dashed p-4 transition ${dragging ? 'border-gold bg-gold/10' : 'border-cream/20 bg-night/40'}`}
+    >
+      <input type="file" accept={accept} onChange={(event) => {
+        const file = event.target.files?.[0];
+        if (file) onFile(file);
+      }} className="hidden" />
+      <div className="flex items-center gap-3">
+        <span className="grid h-11 w-11 place-items-center rounded-2xl bg-cream/10 text-gold">{icon}</span>
+        <span>
+          <span className="block font-semibold">{title}</span>
+          <span className="text-sm text-cream/60">{body}</span>
+        </span>
+      </div>
+      {progress > 0 && (
+        <div className="mt-4 h-2 overflow-hidden rounded-full bg-cream/10">
+          <div className="h-full rounded-full bg-gold transition-all" style={{ width: `${progress}%` }} />
+        </div>
+      )}
+    </label>
+  );
+}
+
+function Toggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (checked: boolean) => void }) {
+  return (
+    <button type="button" onClick={() => onChange(!checked)} className={`rounded-2xl px-4 py-3 text-sm font-semibold ${checked ? 'bg-gold text-night' : 'bg-cream/10 text-cream'}`}>
+      {label}
+    </button>
+  );
+}
+
+function AdminPreview({ form }: { form: MeditationPayload }) {
+  return (
+    <div className="mt-5 rounded-3xl border border-cream/15 bg-night/50 p-4">
+      <p className="mb-3 text-sm text-lavender">Preview before publishing</p>
+      <div className="flex gap-3">
+        {form.cover_image ? <img src={form.cover_image} alt="" className="h-24 w-24 rounded-2xl object-cover" /> : <div className="grid h-24 w-24 place-items-center rounded-2xl bg-cream/10 text-cream/40">Cover</div>}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h3 className="truncate font-semibold">{form.title || 'Meditation title'}</h3>
+            {form.premium && <Crown size={15} className="text-gold" />}
+          </div>
+          <p className="mt-1 line-clamp-1 text-xs text-lavender">{form.subtitle || form.category}</p>
+          <p className="mt-2 text-sm text-cream/70">{formatTime(form.duration)} · {form.published ? 'Published' : 'Draft'}</p>
+        </div>
+      </div>
+      {form.audio_file && <audio src={form.audio_file} controls className="mt-4 w-full" />}
     </div>
   );
 }

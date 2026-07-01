@@ -16,12 +16,14 @@ export type TelegramUserInput = {
 
 export type MeditationInput = {
   title: string;
+  subtitle?: string;
   description: string;
   category: string;
   duration: number;
   cover_image: string;
   audio_file: string;
   premium: boolean;
+  published?: boolean;
   mood: 'Calm' | 'Stressed' | 'Focused' | 'Tired' | 'Anxious';
 };
 
@@ -89,11 +91,15 @@ export async function getCategories() {
   return data ?? [];
 }
 
-export async function getMeditations(telegramId?: number) {
-  const { data: meditations, error } = await supabase
+export async function getMeditations(telegramId?: number, includeUnpublished = false) {
+  let query = supabase
     .from('meditations')
     .select('*')
     .order('created_at', { ascending: false });
+
+  if (!includeUnpublished) query = query.eq('published', true);
+
+  const { data: meditations, error } = await query;
 
   if (error) throw error;
   if (!telegramId) return meditations ?? [];

@@ -27,6 +27,10 @@ create table if not exists public.meditations (
   updated_at timestamptz not null default now()
 );
 
+alter table public.meditations
+  add column if not exists subtitle text not null default '',
+  add column if not exists published boolean not null default false;
+
 create table if not exists public.favorites (
   id uuid primary key default gen_random_uuid(),
   telegram_id bigint not null references public.users(telegram_id) on delete cascade,

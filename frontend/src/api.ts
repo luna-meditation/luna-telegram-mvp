@@ -19,12 +19,14 @@ export type Category = {
 export type Meditation = {
   id: string;
   title: string;
+  subtitle: string;
   description: string;
   category: string;
   duration: number;
   cover_image: string;
   audio_file: string;
   premium: boolean;
+  published: boolean;
   mood: 'Calm' | 'Stressed' | 'Focused' | 'Tired' | 'Anxious';
   play_count: number;
   created_at: string;
@@ -62,12 +64,14 @@ export type ProfileStats = {
 
 export type MeditationPayload = {
   title: string;
+  subtitle: string;
   description: string;
   category: string;
   duration: number;
   cover_image: string;
   audio_file: string;
   premium: boolean;
+  published: boolean;
   mood: Meditation['mood'];
 };
 
@@ -83,8 +87,8 @@ function telegramHeaders(initData?: string) {
 
 async function request<T>(path: string, options?: RequestInit, initData?: string): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...telegramHeaders(initData), ...options?.headers },
-    ...options
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...telegramHeaders(initData), ...options?.headers }
   });
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
   return response.json() as Promise<T>;
@@ -168,18 +172,52 @@ export async function getProfile(initData?: string): Promise<ProfileStats> {
   return request('/api/profile/me', undefined, initData);
 }
 
-export async function uploadAdminAsset(kind: 'audio' | 'cover', file: File, initData?: string) {
-  const response = await fetch(`${API_URL}/api/admin/storage/${kind}`, {
-    method: 'POST',
-    headers: {
-      'content-type': file.type,
-      'x-file-name': file.name,
-      ...telegramHeaders(initData)
-    },
-    body: file
+export async function checkAdmin(initData?: string) {
+  return request<{ admin: boolean }>('/api/admin/me', undefined, initData);
+}
+
+export async function getAdminMeditations(initData?: string): Promise<Meditation[]> {
+  const response = await request<{ meditations: Meditation[] }>('/api/admin/meditations', undefined, initData);
+  return response.meditations;
+}
+
+export async function uploadAdminAsset(
+  kind: 'audio' | 'cover',
+  file: File,
+  initData?: string,
+  onProgress?: (progress: number) => void
+) {
+  return new Promise<{ path: string; publicUrl: string }>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('POST', `${API_URL}/api/admin/storage/${kind}`);
+    request.setRequestHeader('content-type', file.type);
+    request.setRequestHeader('x-file-name', file.name);
+
+    for (const [key, value] of Object.entries(telegramHeaders(initData))) {
+      request.setRequestHeader(key, value);
+    }
+
+    request.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress?.(Math.round((event.loaded / event.total) * 100));
+    };
+
+    request.onload = () => {
+      if (request.status >= 200 && request.status < 300) {
+        resolve(JSON.parse(request.responseText) as { path: string; publicUrl: string });
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(request.responseText) as { error?: string };
+        reject(new Error(parsed.error || `Upload failed: ${request.status}`));
+      } catch {
+        reject(new Error(`Upload failed: ${request.status}`));
+      }
+    };
+
+    request.onerror = () => reject(new Error('Upload failed. Please check your connection and try again.'));
+    request.send(file);
   });
-  if (!response.ok) throw new Error(`Upload failed: ${response.status}`);
-  return response.json() as Promise<{ path: string; publicUrl: string }>;
 }
 
 export async function createMeditation(input: MeditationPayload, initData?: string) {

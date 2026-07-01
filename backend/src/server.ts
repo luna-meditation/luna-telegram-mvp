@@ -43,6 +43,14 @@ function assertAdmin(req: express.Request, res: express.Response) {
   return true;
 }
 
+function isMp3Upload(contentType: string, fileName: string) {
+  return ['audio/mpeg', 'audio/mp3'].includes(contentType) && /\.mp3$/i.test(fileName);
+}
+
+function isCoverUpload(contentType: string, fileName: string) {
+  return ['image/jpeg', 'image/png', 'image/webp'].includes(contentType) && /\.(jpe?g|png|webp)$/i.test(fileName);
+}
+
 app.post(
   '/api/admin/storage/:kind',
   requireTelegramWebApp,
@@ -61,13 +69,13 @@ app.post(
         return;
       }
 
-      if (kind === 'audio' && !contentType.includes('audio/')) {
-        res.status(400).json({ error: 'Audio uploads must be MP3 audio.' });
+      if (kind === 'audio' && !isMp3Upload(contentType, originalName)) {
+        res.status(400).json({ error: 'Please upload an MP3 audio file.' });
         return;
       }
 
-      if (kind === 'cover' && !contentType.startsWith('image/')) {
-        res.status(400).json({ error: 'Cover uploads must be images.' });
+      if (kind === 'cover' && !isCoverUpload(contentType, originalName)) {
+        res.status(400).json({ error: 'Please upload a JPG, PNG, or WebP cover image.' });
         return;
       }
 
@@ -237,7 +245,16 @@ app.get('/api/profile/me', requireTelegramWebApp, async (req, res, next) => {
 app.get('/api/admin/meditations', requireTelegramWebApp, async (req, res, next) => {
   try {
     if (!assertAdmin(req, res)) return;
-    res.json({ meditations: await getMeditations() });
+    res.json({ meditations: await getMeditations(undefined, true) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/admin/me', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    if (!assertAdmin(req, res)) return;
+    res.json({ admin: true });
   } catch (error) {
     next(error);
   }
