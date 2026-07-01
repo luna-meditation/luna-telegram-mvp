@@ -23,6 +23,8 @@ import {
   createMeditation,
   deleteMeditation,
   getAccess,
+  apiDebugConfig,
+  ApiRequestError,
   checkAdmin,
   getAdminDebug,
   getCategories,
@@ -58,6 +60,39 @@ const fallbackUser: TelegramWebAppUser = {
 
 function getTelegram() {
   return window.Telegram?.WebApp;
+}
+
+async function loadAdminDebugInfo(initData?: string): Promise<AdminDebugInfo> {
+  const debugUrl = `${apiDebugConfig.apiBaseUrl}/api/debug/admin`;
+
+  try {
+    const debug = await getAdminDebug(initData);
+    return {
+      ...debug,
+      apiBaseUrl: apiDebugConfig.apiBaseUrl,
+      configuredApiUrl: apiDebugConfig.configuredApiUrl,
+      requestUrl: debugUrl,
+      httpStatus: 200,
+      responseBody: null
+    };
+  } catch (error) {
+    return {
+      telegramUserId: null,
+      adminTelegramId: null,
+      isAdmin: false,
+      authenticationStatus: 'debug_request_failed',
+      authenticationError: apiDebugConfig.isMissingProductionApiUrl
+        ? 'VITE_API_URL is missing in the deployed frontend environment.'
+        : error instanceof Error
+          ? error.message
+          : 'Could not load admin debug info.',
+      apiBaseUrl: apiDebugConfig.apiBaseUrl,
+      configuredApiUrl: apiDebugConfig.configuredApiUrl,
+      requestUrl: error instanceof ApiRequestError ? error.requestUrl : debugUrl,
+      httpStatus: error instanceof ApiRequestError ? error.status : null,
+      responseBody: error instanceof ApiRequestError ? error.responseBody : null
+    };
+  }
 }
 
 function formatTime(seconds: number) {
@@ -123,17 +158,7 @@ function App() {
         setMeditations([]);
       }
 
-      const debug = await getAdminDebug(initData).catch((error) => {
-        const fallback = {
-          telegramUserId: null,
-          adminTelegramId: null,
-          isAdmin: false,
-          authenticationStatus: 'debug_request_failed',
-          authenticationError: error instanceof Error ? error.message : 'Could not load admin debug info.'
-        };
-        console.info('[Luna admin debug]', fallback);
-        return fallback;
-      });
+      const debug = await loadAdminDebugInfo(initData);
       setAdminDebug(debug);
       console.info('[Luna admin debug]', debug);
 
@@ -153,17 +178,7 @@ function App() {
     if (page !== 'admin') return;
 
     async function bootAdmin() {
-      const debug = await getAdminDebug(initData).catch((error) => {
-        const fallback = {
-          telegramUserId: null,
-          adminTelegramId: null,
-          isAdmin: false,
-          authenticationStatus: 'debug_request_failed',
-          authenticationError: error instanceof Error ? error.message : 'Could not load admin debug info.'
-        };
-        console.info('[Luna admin debug]', fallback);
-        return fallback;
-      });
+      const debug = await loadAdminDebugInfo(initData);
       setAdminDebug(debug);
       console.info('[Luna admin debug]', debug);
 
@@ -759,6 +774,11 @@ function ProfilePage({
             <DebugRow label="authenticationStatus" value={adminDebug?.authenticationStatus ?? 'not_loaded'} />
             <DebugRow label="authenticationError" value={adminDebug?.authenticationError ?? 'null'} />
             <DebugRow label="hasInitData" value={String(hasInitData)} />
+            <DebugRow label="apiBaseUrl" value={adminDebug?.apiBaseUrl ?? apiDebugConfig.apiBaseUrl} />
+            <DebugRow label="configuredApiUrl" value={adminDebug?.configuredApiUrl ?? apiDebugConfig.configuredApiUrl ?? 'null'} />
+            <DebugRow label="requestUrl" value={adminDebug?.requestUrl ?? 'null'} />
+            <DebugRow label="httpStatus" value={adminDebug?.httpStatus ?? 'null'} />
+            <DebugRow label="responseBody" value={adminDebug?.responseBody ?? 'null'} />
           </div>
         </div>
       </div>

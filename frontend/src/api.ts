@@ -1,4 +1,26 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const configuredApiUrl = (import.meta.env.VITE_API_URL?.trim() ?? '').replace(/\/+$/, '');
+const API_URL = configuredApiUrl || (import.meta.env.DEV ? 'http://localhost:4000' : '');
+
+export const apiDebugConfig = {
+  apiBaseUrl: API_URL || window.location.origin,
+  configuredApiUrl: configuredApiUrl || null,
+  isUsingDevFallback: !configuredApiUrl && import.meta.env.DEV,
+  isMissingProductionApiUrl: !configuredApiUrl && !import.meta.env.DEV
+};
+
+export class ApiRequestError extends Error {
+  status: number | null;
+  responseBody: string | null;
+  requestUrl: string;
+
+  constructor(message: string, requestUrl: string, status: number | null = null, responseBody: string | null = null) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.status = status;
+    this.responseBody = responseBody;
+    this.requestUrl = requestUrl;
+  }
+}
 
 export type AccessState = {
   hasPremium: boolean;
@@ -86,12 +108,28 @@ function telegramHeaders(initData?: string) {
 }
 
 async function request<T>(path: string, options?: RequestInit, initData?: string): Promise<T> {
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers: { 'Content-Type': 'application/json', ...telegramHeaders(initData), ...options?.headers }
-  });
-  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
-  return response.json() as Promise<T>;
+  const requestUrl = `${API_URL}${path}`;
+
+  let response: Response;
+  try {
+    response = await fetch(requestUrl, {
+      ...options,
+      headers: { 'Content-Type': 'application/json', ...telegramHeaders(initData), ...options?.headers }
+    });
+  } catch (error) {
+    throw new ApiRequestError(error instanceof Error ? error.message : 'Network request failed.', requestUrl);
+  }
+
+  const responseBody = await response.text();
+  if (!response.ok) {
+    throw new ApiRequestError(`Request failed: ${response.status}`, requestUrl, response.status, responseBody);
+  }
+
+  try {
+    return JSON.parse(responseBody) as T;
+  } catch {
+    throw new ApiRequestError('API response was not valid JSON.', requestUrl, response.status, responseBody);
+  }
 }
 
 export async function syncUser(user: TelegramWebAppUser, initData?: string) {
@@ -182,6 +220,11 @@ export type AdminDebugInfo = {
   isAdmin: boolean;
   authenticationStatus: string;
   authenticationError: string | null;
+  apiBaseUrl?: string;
+  configuredApiUrl?: string | null;
+  requestUrl?: string | null;
+  httpStatus?: number | null;
+  responseBody?: string | null;
 };
 
 export async function getAdminDebug(initData?: string) {

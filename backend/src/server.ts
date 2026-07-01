@@ -30,7 +30,34 @@ import { isPlanId } from './plans.js';
 
 const app = express();
 
-app.use(cors({ origin: env.FRONTEND_ORIGIN ?? true }));
+const configuredFrontendOrigins = env.FRONTEND_ORIGIN
+  ? env.FRONTEND_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean)
+  : [];
+
+function isAllowedFrontendOrigin(origin: string) {
+  if (configuredFrontendOrigins.includes(origin)) return true;
+
+  try {
+    const { hostname, protocol } = new URL(origin);
+    return (
+      protocol === 'https:' &&
+      (hostname.endsWith('.netlify.app') || hostname.endsWith('.vercel.app'))
+    );
+  } catch {
+    return false;
+  }
+}
+
+app.use(cors({
+  origin(origin, callback) {
+    if (!origin || !configuredFrontendOrigins.length || isAllowedFrontendOrigin(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    callback(null, false);
+  }
+}));
 
 function assertAdmin(req: express.Request, res: express.Response) {
   const authReq = req as AuthenticatedRequest;
