@@ -1,0 +1,14 @@
+{
+  "name": "luna-telegram-mvp",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Telegram Mini App and bot MVP for Luna wellness.",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @luna/frontend --filter @luna/backend dev",
+    "dev:frontend": "pnpm --filter @luna/frontend dev",
+    "dev:backend": "pnpm --filter @luna/backend dev",
+    "build": "pnpm --filter @luna/frontend build && pnpm --filter @luna/backend build && pnpm --filter @luna/website build",
+    "lint": "pnpm --filter @luna/frontend lint && pnpm --filter @luna/backend lint",
+    "typecheck": "pnpm --filter @luna/frontend typecheck && pnpm --filter @luna/backend typecheck"
+  }
+}

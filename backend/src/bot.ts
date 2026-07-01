@@ -1,0 +1,181 @@
+import { Context, Markup, Telegraf } from 'telegraf';
+import { env } from './config.js';
+import {
+  getAdminStats,
+  getUserAccess,
+  recordSuccessfulPayment,
+  upsertUser
+} from './db.js';
+import { isPlanId, plans, type PlanId } from './plans.js';
+
+export const bot = new Telegraf(env.BOT_TOKEN);
+
+const miniAppButton = Markup.button.webApp('Open Luna App', env.MINI_APP_URL);
+
+function mainKeyboard() {
+  return Markup.inlineKeyboard([
+    [miniAppButton],
+    [
+      Markup.button.callback('Try Free Practice', 'open_free'),
+      Markup.button.callback('View Plans', 'plans')
+    ]
+  ]);
+}
+
+function invoicePayload(plan: PlanId, telegramId: number) {
+  return JSON.stringify({ plan, telegramId, source: 'luna' });
+}
+
+async function ensureUser(ctx: Context) {
+  const from = ctx.from;
+  if (!from) return;
+
+  await upsertUser({
+    telegram_id: from.id,
+    username: from.username,
+    first_name: from.first_name,
+    last_name: from.last_name,
+    language_code: from.language_code
+  });
+}
+
+export async function sendStarsInvoice(chatId: number, telegramId: number, planId: PlanId) {
+  const plan = plans[planId];
+
+  await bot.telegram.callApi('sendInvoice', {
+    chat_id: chatId,
+    title: `Luna ${plan.title}`,
+    description:
+      planId === 'monthly'
+        ? 'Unlock Luna premium meditations and breathing practices for 30 days.'
+        : 'Unlock Luna premium meditations and breathing practices forever.',
+    payload: invoicePayload(planId, telegramId),
+    provider_token: '',
+    currency: 'XTR',
+    prices: [{ label: plan.title, amount: plan.amountStars }],
+    start_parameter: `luna_${planId}`
+  });
+}
+
+bot.start(async (ctx) => {
+  await ensureUser(ctx);
+  await ctx.reply(
+    'Welcome to Luna 🌙\nAI-guided meditations and breathing practices for sleep, stress, focus, and emotional balance.',
+    mainKeyboard()
+  );
+});
+
+bot.command('app', async (ctx) => {
+  await ensureUser(ctx);
+  await ctx.reply('Open Luna whenever you need a softer moment.', Markup.inlineKeyboard([[miniAppButton]]));
+});
+
+bot.command('plans', async (ctx) => {
+  await ensureUser(ctx);
+  await ctx.reply(
+    'Choose your Luna access:\n\nFree: 1 free practice\nMonthly Access: 299 Telegram Stars for 30 days\nLifetime Access: 1999 Telegram Stars',
+    Markup.inlineKeyboard([
+      [Markup.button.callback('Monthly - 299 Stars', 'buy_monthly')],
+      [Markup.button.callback('Lifetime - 1999 Stars', 'buy_lifetime')],
+      [miniAppButton]
+    ])
+  );
+});
+
+bot.command('library', async (ctx) => {
+  await ensureUser(ctx);
+  await ctx.reply('Your Luna practice library is inside the Mini App.', Markup.inlineKeyboard([[miniAppButton]]));
+});
+
+bot.command('profile', async (ctx) => {
+  await ensureUser(ctx);
+  if (!ctx.from) return;
+  const access = await getUserAccess(ctx.from.id);
+  await ctx.reply(
+    `Luna Profile\n\nPlan: ${access.plan}\nActive until: ${access.user?.active_until ?? 'Not active'}\nLifetime access: ${
+      access.user?.lifetime_access ? 'Yes' : 'No'
+    }`,
+    Markup.inlineKeyboard([[miniAppButton]])
+  );
+});
+
+bot.command('help', async (ctx) => {
+  await ctx.reply(
+    'Luna commands:\n/start - Start Luna\n/app - Open Mini App\n/plans - View access plans\n/library - Open practice library\n/profile - View your access\n/help - Show help'
+  );
+});
+
+bot.command('admin', async (ctx) => {
+  if (!env.ADMIN_TELEGRAM_ID || ctx.from?.id !== env.ADMIN_TELEGRAM_ID) {
+    await ctx.reply('Admin access only.');
+    return;
+  }
+
+  const [, subcommand] = ctx.message.text.split(' ');
+  if (subcommand !== 'stats') {
+    await ctx.reply('Use /admin stats');
+    return;
+  }
+
+  const stats = await getAdminStats();
+  await ctx.reply(
+    `Luna Stats\n\nTotal users: ${stats.totalUsers}\nPaid users: ${stats.paidUsers}\nMonthly users: ${stats.monthlyUsers}\nLifetime users: ${stats.lifetimeUsers}\nTotal Stars earned: ${stats.totalStars}`
+  );
+});
+
+bot.action('plans', async (ctx) => {
+  await ctx.answerCbQuery();
+  await ctx.reply(
+    'Premium unlocks the full Luna library.',
+    Markup.inlineKeyboard([
+      [Markup.button.callback('Monthly - 299 Stars', 'buy_monthly')],
+      [Markup.button.callback('Lifetime - 1999 Stars', 'buy_lifetime')]
+    ])
+  );
+});
+
+bot.action('open_free', async (ctx) => {
+  await ctx.answerCbQuery();
+  await ctx.reply('Your free practice is waiting inside Luna.', Markup.inlineKeyboard([[miniAppButton]]));
+});
+
+bot.action(/^buy_(monthly|lifetime)$/, async (ctx) => {
+  await ctx.answerCbQuery();
+  if (!ctx.from || !ctx.chat) return;
+  await ensureUser(ctx);
+  const planId = ctx.match[1];
+  if (!isPlanId(planId)) return;
+  await sendStarsInvoice(ctx.chat.id, ctx.from.id, planId);
+});
+
+bot.on('pre_checkout_query', async (ctx) => {
+  const payload = ctx.preCheckoutQuery.invoice_payload;
+  try {
+    const parsed = JSON.parse(payload) as { plan?: unknown; telegramId?: unknown };
+    if (!isPlanId(parsed.plan) || typeof parsed.telegramId !== 'number') {
+      await ctx.answerPreCheckoutQuery(false, 'Invalid Luna payment payload.');
+      return;
+    }
+    await ctx.answerPreCheckoutQuery(true);
+  } catch {
+    await ctx.answerPreCheckoutQuery(false, 'Invalid Luna payment payload.');
+  }
+});
+
+bot.on('successful_payment', async (ctx) => {
+  if (!ctx.from) return;
+  const payment = ctx.message.successful_payment;
+  const payload = JSON.parse(payment.invoice_payload) as { plan: PlanId; telegramId: number };
+
+  await recordSuccessfulPayment({
+    telegram_id: ctx.from.id,
+    plan: payload.plan,
+    telegram_payment_charge_id: payment.telegram_payment_charge_id,
+    provider_payment_charge_id: payment.provider_payment_charge_id
+  });
+
+  await ctx.reply(
+    'Payment successful. Your Luna access is unlocked.',
+    Markup.inlineKeyboard([[Markup.button.webApp('Open Premium Library', env.MINI_APP_URL)]])
+  );
+});
