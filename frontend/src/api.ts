@@ -176,6 +176,18 @@ export async function checkAdmin(initData?: string) {
   return request<{ admin: boolean }>('/api/admin/me', undefined, initData);
 }
 
+export type AdminDebugInfo = {
+  telegramUserId: number | null;
+  adminTelegramId: number | null;
+  isAdmin: boolean;
+  authenticationStatus: string;
+  authenticationError: string | null;
+};
+
+export async function getAdminDebug(initData?: string) {
+  return request<AdminDebugInfo>('/api/debug/admin', undefined, initData);
+}
+
 export async function getAdminMeditations(initData?: string): Promise<Meditation[]> {
   const response = await request<{ meditations: Meditation[] }>('/api/admin/meditations', undefined, initData);
   return response.meditations;

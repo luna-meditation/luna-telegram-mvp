@@ -24,6 +24,7 @@ import {
   deleteMeditation,
   getAccess,
   checkAdmin,
+  getAdminDebug,
   getCategories,
   getAdminMeditations,
   getFavorites,
@@ -120,10 +121,24 @@ function App() {
         setMeditations([]);
       }
 
+      const debug = await getAdminDebug(initData).catch((error) => {
+        const fallback = {
+          telegramUserId: null,
+          adminTelegramId: null,
+          isAdmin: false,
+          authenticationStatus: 'debug_request_failed',
+          authenticationError: error instanceof Error ? error.message : 'Could not load admin debug info.'
+        };
+        console.info('[Luna admin debug]', fallback);
+        return fallback;
+      });
+      console.info('[Luna admin debug]', debug);
+
       try {
         await checkAdmin(initData);
         setAdminStatus('allowed');
-      } catch {
+      } catch (error) {
+        console.info('[Luna admin check failed]', error instanceof Error ? error.message : 'Admin check failed.');
         setAdminStatus('denied');
       }
     }
@@ -135,11 +150,25 @@ function App() {
     if (page !== 'admin') return;
 
     async function bootAdmin() {
+      const debug = await getAdminDebug(initData).catch((error) => {
+        const fallback = {
+          telegramUserId: null,
+          adminTelegramId: null,
+          isAdmin: false,
+          authenticationStatus: 'debug_request_failed',
+          authenticationError: error instanceof Error ? error.message : 'Could not load admin debug info.'
+        };
+        console.info('[Luna admin debug]', fallback);
+        return fallback;
+      });
+      console.info('[Luna admin debug]', debug);
+
       try {
         await checkAdmin(initData);
         setAdminStatus('allowed');
         await Promise.all([refreshLibrary(), refreshAdmin()]);
-      } catch {
+      } catch (error) {
+        console.info('[Luna admin check failed]', error instanceof Error ? error.message : 'Admin check failed.');
         setAdminStatus('denied');
       }
     }
