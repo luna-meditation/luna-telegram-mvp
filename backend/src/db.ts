@@ -412,3 +412,268 @@ export async function getAdminStats() {
     totalStars
   };
 }
+
+function startOfUtcDay(date = new Date()) {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+}
+
+function daysAgo(days: number) {
+  const date = startOfUtcDay();
+  date.setUTCDate(date.getUTCDate() - days);
+  return date;
+}
+
+function dateKey(value?: string | null) {
+  return value ? value.slice(0, 10) : '';
+}
+
+function countSince<T extends Record<string, unknown>>(rows: T[], field: keyof T, since: Date) {
+  return rows.filter((row) => {
+    const value = row[field];
+    return typeof value === 'string' && new Date(value).getTime() >= since.getTime();
+  }).length;
+}
+
+function groupCountByDay<T extends Record<string, unknown>>(rows: T[], field: keyof T, days = 14) {
+  const start = daysAgo(days - 1);
+  const counts = new Map<string, number>();
+
+  for (let index = 0; index < days; index += 1) {
+    const day = new Date(start);
+    day.setUTCDate(start.getUTCDate() + index);
+    counts.set(day.toISOString().slice(0, 10), 0);
+  }
+
+  rows.forEach((row) => {
+    const value = row[field];
+    if (typeof value !== 'string') return;
+    const key = dateKey(value);
+    if (counts.has(key)) counts.set(key, (counts.get(key) ?? 0) + 1);
+  });
+
+  return [...counts.entries()].map(([date, value]) => ({ date, value }));
+}
+
+function groupSumByDay<T extends Record<string, unknown>>(rows: T[], dateField: keyof T, valueField: keyof T, days = 14) {
+  const start = daysAgo(days - 1);
+  const sums = new Map<string, number>();
+
+  for (let index = 0; index < days; index += 1) {
+    const day = new Date(start);
+    day.setUTCDate(start.getUTCDate() + index);
+    sums.set(day.toISOString().slice(0, 10), 0);
+  }
+
+  rows.forEach((row) => {
+    const dateValue = row[dateField];
+    const numberValue = row[valueField];
+    if (typeof dateValue !== 'string' || typeof numberValue !== 'number') return;
+    const key = dateKey(dateValue);
+    if (sums.has(key)) sums.set(key, (sums.get(key) ?? 0) + numberValue);
+  });
+
+  return [...sums.entries()].map(([date, value]) => ({ date, value }));
+}
+
+export async function getAdminDashboard() {
+  const [
+    { data: users, error: usersError },
+    { data: payments, error: paymentsError },
+    { data: meditations, error: meditationsError },
+    { data: history, error: historyError },
+    { data: streaks, error: streaksError }
+  ] = await Promise.all([
+    supabase.from('users').select('telegram_id, username, first_name, last_name, created_at, last_seen_at, active_until, lifetime_access'),
+    supabase.from('payments').select('telegram_id, plan, amount_stars, status, created_at').order('created_at', { ascending: false }),
+    supabase.from('meditations').select('id, title, category, premium, published, play_count, duration, created_at, updated_at').order('created_at', { ascending: false }),
+    supabase.from('history').select('telegram_id, meditation_id, last_played, play_count, completion_percent, last_position, completed'),
+    supabase.from('streaks').select('telegram_id, current_streak, longest_streak')
+  ]);
+
+  if (usersError) throw usersError;
+  if (paymentsError) throw paymentsError;
+  if (meditationsError) throw meditationsError;
+  if (historyError) throw historyError;
+  if (streaksError) throw streaksError;
+
+  const userRows = users ?? [];
+  const paymentRows = (payments ?? []).filter((payment) => payment.status === 'paid');
+  const meditationRows = meditations ?? [];
+  const historyRows = history ?? [];
+  const streakRows = streaks ?? [];
+  const now = Date.now();
+  const today = startOfUtcDay();
+  const weekStart = daysAgo(6);
+  const monthStart = daysAgo(29);
+  const userByTelegramId = new Map(userRows.map((user) => [user.telegram_id, user]));
+  const streakByTelegramId = new Map(streakRows.map((streak) => [streak.telegram_id, streak]));
+  const historyByMeditation = new Map<string, typeof historyRows>();
+
+  historyRows.forEach((item) => {
+    const list = historyByMeditation.get(item.meditation_id) ?? [];
+    list.push(item);
+    historyByMeditation.set(item.meditation_id, list);
+  });
+
+  const monthlyUsers = userRows.filter((user) => !user.lifetime_access && user.active_until && new Date(user.active_until).getTime() > now);
+  const lifetimeUsers = userRows.filter((user) => user.lifetime_access);
+  const activePremiumUsers = userRows.filter((user) => user.lifetime_access || (user.active_until && new Date(user.active_until).getTime() > now));
+  const expiredPremiumUsers = userRows.filter((user) => !user.lifetime_access && user.active_until && new Date(user.active_until).getTime() <= now);
+  const freeUsers = userRows.length - activePremiumUsers.length;
+  const totalRevenue = paymentRows.reduce((sum, payment) => sum + payment.amount_stars, 0);
+  const monthlyRevenue = paymentRows
+    .filter((payment) => new Date(payment.created_at).getTime() >= monthStart.getTime())
+    .reduce((sum, payment) => sum + payment.amount_stars, 0);
+  const payingUsers = new Set(paymentRows.map((payment) => payment.telegram_id));
+  const revenueByPlan = {
+    monthly: paymentRows.filter((payment) => payment.plan === 'monthly').reduce((sum, payment) => sum + payment.amount_stars, 0),
+    lifetime: paymentRows.filter((payment) => payment.plan === 'lifetime').reduce((sum, payment) => sum + payment.amount_stars, 0)
+  };
+
+  const adminUsers = userRows.map((user) => {
+    const userHistory = historyRows.filter((item) => item.telegram_id === user.telegram_id);
+    const userPayments = paymentRows.filter((payment) => payment.telegram_id === user.telegram_id);
+    const activeUntil = user.active_until ? new Date(user.active_until).getTime() : 0;
+    const premiumStatus = user.lifetime_access ? 'lifetime' : activeUntil > now ? 'monthly' : activeUntil ? 'expired' : 'free';
+
+    return {
+      telegram_id: user.telegram_id,
+      username: user.username,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      created_at: user.created_at,
+      last_seen_at: user.last_seen_at,
+      active_until: user.active_until,
+      lifetime_access: user.lifetime_access,
+      premiumStatus,
+      totalMinutesListened: Math.round(userHistory.reduce((sum, item) => sum + (item.last_position ?? 0), 0) / 60),
+      completedMeditations: userHistory.filter((item) => item.completed).length,
+      currentStreak: streakByTelegramId.get(user.telegram_id)?.current_streak ?? 0,
+      longestStreak: streakByTelegramId.get(user.telegram_id)?.longest_streak ?? 0,
+      totalStars: userPayments.reduce((sum, payment) => sum + payment.amount_stars, 0)
+    };
+  });
+
+  const latestPurchases = paymentRows.slice(0, 10).map((payment) => ({
+    ...payment,
+    user: userByTelegramId.get(payment.telegram_id) ?? null,
+    expiryDate: payment.plan === 'monthly'
+      ? userByTelegramId.get(payment.telegram_id)?.active_until ?? null
+      : null
+  }));
+
+  const meditationStats = meditationRows.map((meditation) => {
+    const plays = historyByMeditation.get(meditation.id) ?? [];
+    const averageCompletionRate = plays.length
+      ? Math.round(plays.reduce((sum, item) => sum + Number(item.completion_percent ?? 0), 0) / plays.length)
+      : 0;
+
+    return {
+      ...meditation,
+      completionRate: averageCompletionRate,
+      listeningMinutes: Math.round(plays.reduce((sum, item) => sum + (item.last_position ?? 0), 0) / 60)
+    };
+  });
+
+  const latestPlays = [...historyRows]
+    .sort((left, right) => new Date(right.last_played).getTime() - new Date(left.last_played).getTime())
+    .slice(0, 10)
+    .map((play) => ({
+      ...play,
+      user: userByTelegramId.get(play.telegram_id) ?? null,
+      meditation: meditationRows.find((meditation) => meditation.id === play.meditation_id) ?? null
+    }));
+
+  return {
+    users: {
+      totalRegistered: userRows.length,
+      newToday: countSince(userRows, 'created_at', today),
+      newThisWeek: countSince(userRows, 'created_at', weekStart),
+      activeToday: countSince(userRows, 'last_seen_at', today),
+      activeThisMonth: countSince(userRows, 'last_seen_at', monthStart)
+    },
+    subscriptions: {
+      freeUsers,
+      monthlySubscribers: monthlyUsers.length,
+      lifetimeSubscribers: lifetimeUsers.length,
+      activePremiumUsers: activePremiumUsers.length,
+      expiredPremiumUsers: expiredPremiumUsers.length
+    },
+    revenue: {
+      totalStars: totalRevenue,
+      todayStars: paymentRows
+        .filter((payment) => new Date(payment.created_at).getTime() >= today.getTime())
+        .reduce((sum, payment) => sum + payment.amount_stars, 0),
+      monthStars: monthlyRevenue,
+      revenueByPlan,
+      averageRevenuePerPayingUser: payingUsers.size ? Math.round(totalRevenue / payingUsers.size) : 0,
+      conversionRate: userRows.length ? Math.round((payingUsers.size / userRows.length) * 100) : 0,
+      latestPurchases
+    },
+    meditations: {
+      total: meditationRows.length,
+      published: meditationRows.filter((meditation) => meditation.published).length,
+      drafts: meditationRows.filter((meditation) => !meditation.published).length,
+      mostPlayed: [...meditationRows].sort((left, right) => (right.play_count ?? 0) - (left.play_count ?? 0))[0] ?? null,
+      totalListeningMinutes: Math.round(historyRows.reduce((sum, item) => sum + (item.last_position ?? 0), 0) / 60),
+      averageCompletionRate: historyRows.length
+        ? Math.round(historyRows.reduce((sum, item) => sum + Number(item.completion_percent ?? 0), 0) / historyRows.length)
+        : 0,
+      items: meditationStats
+    },
+    topUsers: {
+      topListeners: [...adminUsers].sort((left, right) => right.totalMinutesListened - left.totalMinutesListened).slice(0, 10),
+      longestStreaks: [...adminUsers].sort((left, right) => right.longestStreak - left.longestStreak).slice(0, 10),
+      mostCompleted: [...adminUsers].sort((left, right) => right.completedMeditations - left.completedMeditations).slice(0, 10)
+    },
+    recentActivity: {
+      latestRegistrations: [...userRows].sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime()).slice(0, 10),
+      latestPurchases,
+      latestMeditationPlays: latestPlays,
+      latestAdminUploads: meditationRows.slice(0, 10)
+    },
+    charts: {
+      registrationsByDay: groupCountByDay(userRows, 'created_at'),
+      purchasesByDay: groupCountByDay(paymentRows, 'created_at'),
+      revenueByDay: groupSumByDay(paymentRows, 'created_at', 'amount_stars'),
+      listeningMinutesByDay: groupSumByDay(historyRows.map((item) => ({ ...item, minutes: Math.round((item.last_position ?? 0) / 60) })), 'last_played', 'minutes'),
+      meditationPlaysByDay: groupCountByDay(historyRows, 'last_played')
+    },
+    usersList: adminUsers,
+    subscriptionsList: adminUsers.filter((user) => user.premiumStatus !== 'free'),
+    purchaseHistory: latestPurchases
+  };
+}
+
+export async function updateAdminUserAccess(telegramId: number, action: 'grant_monthly' | 'grant_lifetime' | 'extend_monthly' | 'remove_premium') {
+  const { data: user, error: userError } = await supabase
+    .from('users')
+    .select('active_until')
+    .eq('telegram_id', telegramId)
+    .maybeSingle();
+
+  if (userError) throw userError;
+  if (!user) throw new Error('User not found.');
+
+  const now = Date.now();
+  const currentActiveUntil = user.active_until ? new Date(user.active_until).getTime() : 0;
+  const extensionBase = Math.max(now, currentActiveUntil);
+  const monthlyUntil = new Date(extensionBase + 30 * 24 * 60 * 60 * 1000).toISOString();
+
+  const updates =
+    action === 'grant_lifetime'
+      ? { lifetime_access: true, active_until: null }
+      : action === 'remove_premium'
+        ? { lifetime_access: false, active_until: null }
+        : { lifetime_access: false, active_until: monthlyUntil };
+
+  const { data, error } = await supabase
+    .from('users')
+    .update(updates)
+    .eq('telegram_id', telegramId)
+    .select('telegram_id, username, first_name, active_until, lifetime_access')
+    .single();
+
+  if (error) throw error;
+  return data;
+}

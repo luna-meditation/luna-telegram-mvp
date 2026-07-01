@@ -4,13 +4,13 @@ export const plans: Record<PlanId, { id: PlanId; title: string; amountStars: num
   monthly: {
     id: 'monthly',
     title: 'Monthly Access',
-    amountStars: 299,
+    amountStars: 499,
     days: 30
   },
   lifetime: {
     id: 'lifetime',
     title: 'Lifetime Access',
-    amountStars: 1999
+    amountStars: 2499
   }
 };
 

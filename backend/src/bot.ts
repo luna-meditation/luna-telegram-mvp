@@ -101,10 +101,10 @@ bot.command('app', async (ctx) => {
 bot.command('plans', async (ctx) => {
   await ensureUser(ctx);
   await ctx.reply(
-    'Choose your Luna access:\n\nFree: 1 free practice\nMonthly Access: 299 Telegram Stars for 30 days\nLifetime Access: 1999 Telegram Stars',
+    `Choose your Luna access:\n\nFree: 1 free practice\nMonthly Access: ${plans.monthly.amountStars} Telegram Stars for 30 days\nLifetime Access: ${plans.lifetime.amountStars} Telegram Stars`,
     Markup.inlineKeyboard([
-      [Markup.button.callback('Monthly - 299 Stars', 'buy_monthly')],
-      [Markup.button.callback('Lifetime - 1999 Stars', 'buy_lifetime')],
+      [Markup.button.callback(`Monthly - ${plans.monthly.amountStars} Stars`, 'buy_monthly')],
+      [Markup.button.callback(`Lifetime - ${plans.lifetime.amountStars} Stars`, 'buy_lifetime')],
       [miniAppButton]
     ])
   );
@@ -156,8 +156,8 @@ bot.action('plans', async (ctx) => {
   await ctx.reply(
     'Premium unlocks the full Luna library.',
     Markup.inlineKeyboard([
-      [Markup.button.callback('Monthly - 299 Stars', 'buy_monthly')],
-      [Markup.button.callback('Lifetime - 1999 Stars', 'buy_lifetime')]
+      [Markup.button.callback(`Monthly - ${plans.monthly.amountStars} Stars`, 'buy_monthly')],
+      [Markup.button.callback(`Lifetime - ${plans.lifetime.amountStars} Stars`, 'buy_lifetime')]
     ])
   );
 });

@@ -23,10 +23,8 @@ import {
   createMeditation,
   deleteMeditation,
   getAccess,
-  apiDebugConfig,
-  ApiRequestError,
   checkAdmin,
-  getAdminDebug,
+  getAdminDashboard,
   getCategories,
   getAdminMeditations,
   getFavorites,
@@ -37,9 +35,11 @@ import {
   setFavorite,
   syncUser,
   updateMeditation,
+  updateAdminUserAccess,
   uploadAdminAsset,
   type AccessState,
-  type AdminDebugInfo,
+  type AdminDashboardData,
+  type AdminUser,
   type Category,
   type Meditation,
   type MeditationPayload,
@@ -52,6 +52,10 @@ type Mood = 'Calm' | 'Stressed' | 'Tired' | 'Anxious' | 'Focused';
 
 const moods: Mood[] = ['Calm', 'Stressed', 'Tired', 'Anxious', 'Focused'];
 const rewardMilestones = [7, 14, 30, 100] as const;
+const premiumPrices = {
+  monthly: 499,
+  lifetime: 2499
+};
 
 const fallbackUser: TelegramWebAppUser = {
   id: 10001,
@@ -60,39 +64,6 @@ const fallbackUser: TelegramWebAppUser = {
 
 function getTelegram() {
   return window.Telegram?.WebApp;
-}
-
-async function loadAdminDebugInfo(initData?: string): Promise<AdminDebugInfo> {
-  const debugUrl = `${apiDebugConfig.apiBaseUrl}/api/debug/admin`;
-
-  try {
-    const debug = await getAdminDebug(initData);
-    return {
-      ...debug,
-      apiBaseUrl: apiDebugConfig.apiBaseUrl,
-      configuredApiUrl: apiDebugConfig.configuredApiUrl,
-      requestUrl: debugUrl,
-      httpStatus: 200,
-      responseBody: null
-    };
-  } catch (error) {
-    return {
-      telegramUserId: null,
-      adminTelegramId: null,
-      isAdmin: false,
-      authenticationStatus: 'debug_request_failed',
-      authenticationError: apiDebugConfig.isMissingProductionApiUrl
-        ? 'VITE_API_URL is missing in the deployed frontend environment.'
-        : error instanceof Error
-          ? error.message
-          : 'Could not load admin debug info.',
-      apiBaseUrl: apiDebugConfig.apiBaseUrl,
-      configuredApiUrl: apiDebugConfig.configuredApiUrl,
-      requestUrl: error instanceof ApiRequestError ? error.requestUrl : debugUrl,
-      httpStatus: error instanceof ApiRequestError ? error.status : null,
-      responseBody: error instanceof ApiRequestError ? error.responseBody : null
-    };
-  }
 }
 
 function formatTime(seconds: number) {
@@ -119,8 +90,8 @@ function App() {
   const [selectedMeditation, setSelectedMeditation] = useState<Meditation | null>(null);
   const [paymentMessage, setPaymentMessage] = useState('');
   const [adminStatus, setAdminStatus] = useState<'checking' | 'allowed' | 'denied'>('checking');
-  const [adminDebug, setAdminDebug] = useState<AdminDebugInfo | null>(null);
   const [adminMeditations, setAdminMeditations] = useState<Meditation[]>([]);
+  const [adminDashboard, setAdminDashboard] = useState<AdminDashboardData | null>(null);
 
   const refreshAccount = async () => {
     const [accessState, profileStats, historyList, favoriteList] = await Promise.all([
@@ -142,8 +113,12 @@ function App() {
   };
 
   const refreshAdmin = async () => {
-    const meditationList = await getAdminMeditations(initData);
+    const [meditationList, dashboard] = await Promise.all([
+      getAdminMeditations(initData),
+      getAdminDashboard(initData)
+    ]);
     setAdminMeditations(meditationList);
+    setAdminDashboard(dashboard);
   };
 
   useEffect(() => {
@@ -157,10 +132,6 @@ function App() {
       } catch {
         setMeditations([]);
       }
-
-      const debug = await loadAdminDebugInfo(initData);
-      setAdminDebug(debug);
-      console.info('[Luna admin debug]', debug);
 
       try {
         await checkAdmin(initData);
@@ -178,10 +149,6 @@ function App() {
     if (page !== 'admin') return;
 
     async function bootAdmin() {
-      const debug = await loadAdminDebugInfo(initData);
-      setAdminDebug(debug);
-      console.info('[Luna admin debug]', debug);
-
       try {
         await checkAdmin(initData);
         setAdminStatus('allowed');
@@ -331,8 +298,6 @@ function App() {
             firstName={user.first_name ?? 'Luna'}
             username={user.username}
             showAdminButton={adminStatus === 'allowed'}
-            adminDebug={adminDebug}
-            hasInitData={Boolean(initData)}
             onAdmin={() => {
               window.history.pushState({}, '', '/admin');
               setPage('admin');
@@ -358,7 +323,12 @@ function App() {
             status={adminStatus}
             categories={categories}
             meditations={adminMeditations}
+            dashboard={adminDashboard}
             initData={initData}
+            onBack={() => {
+              window.history.pushState({}, '', '/');
+              setPage('home');
+            }}
             onRefresh={async () => {
               await Promise.all([refreshLibrary(), refreshAdmin()]);
             }}
@@ -376,7 +346,8 @@ function Header({ plan, streak }: { plan: string; streak: number }) {
     <div className="mb-5 flex items-center justify-between">
       <div>
         <p className="text-xs uppercase tracking-[0.28em] text-lavender/70">Luna</p>
-        <h1 className="font-serif text-3xl text-cream">Soft reset</h1>
+        <h1 className="font-serif text-3xl text-cream">Luna Meditation</h1>
+        <p className="mt-1 text-xs text-gold/80">AI-guided calm</p>
       </div>
       <div className="rounded-full border border-cream/15 bg-white/10 px-3 py-2 text-xs text-cream shadow-glow backdrop-blur">
         {streak > 0 ? `🔥 ${streak} day streak` : plan}
@@ -484,7 +455,7 @@ function LibraryPage(props: {
 }) {
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-semibold">Library</h2>
+      <h2 className="text-2xl font-semibold">Luna Library</h2>
       <div className="flex items-center gap-2 rounded-2xl border border-cream/15 bg-white/10 px-4 py-3 backdrop-blur-xl">
         <Search size={18} className="text-lavender" />
         <input value={props.query} onChange={(event) => props.setQuery(event.target.value)} placeholder="Search by title" className="w-full bg-transparent text-sm outline-none placeholder:text-cream/45" />
@@ -550,7 +521,7 @@ function MeditationCard({ meditation, locked, onOpen, onFavorite, onUnlock }: {
 function FavoritesPage({ meditations, onOpen, onFavorite }: { meditations: Meditation[]; onOpen: (meditation: Meditation) => void; onFavorite: (meditation: Meditation) => void }) {
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-semibold">Favorites</h2>
+      <h2 className="text-2xl font-semibold">Saved meditations</h2>
       {meditations.length ? meditations.map((meditation) => (
         <MeditationCard key={meditation.id} meditation={meditation} locked={false} onOpen={onOpen} onFavorite={onFavorite} onUnlock={() => undefined} />
       )) : <EmptyState title="No favorites yet" body="Save meditations you want to return to." />}
@@ -561,11 +532,11 @@ function FavoritesPage({ meditations, onOpen, onFavorite }: { meditations: Medit
 function PricingPage({ onBuy, message, onLibrary, locked }: { onBuy: (plan: 'monthly' | 'lifetime') => void; message: string; onLibrary: () => void; locked: Meditation | null }) {
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-semibold">Unlock Premium</h2>
+      <h2 className="text-2xl font-semibold">Luna Premium</h2>
       {locked && <p className="rounded-2xl bg-lavender/15 p-4 text-sm text-cream/80">{locked.title} is part of Luna Premium.</p>}
       <PlanCard title="Free" price="0" features={['Free meditations', 'Basic access']} />
-      <PlanCard title="Monthly Access" price="299 Stars" features={['Premium library', '30 days of access', 'Sleep, focus, anxiety, confidence']} action="Choose Monthly" onClick={() => onBuy('monthly')} />
-      <PlanCard title="Lifetime Access" price="1999 Stars" features={['Premium library forever', 'Best value', 'Instant Telegram unlock']} action="Choose Lifetime" onClick={() => onBuy('lifetime')} />
+      <PlanCard title="Monthly Access" price={`${premiumPrices.monthly} Stars`} features={['Premium library', '30 days of access', 'Sleep, focus, anxiety, confidence']} action="Choose Monthly" onClick={() => onBuy('monthly')} />
+      <PlanCard title="Lifetime Access" price={`${premiumPrices.lifetime} Stars`} features={['Premium library forever', 'Best value', 'Instant Telegram unlock']} action="Choose Lifetime" onClick={() => onBuy('lifetime')} />
       {message && <p className="rounded-2xl bg-lavender/15 p-4 text-sm text-cream/80">{message}</p>}
       {message.includes('unlocked') && <button onClick={onLibrary} className="w-full rounded-2xl bg-cream px-5 py-4 font-semibold text-night">Open Premium Library</button>}
     </div>
@@ -717,8 +688,6 @@ function ProfilePage({
   firstName,
   username,
   showAdminButton,
-  adminDebug,
-  hasInitData,
   onAdmin,
   onRestore
 }: {
@@ -727,15 +696,13 @@ function ProfilePage({
   firstName: string;
   username?: string;
   showAdminButton: boolean;
-  adminDebug: AdminDebugInfo | null;
-  hasInitData: boolean;
   onAdmin: () => void;
   onRestore: () => void;
 }) {
   const activeUntil = access.user?.active_until ? new Date(access.user.active_until).toLocaleDateString() : 'Not active';
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-semibold">Profile</h2>
+      <h2 className="text-2xl font-semibold">Luna Profile</h2>
       <div className="rounded-3xl border border-cream/15 bg-white/10 p-5 backdrop-blur-xl">
         <div className="flex items-center gap-4">
           <div className="grid h-16 w-16 place-items-center rounded-full bg-lavender/25 text-2xl">{firstName[0]}</div>
@@ -765,32 +732,7 @@ function ProfilePage({
         )}
         <button onClick={onRestore} className="mt-5 w-full rounded-2xl bg-cream px-5 py-4 font-semibold text-night">Restore purchases</button>
         <button className="mt-3 w-full rounded-2xl bg-cream/10 px-5 py-4 text-sm text-cream/60">Logout</button>
-        <div className="mt-5 rounded-2xl border border-gold/20 bg-night/60 p-4 text-left">
-          <p className="mb-3 text-sm font-semibold text-gold">Temporary admin debug</p>
-          <div className="space-y-2 text-xs text-cream/75">
-            <DebugRow label="telegramUserId" value={adminDebug?.telegramUserId ?? 'null'} />
-            <DebugRow label="adminTelegramId" value={adminDebug?.adminTelegramId ?? 'null'} />
-            <DebugRow label="isAdmin" value={adminDebug ? String(adminDebug.isAdmin) : 'unknown'} />
-            <DebugRow label="authenticationStatus" value={adminDebug?.authenticationStatus ?? 'not_loaded'} />
-            <DebugRow label="authenticationError" value={adminDebug?.authenticationError ?? 'null'} />
-            <DebugRow label="hasInitData" value={String(hasInitData)} />
-            <DebugRow label="apiBaseUrl" value={adminDebug?.apiBaseUrl ?? apiDebugConfig.apiBaseUrl} />
-            <DebugRow label="configuredApiUrl" value={adminDebug?.configuredApiUrl ?? apiDebugConfig.configuredApiUrl ?? 'null'} />
-            <DebugRow label="requestUrl" value={adminDebug?.requestUrl ?? 'null'} />
-            <DebugRow label="httpStatus" value={adminDebug?.httpStatus ?? 'null'} />
-            <DebugRow label="responseBody" value={adminDebug?.responseBody ?? 'null'} />
-          </div>
-        </div>
       </div>
-    </div>
-  );
-}
-
-function DebugRow({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="flex items-start justify-between gap-3">
-      <span className="shrink-0 text-lavender">{label}</span>
-      <span className="break-all text-right font-mono text-cream">{value}</span>
     </div>
   );
 }
@@ -808,25 +750,46 @@ const emptyMeditationForm = (category = 'sleep'): MeditationPayload => ({
   mood: 'Calm'
 });
 
+type AdminTab = 'dashboard' | 'meditations' | 'users' | 'subscriptions' | 'revenue' | 'analytics' | 'settings';
+const adminTabs: Array<{ id: AdminTab; label: string }> = [
+  { id: 'dashboard', label: 'Dashboard' },
+  { id: 'meditations', label: 'Meditations' },
+  { id: 'users', label: 'Users' },
+  { id: 'subscriptions', label: 'Subscriptions' },
+  { id: 'revenue', label: 'Revenue' },
+  { id: 'analytics', label: 'Analytics' },
+  { id: 'settings', label: 'Settings' }
+];
+
 function AdminPage({
   status,
   categories,
   meditations,
+  dashboard,
   initData,
+  onBack,
   onRefresh
 }: {
   status: 'checking' | 'allowed' | 'denied';
   categories: Category[];
   meditations: Meditation[];
+  dashboard: AdminDashboardData | null;
   initData?: string;
+  onBack: () => void;
   onRefresh: () => Promise<void>;
 }) {
+  const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const [form, setForm] = useState<MeditationPayload>(emptyMeditationForm(categories[0]?.slug));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [audioProgress, setAudioProgress] = useState(0);
   const [coverProgress, setCoverProgress] = useState(0);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [userSearch, setUserSearch] = useState('');
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
+  const [meditationSearch, setMeditationSearch] = useState('');
+  const [publishedFilter, setPublishedFilter] = useState<'all' | 'published' | 'draft'>('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
 
   useEffect(() => {
     if (!form.category && categories[0]?.slug) {
@@ -956,104 +919,451 @@ function AdminPage({
     await onRefresh();
   };
 
+  const filteredMeditations = meditations.filter((meditation) => {
+    const matchesSearch = [meditation.title, meditation.subtitle, meditation.category].some((value) =>
+      value?.toLowerCase().includes(meditationSearch.toLowerCase())
+    );
+    const matchesStatus =
+      publishedFilter === 'all' ||
+      (publishedFilter === 'published' && meditation.published) ||
+      (publishedFilter === 'draft' && !meditation.published);
+    const matchesCategory = categoryFilter === 'all' || meditation.category === categoryFilter;
+
+    return matchesSearch && matchesStatus && matchesCategory;
+  });
+
+  const filteredUsers = (dashboard?.usersList ?? []).filter((user) => {
+    const search = userSearch.toLowerCase();
+    return [
+      String(user.telegram_id),
+      user.username ?? '',
+      user.first_name ?? '',
+      user.last_name ?? ''
+    ].some((value) => value.toLowerCase().includes(search));
+  });
+
+  const updateUserAccess = async (telegramId: number, action: 'grant_monthly' | 'grant_lifetime' | 'extend_monthly' | 'remove_premium') => {
+    await updateAdminUserAccess(telegramId, action, initData);
+    await onRefresh();
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.28em] text-lavender/70">Hidden CMS</p>
-          <h2 className="text-2xl font-semibold">Luna Admin</h2>
+          <p className="text-xs uppercase tracking-[0.28em] text-lavender/70">AI-guided calm</p>
+          <h2 className="font-serif text-3xl font-semibold">Luna Meditation Admin</h2>
         </div>
-        <button onClick={reset} className="rounded-full bg-cream/10 px-4 py-2 text-sm">New</button>
+        <button onClick={onBack} className="shrink-0 rounded-full bg-gold px-4 py-2 text-sm font-semibold text-night">Back to Luna</button>
       </div>
 
-      <div className="rounded-3xl border border-cream/15 bg-white/10 p-5 shadow-glow backdrop-blur-xl">
-        <div className="grid gap-3">
-          <DropUpload
-            title="MP3 audio"
-            body="Drag an MP3 here or tap to upload"
-            icon={<Upload />}
-            accept="audio/mpeg,audio/mp3,.mp3"
-            progress={audioProgress}
-            onFile={(file) => upload('audio', file)}
-          />
-          <DropUpload
-            title="Cover image"
-            body="Drag JPG, PNG, or WebP cover here"
-            icon={<Image />}
-            accept="image/jpeg,image/png,image/webp"
-            progress={coverProgress}
-            onFile={(file) => upload('cover', file)}
-          />
-        </div>
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+        {adminTabs.map((tab) => (
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`shrink-0 rounded-full px-4 py-2 text-sm ${activeTab === tab.id ? 'bg-gold text-night' : 'bg-cream/10 text-cream'}`}>
+            {tab.label}
+          </button>
+        ))}
+      </div>
 
-        <div className="mt-4 grid gap-3">
-          <AdminInput label="Title" value={form.title} onChange={(value) => setForm({ ...form, title: value })} />
-          <AdminInput label="Subtitle" value={form.subtitle} onChange={(value) => setForm({ ...form, subtitle: value })} />
-          <label className="text-sm text-lavender">
-            Description
-            <textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} className="mt-2 min-h-28 w-full rounded-2xl bg-night/70 px-4 py-3 text-sm text-cream outline-none" />
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="text-sm text-lavender">
-              Category
-              <select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} className="mt-2 w-full rounded-2xl bg-night px-4 py-3 text-sm text-cream">
-                {categories.map((item) => <option key={item.slug} value={item.slug}>{item.name}</option>)}
-              </select>
-            </label>
-            <label className="text-sm text-lavender">
-              Mood
-              <select value={form.mood} onChange={(event) => setForm({ ...form, mood: event.target.value as MeditationPayload['mood'] })} className="mt-2 w-full rounded-2xl bg-night px-4 py-3 text-sm text-cream">
-                {moods.map((item) => <option key={item} value={item}>{item}</option>)}
-              </select>
-            </label>
+      {!dashboard && activeTab !== 'meditations' && <EmptyState title="Loading dashboard" body="Reading Luna analytics from Supabase." />}
+
+      {dashboard && activeTab === 'dashboard' && (
+        <div className="space-y-4">
+          <AdminMetricGrid>
+            <Stat label="Total users" value={String(dashboard.users.totalRegistered)} />
+            <Stat label="New today" value={String(dashboard.users.newToday)} />
+            <Stat label="Active today" value={String(dashboard.users.activeToday)} />
+            <Stat label="Premium users" value={String(dashboard.subscriptions.activePremiumUsers)} />
+            <Stat label="Total Stars" value={String(dashboard.revenue.totalStars)} />
+            <Stat label="Listening minutes" value={String(dashboard.meditations.totalListeningMinutes)} />
+          </AdminMetricGrid>
+          <AdminSection title="Subscriptions">
+            <AdminMetricGrid>
+              <Stat label="Free" value={String(dashboard.subscriptions.freeUsers)} />
+              <Stat label="Monthly" value={String(dashboard.subscriptions.monthlySubscribers)} />
+              <Stat label="Lifetime" value={String(dashboard.subscriptions.lifetimeSubscribers)} />
+              <Stat label="Expired" value={String(dashboard.subscriptions.expiredPremiumUsers)} />
+            </AdminMetricGrid>
+          </AdminSection>
+          <AdminSection title="Meditations">
+            <AdminMetricGrid>
+              <Stat label="Total" value={String(dashboard.meditations.total)} />
+              <Stat label="Published" value={String(dashboard.meditations.published)} />
+              <Stat label="Drafts" value={String(dashboard.meditations.drafts)} />
+              <Stat label="Avg completion" value={`${dashboard.meditations.averageCompletionRate}%`} />
+            </AdminMetricGrid>
+            <p className="mt-3 rounded-2xl bg-cream/10 p-3 text-sm text-cream/75">
+              Most played: {dashboard.meditations.mostPlayed?.title ?? 'No plays yet'}
+            </p>
+          </AdminSection>
+          <AdminSection title="Charts">
+            <MiniChart title="Registrations" points={dashboard.charts.registrationsByDay} />
+            <MiniChart title="Revenue" points={dashboard.charts.revenueByDay} suffix=" Stars" />
+            <MiniChart title="Listening minutes" points={dashboard.charts.listeningMinutesByDay} />
+          </AdminSection>
+          <AdminPeopleList title="Top listeners" users={dashboard.topUsers.topListeners} metric={(user) => `${user.totalMinutesListened} min`} />
+          <AdminPeopleList title="Longest streaks" users={dashboard.topUsers.longestStreaks} metric={(user) => `${user.longestStreak} days`} />
+          <RecentActivity dashboard={dashboard} />
+        </div>
+      )}
+
+      {activeTab === 'meditations' && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-semibold">Meditation CMS</h3>
+            <button onClick={reset} className="rounded-full bg-cream/10 px-4 py-2 text-sm">New</button>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="text-sm text-lavender">
-              Duration seconds
-              <input type="number" min={1} value={form.duration} onChange={(event) => setForm({ ...form, duration: Number(event.target.value) })} className="mt-2 w-full rounded-2xl bg-night/70 px-4 py-3 text-sm text-cream outline-none" />
-            </label>
-            <div className="grid gap-2 pt-7">
-              <Toggle label={form.premium ? 'Premium' : 'Free'} checked={form.premium} onChange={(checked) => setForm({ ...form, premium: checked })} />
-              <Toggle label={form.published ? 'Published' : 'Draft'} checked={form.published} onChange={(checked) => setForm({ ...form, published: checked })} />
+
+          <div className="rounded-3xl border border-cream/15 bg-white/10 p-5 shadow-glow backdrop-blur-xl">
+            <div className="grid gap-3">
+              <DropUpload title="MP3 audio" body="Drag an MP3 here or tap to upload" icon={<Upload />} accept="audio/mpeg,audio/mp3,.mp3" progress={audioProgress} onFile={(file) => upload('audio', file)} />
+              <DropUpload title="Cover image" body="Drag JPG, PNG, or WebP cover here" icon={<Image />} accept="image/jpeg,image/png,image/webp" progress={coverProgress} onFile={(file) => upload('cover', file)} />
             </div>
-          </div>
-        </div>
 
-        <AdminPreview form={form} />
-
-        {error && <p className="mt-4 rounded-2xl bg-red-500/15 p-3 text-sm text-red-100">{error}</p>}
-        {message && <p className="mt-4 rounded-2xl bg-lavender/15 p-3 text-sm text-cream">{message}</p>}
-
-        <button onClick={save} className="mt-4 w-full rounded-2xl bg-gold px-4 py-3 font-semibold text-night">
-          <CheckCircle className="mr-2 inline" size={16} />{editingId ? 'Save changes' : 'Create meditation'}
-        </button>
-      </div>
-
-      <div className="space-y-3">
-        <h3 className="text-lg font-semibold">Meditations</h3>
-        {meditations.length ? meditations.map((meditation) => (
-          <article key={meditation.id} className="rounded-3xl border border-cream/15 bg-white/10 p-3 backdrop-blur-xl">
-            <div className="flex gap-3">
-              <img src={meditation.cover_image} alt="" className="h-20 w-20 rounded-2xl object-cover" />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h4 className="truncate font-semibold">{meditation.title}</h4>
-                  <span className={`rounded-full px-2 py-1 text-[10px] ${meditation.published ? 'bg-gold text-night' : 'bg-cream/10 text-cream/60'}`}>
-                    {meditation.published ? 'Published' : 'Draft'}
-                  </span>
+            <div className="mt-4 grid gap-3">
+              <AdminInput label="Title" value={form.title} onChange={(value) => setForm({ ...form, title: value })} />
+              <AdminInput label="Subtitle" value={form.subtitle} onChange={(value) => setForm({ ...form, subtitle: value })} />
+              <label className="text-sm text-lavender">
+                Description
+                <textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} className="mt-2 min-h-28 w-full rounded-2xl bg-night/70 px-4 py-3 text-sm text-cream outline-none" />
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="text-sm text-lavender">
+                  Category
+                  <select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} className="mt-2 w-full rounded-2xl bg-night px-4 py-3 text-sm text-cream">
+                    {categories.map((item) => <option key={item.slug} value={item.slug}>{item.name}</option>)}
+                  </select>
+                </label>
+                <label className="text-sm text-lavender">
+                  Mood
+                  <select value={form.mood} onChange={(event) => setForm({ ...form, mood: event.target.value as MeditationPayload['mood'] })} className="mt-2 w-full rounded-2xl bg-night px-4 py-3 text-sm text-cream">
+                    {moods.map((item) => <option key={item} value={item}>{item}</option>)}
+                  </select>
+                </label>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="text-sm text-lavender">
+                  Duration seconds
+                  <input type="number" min={1} value={form.duration} onChange={(event) => setForm({ ...form, duration: Number(event.target.value) })} className="mt-2 w-full rounded-2xl bg-night/70 px-4 py-3 text-sm text-cream outline-none" />
+                </label>
+                <div className="grid gap-2 pt-7">
+                  <Toggle label={form.premium ? 'Premium' : 'Free'} checked={form.premium} onChange={(checked) => setForm({ ...form, premium: checked })} />
+                  <Toggle label={form.published ? 'Published' : 'Draft'} checked={form.published} onChange={(checked) => setForm({ ...form, published: checked })} />
                 </div>
-                <p className="mt-1 line-clamp-1 text-xs text-lavender">{meditation.subtitle || meditation.category}</p>
-                <audio src={meditation.audio_file} controls className="mt-2 w-full" />
               </div>
             </div>
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              <button onClick={() => edit(meditation)} className="rounded-2xl bg-cream/10 px-3 py-2 text-sm"><Edit3 className="mr-1 inline" size={14} />Edit</button>
-              <button onClick={() => void togglePublished(meditation)} className="rounded-2xl bg-cream/10 px-3 py-2 text-sm">{meditation.published ? 'Unpublish' : 'Publish'}</button>
-              <button onClick={async () => { await deleteMeditation(meditation.id, initData); await onRefresh(); }} className="rounded-2xl bg-gold px-3 py-2 text-sm font-semibold text-night">Delete</button>
+
+            <AdminPreview form={form} />
+            {error && <p className="mt-4 rounded-2xl bg-red-500/15 p-3 text-sm text-red-100">{error}</p>}
+            {message && <p className="mt-4 rounded-2xl bg-lavender/15 p-3 text-sm text-cream">{message}</p>}
+            <button onClick={save} className="mt-4 w-full rounded-2xl bg-gold px-4 py-3 font-semibold text-night">
+              <CheckCircle className="mr-2 inline" size={16} />{editingId ? 'Save changes' : 'Create meditation'}
+            </button>
+          </div>
+
+          <div className="grid gap-3 rounded-3xl border border-cream/15 bg-white/10 p-4 backdrop-blur-xl">
+            <input value={meditationSearch} onChange={(event) => setMeditationSearch(event.target.value)} placeholder="Search meditations" className="rounded-2xl bg-night/70 px-4 py-3 text-sm text-cream outline-none placeholder:text-cream/40" />
+            <div className="grid grid-cols-2 gap-2">
+              <select value={publishedFilter} onChange={(event) => setPublishedFilter(event.target.value as typeof publishedFilter)} className="rounded-2xl bg-night px-4 py-3 text-sm text-cream">
+                <option value="all">All statuses</option>
+                <option value="published">Published</option>
+                <option value="draft">Draft</option>
+              </select>
+              <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="rounded-2xl bg-night px-4 py-3 text-sm text-cream">
+                <option value="all">All categories</option>
+                {categories.map((item) => <option key={item.slug} value={item.slug}>{item.name}</option>)}
+              </select>
             </div>
-          </article>
-        )) : <EmptyState title="No meditations" body="Upload audio and cover files, then create your first meditation." />}
+          </div>
+
+          <div className="space-y-3">
+            {filteredMeditations.length ? filteredMeditations.map((meditation) => {
+              const stats = dashboard?.meditations.items.find((item) => item.id === meditation.id);
+              return (
+                <article key={meditation.id} className="rounded-3xl border border-cream/15 bg-white/10 p-3 backdrop-blur-xl">
+                  <div className="flex gap-3">
+                    <img src={meditation.cover_image} alt="" className="h-20 w-20 rounded-2xl object-cover" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="truncate font-semibold">{meditation.title}</h4>
+                        <span className={`rounded-full px-2 py-1 text-[10px] ${meditation.published ? 'bg-gold text-night' : 'bg-cream/10 text-cream/60'}`}>{meditation.published ? 'Published' : 'Draft'}</span>
+                      </div>
+                      <p className="mt-1 line-clamp-1 text-xs text-lavender">{meditation.subtitle || meditation.category} · {new Date(meditation.created_at).toLocaleDateString()}</p>
+                      <p className="mt-1 text-xs text-cream/60">{meditation.play_count} plays · {stats?.completionRate ?? 0}% completion</p>
+                      <audio src={meditation.audio_file} controls className="mt-2 w-full" />
+                    </div>
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2">
+                    <button onClick={() => edit(meditation)} className="rounded-2xl bg-cream/10 px-3 py-2 text-sm"><Edit3 className="mr-1 inline" size={14} />Edit</button>
+                    <button onClick={() => void togglePublished(meditation)} className="rounded-2xl bg-cream/10 px-3 py-2 text-sm">{meditation.published ? 'Unpublish' : 'Publish'}</button>
+                    <button onClick={async () => { await deleteMeditation(meditation.id, initData); await onRefresh(); }} className="rounded-2xl bg-gold px-3 py-2 text-sm font-semibold text-night">Delete</button>
+                  </div>
+                </article>
+              );
+            }) : <EmptyState title="No meditations" body="Upload audio and cover files, then create your first meditation." />}
+          </div>
+        </div>
+      )}
+
+      {dashboard && activeTab === 'users' && <UsersPanel users={filteredUsers} search={userSearch} selectedUser={selectedUser} onSearch={setUserSearch} onSelect={setSelectedUser} onAction={updateUserAccess} />}
+      {dashboard && activeTab === 'subscriptions' && <SubscriptionsPanel dashboard={dashboard} onAction={updateUserAccess} />}
+      {dashboard && activeTab === 'revenue' && <RevenuePanel dashboard={dashboard} />}
+      {dashboard && activeTab === 'analytics' && <AnalyticsPanel dashboard={dashboard} />}
+      {dashboard && activeTab === 'settings' && <SettingsPanel />}
+
+      <button onClick={onBack} className="w-full rounded-2xl bg-gold px-5 py-4 font-semibold text-night">Back to Luna</button>
+    </div>
+  );
+}
+
+function AdminMetricGrid({ children }: { children: React.ReactNode }) {
+  return <div className="grid grid-cols-2 gap-3">{children}</div>;
+}
+
+function AdminSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-3xl border border-cream/15 bg-white/10 p-4 backdrop-blur-xl">
+      <h3 className="mb-3 text-lg font-semibold">{title}</h3>
+      <div className="space-y-3">{children}</div>
+    </section>
+  );
+}
+
+function userDisplayName(user: Pick<AdminUser, 'telegram_id' | 'username' | 'first_name' | 'last_name'>) {
+  const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ');
+  return fullName || (user.username ? `@${user.username}` : String(user.telegram_id));
+}
+
+function premiumLabel(status: AdminUser['premiumStatus']) {
+  if (status === 'monthly') return 'Monthly';
+  if (status === 'lifetime') return 'Lifetime';
+  if (status === 'expired') return 'Expired';
+  return 'Free';
+}
+
+function exportUsersCsv(users: AdminUser[]) {
+  const header = ['telegram_id', 'username', 'first_name', 'premium_status', 'joined_at', 'minutes_listened', 'completed_meditations', 'current_streak'];
+  const rows = users.map((user) => [
+    user.telegram_id,
+    user.username ?? '',
+    user.first_name ?? '',
+    user.premiumStatus,
+    user.created_at,
+    user.totalMinutesListened,
+    user.completedMeditations,
+    user.currentStreak
+  ]);
+  const csv = [header, ...rows].map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `luna-users-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function MiniChart({ title, points, suffix = '' }: { title: string; points: Array<{ date: string; value: number }>; suffix?: string }) {
+  const max = Math.max(1, ...points.map((point) => point.value));
+
+  return (
+    <div className="rounded-2xl bg-night/50 p-3">
+      <div className="mb-3 flex items-center justify-between text-sm">
+        <span className="font-semibold">{title}</span>
+        <span className="text-lavender">{points.reduce((sum, point) => sum + point.value, 0)}{suffix}</span>
       </div>
+      <div className="flex h-24 items-end gap-1">
+        {points.map((point) => (
+          <div key={point.date} className="flex flex-1 flex-col items-center gap-1">
+            <div className="w-full rounded-t bg-gold/80" style={{ height: `${Math.max(4, (point.value / max) * 88)}px` }} title={`${point.date}: ${point.value}`} />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AdminPeopleList({ title, users, metric }: { title: string; users: AdminUser[]; metric: (user: AdminUser) => string }) {
+  return (
+    <AdminSection title={title}>
+      {users.length ? users.map((user) => (
+        <div key={user.telegram_id} className="flex items-center justify-between rounded-2xl bg-cream/10 p-3 text-sm">
+          <span>{userDisplayName(user)}</span>
+          <span className="text-gold">{metric(user)}</span>
+        </div>
+      )) : <p className="text-sm text-cream/60">No user activity yet.</p>}
+    </AdminSection>
+  );
+}
+
+function RecentActivity({ dashboard }: { dashboard: AdminDashboardData }) {
+  return (
+    <AdminSection title="Recent activity">
+      {dashboard.recentActivity.latestRegistrations.slice(0, 4).map((user) => (
+        <p key={`registration-${user.telegram_id}`} className="rounded-2xl bg-cream/10 p-3 text-sm">
+          New user: {userDisplayName(user)} · {new Date(user.created_at).toLocaleDateString()}
+        </p>
+      ))}
+      {dashboard.recentActivity.latestPurchases.slice(0, 4).map((purchase) => (
+        <p key={`purchase-${purchase.telegram_id}-${purchase.created_at}`} className="rounded-2xl bg-cream/10 p-3 text-sm">
+          Purchase: {purchase.plan} · {purchase.amount_stars} Stars · {new Date(purchase.created_at).toLocaleDateString()}
+        </p>
+      ))}
+      {dashboard.recentActivity.latestMeditationPlays.slice(0, 4).map((play) => (
+        <p key={`play-${play.telegram_id}-${play.last_played}`} className="rounded-2xl bg-cream/10 p-3 text-sm">
+          Play: {play.meditation?.title ?? 'Meditation'} · {Math.round(Number(play.completion_percent ?? 0))}% completion
+        </p>
+      ))}
+      {dashboard.recentActivity.latestAdminUploads.slice(0, 4).map((meditation) => (
+        <p key={`upload-${meditation.id}`} className="rounded-2xl bg-cream/10 p-3 text-sm">
+          Upload: {meditation.title} · {new Date(meditation.created_at).toLocaleDateString()}
+        </p>
+      ))}
+    </AdminSection>
+  );
+}
+
+function UsersPanel({
+  users,
+  search,
+  selectedUser,
+  onSearch,
+  onSelect,
+  onAction
+}: {
+  users: AdminUser[];
+  search: string;
+  selectedUser: AdminUser | null;
+  onSearch: (value: string) => void;
+  onSelect: (user: AdminUser) => void;
+  onAction: (telegramId: number, action: 'grant_monthly' | 'grant_lifetime' | 'extend_monthly' | 'remove_premium') => Promise<void>;
+}) {
+  return (
+    <div className="space-y-4">
+      <div className="rounded-3xl border border-cream/15 bg-white/10 p-4 backdrop-blur-xl">
+        <input value={search} onChange={(event) => onSearch(event.target.value)} placeholder="Search Telegram ID, username, or first name" className="w-full rounded-2xl bg-night/70 px-4 py-3 text-sm text-cream outline-none placeholder:text-cream/40" />
+        <button onClick={() => exportUsersCsv(users)} className="mt-3 w-full rounded-2xl bg-gold px-4 py-3 text-sm font-semibold text-night">Export users to CSV</button>
+      </div>
+      {selectedUser && (
+        <AdminSection title="User profile">
+          <AdminMetricGrid>
+            <Stat label="Telegram ID" value={String(selectedUser.telegram_id)} />
+            <Stat label="Premium" value={premiumLabel(selectedUser.premiumStatus)} />
+            <Stat label="Minutes" value={String(selectedUser.totalMinutesListened)} />
+            <Stat label="Completed" value={String(selectedUser.completedMeditations)} />
+            <Stat label="Current streak" value={`${selectedUser.currentStreak} days`} />
+            <Stat label="Total Stars" value={String(selectedUser.totalStars)} />
+          </AdminMetricGrid>
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => void onAction(selectedUser.telegram_id, 'grant_monthly')} className="rounded-2xl bg-cream/10 px-3 py-2 text-sm">Grant Monthly</button>
+            <button onClick={() => void onAction(selectedUser.telegram_id, 'grant_lifetime')} className="rounded-2xl bg-cream/10 px-3 py-2 text-sm">Grant Lifetime</button>
+            <button onClick={() => void onAction(selectedUser.telegram_id, 'extend_monthly')} className="rounded-2xl bg-cream/10 px-3 py-2 text-sm">Extend 30 days</button>
+            <button onClick={() => void onAction(selectedUser.telegram_id, 'remove_premium')} className="rounded-2xl bg-gold px-3 py-2 text-sm font-semibold text-night">Remove Premium</button>
+          </div>
+        </AdminSection>
+      )}
+      <AdminSection title="Users">
+        {users.length ? users.map((user) => (
+          <button key={user.telegram_id} onClick={() => onSelect(user)} className="w-full rounded-2xl bg-cream/10 p-3 text-left text-sm">
+            <span className="block font-semibold">{userDisplayName(user)}</span>
+            <span className="text-lavender">{user.telegram_id} · {premiumLabel(user.premiumStatus)} · joined {new Date(user.created_at).toLocaleDateString()}</span>
+            <span className="mt-1 block text-cream/60">{user.totalMinutesListened} min · {user.completedMeditations} completed · {user.currentStreak} day streak</span>
+          </button>
+        )) : <p className="text-sm text-cream/60">No users found.</p>}
+      </AdminSection>
+    </div>
+  );
+}
+
+function SubscriptionsPanel({ dashboard, onAction }: {
+  dashboard: AdminDashboardData;
+  onAction: (telegramId: number, action: 'grant_monthly' | 'grant_lifetime' | 'extend_monthly' | 'remove_premium') => Promise<void>;
+}) {
+  return (
+    <div className="space-y-4">
+      <AdminMetricGrid>
+        <Stat label="Active monthly" value={String(dashboard.subscriptions.monthlySubscribers)} />
+        <Stat label="Lifetime" value={String(dashboard.subscriptions.lifetimeSubscribers)} />
+        <Stat label="Expired" value={String(dashboard.subscriptions.expiredPremiumUsers)} />
+        <Stat label="Active premium" value={String(dashboard.subscriptions.activePremiumUsers)} />
+      </AdminMetricGrid>
+      <AdminSection title="Subscribers">
+        {dashboard.subscriptionsList.map((user) => (
+          <div key={user.telegram_id} className="rounded-2xl bg-cream/10 p-3 text-sm">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-semibold">{userDisplayName(user)}</span>
+              <span className="text-gold">{premiumLabel(user.premiumStatus)}</span>
+            </div>
+            <p className="mt-1 text-lavender">Expiry: {user.lifetime_access ? 'Lifetime' : user.active_until ? new Date(user.active_until).toLocaleDateString() : 'Not active'}</p>
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              <button onClick={() => void onAction(user.telegram_id, 'extend_monthly')} className="rounded-2xl bg-cream/10 px-2 py-2">Extend</button>
+              <button onClick={() => void onAction(user.telegram_id, 'grant_lifetime')} className="rounded-2xl bg-cream/10 px-2 py-2">Lifetime</button>
+              <button onClick={() => void onAction(user.telegram_id, 'remove_premium')} className="rounded-2xl bg-gold px-2 py-2 font-semibold text-night">Cancel</button>
+            </div>
+          </div>
+        ))}
+      </AdminSection>
+      <AdminSection title="Purchase history">
+        {dashboard.purchaseHistory.map((purchase) => (
+          <p key={`${purchase.telegram_id}-${purchase.created_at}`} className="rounded-2xl bg-cream/10 p-3 text-sm">
+            {purchase.plan} · {purchase.amount_stars} Stars · {new Date(purchase.created_at).toLocaleDateString()} · expiry {purchase.expiryDate ? new Date(purchase.expiryDate).toLocaleDateString() : 'Lifetime'}
+          </p>
+        ))}
+      </AdminSection>
+    </div>
+  );
+}
+
+function RevenuePanel({ dashboard }: { dashboard: AdminDashboardData }) {
+  return (
+    <div className="space-y-4">
+      <AdminMetricGrid>
+        <Stat label="Total Stars" value={String(dashboard.revenue.totalStars)} />
+        <Stat label="This month" value={String(dashboard.revenue.monthStars)} />
+        <Stat label="Today" value={String(dashboard.revenue.todayStars)} />
+        <Stat label="ARPPU" value={String(dashboard.revenue.averageRevenuePerPayingUser)} />
+        <Stat label="Conversion" value={`${dashboard.revenue.conversionRate}%`} />
+        <Stat label="Monthly plan" value={String(dashboard.revenue.revenueByPlan.monthly)} />
+      </AdminMetricGrid>
+      <AdminSection title="Revenue by day">
+        <MiniChart title="Daily Stars" points={dashboard.charts.revenueByDay} suffix=" Stars" />
+      </AdminSection>
+      <AdminSection title="Latest purchases">
+        {dashboard.revenue.latestPurchases.map((purchase) => (
+          <p key={`${purchase.telegram_id}-${purchase.created_at}`} className="rounded-2xl bg-cream/10 p-3 text-sm">
+            {purchase.user?.first_name ?? purchase.telegram_id} · {purchase.plan} · {purchase.amount_stars} Stars
+          </p>
+        ))}
+      </AdminSection>
+    </div>
+  );
+}
+
+function AnalyticsPanel({ dashboard }: { dashboard: AdminDashboardData }) {
+  return (
+    <div className="space-y-4">
+      <AdminSection title="Growth">
+        <MiniChart title="Registrations by day" points={dashboard.charts.registrationsByDay} />
+        <MiniChart title="Purchases by day" points={dashboard.charts.purchasesByDay} />
+      </AdminSection>
+      <AdminSection title="Engagement">
+        <MiniChart title="Listening minutes by day" points={dashboard.charts.listeningMinutesByDay} />
+        <MiniChart title="Meditation plays by day" points={dashboard.charts.meditationPlaysByDay} />
+      </AdminSection>
+      <AdminPeopleList title="Most completed meditations" users={dashboard.topUsers.mostCompleted} metric={(user) => `${user.completedMeditations} completed`} />
+    </div>
+  );
+}
+
+function SettingsPanel() {
+  return (
+    <div className="space-y-4">
+      <AdminSection title="Settings">
+        <p className="rounded-2xl bg-cream/10 p-3 text-sm text-cream/75">Monthly Access: {premiumPrices.monthly} Telegram Stars</p>
+        <p className="rounded-2xl bg-cream/10 p-3 text-sm text-cream/75">Lifetime Access: {premiumPrices.lifetime} Telegram Stars</p>
+        <p className="rounded-2xl bg-cream/10 p-3 text-sm text-cream/75">Uploads happen only when an admin explicitly selects MP3 or cover files.</p>
+        <p className="rounded-2xl bg-cream/10 p-3 text-sm text-cream/75">Backend debug endpoint is protected by Telegram admin authentication.</p>
+      </AdminSection>
     </div>
   );
 }

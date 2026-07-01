@@ -231,6 +231,129 @@ export async function getAdminDebug(initData?: string) {
   return request<AdminDebugInfo>('/api/debug/admin', undefined, initData);
 }
 
+export type AdminUser = {
+  telegram_id: number;
+  username?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  created_at: string;
+  last_seen_at: string;
+  active_until?: string | null;
+  lifetime_access: boolean;
+  premiumStatus: 'free' | 'monthly' | 'lifetime' | 'expired';
+  totalMinutesListened: number;
+  completedMeditations: number;
+  currentStreak: number;
+  longestStreak: number;
+  totalStars: number;
+};
+
+export type AdminPayment = {
+  telegram_id: number;
+  plan: 'monthly' | 'lifetime';
+  amount_stars: number;
+  status: string;
+  created_at: string;
+  expiryDate?: string | null;
+  user?: {
+    username?: string | null;
+    first_name?: string | null;
+  } | null;
+};
+
+export type AdminMeditationStat = {
+  id: string;
+  title: string;
+  category: string;
+  premium: boolean;
+  published: boolean;
+  play_count: number;
+  duration: number;
+  created_at: string;
+  updated_at: string;
+  completionRate: number;
+  listeningMinutes: number;
+};
+
+export type AdminChartPoint = {
+  date: string;
+  value: number;
+};
+
+export type AdminDashboardData = {
+  users: {
+    totalRegistered: number;
+    newToday: number;
+    newThisWeek: number;
+    activeToday: number;
+    activeThisMonth: number;
+  };
+  subscriptions: {
+    freeUsers: number;
+    monthlySubscribers: number;
+    lifetimeSubscribers: number;
+    activePremiumUsers: number;
+    expiredPremiumUsers: number;
+  };
+  revenue: {
+    totalStars: number;
+    todayStars: number;
+    monthStars: number;
+    revenueByPlan: { monthly: number; lifetime: number };
+    averageRevenuePerPayingUser: number;
+    conversionRate: number;
+    latestPurchases: AdminPayment[];
+  };
+  meditations: {
+    total: number;
+    published: number;
+    drafts: number;
+    mostPlayed: AdminMeditationStat | null;
+    totalListeningMinutes: number;
+    averageCompletionRate: number;
+    items: AdminMeditationStat[];
+  };
+  topUsers: {
+    topListeners: AdminUser[];
+    longestStreaks: AdminUser[];
+    mostCompleted: AdminUser[];
+  };
+  recentActivity: {
+    latestRegistrations: AdminUser[];
+    latestPurchases: AdminPayment[];
+    latestMeditationPlays: Array<{
+      telegram_id: number;
+      last_played: string;
+      play_count: number;
+      completion_percent: number;
+      user?: { username?: string | null; first_name?: string | null } | null;
+      meditation?: { title?: string | null } | null;
+    }>;
+    latestAdminUploads: AdminMeditationStat[];
+  };
+  charts: {
+    registrationsByDay: AdminChartPoint[];
+    purchasesByDay: AdminChartPoint[];
+    revenueByDay: AdminChartPoint[];
+    listeningMinutesByDay: AdminChartPoint[];
+    meditationPlaysByDay: AdminChartPoint[];
+  };
+  usersList: AdminUser[];
+  subscriptionsList: AdminUser[];
+  purchaseHistory: AdminPayment[];
+};
+
+export async function getAdminDashboard(initData?: string) {
+  return request<AdminDashboardData>('/api/admin/dashboard', undefined, initData);
+}
+
+export async function updateAdminUserAccess(telegramId: number, action: 'grant_monthly' | 'grant_lifetime' | 'extend_monthly' | 'remove_premium', initData?: string) {
+  return request<{ user: unknown }>(`/api/admin/users/${telegramId}/access`, {
+    method: 'POST',
+    body: JSON.stringify({ action })
+  }, initData);
+}
+
 export async function getAdminMeditations(initData?: string): Promise<Meditation[]> {
   const response = await request<{ meditations: Meditation[] }>('/api/admin/meditations', undefined, initData);
   return response.meditations;

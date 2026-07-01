@@ -1,13 +1,14 @@
 import crypto from 'node:crypto';
 import cors from 'cors';
 import express from 'express';
-import { requireTelegramWebApp, validateTelegramInitData, type AuthenticatedRequest } from './auth.js';
+import { requireTelegramWebApp, type AuthenticatedRequest } from './auth.js';
 import { env } from './config.js';
 import { bot, configureTelegramBot, createStarsInvoiceLink, sendStarsInvoice } from './bot.js';
 import {
   createMeditation,
   deleteCategory,
   deleteMeditation,
+  getAdminDashboard,
   getCategories,
   getFavorites,
   getHistory,
@@ -19,6 +20,7 @@ import {
   markPracticeComplete,
   supabase,
   updateMeditation,
+  updateAdminUserAccess,
   upsertCategory,
   upsertFavorite,
   upsertHistory,
@@ -127,52 +129,19 @@ app.get('/health', (_req, res) => {
   res.json({ ok: true, service: 'luna-backend' });
 });
 
-app.get('/api/debug/admin', (req, res) => {
-  const initData = req.header('x-telegram-init-data');
+app.get('/api/debug/admin', requireTelegramWebApp, (req, res) => {
+  if (!assertAdmin(req, res)) return;
+
+  const authReq = req as AuthenticatedRequest;
   const adminTelegramId = env.ADMIN_TELEGRAM_ID ?? null;
 
-  if (!adminTelegramId) {
-    res.json({
-      telegramUserId: null,
-      adminTelegramId,
-      isAdmin: false,
-      authenticationStatus: 'admin_env_missing',
-      authenticationError: 'ADMIN_TELEGRAM_ID is missing.'
-    });
-    return;
-  }
-
-  if (!initData) {
-    res.json({
-      telegramUserId: null,
-      adminTelegramId,
-      isAdmin: false,
-      authenticationStatus: 'missing_init_data',
-      authenticationError: 'Telegram WebApp initData is missing.'
-    });
-    return;
-  }
-
-  try {
-    const telegramUser = validateTelegramInitData(initData);
-    const isAdmin = telegramUser.telegram_id === adminTelegramId;
-
-    res.json({
-      telegramUserId: telegramUser.telegram_id,
-      adminTelegramId,
-      isAdmin,
-      authenticationStatus: isAdmin ? 'authenticated_admin' : 'authenticated_not_admin',
-      authenticationError: isAdmin ? null : 'Authenticated Telegram user ID does not match ADMIN_TELEGRAM_ID.'
-    });
-  } catch (error) {
-    res.json({
-      telegramUserId: null,
-      adminTelegramId,
-      isAdmin: false,
-      authenticationStatus: 'invalid_init_data',
-      authenticationError: error instanceof Error ? error.message : 'Telegram WebApp initData is invalid.'
-    });
-  }
+  res.json({
+    telegramUserId: authReq.telegramUser.telegram_id,
+    adminTelegramId,
+    isAdmin: true,
+    authenticationStatus: 'authenticated_admin',
+    authenticationError: null
+  });
 });
 
 app.post('/api/users/sync', requireTelegramWebApp, async (req, res, next) => {
@@ -330,6 +299,38 @@ app.get('/api/admin/me', requireTelegramWebApp, async (req, res, next) => {
   try {
     if (!assertAdmin(req, res)) return;
     res.json({ admin: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/admin/dashboard', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    if (!assertAdmin(req, res)) return;
+    res.json(await getAdminDashboard());
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/admin/users/:telegramId/access', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    if (!assertAdmin(req, res)) return;
+
+    const telegramId = Number(req.params.telegramId);
+    const action = req.body?.action as 'grant_monthly' | 'grant_lifetime' | 'extend_monthly' | 'remove_premium' | undefined;
+
+    if (!Number.isFinite(telegramId)) {
+      res.status(400).json({ error: 'Valid Telegram user ID is required.' });
+      return;
+    }
+
+    if (!action || !['grant_monthly', 'grant_lifetime', 'extend_monthly', 'remove_premium'].includes(action)) {
+      res.status(400).json({ error: 'Valid premium action is required.' });
+      return;
+    }
+
+    res.json({ user: await updateAdminUserAccess(telegramId, action) });
   } catch (error) {
     next(error);
   }
