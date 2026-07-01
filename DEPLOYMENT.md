@@ -40,6 +40,7 @@ SUPABASE_SERVICE_ROLE_KEY=
 ADMIN_TELEGRAM_ID=
 TELEGRAM_AUTH_MAX_AGE_SECONDS=86400
 ALLOW_UNVERIFIED_TELEGRAM_WEBAPP=false
+RUN_MIGRATIONS=true
 PORT=4000
 ```
 
@@ -54,6 +55,7 @@ Notes:
 - `ADMIN_TELEGRAM_ID` is your numeric Telegram user ID.
 - `TELEGRAM_AUTH_MAX_AGE_SECONDS` controls how long Telegram WebApp auth data is accepted.
 - Keep `ALLOW_UNVERIFIED_TELEGRAM_WEBAPP=false` in production.
+- Keep `RUN_MIGRATIONS=true` so the backend applies Luna SQL migrations on startup.
 
 ### Frontend Mini App
 

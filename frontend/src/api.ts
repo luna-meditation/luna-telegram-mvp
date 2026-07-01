@@ -1,5 +1,3 @@
-import { samplePractices, type Practice } from './data/practices';
-
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 export type AccessState = {
@@ -11,6 +9,40 @@ export type AccessState = {
   };
 };
 
+export type Category = {
+  id: string;
+  name: string;
+  slug: string;
+  sort_order: number;
+};
+
+export type Meditation = {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  duration: number;
+  cover_image: string;
+  audio_file: string;
+  premium: boolean;
+  mood: 'Calm' | 'Stressed' | 'Focused' | 'Tired' | 'Anxious';
+  play_count: number;
+  created_at: string;
+  favorite?: boolean;
+  history?: PlaybackHistory | null;
+};
+
+export type PlaybackHistory = {
+  id: string;
+  meditation_id: string;
+  last_played: string;
+  play_count: number;
+  completion_percent: number;
+  last_position: number;
+  completed: boolean;
+  meditation?: Meditation;
+};
+
 export type ProfileStats = {
   user?: {
     first_name?: string;
@@ -20,7 +52,23 @@ export type ProfileStats = {
   };
   completed: number;
   dayStreak: number;
+  currentStreak: number;
+  longestStreak: number;
+  minutesListened: number;
+  purchasedPlan: string;
   calmScore: number;
+  rewards: Record<7 | 14 | 30 | 100, boolean>;
+};
+
+export type MeditationPayload = {
+  title: string;
+  description: string;
+  category: string;
+  duration: number;
+  cover_image: string;
+  audio_file: string;
+  premium: boolean;
+  mood: Meditation['mood'];
 };
 
 function telegramHeaders(initData?: string) {
@@ -35,7 +83,7 @@ function telegramHeaders(initData?: string) {
 
 async function request<T>(path: string, options?: RequestInit, initData?: string): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...telegramHeaders(initData) },
+    headers: { 'Content-Type': 'application/json', ...telegramHeaders(initData), ...options?.headers },
     ...options
   });
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
@@ -59,13 +107,43 @@ export async function getAccess(initData?: string): Promise<AccessState> {
   return request('/api/access/me', undefined, initData);
 }
 
-export async function getPractices(): Promise<Practice[]> {
-  try {
-    const response = await request<{ practices: Practice[] }>('/api/practices');
-    return response.practices.length ? response.practices : samplePractices;
-  } catch {
-    return samplePractices;
-  }
+export async function getCategories(): Promise<Category[]> {
+  const response = await request<{ categories: Category[] }>('/api/categories');
+  return response.categories;
+}
+
+export async function getMeditations(initData?: string): Promise<Meditation[]> {
+  const response = await request<{ meditations: Meditation[] }>('/api/meditations', undefined, initData);
+  return response.meditations;
+}
+
+export async function getFavorites(initData?: string): Promise<Meditation[]> {
+  const response = await request<{ favorites: Meditation[] }>('/api/favorites', undefined, initData);
+  return response.favorites;
+}
+
+export async function setFavorite(meditationId: string, favorite: boolean, initData?: string) {
+  return request<{ favorite: boolean }>(`/api/favorites/${meditationId}`, {
+    method: 'POST',
+    body: JSON.stringify({ favorite })
+  }, initData);
+}
+
+export async function getHistory(initData?: string): Promise<PlaybackHistory[]> {
+  const response = await request<{ history: PlaybackHistory[] }>('/api/history', undefined, initData);
+  return response.history;
+}
+
+export async function saveHistory(input: {
+  meditation_id: string;
+  last_position: number;
+  duration: number;
+  completed?: boolean;
+}, initData?: string) {
+  return request('/api/history', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  }, initData);
 }
 
 export async function createInvoiceLink(plan: 'monthly' | 'lifetime', initData?: string) {
@@ -88,4 +166,43 @@ export async function completePractice(input: {
 
 export async function getProfile(initData?: string): Promise<ProfileStats> {
   return request('/api/profile/me', undefined, initData);
+}
+
+export async function uploadAdminAsset(kind: 'audio' | 'cover', file: File, initData?: string) {
+  const response = await fetch(`${API_URL}/api/admin/storage/${kind}`, {
+    method: 'POST',
+    headers: {
+      'content-type': file.type,
+      'x-file-name': file.name,
+      ...telegramHeaders(initData)
+    },
+    body: file
+  });
+  if (!response.ok) throw new Error(`Upload failed: ${response.status}`);
+  return response.json() as Promise<{ path: string; publicUrl: string }>;
+}
+
+export async function createMeditation(input: MeditationPayload, initData?: string) {
+  return request<{ meditation: Meditation }>('/api/admin/meditations', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  }, initData);
+}
+
+export async function updateMeditation(id: string, input: Partial<MeditationPayload>, initData?: string) {
+  return request<{ meditation: Meditation }>(`/api/admin/meditations/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(input)
+  }, initData);
+}
+
+export async function deleteMeditation(id: string, initData?: string) {
+  return request<{ ok: boolean }>(`/api/admin/meditations/${id}`, { method: 'DELETE' }, initData);
+}
+
+export async function saveCategory(input: { name: string; slug: string; sort_order?: number }, initData?: string) {
+  return request<{ category: Category }>('/api/admin/categories', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  }, initData);
 }

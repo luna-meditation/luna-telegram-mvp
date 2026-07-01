@@ -1,14 +1,92 @@
+import crypto from 'node:crypto';
 import cors from 'cors';
 import express from 'express';
 import { requireTelegramWebApp, type AuthenticatedRequest } from './auth.js';
 import { env } from './config.js';
 import { bot, configureTelegramBot, createStarsInvoiceLink, sendStarsInvoice } from './bot.js';
-import { getPractices, getProfileStats, getUserAccess, markPracticeComplete, upsertUser } from './db.js';
+import {
+  createMeditation,
+  deleteCategory,
+  deleteMeditation,
+  ensureStorageBucket,
+  getCategories,
+  getFavorites,
+  getHistory,
+  getMeditationById,
+  getMeditations,
+  getPractices,
+  getProfileStats,
+  getUserAccess,
+  markPracticeComplete,
+  supabase,
+  updateMeditation,
+  upsertCategory,
+  upsertFavorite,
+  upsertHistory,
+  upsertUser,
+  type MeditationInput
+} from './db.js';
+import { runMigrations } from './migrations.js';
 import { isPlanId } from './plans.js';
 
 const app = express();
 
 app.use(cors({ origin: env.FRONTEND_ORIGIN ?? true }));
+
+function assertAdmin(req: express.Request, res: express.Response) {
+  const authReq = req as AuthenticatedRequest;
+
+  if (!env.ADMIN_TELEGRAM_ID || authReq.telegramUser.telegram_id !== env.ADMIN_TELEGRAM_ID) {
+    res.status(403).json({ error: 'Admin access only.' });
+    return false;
+  }
+
+  return true;
+}
+
+app.post(
+  '/api/admin/storage/:kind',
+  requireTelegramWebApp,
+  express.raw({ type: ['audio/mpeg', 'audio/mp3', 'image/jpeg', 'image/png', 'image/webp'], limit: '100mb' }),
+  async (req, res, next) => {
+    try {
+      if (!assertAdmin(req, res)) return;
+
+      const kind = req.params.kind;
+      const contentType = req.header('content-type') ?? '';
+      const originalName = req.header('x-file-name') ?? `${kind}-${Date.now()}`;
+      const extension = originalName.split('.').pop() || (contentType.startsWith('audio/') ? 'mp3' : 'webp');
+
+      if (kind !== 'audio' && kind !== 'cover') {
+        res.status(400).json({ error: 'Storage kind must be audio or cover.' });
+        return;
+      }
+
+      if (kind === 'audio' && !contentType.includes('audio/')) {
+        res.status(400).json({ error: 'Audio uploads must be MP3 audio.' });
+        return;
+      }
+
+      if (kind === 'cover' && !contentType.startsWith('image/')) {
+        res.status(400).json({ error: 'Cover uploads must be images.' });
+        return;
+      }
+
+      const storagePath = `${kind}/${crypto.randomUUID()}.${extension}`;
+      const { error } = await supabase.storage
+        .from('meditations')
+        .upload(storagePath, req.body, { contentType, upsert: false });
+
+      if (error) throw error;
+
+      const { data } = supabase.storage.from('meditations').getPublicUrl(storagePath);
+      res.json({ path: storagePath, publicUrl: data.publicUrl });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 app.use(express.json());
 
 app.get('/health', (_req, res) => {
@@ -38,6 +116,59 @@ app.get('/api/access/me', requireTelegramWebApp, async (req, res, next) => {
 app.get('/api/practices', async (_req, res, next) => {
   try {
     res.json({ practices: await getPractices() });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/categories', async (_req, res, next) => {
+  try {
+    res.json({ categories: await getCategories() });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/meditations', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    res.json({ meditations: await getMeditations(authReq.telegramUser.telegram_id) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/favorites', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    res.json({ favorites: await getFavorites(authReq.telegramUser.telegram_id) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/favorites/:meditationId', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    res.json(await upsertFavorite(authReq.telegramUser.telegram_id, req.params.meditationId, Boolean(req.body.favorite)));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/history', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    res.json({ history: await getHistory(authReq.telegramUser.telegram_id) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/history', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    res.json(await upsertHistory(authReq.telegramUser.telegram_id, req.body));
   } catch (error) {
     next(error);
   }
@@ -104,6 +235,63 @@ app.get('/api/profile/me', requireTelegramWebApp, async (req, res, next) => {
   }
 });
 
+app.get('/api/admin/meditations', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    if (!assertAdmin(req, res)) return;
+    res.json({ meditations: await getMeditations() });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/admin/meditations', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    if (!assertAdmin(req, res)) return;
+    res.json({ meditation: await createMeditation(req.body as MeditationInput) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.patch('/api/admin/meditations/:id', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    if (!assertAdmin(req, res)) return;
+    res.json({ meditation: await updateMeditation(req.params.id, req.body) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete('/api/admin/meditations/:id', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    if (!assertAdmin(req, res)) return;
+    const meditation = await getMeditationById(req.params.id);
+    await deleteMeditation(req.params.id);
+    res.json({ ok: true, meditation });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/admin/categories', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    if (!assertAdmin(req, res)) return;
+    res.json({ category: await upsertCategory(req.body) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete('/api/admin/categories/:slug', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    if (!assertAdmin(req, res)) return;
+    await deleteCategory(req.params.slug);
+    res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.use(bot.webhookCallback('/telegram/webhook'));
 
 app.use((error: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -114,6 +302,8 @@ app.use((error: unknown, _req: express.Request, res: express.Response, next: exp
 
 app.listen(env.PORT, async () => {
   console.log(`Luna backend listening on ${env.PORT}`);
+  await runMigrations();
+  await ensureStorageBucket();
   await configureTelegramBot();
 
   if (env.WEBHOOK_URL) {

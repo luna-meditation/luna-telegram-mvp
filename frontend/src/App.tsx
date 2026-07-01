@@ -1,32 +1,47 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BookOpen,
   Crown,
+  Download,
+  Heart,
   Home,
   Lock,
-  Moon,
   Pause,
   Play,
+  Search,
+  SkipBack,
+  SkipForward,
   Sparkles,
-  User,
-  Wind
+  Upload,
+  User
 } from 'lucide-react';
 import {
-  completePractice,
   createInvoiceLink,
+  createMeditation,
+  deleteMeditation,
   getAccess,
-  getPractices,
+  getCategories,
+  getFavorites,
+  getHistory,
+  getMeditations,
   getProfile,
+  saveHistory,
+  setFavorite,
   syncUser,
+  uploadAdminAsset,
   type AccessState,
+  type Category,
+  type Meditation,
+  type MeditationPayload,
+  type PlaybackHistory,
   type ProfileStats
 } from './api';
-import { samplePractices, type Practice } from './data/practices';
 
-type Page = 'home' | 'practices' | 'breathwork' | 'sleep' | 'progress' | 'profile' | 'pricing' | 'player';
+type Page = 'home' | 'library' | 'favorites' | 'profile' | 'pricing' | 'player' | 'admin';
 type Mood = 'Calm' | 'Stressed' | 'Tired' | 'Anxious' | 'Focused';
 
 const moods: Mood[] = ['Calm', 'Stressed', 'Tired', 'Anxious', 'Focused'];
+const rewardMilestones = [7, 14, 30, 100] as const;
 
 const fallbackUser: TelegramWebAppUser = {
   id: 10001,
@@ -37,19 +52,48 @@ function getTelegram() {
   return window.Telegram?.WebApp;
 }
 
+function formatTime(seconds: number) {
+  if (!Number.isFinite(seconds)) return '0:00';
+  const minutes = Math.floor(seconds / 60);
+  const remaining = Math.floor(seconds % 60).toString().padStart(2, '0');
+  return `${minutes}:${remaining}`;
+}
+
 function App() {
   const telegram = getTelegram();
   const user = telegram?.initDataUnsafe.user ?? fallbackUser;
   const initData = telegram?.initData;
-  const [page, setPage] = useState<Page>('home');
+  const [page, setPage] = useState<Page>(window.location.hash === '#admin' ? 'admin' : 'home');
   const [mood, setMood] = useState<Mood>('Calm');
-  const [practices, setPractices] = useState<Practice[]>(samplePractices);
+  const [query, setQuery] = useState('');
+  const [category, setCategory] = useState('all');
+  const [meditations, setMeditations] = useState<Meditation[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [history, setHistory] = useState<PlaybackHistory[]>([]);
+  const [favorites, setFavorites] = useState<Meditation[]>([]);
   const [access, setAccess] = useState<AccessState>({ hasPremium: false, plan: 'Free' });
   const [profile, setProfile] = useState<ProfileStats | null>(null);
-  const [selectedPractice, setSelectedPractice] = useState<Practice>(samplePractices[0]);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(28);
+  const [selectedMeditation, setSelectedMeditation] = useState<Meditation | null>(null);
   const [paymentMessage, setPaymentMessage] = useState('');
+
+  const refreshAccount = async () => {
+    const [accessState, profileStats, historyList, favoriteList] = await Promise.all([
+      getAccess(initData),
+      getProfile(initData).catch(() => null),
+      getHistory(initData).catch(() => []),
+      getFavorites(initData).catch(() => [])
+    ]);
+    setAccess(accessState);
+    setProfile(profileStats);
+    setHistory(historyList);
+    setFavorites(favoriteList);
+  };
+
+  const refreshLibrary = async () => {
+    const [categoryList, meditationList] = await Promise.all([getCategories(), getMeditations(initData)]);
+    setCategories(categoryList);
+    setMeditations(meditationList);
+  };
 
   useEffect(() => {
     telegram?.ready();
@@ -58,55 +102,69 @@ function App() {
     async function boot() {
       try {
         await syncUser(user, initData);
-        const [practiceList, accessState, profileStats] = await Promise.all([
-          getPractices(),
-          getAccess(initData),
-          getProfile(initData).catch(() => null)
-        ]);
-        setPractices(practiceList);
-        setAccess(accessState);
-        setProfile(profileStats);
+        await Promise.all([refreshLibrary(), refreshAccount()]);
       } catch {
-        setPractices(samplePractices);
+        setMeditations([]);
       }
     }
 
     void boot();
   }, [initData, telegram, user]);
 
-  const refreshAccount = async () => {
-    const [accessState, profileStats] = await Promise.all([
-      getAccess(initData),
-      getProfile(initData).catch(() => null)
-    ]);
-    setAccess(accessState);
-    setProfile(profileStats);
-  };
+  const historyByMeditation = useMemo(() => {
+    return new Map(history.map((item) => [item.meditation_id, item]));
+  }, [history]);
+
+  const favoriteIds = useMemo(() => new Set(favorites.map((item) => item.id)), [favorites]);
+
+  const decoratedMeditations = useMemo(() => {
+    return meditations.map((meditation) => ({
+      ...meditation,
+      favorite: favoriteIds.has(meditation.id) || meditation.favorite,
+      history: historyByMeditation.get(meditation.id) ?? meditation.history ?? null
+    }));
+  }, [favoriteIds, historyByMeditation, meditations]);
+
+  const filteredMeditations = useMemo(() => {
+    return decoratedMeditations.filter((meditation) => {
+      const matchesQuery = meditation.title.toLowerCase().includes(query.toLowerCase());
+      const matchesCategory = category === 'all' || meditation.category === category;
+      return matchesQuery && matchesCategory;
+    });
+  }, [category, decoratedMeditations, query]);
 
   const recommended = useMemo(() => {
-    if (mood === 'Tired') return practices.find((practice) => practice.title.includes('Sleep')) ?? practices[0];
-    if (mood === 'Anxious') return practices.find((practice) => practice.title.includes('Anxiety')) ?? practices[0];
-    if (mood === 'Focused') return practices.find((practice) => practice.title.includes('Focus')) ?? practices[0];
-    return practices[0];
-  }, [mood, practices]);
+    return decoratedMeditations.filter((meditation) => meditation.mood === mood).slice(0, 6);
+  }, [decoratedMeditations, mood]);
 
-  const visiblePractices = useMemo(() => {
-    if (page === 'breathwork') return practices.filter((practice) => /breath/i.test(practice.type + practice.title));
-    if (page === 'sleep') return practices.filter((practice) => /sleep/i.test(practice.type + practice.title));
-    return practices;
-  }, [page, practices]);
+  const continueListening = useMemo(() => {
+    return decoratedMeditations
+      .filter((meditation) => meditation.history && meditation.history.last_position > 10 && !meditation.history.completed)
+      .sort((a, b) => {
+        return new Date(b.history?.last_played ?? 0).getTime() - new Date(a.history?.last_played ?? 0).getTime();
+      });
+  }, [decoratedMeditations]);
 
-  const openPractice = (practice: Practice) => {
-    const locked = practice.access_level === 'premium' && !access.hasPremium;
+  const popular = useMemo(() => [...decoratedMeditations].sort((a, b) => b.play_count - a.play_count).slice(0, 6), [decoratedMeditations]);
+  const newest = useMemo(() => [...decoratedMeditations].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 6), [decoratedMeditations]);
+  const dailyMeditation = recommended[0] ?? newest[0] ?? decoratedMeditations[0];
+
+  const openMeditation = (meditation: Meditation) => {
+    const locked = meditation.premium && !access.hasPremium;
     telegram?.HapticFeedback?.impactOccurred('light');
     if (locked) {
+      setSelectedMeditation(meditation);
       setPage('pricing');
       return;
     }
-    setSelectedPractice(practice);
-    setIsPlaying(false);
-    setProgress(18);
+    setSelectedMeditation(meditation);
     setPage('player');
+  };
+
+  const toggleFavorite = async (meditation: Meditation) => {
+    const next = !favoriteIds.has(meditation.id);
+    await setFavorite(meditation.id, next, initData);
+    await refreshAccount();
   };
 
   const buyPlan = async (plan: 'monthly' | 'lifetime') => {
@@ -121,13 +179,7 @@ function App() {
             void refreshAccount();
             return;
           }
-
-          if (status === 'cancelled') {
-            setPaymentMessage('Payment cancelled. You can restart checkout anytime.');
-            return;
-          }
-
-          setPaymentMessage('Payment is pending. Your access will update automatically after Telegram confirms it.');
+          setPaymentMessage(status === 'cancelled' ? 'Payment cancelled. You can restart checkout anytime.' : 'Payment is pending. Telegram will confirm it shortly.');
         });
       } else {
         telegram?.openTelegramLink(invoiceLink);
@@ -140,64 +192,71 @@ function App() {
     }
   };
 
-  const finishPractice = async () => {
-    setProgress(100);
-    try {
-      await completePractice({
-        practice_id: selectedPractice.id,
-        mood_before: mood,
-        mood_after: 'Calm'
-      }, initData);
-    } catch {
-      // Progress can still be shown locally if the backend is not configured yet.
-    }
-  };
+  const nextMeditation = selectedMeditation
+    ? decoratedMeditations[(decoratedMeditations.findIndex((item) => item.id === selectedMeditation.id) + 1) % decoratedMeditations.length]
+    : undefined;
 
   return (
     <main className="min-h-screen overflow-hidden bg-night text-cream">
       <div className="fixed inset-0 luna-bg" />
       <section className="relative mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-24 pt-5">
-        <Header plan={access.plan} />
+        <Header plan={access.plan} streak={profile?.currentStreak ?? 0} />
 
         {page === 'home' && (
           <HomePage
             firstName={user.first_name ?? 'friend'}
             mood={mood}
             setMood={setMood}
+            daily={dailyMeditation}
             recommended={recommended}
-            onStart={() => openPractice(practices[0])}
-            onOpenPractice={openPractice}
+            continueListening={continueListening}
+            popular={popular}
+            newest={newest}
+            onOpen={openMeditation}
+            onLibrary={() => setPage('library')}
           />
         )}
 
-        {(page === 'practices' || page === 'breathwork' || page === 'sleep') && (
+        {page === 'library' && (
           <LibraryPage
-            title={page === 'breathwork' ? 'Breathwork' : page === 'sleep' ? 'Sleep' : 'Practices'}
-            practices={visiblePractices}
+            categories={categories}
+            query={query}
+            setQuery={setQuery}
+            category={category}
+            setCategory={setCategory}
+            meditations={filteredMeditations}
             hasPremium={access.hasPremium}
-            onOpenPractice={openPractice}
+            onOpen={openMeditation}
+            onFavorite={toggleFavorite}
             onUnlock={() => setPage('pricing')}
           />
         )}
 
-        {page === 'pricing' && (
-          <PricingPage onBuy={buyPlan} message={paymentMessage} onLibrary={() => setPage('practices')} />
+        {page === 'favorites' && (
+          <FavoritesPage meditations={decoratedMeditations.filter((item) => favoriteIds.has(item.id))} onOpen={openMeditation} onFavorite={toggleFavorite} />
         )}
 
-        {page === 'profile' && <ProfilePage profile={profile} access={access} firstName={user.first_name ?? 'Luna'} />}
+        {page === 'pricing' && (
+          <PricingPage onBuy={buyPlan} message={paymentMessage} onLibrary={() => setPage('library')} locked={selectedMeditation} />
+        )}
 
-        {page === 'progress' && <ProgressPage profile={profile} />}
+        {page === 'profile' && (
+          <ProfilePage profile={profile} access={access} firstName={user.first_name ?? 'Luna'} username={user.username} onRestore={refreshAccount} />
+        )}
 
-        {page === 'player' && (
+        {page === 'player' && selectedMeditation && (
           <PlayerPage
-            practice={selectedPractice}
-            isPlaying={isPlaying}
-            setIsPlaying={setIsPlaying}
-            progress={progress}
-            setProgress={setProgress}
-            onDone={finishPractice}
+            meditation={selectedMeditation}
+            nextMeditation={nextMeditation}
+            favorite={favoriteIds.has(selectedMeditation.id)}
+            onFavorite={() => toggleFavorite(selectedMeditation)}
+            onSave={(position, duration, completed) =>
+              saveHistory({ meditation_id: selectedMeditation.id, last_position: position, duration, completed }, initData).then(refreshAccount)
+            }
           />
         )}
+
+        {page === 'admin' && <AdminPage categories={categories} meditations={decoratedMeditations} initData={initData} onRefresh={refreshLibrary} />}
 
         <Nav active={page} onChange={setPage} />
       </section>
@@ -205,7 +264,7 @@ function App() {
   );
 }
 
-function Header({ plan }: { plan: string }) {
+function Header({ plan, streak }: { plan: string; streak: number }) {
   return (
     <div className="mb-5 flex items-center justify-between">
       <div>
@@ -213,7 +272,7 @@ function Header({ plan }: { plan: string }) {
         <h1 className="font-serif text-3xl text-cream">Soft reset</h1>
       </div>
       <div className="rounded-full border border-cream/15 bg-white/10 px-3 py-2 text-xs text-cream shadow-glow backdrop-blur">
-        {plan}
+        {streak > 0 ? `🔥 ${streak} day streak` : plan}
       </div>
     </div>
   );
@@ -223,9 +282,13 @@ function HomePage(props: {
   firstName: string;
   mood: Mood;
   setMood: (mood: Mood) => void;
-  recommended: Practice;
-  onStart: () => void;
-  onOpenPractice: (practice: Practice) => void;
+  daily?: Meditation;
+  recommended: Meditation[];
+  continueListening: Meditation[];
+  popular: Meditation[];
+  newest: Meditation[];
+  onOpen: (meditation: Meditation) => void;
+  onLibrary: () => void;
 }) {
   return (
     <div className="space-y-5">
@@ -247,120 +310,162 @@ function HomePage(props: {
         </div>
       </section>
 
-      <PracticeHero practice={props.recommended} onOpen={() => props.onOpenPractice(props.recommended)} />
+      {props.daily ? (
+        <PracticeHero label="Daily Meditation" meditation={props.daily} onOpen={() => props.onOpen(props.daily!)} />
+      ) : (
+        <EmptyState title="No meditations yet" body="Upload your first meditation in the hidden admin page." />
+      )}
 
-      <button onClick={props.onStart} className="w-full rounded-2xl bg-cream px-5 py-4 font-semibold text-night shadow-glow">
-        Start Free Practice
+      <Rail title="Continue Listening" meditations={props.continueListening} onOpen={props.onOpen} />
+      <Rail title="Mood Recommendations" meditations={props.recommended} onOpen={props.onOpen} />
+      <Rail title="Popular" meditations={props.popular} onOpen={props.onOpen} />
+      <Rail title="Newest" meditations={props.newest} onOpen={props.onOpen} />
+
+      <button onClick={props.onLibrary} className="w-full rounded-2xl bg-cream px-5 py-4 font-semibold text-night shadow-glow">
+        Open Library
       </button>
     </div>
   );
 }
 
-function PracticeHero({ practice, onOpen }: { practice: Practice; onOpen: () => void }) {
+function PracticeHero({ meditation, label, onOpen }: { meditation: Meditation; label: string; onOpen: () => void }) {
   return (
-    <button
-      onClick={onOpen}
-      className="group relative h-72 w-full overflow-hidden rounded-[30px] border border-cream/15 text-left shadow-glow"
-    >
-      <img src={practice.cover_image_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70" />
+    <button onClick={onOpen} className="group relative h-72 w-full overflow-hidden rounded-[30px] border border-cream/15 text-left shadow-glow">
+      <img src={meditation.cover_image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70 transition group-hover:scale-105" loading="lazy" />
       <div className="absolute inset-0 bg-gradient-to-t from-night via-night/40 to-transparent" />
       <div className="absolute bottom-0 p-5">
-        <p className="mb-2 inline-flex rounded-full bg-lavender/25 px-3 py-1 text-xs text-cream backdrop-blur">
-          Recommended
-        </p>
-        <h3 className="text-2xl font-semibold">{practice.title}</h3>
-        <p className="mt-1 text-sm text-cream/75">
-          {practice.type} · {practice.duration}
+        <p className="mb-2 inline-flex rounded-full bg-lavender/25 px-3 py-1 text-xs text-cream backdrop-blur">{label}</p>
+        <h3 className="text-2xl font-semibold">{meditation.title}</h3>
+        <p className="mt-1 text-sm capitalize text-cream/75">
+          {meditation.category.replace('-', ' ')} · {formatTime(meditation.duration)}
         </p>
       </div>
     </button>
   );
 }
 
+function Rail({ title, meditations, onOpen }: { title: string; meditations: Meditation[]; onOpen: (meditation: Meditation) => void }) {
+  if (!meditations.length) return null;
+
+  return (
+    <section>
+      <h2 className="mb-3 text-lg font-semibold">{title}</h2>
+      <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+        {meditations.map((meditation) => (
+          <button key={meditation.id} onClick={() => onOpen(meditation)} className="w-40 shrink-0 text-left">
+            <img src={meditation.cover_image} alt="" className="h-40 w-40 rounded-3xl object-cover shadow-glow" loading="lazy" />
+            <p className="mt-2 line-clamp-1 font-semibold">{meditation.title}</p>
+            <p className="text-xs capitalize text-lavender">{meditation.category.replace('-', ' ')}</p>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function LibraryPage(props: {
-  title: string;
-  practices: Practice[];
+  categories: Category[];
+  query: string;
+  setQuery: (query: string) => void;
+  category: string;
+  setCategory: (category: string) => void;
+  meditations: Meditation[];
   hasPremium: boolean;
-  onOpenPractice: (practice: Practice) => void;
+  onOpen: (meditation: Meditation) => void;
+  onFavorite: (meditation: Meditation) => void;
   onUnlock: () => void;
 }) {
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-semibold">{props.title}</h2>
-      {props.practices.map((practice) => {
-        const locked = practice.access_level === 'premium' && !props.hasPremium;
-        return (
-          <article key={practice.id} className="rounded-3xl border border-cream/15 bg-white/10 p-3 backdrop-blur-xl">
-            <div className="flex gap-3">
-              <img src={practice.cover_image_url} alt="" className="h-24 w-24 rounded-2xl object-cover" />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h3 className="truncate font-semibold">{practice.title}</h3>
-                  {locked && <Lock size={16} className="text-gold" />}
-                </div>
-                <p className="mt-1 text-xs text-lavender">{practice.type}</p>
-                <p className="mt-2 line-clamp-2 text-sm text-cream/70">{practice.description}</p>
-              </div>
-            </div>
-            <button
-              onClick={() => (locked ? props.onUnlock() : props.onOpenPractice(practice))}
-              className={`mt-3 w-full rounded-2xl px-4 py-3 text-sm font-semibold ${
-                locked ? 'bg-gold text-night' : 'bg-cream/15 text-cream'
-              }`}
-            >
-              {locked ? 'Unlock Premium' : 'Play'}
-            </button>
-          </article>
-        );
-      })}
-    </div>
-  );
-}
-
-function PricingPage({
-  onBuy,
-  message,
-  onLibrary
-}: {
-  onBuy: (plan: 'monthly' | 'lifetime') => void;
-  message: string;
-  onLibrary: () => void;
-}) {
-  return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-semibold">Unlock Premium</h2>
-      <PlanCard title="Free" price="0" features={['1 free practice', 'Basic access']} />
-      <PlanCard
-        title="Monthly Access"
-        price="299 Stars"
-        features={['Premium library', '30 days of access', 'Sleep, focus, anxiety, confidence']}
-        action="Choose Monthly"
-        onClick={() => onBuy('monthly')}
-      />
-      <PlanCard
-        title="Lifetime Access"
-        price="1999 Stars"
-        features={['Premium library forever', 'Best value', 'Instant Telegram unlock']}
-        action="Choose Lifetime"
-        onClick={() => onBuy('lifetime')}
-      />
-      {message && <p className="rounded-2xl bg-lavender/15 p-4 text-sm text-cream/80">{message}</p>}
-      {message.includes('unlocked') && (
-        <button onClick={onLibrary} className="w-full rounded-2xl bg-cream px-5 py-4 font-semibold text-night">
-          Open Premium Library
-        </button>
+      <h2 className="text-2xl font-semibold">Library</h2>
+      <div className="flex items-center gap-2 rounded-2xl border border-cream/15 bg-white/10 px-4 py-3 backdrop-blur-xl">
+        <Search size={18} className="text-lavender" />
+        <input value={props.query} onChange={(event) => props.setQuery(event.target.value)} placeholder="Search by title" className="w-full bg-transparent text-sm outline-none placeholder:text-cream/45" />
+      </div>
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4">
+        <FilterPill active={props.category === 'all'} onClick={() => props.setCategory('all')} label="All" />
+        {props.categories.map((item) => (
+          <FilterPill key={item.slug} active={props.category === item.slug} onClick={() => props.setCategory(item.slug)} label={item.name} />
+        ))}
+      </div>
+      {props.meditations.length ? (
+        props.meditations.map((meditation) => (
+          <MeditationCard key={meditation.id} meditation={meditation} locked={meditation.premium && !props.hasPremium} onOpen={props.onOpen} onFavorite={props.onFavorite} onUnlock={props.onUnlock} />
+        ))
+      ) : (
+        <EmptyState title="Nothing found" body="Try another search or category." />
       )}
     </div>
   );
 }
 
-function PlanCard(props: {
-  title: string;
-  price: string;
-  features: string[];
-  action?: string;
-  onClick?: () => void;
+function FilterPill({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className={`shrink-0 rounded-full px-4 py-2 text-sm ${active ? 'bg-gold text-night' : 'bg-cream/10 text-cream'}`}>
+      {label}
+    </button>
+  );
+}
+
+function MeditationCard({ meditation, locked, onOpen, onFavorite, onUnlock }: {
+  meditation: Meditation;
+  locked: boolean;
+  onOpen: (meditation: Meditation) => void;
+  onFavorite: (meditation: Meditation) => void;
+  onUnlock: () => void;
 }) {
+  return (
+    <article className="rounded-3xl border border-cream/15 bg-white/10 p-3 backdrop-blur-xl">
+      <div className="flex gap-3">
+        <div className="relative">
+          <img src={meditation.cover_image} alt="" className={`h-24 w-24 rounded-2xl object-cover ${locked ? 'blur-sm' : ''}`} loading="lazy" />
+          {locked && <Lock className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gold" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h3 className="truncate font-semibold">{meditation.title}</h3>
+            {meditation.premium && <Crown size={15} className="text-gold" />}
+          </div>
+          <p className="mt-1 text-xs capitalize text-lavender">{meditation.category.replace('-', ' ')}</p>
+          <p className="mt-2 line-clamp-2 text-sm text-cream/70">{meditation.description}</p>
+        </div>
+        <button onClick={() => onFavorite(meditation)} className="self-start rounded-full bg-cream/10 p-2" aria-label="Favorite meditation">
+          <Heart size={17} className={meditation.favorite ? 'fill-gold text-gold' : 'text-cream'} />
+        </button>
+      </div>
+      <button onClick={() => (locked ? onUnlock() : onOpen(meditation))} className={`mt-3 w-full rounded-2xl px-4 py-3 text-sm font-semibold ${locked ? 'bg-gold text-night' : 'bg-cream/15 text-cream'}`}>
+        {locked ? 'Unlock Premium' : meditation.history?.last_position ? `Resume at ${formatTime(meditation.history.last_position)}` : 'Play'}
+      </button>
+    </article>
+  );
+}
+
+function FavoritesPage({ meditations, onOpen, onFavorite }: { meditations: Meditation[]; onOpen: (meditation: Meditation) => void; onFavorite: (meditation: Meditation) => void }) {
+  return (
+    <div className="space-y-4">
+      <h2 className="text-2xl font-semibold">Favorites</h2>
+      {meditations.length ? meditations.map((meditation) => (
+        <MeditationCard key={meditation.id} meditation={meditation} locked={false} onOpen={onOpen} onFavorite={onFavorite} onUnlock={() => undefined} />
+      )) : <EmptyState title="No favorites yet" body="Save meditations you want to return to." />}
+    </div>
+  );
+}
+
+function PricingPage({ onBuy, message, onLibrary, locked }: { onBuy: (plan: 'monthly' | 'lifetime') => void; message: string; onLibrary: () => void; locked: Meditation | null }) {
+  return (
+    <div className="space-y-4">
+      <h2 className="text-2xl font-semibold">Unlock Premium</h2>
+      {locked && <p className="rounded-2xl bg-lavender/15 p-4 text-sm text-cream/80">{locked.title} is part of Luna Premium.</p>}
+      <PlanCard title="Free" price="0" features={['Free meditations', 'Basic access']} />
+      <PlanCard title="Monthly Access" price="299 Stars" features={['Premium library', '30 days of access', 'Sleep, focus, anxiety, confidence']} action="Choose Monthly" onClick={() => onBuy('monthly')} />
+      <PlanCard title="Lifetime Access" price="1999 Stars" features={['Premium library forever', 'Best value', 'Instant Telegram unlock']} action="Choose Lifetime" onClick={() => onBuy('lifetime')} />
+      {message && <p className="rounded-2xl bg-lavender/15 p-4 text-sm text-cream/80">{message}</p>}
+      {message.includes('unlocked') && <button onClick={onLibrary} className="w-full rounded-2xl bg-cream px-5 py-4 font-semibold text-night">Open Premium Library</button>}
+    </div>
+  );
+}
+
+function PlanCard(props: { title: string; price: string; features: string[]; action?: string; onClick?: () => void }) {
   return (
     <article className="rounded-3xl border border-cream/15 bg-white/10 p-5 backdrop-blur-xl">
       <div className="flex items-start justify-between gap-4">
@@ -371,65 +476,135 @@ function PlanCard(props: {
         <Crown className="text-gold" />
       </div>
       <ul className="mt-4 space-y-2 text-sm text-cream/75">
-        {props.features.map((feature) => (
-          <li key={feature}>• {feature}</li>
-        ))}
+        {props.features.map((feature) => <li key={feature}>• {feature}</li>)}
       </ul>
-      {props.action && (
-        <button onClick={props.onClick} className="mt-5 w-full rounded-2xl bg-gold px-4 py-3 font-semibold text-night">
-          {props.action}
-        </button>
-      )}
+      {props.action && <button onClick={props.onClick} className="mt-5 w-full rounded-2xl bg-gold px-4 py-3 font-semibold text-night">{props.action}</button>}
     </article>
   );
 }
 
-function PlayerPage(props: {
-  practice: Practice;
-  isPlaying: boolean;
-  setIsPlaying: (isPlaying: boolean) => void;
-  progress: number;
-  setProgress: (progress: number) => void;
-  onDone: () => void;
+function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }: {
+  meditation: Meditation;
+  nextMeditation?: Meditation;
+  favorite: boolean;
+  onFavorite: () => void;
+  onSave: (position: number, duration: number, completed?: boolean) => Promise<unknown>;
 }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const saveTimer = useRef<number | undefined>();
+  const [playing, setPlaying] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [position, setPosition] = useState(meditation.history?.last_position ?? 0);
+  const [duration, setDuration] = useState(meditation.duration);
+  const [speed, setSpeed] = useState(1);
+
+  useEffect(() => {
+    setPosition(meditation.history?.last_position ?? 0);
+    setDuration(meditation.duration);
+    setLoading(true);
+  }, [meditation]);
+
+  useEffect(() => {
+    if (nextMeditation?.audio_file) {
+      const link = document.createElement('link');
+      link.rel = 'preload';
+      link.as = 'audio';
+      link.href = nextMeditation.audio_file;
+      document.head.appendChild(link);
+      return () => link.remove();
+    }
+  }, [nextMeditation]);
+
+  const persist = (completed = false) => {
+    if (audioRef.current) void onSave(audioRef.current.currentTime, audioRef.current.duration || duration, completed);
+  };
+
   return (
     <div className="space-y-5">
-      <div className="relative h-[420px] overflow-hidden rounded-[34px] border border-cream/15 shadow-glow">
-        <img src={props.practice.cover_image_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70" />
-        <div className="absolute inset-0 bg-gradient-to-t from-night via-night/50 to-transparent" />
+      <div className="relative h-[520px] overflow-hidden rounded-[34px] border border-cream/15 shadow-glow">
+        <img src={meditation.cover_image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-80" />
+        <div className="absolute inset-0 bg-gradient-to-t from-night via-night/55 to-night/10" />
+        {loading && <div className="absolute left-5 top-5 rounded-full bg-cream/15 px-4 py-2 text-xs text-cream backdrop-blur">Loading audio...</div>}
+        {meditation.premium && <div className="absolute right-5 top-5 rounded-full bg-gold px-3 py-1 text-xs font-semibold text-night">Premium</div>}
         <div className="absolute inset-x-0 bottom-0 p-6">
-          <p className="text-sm text-lavender">{props.practice.type}</p>
-          <h2 className="mt-1 text-3xl font-semibold">{props.practice.title}</h2>
-          <p className="mt-2 text-sm text-cream/75">{props.practice.duration}</p>
+          <p className="text-sm capitalize text-lavender">{meditation.category.replace('-', ' ')}</p>
+          <h2 className="mt-1 text-3xl font-semibold">{meditation.title}</h2>
+          <p className="mt-2 text-sm text-cream/75">{formatTime(duration)} · {formatTime(Math.max(0, duration - position))} left</p>
+          <input className="mt-5 w-full accent-gold" type="range" min={0} max={duration || 1} value={position} onChange={(event) => {
+            const next = Number(event.target.value);
+            setPosition(next);
+            if (audioRef.current) audioRef.current.currentTime = next;
+          }} />
+          <div className="mt-1 flex justify-between text-xs text-cream/60">
+            <span>{formatTime(position)}</span>
+            <span>{formatTime(duration)}</span>
+          </div>
         </div>
       </div>
 
       <div className="rounded-3xl border border-cream/15 bg-white/10 p-5 backdrop-blur-xl">
-        <div className="h-2 overflow-hidden rounded-full bg-cream/15">
-          <div className="h-full rounded-full bg-gold transition-all" style={{ width: `${props.progress}%` }} />
-        </div>
-        <div className="mt-5 flex items-center justify-center gap-4">
-          <button
-            onClick={() => {
-              props.setIsPlaying(!props.isPlaying);
-              props.setProgress(Math.min(96, props.progress + 12));
-            }}
-            className="grid h-16 w-16 place-items-center rounded-full bg-cream text-night shadow-glow"
-            aria-label={props.isPlaying ? 'Pause practice' : 'Play practice'}
-          >
-            {props.isPlaying ? <Pause /> : <Play />}
+        <div className="flex items-center justify-center gap-4">
+          <IconButton label="Rewind 15 seconds" onClick={() => {
+            if (audioRef.current) audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 15);
+          }}><SkipBack /></IconButton>
+          <button onClick={() => {
+            if (!audioRef.current) return;
+            if (audioRef.current.paused) void audioRef.current.play();
+            else audioRef.current.pause();
+          }} className="grid h-16 w-16 place-items-center rounded-full bg-cream text-night shadow-glow">
+            {playing ? <Pause /> : <Play />}
           </button>
-          <button onClick={props.onDone} className="rounded-full bg-gold px-5 py-3 text-sm font-semibold text-night">
-            Mark Complete
-          </button>
+          <IconButton label="Forward 15 seconds" onClick={() => {
+            if (audioRef.current) audioRef.current.currentTime = Math.min(duration, audioRef.current.currentTime + 15);
+          }}><SkipForward /></IconButton>
         </div>
-        <audio src={props.practice.audio_url} className="mt-4 w-full" controls />
+        <div className="mt-5 flex items-center justify-between">
+          <button onClick={onFavorite} className="rounded-full bg-cream/10 px-4 py-2 text-sm"><Heart className={favorite ? 'mr-2 inline fill-gold text-gold' : 'mr-2 inline'} size={16} />Favorite</button>
+          <button className="rounded-full bg-cream/10 px-4 py-2 text-sm text-cream/60"><Download className="mr-2 inline" size={16} />Future</button>
+          <select value={speed} onChange={(event) => {
+            const next = Number(event.target.value);
+            setSpeed(next);
+            if (audioRef.current) audioRef.current.playbackRate = next;
+          }} className="rounded-full bg-night px-3 py-2 text-sm text-cream">
+            {[0.75, 1, 1.25, 1.5, 2].map((item) => <option key={item} value={item}>{item}x</option>)}
+          </select>
+        </div>
+        <audio
+          ref={audioRef}
+          src={meditation.audio_file}
+          preload="auto"
+          onLoadedMetadata={(event) => {
+            const audio = event.currentTarget;
+            setDuration(audio.duration || meditation.duration);
+            audio.playbackRate = speed;
+            if (meditation.history?.last_position) audio.currentTime = meditation.history.last_position;
+            setLoading(false);
+          }}
+          onPlay={() => setPlaying(true)}
+          onPause={() => {
+            setPlaying(false);
+            persist(false);
+          }}
+          onTimeUpdate={(event) => {
+            setPosition(event.currentTarget.currentTime);
+            window.clearTimeout(saveTimer.current);
+            saveTimer.current = window.setTimeout(() => persist(false), 1200);
+          }}
+          onEnded={() => {
+            setPlaying(false);
+            persist(true);
+          }}
+        />
       </div>
     </div>
   );
 }
 
-function ProfilePage({ profile, access, firstName }: { profile: ProfileStats | null; access: AccessState; firstName: string }) {
+function IconButton({ label, children, onClick }: { label: string; children: React.ReactNode; onClick: () => void }) {
+  return <button aria-label={label} onClick={onClick} className="grid h-12 w-12 place-items-center rounded-full bg-cream/10 text-cream">{children}</button>;
+}
+
+function ProfilePage({ profile, access, firstName, username, onRestore }: { profile: ProfileStats | null; access: AccessState; firstName: string; username?: string; onRestore: () => void }) {
   const activeUntil = access.user?.active_until ? new Date(access.user.active_until).toLocaleDateString() : 'Not active';
   return (
     <div className="space-y-4">
@@ -439,33 +614,74 @@ function ProfilePage({ profile, access, firstName }: { profile: ProfileStats | n
           <div className="grid h-16 w-16 place-items-center rounded-full bg-lavender/25 text-2xl">{firstName[0]}</div>
           <div>
             <h3 className="text-xl font-semibold">{firstName}</h3>
-            <p className="text-sm text-lavender">{access.plan} plan</p>
+            <p className="text-sm text-lavender">{username ? `@${username}` : access.plan}</p>
           </div>
         </div>
         <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
+          <Stat label="Premium status" value={access.hasPremium ? 'Active' : 'Free'} />
           <Stat label="Active until" value={activeUntil} />
           <Stat label="Completed" value={String(profile?.completed ?? 0)} />
-          <Stat label="Day streak" value={String(profile?.dayStreak ?? 0)} />
-          <Stat label="Calm score" value={String(profile?.calmScore ?? 42)} />
+          <Stat label="Minutes listened" value={String(profile?.minutesListened ?? 0)} />
+          <Stat label="Current streak" value={`${profile?.currentStreak ?? 0} days`} />
+          <Stat label="Purchased plan" value={profile?.purchasedPlan ?? 'free'} />
         </div>
+        <div className="mt-5 rounded-2xl bg-cream/10 p-4">
+          <p className="mb-3 text-sm text-lavender">Rewards</p>
+          <div className="grid grid-cols-4 gap-2 text-center text-xs">
+            {rewardMilestones.map((days) => <span key={days} className={`rounded-full px-2 py-2 ${profile?.rewards?.[days] ? 'bg-gold text-night' : 'bg-cream/10 text-cream/60'}`}>{days}d</span>)}
+          </div>
+        </div>
+        <button onClick={onRestore} className="mt-5 w-full rounded-2xl bg-cream px-5 py-4 font-semibold text-night">Restore purchases</button>
+        <button className="mt-3 w-full rounded-2xl bg-cream/10 px-5 py-4 text-sm text-cream/60">Logout</button>
       </div>
     </div>
   );
 }
 
-function ProgressPage({ profile }: { profile: ProfileStats | null }) {
+function AdminPage({ categories, meditations, initData, onRefresh }: { categories: Category[]; meditations: Meditation[]; initData?: string; onRefresh: () => Promise<void> }) {
+  const [form, setForm] = useState<MeditationPayload>({ title: '', description: '', category: categories[0]?.slug ?? 'sleep', duration: 600, cover_image: '', audio_file: '', premium: false, mood: 'Calm' });
+  const [message, setMessage] = useState('');
+
+  const upload = async (kind: 'audio' | 'cover', file?: File) => {
+    if (!file) return;
+    const result = await uploadAdminAsset(kind, file, initData);
+    setForm((current) => ({ ...current, [kind === 'audio' ? 'audio_file' : 'cover_image']: result.publicUrl }));
+  };
+
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-semibold">Progress</h2>
+      <h2 className="text-2xl font-semibold">Admin</h2>
       <div className="rounded-3xl border border-cream/15 bg-white/10 p-5 backdrop-blur-xl">
-        <Sparkles className="text-gold" />
-        <p className="mt-4 text-5xl font-semibold">{profile?.calmScore ?? 42}</p>
-        <p className="mt-2 text-sm text-cream/70">Calm score</p>
-        <div className="mt-5 grid grid-cols-2 gap-3">
-          <Stat label="Practices" value={String(profile?.completed ?? 0)} />
-          <Stat label="Streak" value={`${profile?.dayStreak ?? 0} days`} />
+        <label className="text-sm text-lavender">Upload MP3</label>
+        <input type="file" accept="audio/mpeg,audio/mp3" onChange={(event) => void upload('audio', event.target.files?.[0])} className="mt-2 w-full text-sm" />
+        <label className="mt-4 block text-sm text-lavender">Upload cover</label>
+        <input type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => void upload('cover', event.target.files?.[0])} className="mt-2 w-full text-sm" />
+        {(['title', 'description', 'audio_file', 'cover_image'] as const).map((field) => (
+          <input key={field} value={form[field]} onChange={(event) => setForm({ ...form, [field]: event.target.value })} placeholder={field.replace('_', ' ')} className="mt-3 w-full rounded-2xl bg-night/70 px-4 py-3 text-sm outline-none" />
+        ))}
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })} className="rounded-2xl bg-night px-4 py-3 text-sm">
+            {categories.map((item) => <option key={item.slug} value={item.slug}>{item.name}</option>)}
+          </select>
+          <select value={form.mood} onChange={(event) => setForm({ ...form, mood: event.target.value as MeditationPayload['mood'] })} className="rounded-2xl bg-night px-4 py-3 text-sm">
+            {moods.map((item) => <option key={item} value={item}>{item}</option>)}
+          </select>
+          <input type="number" value={form.duration} onChange={(event) => setForm({ ...form, duration: Number(event.target.value) })} className="rounded-2xl bg-night px-4 py-3 text-sm" />
+          <label className="flex items-center gap-2 rounded-2xl bg-night px-4 py-3 text-sm"><input type="checkbox" checked={form.premium} onChange={(event) => setForm({ ...form, premium: event.target.checked })} /> Premium</label>
         </div>
+        <button onClick={async () => {
+          await createMeditation(form, initData);
+          setMessage('Meditation saved.');
+          await onRefresh();
+        }} className="mt-4 w-full rounded-2xl bg-gold px-4 py-3 font-semibold text-night"><Upload className="mr-2 inline" size={16} />Create meditation</button>
+        {message && <p className="mt-3 text-sm text-lavender">{message}</p>}
       </div>
+      {meditations.map((meditation) => (
+        <div key={meditation.id} className="flex items-center justify-between rounded-2xl bg-cream/10 p-3">
+          <span className="truncate text-sm">{meditation.title}</span>
+          <button onClick={async () => { await deleteMeditation(meditation.id, initData); await onRefresh(); }} className="text-sm text-gold">Delete</button>
+        </div>
+      ))}
     </div>
   );
 }
@@ -479,12 +695,16 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
+function EmptyState({ title, body }: { title: string; body: string }) {
+  return <div className="rounded-3xl border border-cream/15 bg-white/10 p-5 text-center backdrop-blur-xl"><Sparkles className="mx-auto text-gold" /><h3 className="mt-3 font-semibold">{title}</h3><p className="mt-1 text-sm text-cream/65">{body}</p></div>;
+}
+
 function Nav({ active, onChange }: { active: Page; onChange: (page: Page) => void }) {
   const items: Array<{ page: Page; label: string; icon: typeof Home }> = [
     { page: 'home', label: 'Home', icon: Home },
-    { page: 'practices', label: 'Library', icon: BookOpen },
-    { page: 'breathwork', label: 'Breathe', icon: Wind },
-    { page: 'sleep', label: 'Sleep', icon: Moon },
+    { page: 'library', label: 'Library', icon: BookOpen },
+    { page: 'favorites', label: 'Saved', icon: Heart },
+    { page: 'pricing', label: 'Premium', icon: Crown },
     { page: 'profile', label: 'Profile', icon: User }
   ];
 
@@ -495,13 +715,7 @@ function Nav({ active, onChange }: { active: Page; onChange: (page: Page) => voi
           const Icon = item.icon;
           const selected = active === item.page;
           return (
-            <button
-              key={item.page}
-              onClick={() => onChange(item.page)}
-              className={`flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] ${
-                selected ? 'bg-cream/15 text-cream' : 'text-cream/55'
-              }`}
-            >
+            <button key={item.page} onClick={() => onChange(item.page)} className={`flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] ${selected ? 'bg-cream/15 text-cream' : 'text-cream/55'}`}>
               <Icon size={19} />
               {item.label}
             </button>

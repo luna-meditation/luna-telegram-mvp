@@ -13,53 +13,6 @@ on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
-create table if not exists public.users (
-  id uuid primary key default gen_random_uuid(),
-  telegram_id bigint not null unique,
-  username text,
-  first_name text,
-  last_name text,
-  language_code text,
-  created_at timestamptz not null default now(),
-  last_seen_at timestamptz not null default now(),
-  active_until timestamptz,
-  lifetime_access boolean not null default false,
-  free_used boolean not null default false
-);
-
-create table if not exists public.payments (
-  id uuid primary key default gen_random_uuid(),
-  telegram_id bigint not null references public.users(telegram_id) on delete cascade,
-  plan text not null check (plan in ('monthly', 'lifetime')),
-  amount_stars integer not null,
-  currency text not null default 'XTR',
-  telegram_payment_charge_id text,
-  provider_payment_charge_id text,
-  status text not null default 'paid',
-  created_at timestamptz not null default now()
-);
-
-create table if not exists public.practices (
-  id uuid primary key default gen_random_uuid(),
-  title text not null,
-  type text not null,
-  description text not null,
-  duration text not null,
-  access_level text not null check (access_level in ('free', 'premium')),
-  audio_url text not null,
-  cover_image_url text,
-  created_at timestamptz not null default now()
-);
-
-create table if not exists public.progress (
-  id uuid primary key default gen_random_uuid(),
-  telegram_id bigint not null references public.users(telegram_id) on delete cascade,
-  practice_id uuid not null references public.practices(id) on delete cascade,
-  completed_at timestamptz not null default now(),
-  mood_before text,
-  mood_after text
-);
-
 create table if not exists public.categories (
   id uuid primary key default gen_random_uuid(),
   name text not null unique,
@@ -116,9 +69,6 @@ create table if not exists public.streaks (
   updated_at timestamptz not null default now()
 );
 
-create index if not exists idx_users_telegram_id on public.users(telegram_id);
-create index if not exists idx_payments_telegram_id on public.payments(telegram_id);
-create index if not exists idx_progress_telegram_id on public.progress(telegram_id);
 create index if not exists idx_meditations_category on public.meditations(category);
 create index if not exists idx_meditations_mood on public.meditations(mood);
 create index if not exists idx_meditations_created_at on public.meditations(created_at desc);
@@ -138,23 +88,15 @@ as $$
   where id = meditation_uuid;
 $$;
 
-alter table public.users enable row level security;
-alter table public.payments enable row level security;
-alter table public.practices enable row level security;
-alter table public.progress enable row level security;
 alter table public.categories enable row level security;
 alter table public.meditations enable row level security;
 alter table public.favorites enable row level security;
 alter table public.history enable row level security;
 alter table public.streaks enable row level security;
 
-drop policy if exists "Practices are readable" on public.practices;
 drop policy if exists "Categories are readable" on public.categories;
 drop policy if exists "Meditations are readable" on public.meditations;
 drop policy if exists "Meditation storage is readable" on storage.objects;
-
-create policy "Practices are readable" on public.practices
-  for select using (true);
 
 create policy "Categories are readable" on public.categories
   for select using (true);
