@@ -22,6 +22,8 @@ export class ApiRequestError extends Error {
   }
 }
 
+const inFlightRequests = new Map<string, Promise<unknown>>();
+
 export type AccessState = {
   hasPremium: boolean;
   plan: string;
@@ -109,7 +111,27 @@ function telegramHeaders(initData?: string) {
 
 async function request<T>(path: string, options?: RequestInit, initData?: string): Promise<T> {
   const requestUrl = `${API_URL}${path}`;
+  const method = options?.method ?? 'GET';
+  const dedupeKey = `${method}:${requestUrl}:${initData ?? ''}`;
 
+  if (method === 'GET' && inFlightRequests.has(dedupeKey)) {
+    return inFlightRequests.get(dedupeKey) as Promise<T>;
+  }
+
+  const promise = executeRequest<T>(requestUrl, options, initData);
+
+  if (method === 'GET') {
+    inFlightRequests.set(dedupeKey, promise);
+    promise.then(
+      () => inFlightRequests.delete(dedupeKey),
+      () => inFlightRequests.delete(dedupeKey)
+    );
+  }
+
+  return promise;
+}
+
+async function executeRequest<T>(requestUrl: string, options?: RequestInit, initData?: string): Promise<T> {
   let response: Response;
   try {
     response = await fetch(requestUrl, {

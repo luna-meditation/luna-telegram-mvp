@@ -7,7 +7,7 @@ import {
   Edit3,
   Heart,
   Home,
-  Image,
+  Image as ImageIcon,
   Lock,
   Pause,
   Play,
@@ -56,6 +56,14 @@ const premiumPrices = {
   monthly: 499,
   lifetime: 2499
 };
+const libraryCacheKey = 'luna.library.v1';
+type LibraryCache = {
+  categories: Category[];
+  meditations: Meditation[];
+  savedAt: number;
+};
+
+let memoryLibraryCache: LibraryCache | null = null;
 
 const fallbackUser: TelegramWebAppUser = {
   id: 10001,
@@ -64,6 +72,40 @@ const fallbackUser: TelegramWebAppUser = {
 
 function getTelegram() {
   return window.Telegram?.WebApp;
+}
+
+function readLibraryCache() {
+  if (memoryLibraryCache) return memoryLibraryCache;
+
+  try {
+    const raw = window.localStorage.getItem(libraryCacheKey);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as LibraryCache;
+    if (!Array.isArray(parsed.categories) || !Array.isArray(parsed.meditations)) return null;
+    memoryLibraryCache = parsed;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeLibraryCache(categories: Category[], meditations: Meditation[]) {
+  const nextCache = { categories, meditations, savedAt: Date.now() };
+  memoryLibraryCache = nextCache;
+
+  try {
+    window.localStorage.setItem(libraryCacheKey, JSON.stringify(nextCache));
+  } catch {
+    // Cache writes are best-effort; the app should stay usable in restricted storage contexts.
+  }
+}
+
+function preloadCoverImages(meditations: Meditation[]) {
+  meditations.slice(0, 8).forEach((meditation) => {
+    if (!meditation.cover_image) return;
+    const image = new Image();
+    image.src = meditation.cover_image;
+  });
 }
 
 function formatTime(seconds: number) {
@@ -77,18 +119,21 @@ function App() {
   const telegram = getTelegram();
   const user = telegram?.initDataUnsafe.user ?? fallbackUser;
   const initData = telegram?.initData;
+  const [initialLibraryCache] = useState(() => readLibraryCache());
   const [page, setPage] = useState<Page>(window.location.pathname === '/admin' || window.location.hash === '#admin' ? 'admin' : 'home');
   const [mood, setMood] = useState<Mood>('Calm');
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
-  const [meditations, setMeditations] = useState<Meditation[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [meditations, setMeditations] = useState<Meditation[]>(initialLibraryCache?.meditations ?? []);
+  const [categories, setCategories] = useState<Category[]>(initialLibraryCache?.categories ?? []);
+  const [libraryLoading, setLibraryLoading] = useState(!initialLibraryCache?.meditations.length);
   const [history, setHistory] = useState<PlaybackHistory[]>([]);
   const [favorites, setFavorites] = useState<Meditation[]>([]);
   const [access, setAccess] = useState<AccessState>({ hasPremium: false, plan: 'Free' });
   const [profile, setProfile] = useState<ProfileStats | null>(null);
   const [selectedMeditation, setSelectedMeditation] = useState<Meditation | null>(null);
   const [paymentMessage, setPaymentMessage] = useState('');
+  const [openingPlan, setOpeningPlan] = useState<'monthly' | 'lifetime' | null>(null);
   const [adminStatus, setAdminStatus] = useState<'checking' | 'allowed' | 'denied'>('checking');
   const [adminMeditations, setAdminMeditations] = useState<Meditation[]>([]);
   const [adminDashboard, setAdminDashboard] = useState<AdminDashboardData | null>(null);
@@ -107,9 +152,16 @@ function App() {
   };
 
   const refreshLibrary = async () => {
-    const [categoryList, meditationList] = await Promise.all([getCategories(), getMeditations(initData)]);
-    setCategories(categoryList);
-    setMeditations(meditationList);
+    if (!meditations.length) setLibraryLoading(true);
+    try {
+      const [categoryList, meditationList] = await Promise.all([getCategories(), getMeditations(initData)]);
+      setCategories(categoryList);
+      setMeditations(meditationList);
+      writeLibraryCache(categoryList, meditationList);
+      preloadCoverImages(meditationList);
+    } finally {
+      setLibraryLoading(false);
+    }
   };
 
   const refreshAdmin = async () => {
@@ -124,13 +176,21 @@ function App() {
   useEffect(() => {
     telegram?.ready();
     telegram?.expand();
+    if (initialLibraryCache?.meditations.length) {
+      preloadCoverImages(initialLibraryCache.meditations);
+    }
 
     async function boot() {
+      const libraryPromise = refreshLibrary().catch((error) => {
+        console.info('[Luna library refresh failed]', error instanceof Error ? error.message : 'Library refresh failed.');
+        setLibraryLoading(false);
+      });
+
       try {
         await syncUser(user, initData);
-        await Promise.all([refreshLibrary(), refreshAccount()]);
+        await refreshAccount();
       } catch {
-        setMeditations([]);
+        setLibraryLoading(false);
       }
 
       try {
@@ -140,10 +200,12 @@ function App() {
         console.info('[Luna admin check failed]', error instanceof Error ? error.message : 'Admin check failed.');
         setAdminStatus('denied');
       }
+
+      await libraryPromise;
     }
 
     void boot();
-  }, [initData, telegram, user]);
+  }, [initData, initialLibraryCache, telegram, user]);
 
   useEffect(() => {
     if (page !== 'admin') return;
@@ -200,6 +262,10 @@ function App() {
   const newest = useMemo(() => [...decoratedMeditations].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 6), [decoratedMeditations]);
   const dailyMeditation = recommended[0] ?? newest[0] ?? decoratedMeditations[0];
 
+  useEffect(() => {
+    preloadCoverImages([dailyMeditation, ...recommended, ...continueListening, ...popular, ...newest].filter(Boolean) as Meditation[]);
+  }, [continueListening, dailyMeditation, newest, popular, recommended]);
+
   const openMeditation = (meditation: Meditation) => {
     const locked = meditation.premium && !access.hasPremium;
     telegram?.HapticFeedback?.impactOccurred('light');
@@ -219,12 +285,18 @@ function App() {
   };
 
   const buyPlan = async (plan: 'monthly' | 'lifetime') => {
-    setPaymentMessage('Creating Telegram Stars invoice...');
+    if (openingPlan) return;
+
+    setOpeningPlan(plan);
+    setPaymentMessage('Opening payment...');
+    telegram?.HapticFeedback?.impactOccurred('light');
     try {
       const { invoiceLink } = await createInvoiceLink(plan, initData);
+      setPaymentMessage('Opening Telegram Stars payment...');
 
       if (telegram?.openInvoice) {
         telegram.openInvoice(invoiceLink, (status) => {
+          setOpeningPlan(null);
           if (status === 'paid') {
             setPaymentMessage('Payment successful. Your Luna access is unlocked.');
             void refreshAccount();
@@ -234,11 +306,13 @@ function App() {
         });
       } else {
         telegram?.openTelegramLink(invoiceLink);
+        setOpeningPlan(null);
         setPaymentMessage('Invoice opened in Telegram. Complete payment there to unlock access.');
       }
     } catch {
+      setOpeningPlan(null);
       const botUsername = import.meta.env.VITE_BOT_USERNAME;
-      setPaymentMessage('Open the bot and use /plans to complete your Telegram Stars purchase.');
+      setPaymentMessage('Payment could not open. Please try again, or open the bot and use /plans.');
       if (botUsername) telegram?.openTelegramLink(`https://t.me/${botUsername}?start=luna`);
     }
   };
@@ -263,6 +337,7 @@ function App() {
             continueListening={continueListening}
             popular={popular}
             newest={newest}
+            loading={libraryLoading}
             onOpen={openMeditation}
             onLibrary={() => setPage('library')}
           />
@@ -277,6 +352,7 @@ function App() {
             setCategory={setCategory}
             meditations={filteredMeditations}
             hasPremium={access.hasPremium}
+            loading={libraryLoading}
             onOpen={openMeditation}
             onFavorite={toggleFavorite}
             onUnlock={() => setPage('pricing')}
@@ -288,7 +364,7 @@ function App() {
         )}
 
         {page === 'pricing' && (
-          <PricingPage onBuy={buyPlan} message={paymentMessage} onLibrary={() => setPage('library')} locked={selectedMeditation} />
+          <PricingPage onBuy={buyPlan} message={paymentMessage} openingPlan={openingPlan} onLibrary={() => setPage('library')} locked={selectedMeditation} />
         )}
 
         {page === 'profile' && (
@@ -365,6 +441,7 @@ function HomePage(props: {
   continueListening: Meditation[];
   popular: Meditation[];
   newest: Meditation[];
+  loading: boolean;
   onOpen: (meditation: Meditation) => void;
   onLibrary: () => void;
 }) {
@@ -390,6 +467,8 @@ function HomePage(props: {
 
       {props.daily ? (
         <PracticeHero label="Daily Meditation" meditation={props.daily} onOpen={() => props.onOpen(props.daily!)} />
+      ) : props.loading ? (
+        <PracticeHeroSkeleton />
       ) : (
         <EmptyState title="No meditations yet" body="Upload your first meditation in the hidden admin page." />
       )}
@@ -398,6 +477,7 @@ function HomePage(props: {
       <Rail title="Mood Recommendations" meditations={props.recommended} onOpen={props.onOpen} />
       <Rail title="Popular" meditations={props.popular} onOpen={props.onOpen} />
       <Rail title="Newest" meditations={props.newest} onOpen={props.onOpen} />
+      {props.loading && !props.daily && <RailSkeleton title="Preparing your calm" />}
 
       <button onClick={props.onLibrary} className="w-full rounded-2xl bg-cream px-5 py-4 font-semibold text-night shadow-glow">
         Open Library
@@ -409,7 +489,7 @@ function HomePage(props: {
 function PracticeHero({ meditation, label, onOpen }: { meditation: Meditation; label: string; onOpen: () => void }) {
   return (
     <button onClick={onOpen} className="group relative h-72 w-full overflow-hidden rounded-[30px] border border-cream/15 text-left shadow-glow">
-      <img src={meditation.cover_image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70 transition group-hover:scale-105" loading="lazy" />
+      <img src={meditation.cover_image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70 transition group-hover:scale-105" loading="eager" />
       <div className="absolute inset-0 bg-gradient-to-t from-night via-night/40 to-transparent" />
       <div className="absolute bottom-0 p-5">
         <p className="mb-2 inline-flex rounded-full bg-lavender/25 px-3 py-1 text-xs text-cream backdrop-blur">{label}</p>
@@ -419,6 +499,36 @@ function PracticeHero({ meditation, label, onOpen }: { meditation: Meditation; l
         </p>
       </div>
     </button>
+  );
+}
+
+function PracticeHeroSkeleton() {
+  return (
+    <div className="relative h-72 w-full overflow-hidden rounded-[30px] border border-cream/15 bg-white/10 shadow-glow">
+      <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-lavender/20 via-cream/10 to-gold/10" />
+      <div className="absolute bottom-0 w-full p-5">
+        <div className="h-7 w-28 rounded-full bg-cream/15" />
+        <div className="mt-4 h-8 w-2/3 rounded-full bg-cream/15" />
+        <div className="mt-3 h-4 w-40 rounded-full bg-cream/10" />
+      </div>
+    </div>
+  );
+}
+
+function RailSkeleton({ title }: { title: string }) {
+  return (
+    <section>
+      <h2 className="mb-3 text-lg font-semibold">{title}</h2>
+      <div className="-mx-4 flex gap-3 overflow-hidden px-4 pb-1">
+        {[0, 1, 2].map((item) => (
+          <div key={item} className="w-40 shrink-0 animate-pulse">
+            <div className="h-40 w-40 rounded-3xl bg-cream/10 shadow-glow" />
+            <div className="mt-3 h-4 w-32 rounded-full bg-cream/10" />
+            <div className="mt-2 h-3 w-20 rounded-full bg-cream/10" />
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -449,6 +559,7 @@ function LibraryPage(props: {
   setCategory: (category: string) => void;
   meditations: Meditation[];
   hasPremium: boolean;
+  loading: boolean;
   onOpen: (meditation: Meditation) => void;
   onFavorite: (meditation: Meditation) => void;
   onUnlock: () => void;
@@ -466,7 +577,11 @@ function LibraryPage(props: {
           <FilterPill key={item.slug} active={props.category === item.slug} onClick={() => props.setCategory(item.slug)} label={item.name} />
         ))}
       </div>
-      {props.meditations.length ? (
+      {props.loading && !props.meditations.length ? (
+        <div className="space-y-3">
+          {[0, 1, 2].map((item) => <MeditationCardSkeleton key={item} />)}
+        </div>
+      ) : props.meditations.length ? (
         props.meditations.map((meditation) => (
           <MeditationCard key={meditation.id} meditation={meditation} locked={meditation.premium && !props.hasPremium} onOpen={props.onOpen} onFavorite={props.onFavorite} onUnlock={props.onUnlock} />
         ))
@@ -474,6 +589,23 @@ function LibraryPage(props: {
         <EmptyState title="Nothing found" body="Try another search or category." />
       )}
     </div>
+  );
+}
+
+function MeditationCardSkeleton() {
+  return (
+    <article className="animate-pulse rounded-3xl border border-cream/15 bg-white/10 p-3 backdrop-blur-xl">
+      <div className="flex gap-3">
+        <div className="h-24 w-24 rounded-2xl bg-cream/10" />
+        <div className="min-w-0 flex-1">
+          <div className="h-5 w-36 rounded-full bg-cream/15" />
+          <div className="mt-3 h-3 w-20 rounded-full bg-cream/10" />
+          <div className="mt-4 h-3 w-full rounded-full bg-cream/10" />
+          <div className="mt-2 h-3 w-2/3 rounded-full bg-cream/10" />
+        </div>
+      </div>
+      <div className="mt-3 h-11 w-full rounded-2xl bg-cream/10" />
+    </article>
   );
 }
 
@@ -529,21 +661,34 @@ function FavoritesPage({ meditations, onOpen, onFavorite }: { meditations: Medit
   );
 }
 
-function PricingPage({ onBuy, message, onLibrary, locked }: { onBuy: (plan: 'monthly' | 'lifetime') => void; message: string; onLibrary: () => void; locked: Meditation | null }) {
+function PricingPage({
+  onBuy,
+  message,
+  openingPlan,
+  onLibrary,
+  locked
+}: {
+  onBuy: (plan: 'monthly' | 'lifetime') => void;
+  message: string;
+  openingPlan: 'monthly' | 'lifetime' | null;
+  onLibrary: () => void;
+  locked: Meditation | null;
+}) {
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-semibold">Luna Premium</h2>
       {locked && <p className="rounded-2xl bg-lavender/15 p-4 text-sm text-cream/80">{locked.title} is part of Luna Premium.</p>}
       <PlanCard title="Free" price="0" features={['Free meditations', 'Basic access']} />
-      <PlanCard title="Monthly Access" price={`${premiumPrices.monthly} Stars`} features={['Premium library', '30 days of access', 'Sleep, focus, anxiety, confidence']} action="Choose Monthly" onClick={() => onBuy('monthly')} />
-      <PlanCard title="Lifetime Access" price={`${premiumPrices.lifetime} Stars`} features={['Premium library forever', 'Best value', 'Instant Telegram unlock']} action="Choose Lifetime" onClick={() => onBuy('lifetime')} />
+      <PlanCard title="Monthly Access" price={`${premiumPrices.monthly} Stars`} features={['Premium library', '30 days of access', 'Sleep, focus, anxiety, confidence']} action="Choose Monthly" loading={openingPlan === 'monthly'} disabled={Boolean(openingPlan)} onClick={() => onBuy('monthly')} />
+      <PlanCard title="Lifetime Access" price={`${premiumPrices.lifetime} Stars`} features={['Premium library forever', 'Best value', 'Instant Telegram unlock']} action="Choose Lifetime" loading={openingPlan === 'lifetime'} disabled={Boolean(openingPlan)} onClick={() => onBuy('lifetime')} />
       {message && <p className="rounded-2xl bg-lavender/15 p-4 text-sm text-cream/80">{message}</p>}
+      {openingPlan && <div className="h-1 overflow-hidden rounded-full bg-cream/10"><div className="h-full w-1/2 animate-pulse rounded-full bg-gold" /></div>}
       {message.includes('unlocked') && <button onClick={onLibrary} className="w-full rounded-2xl bg-cream px-5 py-4 font-semibold text-night">Open Premium Library</button>}
     </div>
   );
 }
 
-function PlanCard(props: { title: string; price: string; features: string[]; action?: string; onClick?: () => void }) {
+function PlanCard(props: { title: string; price: string; features: string[]; action?: string; loading?: boolean; disabled?: boolean; onClick?: () => void }) {
   return (
     <article className="rounded-3xl border border-cream/15 bg-white/10 p-5 backdrop-blur-xl">
       <div className="flex items-start justify-between gap-4">
@@ -556,7 +701,16 @@ function PlanCard(props: { title: string; price: string; features: string[]; act
       <ul className="mt-4 space-y-2 text-sm text-cream/75">
         {props.features.map((feature) => <li key={feature}>• {feature}</li>)}
       </ul>
-      {props.action && <button onClick={props.onClick} className="mt-5 w-full rounded-2xl bg-gold px-4 py-3 font-semibold text-night">{props.action}</button>}
+      {props.action && (
+        <button
+          onClick={props.onClick}
+          disabled={props.disabled}
+          className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-gold px-4 py-3 font-semibold text-night transition disabled:cursor-not-allowed disabled:opacity-70"
+        >
+          {props.loading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-night/30 border-t-night" />}
+          {props.loading ? 'Opening payment...' : props.action}
+        </button>
+      )}
     </article>
   );
 }
@@ -1017,7 +1171,7 @@ function AdminPage({
           <div className="rounded-3xl border border-cream/15 bg-white/10 p-5 shadow-glow backdrop-blur-xl">
             <div className="grid gap-3">
               <DropUpload title="MP3 audio" body="Drag an MP3 here or tap to upload" icon={<Upload />} accept="audio/mpeg,audio/mp3,.mp3" progress={audioProgress} onFile={(file) => upload('audio', file)} />
-              <DropUpload title="Cover image" body="Drag JPG, PNG, or WebP cover here" icon={<Image />} accept="image/jpeg,image/png,image/webp" progress={coverProgress} onFile={(file) => upload('cover', file)} />
+              <DropUpload title="Cover image" body="Drag JPG, PNG, or WebP cover here" icon={<ImageIcon />} accept="image/jpeg,image/png,image/webp" progress={coverProgress} onFile={(file) => upload('cover', file)} />
             </div>
 
             <div className="mt-4 grid gap-3">
