@@ -3,43 +3,91 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Luna Wellness</title>
+    <title>LUNA — AI Guided Meditation</title>
     <link rel="stylesheet" href="/src/styles.css" />
   </head>
   <body>
     <main class="page">
+      <nav class="topbar">
+        <a class="brand" href="#">LUNA</a>
+        <a id="open-luna" class="nav-cta" href="#">Open in Telegram</a>
+      </nav>
+
       <section class="hero">
         <div class="hero-copy">
-          <p class="eyebrow">AI-guided wellness inside Telegram</p>
-          <h1>Luna</h1>
+          <p class="eyebrow">AI Guided Meditation</p>
+          <h1>LUNA</h1>
           <p class="lede">
-            Meditations and breathing practices for sleep, stress, anxiety, focus, confidence, and emotional balance.
-          </p>
-          <p class="telegram-note">
-            Luna works inside Telegram. No passwords. No complicated checkout. Access your practices instantly.
+            A premium calm companion inside Telegram for sleep, focus, breathwork, and emotional balance.
           </p>
           <div class="actions">
-            <a id="open-luna" class="primary" href="#">Open Luna in Telegram</a>
-            <a id="try-free" class="secondary" href="#">Try Free Practice</a>
-            <a id="unlock-premium" class="secondary" href="#">Unlock Premium</a>
+            <a id="try-free" class="primary" href="#">Open in Telegram</a>
+            <button class="secondary" type="button" data-coming-soon="Card">Card · Coming Soon</button>
+            <button class="secondary" type="button" data-coming-soon="Crypto">Crypto · Coming Soon</button>
           </div>
         </div>
-        <div class="phone" aria-label="Luna app preview">
+
+        <div class="phone" aria-label="LUNA app preview">
           <div class="phone-top"></div>
-          <div class="mood-card">
-            <span>Hello, friend</span>
-            <strong>How do you feel today?</strong>
-            <div class="moods">
-              <i>Calm</i><i>Stressed</i><i>Tired</i>
-            </div>
+          <div class="preview-header">
+            <span>Good evening</span>
+            <strong>LUNA</strong>
           </div>
+          <div class="moon-art" aria-hidden="true"><span></span></div>
           <div class="practice-card">
-            <span>Recommended</span>
-            <strong>5-Minute Calm Reset</strong>
-            <small>Meditation + Breathwork</small>
+            <span>Today’s recommendation</span>
+            <strong>Quiet Mountain Breath</strong>
+            <small>Sleep · 12 min · Premium</small>
           </div>
         </div>
       </section>
+
+      <section class="section">
+        <p class="eyebrow">Meditation categories</p>
+        <div class="grid">
+          <article>Sleep</article>
+          <article>Breathwork</article>
+          <article>Focus</article>
+          <article>Anxiety</article>
+        </div>
+      </section>
+
+      <section class="section split">
+        <div>
+          <p class="eyebrow">Premium</p>
+          <h2>Unlock Luna Premium</h2>
+          <p>Unlimited meditation library, exclusive breathwork, Sleep Stories, weekly new content, and offline listening.</p>
+        </div>
+        <div class="pricing">
+          <article><span>Monthly</span><strong>499 Stars</strong><small>Telegram Stars · available now</small></article>
+          <article><span>Lifetime</span><strong>2499 Stars</strong><small>Best value · available now</small></article>
+        </div>
+      </section>
+
+      <section class="section">
+        <p class="eyebrow">Why Luna</p>
+        <div class="grid">
+          <article>Instant inside Telegram</article>
+          <article>No passwords</article>
+          <article>Elegant daily calm</article>
+          <article>Premium audio library</article>
+        </div>
+      </section>
+
+      <section class="section faq">
+        <p class="eyebrow">FAQ</p>
+        <details open><summary>How do I pay?</summary><p>Telegram Stars are available now. Card and Crypto are coming soon.</p></details>
+        <details><summary>Is there free content?</summary><p>Yes. Free members can access basic meditations.</p></details>
+        <details><summary>Where does Luna work?</summary><p>Luna works in Telegram Mini Apps on iPhone, Android, tablets, and desktop.</p></details>
+      </section>
+
+      <footer>
+        <span>LUNA</span>
+        <a href="#">Telegram</a>
+        <a href="#">Instagram</a>
+        <a href="#">Privacy</a>
+        <a href="#">Terms</a>
+      </footer>
     </main>
     <script type="module" src="/src/main.ts"></script>
   </body>

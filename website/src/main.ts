@@ -13,3 +13,10 @@ for (const id of ['open-luna', 'try-free', 'unlock-premium']) {
     link.href = appUrl || fallbackUrl;
   }
 }
+
+document.querySelectorAll<HTMLButtonElement>('[data-coming-soon]').forEach((button) => {
+  button.addEventListener('click', () => {
+    const label = button.dataset.comingSoon ?? 'Payment method';
+    window.alert(`${label}: Coming Soon`);
+  });
+});

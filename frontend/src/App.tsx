@@ -12,9 +12,11 @@ import {
   Pause,
   Play,
   Search,
+  Share2,
   SkipBack,
   SkipForward,
   Sparkles,
+  Timer,
   Upload,
   User
 } from 'lucide-react';
@@ -113,6 +115,13 @@ function formatTime(seconds: number) {
   const minutes = Math.floor(seconds / 60);
   const remaining = Math.floor(seconds % 60).toString().padStart(2, '0');
   return `${minutes}:${remaining}`;
+}
+
+function dayGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
 }
 
 function App() {
@@ -422,11 +431,11 @@ function Header({ plan, streak }: { plan: string; streak: number }) {
     <div className="mb-5 flex items-center justify-between">
       <div>
         <p className="text-xs uppercase tracking-[0.28em] text-lavender/70">Luna</p>
-        <h1 className="font-serif text-3xl text-cream">Luna Meditation</h1>
-        <p className="mt-1 text-xs text-gold/80">AI-guided calm</p>
+        <h1 className="font-serif text-3xl tracking-wide text-cream">LUNA</h1>
+        <p className="mt-1 text-xs uppercase tracking-[0.18em] text-gold/80">AI Guided Meditation</p>
       </div>
-      <div className="rounded-full border border-cream/15 bg-white/10 px-3 py-2 text-xs text-cream shadow-glow backdrop-blur">
-        {streak > 0 ? `🔥 ${streak} day streak` : plan}
+      <div className="rounded-full border border-white/10 bg-ink px-3 py-2 text-xs text-cream shadow-glow">
+        {streak > 0 ? `${streak} day streak` : plan}
       </div>
     </div>
   );
@@ -447,16 +456,16 @@ function HomePage(props: {
 }) {
   return (
     <div className="space-y-5">
-      <section className="rounded-[28px] border border-cream/15 bg-white/10 p-5 shadow-glow backdrop-blur-xl">
-        <p className="text-sm text-lavender">Hello, {props.firstName}</p>
-        <h2 className="mt-2 text-3xl font-semibold leading-tight">How do you feel today?</h2>
+      <section className="luna-fade rounded-[28px] border border-white/10 bg-ink p-5 shadow-glow">
+        <p className="text-sm text-lavender">{dayGreeting()}, {props.firstName}</p>
+        <h2 className="mt-2 font-serif text-3xl font-semibold leading-tight">Choose your state of calm.</h2>
         <div className="mt-4 flex flex-wrap gap-2">
           {moods.map((item) => (
             <button
               key={item}
               onClick={() => props.setMood(item)}
               className={`rounded-full px-4 py-2 text-sm transition ${
-                props.mood === item ? 'bg-gold text-night' : 'bg-cream/10 text-cream'
+                props.mood === item ? 'bg-gold text-night' : 'bg-surface text-cream'
               }`}
             >
               {item}
@@ -466,20 +475,21 @@ function HomePage(props: {
       </section>
 
       {props.daily ? (
-        <PracticeHero label="Daily Meditation" meditation={props.daily} onOpen={() => props.onOpen(props.daily!)} />
+        <PracticeHero label="Today’s recommendation" meditation={props.daily} onOpen={() => props.onOpen(props.daily!)} />
       ) : props.loading ? (
         <PracticeHeroSkeleton />
       ) : (
         <EmptyState title="No meditations yet" body="Upload your first meditation in the hidden admin page." />
       )}
 
-      <Rail title="Continue Listening" meditations={props.continueListening} onOpen={props.onOpen} />
-      <Rail title="Mood Recommendations" meditations={props.recommended} onOpen={props.onOpen} />
-      <Rail title="Popular" meditations={props.popular} onOpen={props.onOpen} />
-      <Rail title="Newest" meditations={props.newest} onOpen={props.onOpen} />
+      <Rail title="Continue listening" meditations={props.continueListening} onOpen={props.onOpen} />
+      <Rail title="Recently played" meditations={props.continueListening} onOpen={props.onOpen} />
+      <Rail title="Popular meditations" meditations={props.popular} onOpen={props.onOpen} />
+      <Rail title="Breathing exercises" meditations={props.newest.filter((item) => item.category.includes('breath'))} onOpen={props.onOpen} />
+      <Rail title="Premium recommendations" meditations={props.recommended.filter((item) => item.premium)} onOpen={props.onOpen} />
       {props.loading && !props.daily && <RailSkeleton title="Preparing your calm" />}
 
-      <button onClick={props.onLibrary} className="w-full rounded-2xl bg-cream px-5 py-4 font-semibold text-night shadow-glow">
+      <button onClick={props.onLibrary} className="w-full rounded-[20px] bg-gold px-5 py-4 font-semibold text-night shadow-glow hover:brightness-110">
         Open Library
       </button>
     </div>
@@ -674,23 +684,45 @@ function PricingPage({
   onLibrary: () => void;
   locked: Meditation | null;
 }) {
+  const [comingSoon, setComingSoon] = useState('');
+
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-semibold">Luna Premium</h2>
-      {locked && <p className="rounded-2xl bg-lavender/15 p-4 text-sm text-cream/80">{locked.title} is part of Luna Premium.</p>}
-      <PlanCard title="Free" price="0" features={['Free meditations', 'Basic access']} />
-      <PlanCard title="Monthly Access" price={`${premiumPrices.monthly} Stars`} features={['Premium library', '30 days of access', 'Sleep, focus, anxiety, confidence']} action="Choose Monthly" loading={openingPlan === 'monthly'} disabled={Boolean(openingPlan)} onClick={() => onBuy('monthly')} />
-      <PlanCard title="Lifetime Access" price={`${premiumPrices.lifetime} Stars`} features={['Premium library forever', 'Best value', 'Instant Telegram unlock']} action="Choose Lifetime" loading={openingPlan === 'lifetime'} disabled={Boolean(openingPlan)} onClick={() => onBuy('lifetime')} />
+    <div className="space-y-4 luna-fade">
+      <section className="overflow-hidden rounded-[28px] border border-white/10 bg-ink p-5 shadow-glow">
+        <p className="text-xs uppercase tracking-[0.18em] text-gold">LUNA Premium</p>
+        <h2 className="mt-2 font-serif text-3xl font-semibold">Unlock Luna Premium</h2>
+        <div className="luna-artwork mt-5 grid h-44 place-items-center rounded-[28px] border border-white/10">
+          <div className="h-20 w-20 rounded-full border border-gold/40 bg-gold/10 shadow-glow" />
+        </div>
+      </section>
+      {locked && <p className="rounded-[20px] bg-surface p-4 text-sm text-cream/80">{locked.title} is part of Luna Premium.</p>}
+      <PlanCard title="Free" price="0" features={['Basic meditations only']} />
+      <PlanCard title="Monthly" price={`${premiumPrices.monthly} Stars`} features={['Unlimited meditation library', 'Exclusive Breathwork', 'Sleep Stories', 'Weekly new content', 'Offline listening']} action="Telegram Stars" loading={openingPlan === 'monthly'} disabled={Boolean(openingPlan)} onClick={() => onBuy('monthly')} />
+      <PlanCard title="Lifetime" price={`${premiumPrices.lifetime} Stars`} features={['Premium library forever', 'Best value', 'Instant Telegram unlock']} action="Telegram Stars" loading={openingPlan === 'lifetime'} disabled={Boolean(openingPlan)} onClick={() => onBuy('lifetime')} />
+      <div className="grid grid-cols-2 gap-3">
+        <button onClick={() => setComingSoon('Card')} className="rounded-[20px] border border-white/10 bg-surface px-4 py-3 text-sm font-semibold">Card</button>
+        <button onClick={() => setComingSoon('Crypto')} className="rounded-[20px] border border-white/10 bg-surface px-4 py-3 text-sm font-semibold">Crypto</button>
+      </div>
       {message && <p className="rounded-2xl bg-lavender/15 p-4 text-sm text-cream/80">{message}</p>}
       {openingPlan && <div className="h-1 overflow-hidden rounded-full bg-cream/10"><div className="h-full w-1/2 animate-pulse rounded-full bg-gold" /></div>}
       {message.includes('unlocked') && <button onClick={onLibrary} className="w-full rounded-2xl bg-cream px-5 py-4 font-semibold text-night">Open Premium Library</button>}
+      {comingSoon && (
+        <div className="fixed inset-0 z-30 grid place-items-center bg-night/80 px-5 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-[28px] border border-white/10 bg-ink p-5 text-center shadow-glow">
+            <p className="text-xs uppercase tracking-[0.18em] text-gold">{comingSoon}</p>
+            <h3 className="mt-2 font-serif text-2xl">Coming Soon</h3>
+            <p className="mt-2 text-sm text-lavender">Telegram Stars are available now for Luna Premium.</p>
+            <button onClick={() => setComingSoon('')} className="mt-5 w-full rounded-[20px] bg-gold px-4 py-3 font-semibold text-night">Close</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 function PlanCard(props: { title: string; price: string; features: string[]; action?: string; loading?: boolean; disabled?: boolean; onClick?: () => void }) {
   return (
-    <article className="rounded-3xl border border-cream/15 bg-white/10 p-5 backdrop-blur-xl">
+    <article className="rounded-[28px] border border-white/10 bg-ink p-5 shadow-glow">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-xl font-semibold">{props.title}</h3>
@@ -752,30 +784,32 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
   };
 
   return (
-    <div className="space-y-5">
-      <div className="relative h-[520px] overflow-hidden rounded-[34px] border border-cream/15 shadow-glow">
-        <img src={meditation.cover_image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-80" />
-        <div className="absolute inset-0 bg-gradient-to-t from-night via-night/55 to-night/10" />
-        {loading && <div className="absolute left-5 top-5 rounded-full bg-cream/15 px-4 py-2 text-xs text-cream backdrop-blur">Loading audio...</div>}
-        {meditation.premium && <div className="absolute right-5 top-5 rounded-full bg-gold px-3 py-1 text-xs font-semibold text-night">Premium</div>}
-        <div className="absolute inset-x-0 bottom-0 p-6">
-          <p className="text-sm capitalize text-lavender">{meditation.category.replace('-', ' ')}</p>
-          <h2 className="mt-1 text-3xl font-semibold">{meditation.title}</h2>
-          <p className="mt-2 text-sm text-cream/75">{formatTime(duration)} · {formatTime(Math.max(0, duration - position))} left</p>
-          <input className="mt-5 w-full accent-gold" type="range" min={0} max={duration || 1} value={position} onChange={(event) => {
-            const next = Number(event.target.value);
-            setPosition(next);
-            if (audioRef.current) audioRef.current.currentTime = next;
-          }} />
-          <div className="mt-1 flex justify-between text-xs text-cream/60">
-            <span>{formatTime(position)}</span>
-            <span>{formatTime(duration)}</span>
-          </div>
+    <div className="relative space-y-5 luna-fade">
+      <img src={meditation.cover_image} alt="" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[520px] w-full scale-110 rounded-[34px] object-cover opacity-25 blur-3xl" />
+      <div className="rounded-[28px] border border-white/10 bg-ink p-5 shadow-glow">
+        <div className="relative mx-auto aspect-square w-full max-w-[340px] overflow-hidden rounded-[28px] border border-white/10">
+          <img src={meditation.cover_image} alt="" className="h-full w-full object-cover" />
+          {loading && <div className="absolute left-4 top-4 rounded-full bg-night/70 px-4 py-2 text-xs text-cream backdrop-blur">Loading audio...</div>}
+          {meditation.premium && <div className="absolute right-4 top-4 rounded-full bg-gold px-3 py-1 text-xs font-semibold text-night">Premium</div>}
         </div>
-      </div>
 
-      <div className="rounded-3xl border border-cream/15 bg-white/10 p-5 backdrop-blur-xl">
-        <div className="flex items-center justify-center gap-4">
+        <div className="mt-6 text-center">
+          <p className="text-xs uppercase tracking-[0.18em] text-gold">{meditation.category.replace('-', ' ')}</p>
+          <h2 className="mt-2 font-serif text-3xl font-semibold">{meditation.title}</h2>
+          <p className="mt-2 text-sm text-lavender">{formatTime(position)} elapsed · {formatTime(Math.max(0, duration - position))} remaining</p>
+        </div>
+
+        <input className="mt-6 w-full accent-gold" type="range" min={0} max={duration || 1} value={position} onChange={(event) => {
+          const next = Number(event.target.value);
+          setPosition(next);
+          if (audioRef.current) audioRef.current.currentTime = next;
+        }} />
+        <div className="mt-1 flex justify-between text-xs text-lavender">
+          <span>{formatTime(position)}</span>
+          <span>{formatTime(duration)}</span>
+        </div>
+
+        <div className="mt-6 flex items-center justify-center gap-5">
           <IconButton label="Rewind 15 seconds" onClick={() => {
             if (audioRef.current) audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 15);
           }}><SkipBack /></IconButton>
@@ -783,21 +817,28 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
             if (!audioRef.current) return;
             if (audioRef.current.paused) void audioRef.current.play();
             else audioRef.current.pause();
-          }} className="grid h-16 w-16 place-items-center rounded-full bg-cream text-night shadow-glow">
+          }} className="grid h-20 w-20 place-items-center rounded-full bg-gold text-night shadow-glow hover:brightness-110">
             {playing ? <Pause /> : <Play />}
           </button>
           <IconButton label="Forward 15 seconds" onClick={() => {
             if (audioRef.current) audioRef.current.currentTime = Math.min(duration, audioRef.current.currentTime + 15);
           }}><SkipForward /></IconButton>
         </div>
-        <div className="mt-5 flex items-center justify-between">
-          <button onClick={onFavorite} className="rounded-full bg-cream/10 px-4 py-2 text-sm"><Heart className={favorite ? 'mr-2 inline fill-gold text-gold' : 'mr-2 inline'} size={16} />Favorite</button>
-          <button className="rounded-full bg-cream/10 px-4 py-2 text-sm text-cream/60"><Download className="mr-2 inline" size={16} />Future</button>
+
+        <div className="mt-6 grid grid-cols-4 gap-2">
+          <button onClick={onFavorite} className="rounded-[20px] bg-surface px-3 py-3 text-xs"><Heart className={favorite ? 'mx-auto fill-gold text-gold' : 'mx-auto'} size={18} /><span className="mt-1 block">Favorite</span></button>
+          <button className="rounded-[20px] bg-surface px-3 py-3 text-xs text-lavender"><Download className="mx-auto" size={18} /><span className="mt-1 block">Download</span></button>
+          <button className="rounded-[20px] bg-surface px-3 py-3 text-xs text-lavender"><Share2 className="mx-auto" size={18} /><span className="mt-1 block">Share</span></button>
+          <button className="rounded-[20px] bg-surface px-3 py-3 text-xs text-lavender"><Timer className="mx-auto" size={18} /><span className="mt-1 block">Timer</span></button>
+        </div>
+
+        <div className="mt-4 flex items-center justify-between rounded-[20px] bg-surface px-4 py-3">
+          <span className="text-sm text-lavender">Playback speed</span>
           <select value={speed} onChange={(event) => {
             const next = Number(event.target.value);
             setSpeed(next);
             if (audioRef.current) audioRef.current.playbackRate = next;
-          }} className="rounded-full bg-night px-3 py-2 text-sm text-cream">
+          }} className="rounded-full bg-night px-3 py-2 text-sm text-cream outline-none">
             {[0.75, 1, 1.25, 1.5, 2].map((item) => <option key={item} value={item}>{item}x</option>)}
           </select>
         </div>
@@ -833,7 +874,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
 }
 
 function IconButton({ label, children, onClick }: { label: string; children: React.ReactNode; onClick: () => void }) {
-  return <button aria-label={label} onClick={onClick} className="grid h-12 w-12 place-items-center rounded-full bg-cream/10 text-cream">{children}</button>;
+  return <button aria-label={label} onClick={onClick} className="grid h-12 w-12 place-items-center rounded-full bg-surface text-cream">{children}</button>;
 }
 
 function ProfilePage({
@@ -855,37 +896,43 @@ function ProfilePage({
 }) {
   const activeUntil = access.user?.active_until ? new Date(access.user.active_until).toLocaleDateString() : 'Not active';
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-semibold">Luna Profile</h2>
-      <div className="rounded-3xl border border-cream/15 bg-white/10 p-5 backdrop-blur-xl">
+    <div className="space-y-4 luna-fade">
+      <div>
+        <p className="text-xs uppercase tracking-[0.18em] text-gold">LUNA</p>
+        <h2 className="font-serif text-3xl font-semibold">Profile</h2>
+      </div>
+      <div className="rounded-[28px] border border-white/10 bg-ink p-5 shadow-glow">
         <div className="flex items-center gap-4">
-          <div className="grid h-16 w-16 place-items-center rounded-full bg-lavender/25 text-2xl">{firstName[0]}</div>
+          <div className="grid h-16 w-16 place-items-center rounded-full bg-gold/15 text-2xl font-semibold text-gold">{firstName[0]}</div>
           <div>
-            <h3 className="text-xl font-semibold">{firstName}</h3>
-            <p className="text-sm text-lavender">{username ? `@${username}` : access.plan}</p>
+            <h3 className="font-serif text-2xl font-semibold">{firstName}</h3>
+            <p className="text-sm text-lavender">{username ? `@${username}` : 'Luna member'}</p>
           </div>
         </div>
         <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
+          <Stat label="Member since" value="Today" />
           <Stat label="Premium status" value={access.hasPremium ? 'Active' : 'Free'} />
           <Stat label="Active until" value={activeUntil} />
-          <Stat label="Completed" value={String(profile?.completed ?? 0)} />
-          <Stat label="Minutes listened" value={String(profile?.minutesListened ?? 0)} />
+          <Stat label="Minutes meditated" value={String(profile?.minutesListened ?? 0)} />
+          <Stat label="Completed sessions" value={String(profile?.completed ?? 0)} />
           <Stat label="Current streak" value={`${profile?.currentStreak ?? 0} days`} />
-          <Stat label="Purchased plan" value={profile?.purchasedPlan ?? 'free'} />
+          <Stat label="Longest streak" value={`${profile?.longestStreak ?? 0} days`} />
+          <Stat label="Favorite category" value="After listening" />
+          <Stat label="Last listened" value="After first session" />
         </div>
-        <div className="mt-5 rounded-2xl bg-cream/10 p-4">
-          <p className="mb-3 text-sm text-lavender">Rewards</p>
+        <div className="mt-5 rounded-[20px] bg-surface p-4">
+          <p className="mb-3 text-sm text-lavender">Achievements</p>
           <div className="grid grid-cols-4 gap-2 text-center text-xs">
-            {rewardMilestones.map((days) => <span key={days} className={`rounded-full px-2 py-2 ${profile?.rewards?.[days] ? 'bg-gold text-night' : 'bg-cream/10 text-cream/60'}`}>{days}d</span>)}
+            {rewardMilestones.map((days) => <span key={days} className={`rounded-full px-2 py-2 ${profile?.rewards?.[days] ? 'bg-gold text-night' : 'bg-night text-lavender'}`}>{days}d</span>)}
           </div>
         </div>
         {showAdminButton && (
-          <button onClick={onAdmin} className="mt-5 w-full rounded-2xl bg-gold px-5 py-4 font-semibold text-night">
+          <button onClick={onAdmin} className="mt-5 w-full rounded-[20px] bg-gold px-5 py-4 font-semibold text-night">
             Admin
           </button>
         )}
-        <button onClick={onRestore} className="mt-5 w-full rounded-2xl bg-cream px-5 py-4 font-semibold text-night">Restore purchases</button>
-        <button className="mt-3 w-full rounded-2xl bg-cream/10 px-5 py-4 text-sm text-cream/60">Logout</button>
+        <button onClick={onRestore} className="mt-5 w-full rounded-[20px] bg-gold px-5 py-4 font-semibold text-night">Restore purchases</button>
+        <button className="mt-3 w-full rounded-[20px] bg-surface px-5 py-4 text-sm text-lavender">Logout</button>
       </div>
     </div>
   );
@@ -1105,8 +1152,8 @@ function AdminPage({
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.28em] text-lavender/70">AI-guided calm</p>
-          <h2 className="font-serif text-3xl font-semibold">Luna Meditation Admin</h2>
+          <p className="text-xs uppercase tracking-[0.18em] text-gold">AI Guided Meditation</p>
+          <h2 className="font-serif text-3xl font-semibold">LUNA Admin</h2>
         </div>
         <button onClick={onBack} className="shrink-0 rounded-full bg-gold px-4 py-2 text-sm font-semibold text-night">Back to Luna</button>
       </div>
@@ -1599,7 +1646,7 @@ function AdminPreview({ form }: { form: MeditationPayload }) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-cream/10 p-4">
+    <div className="rounded-[20px] bg-surface p-4">
       <p className="text-xs text-lavender">{label}</p>
       <p className="mt-1 font-semibold">{value}</p>
     </div>
@@ -1607,7 +1654,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 function EmptyState({ title, body }: { title: string; body: string }) {
-  return <div className="rounded-3xl border border-cream/15 bg-white/10 p-5 text-center backdrop-blur-xl"><Sparkles className="mx-auto text-gold" /><h3 className="mt-3 font-semibold">{title}</h3><p className="mt-1 text-sm text-cream/65">{body}</p></div>;
+  return <div className="rounded-[28px] border border-white/10 bg-ink p-5 text-center shadow-glow"><Sparkles className="mx-auto text-gold" /><h3 className="mt-3 font-serif text-xl font-semibold">{title}</h3><p className="mt-1 text-sm text-lavender">{body}</p></div>;
 }
 
 function Nav({ active, onChange }: { active: Page; onChange: (page: Page) => void }) {
