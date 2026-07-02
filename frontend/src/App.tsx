@@ -446,7 +446,7 @@ function App() {
   return (
     <main className="min-h-screen overflow-hidden bg-night text-cream">
       <div className="fixed inset-0 luna-bg" />
-      <section className="relative mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-24 pt-5">
+      <section className="relative mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-28 pt-4">
         <Header plan={access.plan} streak={profile?.currentStreak ?? 0} />
 
         {page === 'home' && (
@@ -546,16 +546,16 @@ function App() {
 
 function Header({ plan, streak }: { plan: string; streak: number }) {
   return (
-    <div className="mb-5 flex items-center justify-between">
+    <div className="mb-3 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <MoonMark className="h-12 w-12 shrink-0" />
+        <MoonMark className="h-10 w-10 shrink-0" />
         <div>
-          <p className="text-xs uppercase tracking-[0.28em] text-gold">LUNA</p>
-          <h1 className="font-serif text-3xl tracking-[0.18em] text-cream">MEDITATION</h1>
+          <p className="text-[10px] uppercase tracking-[0.28em] text-gold">LUNA</p>
+          <h1 className="font-serif text-2xl tracking-[0.16em] text-cream">MEDITATION</h1>
           <p className="mt-1 text-[10px] uppercase tracking-[0.22em] text-beige">AI Guided Calm Inside Telegram</p>
         </div>
       </div>
-      <div className="rounded-full border border-white/10 bg-ink px-3 py-2 text-xs text-cream shadow-glow">
+      <div className="rounded-full border border-white/10 bg-ink px-3 py-1.5 text-[11px] text-cream shadow-glow">
         {streak > 0 ? `${streak} day streak` : plan}
       </div>
     </div>
@@ -577,22 +577,22 @@ function HomePage(props: {
   onLibrary: () => void;
 }) {
   return (
-    <div className="space-y-5">
-      <section className="luna-fade overflow-hidden rounded-[28px] border border-white/10 bg-ink p-5 shadow-glow">
+    <div className="space-y-4">
+      <section className="luna-fade overflow-hidden rounded-[24px] border border-white/10 bg-ink p-4 shadow-glow">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-sm text-beige">{dayGreeting()},</p>
-            <h2 className="mt-1 font-serif text-4xl font-semibold leading-tight text-cream">{props.firstName}</h2>
+            <h2 className="mt-0.5 font-serif text-3xl font-semibold leading-tight text-cream">{props.firstName}</h2>
           </div>
-          <MoonMark className="h-20 w-20 shrink-0" />
+          <MoonMark className="h-14 w-14 shrink-0" />
         </div>
-        <p className="mt-4 text-sm text-beige">How are you feeling today?</p>
-        <div className="mt-4 flex flex-wrap gap-2">
+        <p className="mt-3 text-sm text-beige">How are you feeling today?</p>
+        <div className="mt-3 flex flex-wrap gap-2">
           {moods.map((item) => (
             <button
               key={item}
               onClick={() => props.setMood(item)}
-              className={`rounded-full px-4 py-2 text-sm transition ${
+              className={`rounded-full px-3.5 py-1.5 text-sm transition ${
                 props.mood === item ? 'bg-gold text-night' : 'bg-surface text-cream'
               }`}
             >
@@ -600,11 +600,11 @@ function HomePage(props: {
             </button>
           ))}
         </div>
-        <div className="mt-4 rounded-[20px] border border-gold/20 bg-gold/10 p-4">
-          <p className="text-sm leading-6 text-cream/85">{moodMessage(props.mood, props.wellness)}</p>
+        <div className="mt-3 rounded-2xl border border-gold/20 bg-gold/10 px-3 py-2">
+          <p className="line-clamp-1 text-xs font-medium text-cream/85">{props.wellness?.todayCheckin ? '✓ Today’s check-in saved' : moodMessage(props.mood, props.wellness)}</p>
           {props.wellness?.weeklyCheckinCount ? (
-            <p className="mt-2 text-xs uppercase tracking-[0.16em] text-gold">
-              {props.wellness.weeklyCheckinCount}/7 weekly check-ins · {props.wellness.mostCommonMoodLabel}
+            <p className="mt-1 text-[11px] capitalize text-gold">
+              {props.wellness.mostCommonMoodLabel} · {props.wellness.weeklyCheckinCount}/7 check-ins
             </p>
           ) : null}
         </div>
@@ -635,19 +635,19 @@ function HomePage(props: {
 
 function PracticeHero({ meditation, label, onOpen }: { meditation: Meditation; label: string; onOpen: () => void }) {
   return (
-    <button onClick={onOpen} className="group relative h-80 w-full overflow-hidden rounded-[30px] border border-white/10 text-left shadow-glow transition duration-300 ease-in-out hover:brightness-110">
+    <button onClick={onOpen} className="group relative h-[260px] w-full overflow-hidden rounded-[26px] border border-white/10 text-left shadow-glow transition duration-300 ease-in-out hover:brightness-110">
       <img src={meditation.cover_image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70 transition group-hover:scale-105" loading="eager" />
       <div className="absolute inset-0 bg-gradient-to-t from-night via-night/40 to-transparent" />
-      <span className="absolute right-5 top-5 rounded-full bg-gold px-3 py-1 text-xs font-semibold text-night">
+      <span className="absolute right-4 top-4 rounded-full bg-gold px-3 py-1 text-xs font-semibold text-night">
         {meditation.premium ? 'Premium' : 'Free'}
       </span>
-      <div className="absolute bottom-0 p-5">
+      <div className="absolute bottom-0 p-4">
         <p className="mb-2 inline-flex rounded-full bg-lavender/25 px-3 py-1 text-xs text-cream backdrop-blur">{label}</p>
-        <h3 className="font-serif text-3xl font-semibold">{displayMeditationTitle(meditation)}</h3>
+        <h3 className="font-serif text-2xl font-semibold">{displayMeditationTitle(meditation)}</h3>
         <p className="mt-1 text-sm capitalize text-cream/75">
           {meditation.category.replace('-', ' ')} · {formatTime(meditation.duration)}
         </p>
-        <span className="mt-4 inline-flex rounded-[20px] bg-gold px-5 py-3 text-sm font-semibold text-night shadow-gold">
+        <span className="mt-3 inline-flex rounded-[18px] bg-gold px-5 py-2.5 text-sm font-semibold text-night shadow-gold">
           Begin
         </span>
       </div>
@@ -823,7 +823,10 @@ function MeditationCard({ meditation, locked, onOpen, onFavorite, onUnlock }: {
 function FavoritesPage({ meditations, onOpen, onFavorite }: { meditations: Meditation[]; onOpen: (meditation: Meditation) => void; onFavorite: (meditation: Meditation) => void }) {
   return (
     <div className="space-y-4">
-      <h2 className="font-serif text-3xl font-semibold">Your Sanctuary</h2>
+      <div>
+        <h2 className="font-serif text-3xl font-semibold">Your Sanctuary</h2>
+        <p className="mt-1 text-sm text-lavender">Practices you saved to return to.</p>
+      </div>
       {meditations.length ? meditations.map((meditation) => (
         <MeditationCard key={meditation.id} meditation={meditation} locked={false} onOpen={onOpen} onFavorite={onFavorite} onUnlock={() => undefined} />
       )) : <EmptyState title="Your saved calm will live here." body="Tap the heart on any meditation to build a small refuge you can return to anytime." />}
@@ -957,27 +960,34 @@ function PricingPage({
   const [comingSoon, setComingSoon] = useState('');
 
   return (
-    <div className="space-y-4 luna-fade">
-      <section className="overflow-hidden rounded-[28px] border border-white/10 bg-ink p-5 shadow-glow">
-        <p className="text-xs uppercase tracking-[0.18em] text-gold">LUNA Premium</p>
-        <h2 className="mt-2 font-serif text-4xl font-semibold leading-tight">Unlock your calm.</h2>
-        <p className="mt-3 text-sm leading-6 text-beige">
-          Access the full Luna library, premium breathwork, daily streaks, favorites and new practices every week.
+    <div className="space-y-2.5 luna-fade">
+      <section className="overflow-hidden rounded-[24px] border border-white/10 bg-ink p-4 shadow-glow">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-gold">LUNA Premium</p>
+            <h2 className="mt-1 font-serif text-3xl font-semibold leading-tight">Unlock your calm.</h2>
+          </div>
+          <MoonMark className="h-14 w-14 shrink-0" />
+        </div>
+        <p className="mt-2 text-sm leading-5 text-beige">
+          Full library, premium breathwork, daily streaks and new practices every week.
         </p>
-        <div className="luna-artwork mt-5 grid h-56 place-items-center rounded-[28px] border border-white/10">
-          <MoonMark className="h-36 w-36" />
+        <div className="mt-3 flex flex-wrap gap-2">
+          <PremiumBadge label="Premium Library" />
+          <PremiumBadge label="Weekly Content" />
+          <PremiumBadge label="Daily Streak" />
         </div>
       </section>
       {locked && <p className="rounded-[20px] bg-surface p-4 text-sm text-cream/80">{locked.title} is part of Luna Premium.</p>}
-      <div className="grid grid-cols-2 gap-3">
+      <PlanCard title="Monthly Premium" price={`${premiumPrices.monthly} ⭐`} features={['Unlimited meditations', 'Premium breathing', 'Sleep, anxiety and focus', 'Daily streaks']} action="Unlock Monthly" loading={openingPlan === 'monthly'} disabled={Boolean(openingPlan)} onClick={() => onBuy('monthly')} featured />
+      <PlanCard title="Lifetime Premium" price={`${premiumPrices.lifetime} ⭐`} features={['Premium library forever', 'All future practices', 'Best value', 'Instant Telegram unlock']} action="Get Lifetime" loading={openingPlan === 'lifetime'} disabled={Boolean(openingPlan)} onClick={() => onBuy('lifetime')} />
+      <div className="grid grid-cols-2 gap-2">
         <PremiumValue title="Sleep deeper" body="Evening practices made for softer endings." />
         <PremiumValue title="Calm faster" body="Breath-led resets for anxious moments." />
         <PremiumValue title="Build rhythm" body="Streaks, favorites, and weekly guidance." />
         <PremiumValue title="Grow gently" body="New meditations as your needs change." />
       </div>
       <PlanCard title="Free" price="0" features={['Basic meditations only']} />
-      <PlanCard title="Monthly Premium" price={`${premiumPrices.monthly} ⭐`} features={['Unlimited meditations', 'Premium breathing practices', 'Sleep collection', 'Anxiety relief', 'Focus sessions', 'Favorites', 'Daily streak', 'Weekly new content']} action="Telegram Stars" loading={openingPlan === 'monthly'} disabled={Boolean(openingPlan)} onClick={() => onBuy('monthly')} />
-      <PlanCard title="Lifetime Premium" price={`${premiumPrices.lifetime} ⭐`} features={['Premium library forever', 'All future practices', 'Best value', 'Instant Telegram unlock']} action="Telegram Stars" loading={openingPlan === 'lifetime'} disabled={Boolean(openingPlan)} onClick={() => onBuy('lifetime')} />
       <div className="grid grid-cols-2 gap-3">
         <button onClick={() => setComingSoon('Card')} className="rounded-[20px] border border-white/10 bg-surface px-4 py-3 text-sm font-semibold">Card</button>
         <button onClick={() => setComingSoon('Crypto')} className="rounded-[20px] border border-white/10 bg-surface px-4 py-3 text-sm font-semibold">Crypto</button>
@@ -999,19 +1009,25 @@ function PricingPage({
   );
 }
 
+function PremiumBadge({ label }: { label: string }) {
+  return <span className="rounded-full border border-gold/20 bg-gold/10 px-3 py-1.5 text-[11px] font-medium text-gold">{label}</span>;
+}
+
 function PremiumValue({ title, body }: { title: string; body: string }) {
   return (
-    <article className="rounded-[22px] border border-gold/20 bg-gold/10 p-4">
-      <Sparkles size={18} className="text-gold" />
-      <h3 className="mt-3 font-semibold">{title}</h3>
-      <p className="mt-2 text-xs leading-5 text-cream/70">{body}</p>
+    <article className="rounded-[18px] border border-gold/20 bg-gold/10 p-2.5">
+      <div className="flex items-center gap-2">
+        <Sparkles size={15} className="shrink-0 text-gold" />
+        <h3 className="text-sm font-semibold">{title}</h3>
+      </div>
+      <p className="mt-1 line-clamp-1 text-[11px] leading-4 text-cream/70">{body}</p>
     </article>
   );
 }
 
-function PlanCard(props: { title: string; price: string; features: string[]; action?: string; loading?: boolean; disabled?: boolean; onClick?: () => void }) {
+function PlanCard(props: { title: string; price: string; features: string[]; action?: string; loading?: boolean; disabled?: boolean; featured?: boolean; onClick?: () => void }) {
   return (
-    <article className="rounded-[28px] border border-white/10 bg-ink p-5 shadow-glow">
+    <article className={`rounded-[22px] border p-3.5 shadow-glow ${props.featured ? 'border-gold/40 bg-gold/10' : 'border-white/10 bg-ink'}`}>
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-xl font-semibold">{props.title}</h3>
@@ -1019,14 +1035,14 @@ function PlanCard(props: { title: string; price: string; features: string[]; act
         </div>
         <Crown className="text-gold" />
       </div>
-      <ul className="mt-4 space-y-2 text-sm text-cream/75">
+      <ul className="mt-2 grid grid-cols-2 gap-1.5 text-xs text-cream/75">
         {props.features.map((feature) => <li key={feature}>• {feature}</li>)}
       </ul>
       {props.action && (
         <button
           onClick={props.onClick}
           disabled={props.disabled}
-          className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-gold px-4 py-3 font-semibold text-night transition disabled:cursor-not-allowed disabled:opacity-70"
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-gold px-4 py-2.5 font-semibold text-night transition disabled:cursor-not-allowed disabled:opacity-70"
         >
           {props.loading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-night/30 border-t-night" />}
           {props.loading ? 'Opening payment...' : props.action}
@@ -1075,10 +1091,10 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
   };
 
   return (
-    <div className="relative space-y-5 luna-fade">
-      <img src={meditation.cover_image} alt="" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[520px] w-full scale-110 rounded-[34px] object-cover opacity-25 blur-3xl" />
-      <div className="rounded-[28px] border border-white/10 bg-ink p-5 shadow-glow">
-        <div className="relative mx-auto aspect-square w-full max-w-[340px] overflow-hidden rounded-[28px] border border-white/10">
+    <div className="relative space-y-4 luna-fade">
+      <img src={meditation.cover_image} alt="" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[440px] w-full scale-110 rounded-[34px] object-cover opacity-25 blur-3xl" />
+      <div className="rounded-[24px] border border-white/10 bg-ink p-4 shadow-glow">
+        <div className="relative mx-auto aspect-square w-full max-w-[300px] overflow-hidden rounded-[24px] border border-white/10">
           <img src={meditation.cover_image} alt="" className="h-full w-full object-cover" />
           {loading && <div className="absolute left-4 top-4 rounded-full bg-night/70 px-4 py-2 text-xs text-cream backdrop-blur">Loading audio...</div>}
           {meditation.premium && <div className="absolute right-4 top-4 rounded-full bg-gold px-3 py-1 text-xs font-semibold text-night">Premium</div>}
@@ -1093,13 +1109,13 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
           )}
         </div>
 
-        <div className="mt-6 text-center">
+        <div className="mt-4 text-center">
           <p className="text-xs uppercase tracking-[0.18em] text-gold">{meditation.category.replace('-', ' ')}</p>
-          <h2 className="mt-2 font-serif text-3xl font-semibold">{displayMeditationTitle(meditation)}</h2>
+          <h2 className="mt-1 font-serif text-2xl font-semibold">{displayMeditationTitle(meditation)}</h2>
           <p className="mt-2 text-sm text-lavender">{formatTime(position)} elapsed · {formatTime(Math.max(0, duration - position))} remaining</p>
         </div>
 
-        <input className="mt-6 w-full accent-gold" type="range" min={0} max={duration || 1} value={position} onChange={(event) => {
+        <input className="mt-5 h-8 w-full accent-gold" type="range" min={0} max={duration || 1} value={position} onChange={(event) => {
           const next = Number(event.target.value);
           setPosition(next);
           if (audioRef.current) audioRef.current.currentTime = next;
@@ -1109,7 +1125,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
           <span>{formatTime(duration)}</span>
         </div>
 
-        <div className="mt-6 flex items-center justify-center gap-5">
+        <div className="mt-4 flex items-center justify-center gap-5">
           <IconButton label="Rewind 15 seconds" onClick={() => {
             if (audioRef.current) audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 15);
           }}><SkipBack /></IconButton>
@@ -1117,7 +1133,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
             if (!audioRef.current) return;
             if (audioRef.current.paused) void audioRef.current.play();
             else audioRef.current.pause();
-          }} className="grid h-20 w-20 place-items-center rounded-full bg-gold text-night shadow-glow hover:brightness-110">
+          }} className="grid h-16 w-16 place-items-center rounded-full bg-gold text-night shadow-glow hover:brightness-110">
             {playing ? <Pause /> : <Play />}
           </button>
           <IconButton label="Forward 15 seconds" onClick={() => {
@@ -1125,14 +1141,14 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
           }}><SkipForward /></IconButton>
         </div>
 
-        <div className="mt-6 grid grid-cols-4 gap-2">
-          <button onClick={onFavorite} className="rounded-[20px] bg-surface px-3 py-3 text-xs"><Heart className={favorite ? 'mx-auto fill-gold text-gold' : 'mx-auto'} size={18} /><span className="mt-1 block">Favorite</span></button>
-          <button className="rounded-[20px] bg-surface px-3 py-3 text-xs text-lavender"><Download className="mx-auto" size={18} /><span className="mt-1 block">Download</span></button>
-          <button className="rounded-[20px] bg-surface px-3 py-3 text-xs text-lavender"><Share2 className="mx-auto" size={18} /><span className="mt-1 block">Share</span></button>
-          <button className="rounded-[20px] bg-surface px-3 py-3 text-xs text-lavender"><Timer className="mx-auto" size={18} /><span className="mt-1 block">Timer</span></button>
+        <div className="mt-4 grid grid-cols-4 gap-2">
+          <button onClick={onFavorite} className="rounded-[18px] bg-surface px-2 py-2.5 text-xs"><Heart className={favorite ? 'mx-auto fill-gold text-gold' : 'mx-auto'} size={17} /><span className="mt-1 block">Favorite</span></button>
+          <button className="rounded-[18px] bg-surface px-2 py-2.5 text-xs text-lavender"><Download className="mx-auto" size={17} /><span className="mt-1 block">Download</span></button>
+          <button className="rounded-[18px] bg-surface px-2 py-2.5 text-xs text-lavender"><Share2 className="mx-auto" size={17} /><span className="mt-1 block">Share</span></button>
+          <button className="rounded-[18px] bg-surface px-2 py-2.5 text-xs text-lavender"><Timer className="mx-auto" size={17} /><span className="mt-1 block">Timer</span></button>
         </div>
 
-        <div className="mt-4 flex items-center justify-between rounded-[20px] bg-surface px-4 py-3">
+        <div className="mt-3 flex items-center justify-between rounded-[18px] bg-surface px-4 py-2.5">
           <span className="text-sm text-lavender">Playback speed</span>
           <select value={speed} onChange={(event) => {
             const next = Number(event.target.value);
@@ -1175,7 +1191,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
 }
 
 function IconButton({ label, children, onClick }: { label: string; children: React.ReactNode; onClick: () => void }) {
-  return <button aria-label={label} onClick={onClick} className="grid h-12 w-12 place-items-center rounded-full bg-surface text-cream">{children}</button>;
+  return <button aria-label={label} onClick={onClick} className="grid h-11 w-11 place-items-center rounded-full bg-surface text-cream">{children}</button>;
 }
 
 function ProfilePage({
@@ -1200,21 +1216,21 @@ function ProfilePage({
   const activeUntil = access.user?.active_until ? new Date(access.user.active_until).toLocaleDateString() : 'Not active';
   const level = wellness?.level;
   return (
-    <div className="space-y-4 luna-fade">
+    <div className="space-y-3 luna-fade">
       <div>
         <p className="text-xs uppercase tracking-[0.18em] text-gold">LUNA</p>
         <h2 className="font-serif text-3xl font-semibold">Profile</h2>
       </div>
-      <div className="rounded-[28px] border border-white/10 bg-ink p-5 shadow-glow">
+      <div className="rounded-[24px] border border-white/10 bg-ink p-4 shadow-glow">
         <div className="flex items-center gap-4">
-          <MoonMark className="h-20 w-20 shrink-0" />
+          <MoonMark className="h-16 w-16 shrink-0" />
           <div>
             <h3 className="font-serif text-2xl font-semibold">{firstName}</h3>
             <p className="text-sm text-lavender">{username ? `@${username}` : 'Luna member'}</p>
           </div>
         </div>
         {level && (
-          <div className="mt-5 rounded-[22px] border border-gold/20 bg-gold/10 p-4">
+          <div className="mt-4 rounded-[20px] border border-gold/20 bg-gold/10 p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.18em] text-gold">Level {level.current}</p>
@@ -1222,13 +1238,13 @@ function ProfilePage({
               </div>
               <Sparkles className="text-gold" />
             </div>
-            <div className="mt-4 h-2 overflow-hidden rounded-full bg-night">
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-night">
               <div className="h-full rounded-full bg-gold" style={{ width: `${level.progress}%` }} />
             </div>
             <p className="mt-2 text-xs text-lavender">Next: {level.next}</p>
           </div>
         )}
-        <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
+        <div className="mt-4 grid grid-cols-2 gap-2.5 text-sm">
           <Stat label="Member since" value="Today" />
           <Stat label="Premium status" value={access.hasPremium ? 'Active' : 'Free'} />
           <Stat label="Active until" value={activeUntil} />
@@ -1236,13 +1252,14 @@ function ProfilePage({
           <Stat label="Completed sessions" value={String(profile?.completed ?? 0)} />
           <Stat label="Current streak" value={`${profile?.currentStreak ?? 0} days`} />
           <Stat label="Longest streak" value={`${profile?.longestStreak ?? 0} days`} />
+          <Stat label="Calm score" value={`${profile?.calmScore ?? 0}%`} />
           <Stat label="Weekly check-ins" value={`${wellness?.weeklyCheckinCount ?? 0}/7`} />
           <Stat label="Average sleep" value={wellness?.averageSleepLabel ?? 'No check-ins yet'} />
           <Stat label="Current mood" value={wellness?.mostCommonMoodLabel ?? 'Not enough data'} />
           <Stat label="Preferred length" value={durationLabel(wellness?.todayCheckin?.available_minutes)} />
         </div>
         {wellness && <InsightCard title="Your weekly insight" body={wellness.weeklyInsight} meta={`Recommended focus: ${wellness.recommendedFocus}`} />}
-        <div className="mt-5 rounded-[20px] bg-surface p-4">
+        <div className="mt-4 rounded-[20px] bg-surface p-4">
           <p className="mb-3 text-sm text-lavender">Achievements</p>
           <div className="grid grid-cols-2 gap-2 text-xs">
             {(wellness?.achievements ?? rewardMilestones.map((days) => ({
@@ -1251,7 +1268,7 @@ function ProfilePage({
               description: 'Streak reward',
               unlocked: Boolean(profile?.rewards?.[days])
             }))).map((achievement) => (
-              <span key={achievement.id} className={`rounded-2xl p-3 ${achievement.unlocked ? 'bg-gold text-night' : 'bg-night text-lavender'}`}>
+              <span key={achievement.id} className={`flex min-h-[78px] flex-col justify-between rounded-2xl p-3 ${achievement.unlocked ? 'bg-gold text-night' : 'bg-night text-lavender'}`}>
                 <strong className="block">{achievement.title}</strong>
                 <span className="mt-1 block opacity-75">{achievement.description}</span>
               </span>
@@ -1259,12 +1276,12 @@ function ProfilePage({
           </div>
         </div>
         {showAdminButton && (
-          <button onClick={onAdmin} className="mt-5 w-full rounded-[20px] bg-gold px-5 py-4 font-semibold text-night">
+          <button onClick={onAdmin} className="mt-4 w-full rounded-[20px] bg-gold px-5 py-3.5 font-semibold text-night">
             Admin
           </button>
         )}
-        <button onClick={onRestore} className="mt-5 w-full rounded-[20px] bg-gold px-5 py-4 font-semibold text-night">Restore purchases</button>
-        <button className="mt-3 w-full rounded-[20px] bg-surface px-5 py-4 text-sm text-lavender">Logout</button>
+        <button onClick={onRestore} className="mt-4 w-full rounded-[20px] bg-gold px-5 py-3.5 font-semibold text-night">Restore purchases</button>
+        <button className="mt-2.5 w-full rounded-[20px] bg-surface px-5 py-3.5 text-sm text-lavender">Logout</button>
       </div>
     </div>
   );
@@ -2043,15 +2060,15 @@ function AdminPreview({ form }: { form: MeditationPayload }) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[20px] bg-surface p-4">
-      <p className="text-xs text-lavender">{label}</p>
-      <p className="mt-1 font-semibold">{value}</p>
+    <div className="flex min-h-[76px] flex-col justify-between rounded-[18px] bg-surface p-3">
+      <p className="text-xs leading-4 text-lavender">{label}</p>
+      <p className="mt-1 break-words font-semibold leading-5">{value}</p>
     </div>
   );
 }
 
 function EmptyState({ title, body }: { title: string; body: string }) {
-  return <div className="rounded-[28px] border border-white/10 bg-ink p-5 text-center shadow-glow"><Sparkles className="mx-auto text-gold" /><h3 className="mt-3 font-serif text-xl font-semibold">{title}</h3><p className="mt-1 text-sm text-lavender">{body}</p></div>;
+  return <div className="rounded-[24px] border border-white/10 bg-ink p-4 text-center shadow-glow"><Sparkles className="mx-auto text-gold" /><h3 className="mt-3 font-serif text-xl font-semibold">{title}</h3><p className="mt-1 text-sm text-lavender">{body}</p></div>;
 }
 
 function Nav({ active, onChange }: { active: Page; onChange: (page: Page) => void }) {
@@ -2064,13 +2081,14 @@ function Nav({ active, onChange }: { active: Page; onChange: (page: Page) => voi
   ];
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-10 mx-auto max-w-md border-t border-cream/10 bg-night/80 px-3 py-3 backdrop-blur-xl">
+    <nav className="fixed inset-x-0 bottom-0 z-10 mx-auto max-w-md border-t border-cream/10 bg-night/85 px-3 py-2.5 backdrop-blur-xl">
       <div className="grid grid-cols-5 gap-1">
         {items.map((item) => {
           const Icon = item.icon;
           const selected = active === item.page;
           return (
-            <button key={item.page} onClick={() => onChange(item.page)} className={`flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] ${selected ? 'bg-cream/15 text-cream' : 'text-cream/55'}`}>
+            <button key={item.page} onClick={() => onChange(item.page)} className={`relative flex flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] ${selected ? 'bg-gold/10 text-cream shadow-[0_0_18px_rgba(212,175,55,0.12)]' : 'text-cream/55'}`}>
+              {selected && <span className="absolute top-1 h-0.5 w-6 rounded-full bg-gold" />}
               <Icon size={19} />
               {item.label}
             </button>
