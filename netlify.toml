@@ -1,6 +1,6 @@
 [build]
   command = "pnpm --filter @luna/frontend build"
-  publish = "frontend/dist"
+  publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"
