@@ -117,7 +117,30 @@ const copy = {
     popularToday: 'Popular today',
     profile: 'Profile',
     member: 'Luna member',
-    restore: 'Restore purchases'
+    restore: 'Restore purchases',
+    checkinKicker: 'DAILY CHECK-IN',
+    checkinTitle: 'How is your inner weather?',
+    checkinSleep: 'Sleep last night',
+    checkinMood: 'Mood right now',
+    checkinTime: 'Time available',
+    checkinSaveError: 'Could not save your check-in. Please try again.',
+    checkinSave: 'Save today',
+    checkinSaving: 'Saving...',
+    checkinSkip: 'Skip',
+    sleepLess4: '<4h',
+    sleep4To6: '4-6h',
+    sleep6To8: '6-8h',
+    sleep8Plus: '8h+',
+    moodCalm: 'Calm',
+    moodStressed: 'Stressed',
+    moodTired: 'Tired',
+    moodAnxious: 'Anxious',
+    moodFocused: 'Focused',
+    moodLowEnergy: 'Low energy',
+    minutes3: '3 min',
+    minutes5: '5 min',
+    minutes10: '10 min',
+    minutes15Plus: '15+ min'
   },
   ru: {
     tagline: 'AI-спокойствие внутри Telegram',
@@ -153,7 +176,30 @@ const copy = {
     popularToday: 'Популярно сегодня',
     profile: 'Профиль',
     member: 'Участник Luna',
-    restore: 'Восстановить покупки'
+    restore: 'Восстановить покупки',
+    checkinKicker: 'ЕЖЕДНЕВНЫЙ ЧЕК-ИН',
+    checkinTitle: 'Как ты чувствуешь себя внутри?',
+    checkinSleep: 'Сон прошлой ночью',
+    checkinMood: 'Настроение сейчас',
+    checkinTime: 'Сколько есть времени',
+    checkinSaveError: 'Не удалось сохранить чек-ин. Попробуй ещё раз.',
+    checkinSave: 'Сохранить',
+    checkinSaving: 'Сохраняю...',
+    checkinSkip: 'Пропустить',
+    sleepLess4: '<4 ч',
+    sleep4To6: '4–6 ч',
+    sleep6To8: '6–8 ч',
+    sleep8Plus: '8+ ч',
+    moodCalm: 'Спокойно',
+    moodStressed: 'Стресс',
+    moodTired: 'Усталость',
+    moodAnxious: 'Тревожно',
+    moodFocused: 'Фокус',
+    moodLowEnergy: 'Мало энергии',
+    minutes3: '3 мин',
+    minutes5: '5 мин',
+    minutes10: '10 мин',
+    minutes15Plus: '15+ мин'
   }
 } satisfies Record<AppLanguage, Record<string, string>>;
 
@@ -596,6 +642,19 @@ function App() {
     await refreshAccount();
   };
 
+  const withCheckinAuthFallback = (input: DailyCheckinPayload): DailyCheckinPayload => {
+    if (initData) return input;
+
+    return {
+      ...input,
+      telegram_id: user.id,
+      username: user.username,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      language_code: user.language_code
+    };
+  };
+
   const selectMood = async (nextMood: MoodChip) => {
     setMood(nextMood);
     telegram?.HapticFeedback?.impactOccurred('light');
@@ -606,12 +665,12 @@ function App() {
     }
 
     try {
-      const checkin = await saveDailyCheckin({
+      const checkin = await saveDailyCheckin(withCheckinAuthFallback({
         sleep_range: wellness.todayCheckin.sleep_range,
         available_minutes: wellness.todayCheckin.available_minutes,
         mood: moodChipToCheckinMood(nextMood),
         local_date: wellness.todayCheckin.local_date
-      }, initData);
+      }), initData);
       const nextSummary = await getWellnessSummary(initData);
       setWellness({ ...nextSummary, todayCheckin: checkin });
     } catch (error) {
@@ -620,7 +679,7 @@ function App() {
   };
 
   const saveCheckin = async (input: DailyCheckinPayload) => {
-    const checkin = await saveDailyCheckin(input, initData);
+    const checkin = await saveDailyCheckin(withCheckinAuthFallback(input), initData);
     setMood(checkinMoodToMoodChip(checkin.mood));
     setShowCheckin(false);
     const nextSummary = await getWellnessSummary(initData);
@@ -767,7 +826,7 @@ function App() {
 
         {page !== 'admin' && <Nav active={page} onChange={setPage} />}
         {showCheckin && page !== 'admin' && (
-          <DailyCheckinSheet onClose={dismissCheckin} onSave={saveCheckin} initialMood={moodChipToCheckinMood(mood)} />
+          <DailyCheckinSheet onClose={dismissCheckin} onSave={saveCheckin} initialMood={moodChipToCheckinMood(mood)} language={language} />
         )}
       </section>
     </main>
@@ -1099,12 +1158,15 @@ function FavoritesPage({ meditations, onOpen, onFavorite, language }: { meditati
 function DailyCheckinSheet({
   initialMood,
   onClose,
-  onSave
+  onSave,
+  language
 }: {
   initialMood: DailyCheckin['mood'];
   onClose: () => void;
   onSave: (input: DailyCheckinPayload) => Promise<void>;
+  language: AppLanguage;
 }) {
+  const t = copy[language];
   const [sleepRange, setSleepRange] = useState<DailyCheckin['sleep_range']>('6_8');
   const [mood, setMood] = useState<DailyCheckin['mood']>(initialMood);
   const [availableMinutes, setAvailableMinutes] = useState<DailyCheckin['available_minutes']>('5');
@@ -1116,8 +1178,9 @@ function DailyCheckinSheet({
     setError('');
     try {
       await onSave({ sleep_range: sleepRange, mood, available_minutes: availableMinutes, local_date: todayLocalDate() });
-    } catch {
-      setError('Could not save your check-in. Please try again.');
+    } catch (saveError) {
+      console.error('[Luna check-in save failed]', saveError);
+      setError(t.checkinSaveError);
       setSaving(false);
     }
   };
@@ -1127,42 +1190,42 @@ function DailyCheckinSheet({
       <section className="w-full rounded-[30px] border border-white/10 bg-ink p-5 shadow-glow luna-fade">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-gold">Daily check-in</p>
-            <h3 className="mt-1 font-serif text-3xl">How is your inner weather?</h3>
+            <p className="text-xs uppercase tracking-[0.18em] text-gold">{t.checkinKicker}</p>
+            <h3 className="mt-1 font-serif text-3xl">{t.checkinTitle}</h3>
           </div>
-          <button onClick={onClose} className="rounded-full bg-surface px-3 py-2 text-sm text-lavender">Skip</button>
+          <button onClick={onClose} className="rounded-full bg-surface px-3 py-2 text-sm text-lavender">{t.checkinSkip}</button>
         </div>
         <CheckinGroup
-          title="Sleep last night"
+          title={t.checkinSleep}
           options={[
-            ['less_than_4', '<4h'],
-            ['4_6', '4-6h'],
-            ['6_8', '6-8h'],
-            ['8_plus', '8h+']
+            ['less_than_4', t.sleepLess4],
+            ['4_6', t.sleep4To6],
+            ['6_8', t.sleep6To8],
+            ['8_plus', t.sleep8Plus]
           ]}
           value={sleepRange}
           onChange={(value) => setSleepRange(value as DailyCheckin['sleep_range'])}
         />
         <CheckinGroup
-          title="Mood right now"
+          title={t.checkinMood}
           options={[
-            ['calm', 'Calm'],
-            ['stressed', 'Stressed'],
-            ['tired', 'Tired'],
-            ['anxious', 'Anxious'],
-            ['focused', 'Focused'],
-            ['low_energy', 'Low energy']
+            ['calm', t.moodCalm],
+            ['stressed', t.moodStressed],
+            ['tired', t.moodTired],
+            ['anxious', t.moodAnxious],
+            ['focused', t.moodFocused],
+            ['low_energy', t.moodLowEnergy]
           ]}
           value={mood}
           onChange={(value) => setMood(value as DailyCheckin['mood'])}
         />
         <CheckinGroup
-          title="Time available"
+          title={t.checkinTime}
           options={[
-            ['3', '3 min'],
-            ['5', '5 min'],
-            ['10', '10 min'],
-            ['15_plus', '15+ min']
+            ['3', t.minutes3],
+            ['5', t.minutes5],
+            ['10', t.minutes10],
+            ['15_plus', t.minutes15Plus]
           ]}
           value={availableMinutes}
           onChange={(value) => setAvailableMinutes(value as DailyCheckin['available_minutes'])}
@@ -1170,7 +1233,7 @@ function DailyCheckinSheet({
         {error && <p className="mt-3 rounded-2xl bg-red-500/15 p-3 text-sm text-red-100">{error}</p>}
         <button onClick={save} disabled={saving} className="mt-5 flex w-full items-center justify-center gap-2 rounded-[20px] bg-gold px-5 py-4 font-semibold text-night disabled:opacity-70">
           {saving && <span className="h-4 w-4 animate-spin rounded-full border-2 border-night/30 border-t-night" />}
-          {saving ? 'Saving...' : 'Save today'}
+          {saving ? t.checkinSaving : t.checkinSave}
         </button>
       </section>
     </div>

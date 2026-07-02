@@ -301,12 +301,22 @@ app.post('/api/checkins', requireTelegramWebApp, async (req, res, next) => {
       !['calm', 'stressed', 'tired', 'anxious', 'focused', 'low_energy'].includes(input.mood) ||
       !['3', '5', '10', '15_plus'].includes(input.available_minutes)
     ) {
+      console.warn('[Luna check-in validation failed]', {
+        telegramId: authReq.telegramUser.telegram_id,
+        body: req.body
+      });
       res.status(400).json({ error: 'Please complete the daily check-in.' });
       return;
     }
 
+    await upsertUser(authReq.telegramUser);
     res.json({ checkin: await upsertDailyCheckin(authReq.telegramUser.telegram_id, input) });
   } catch (error) {
+    console.error('[Luna check-in save failed]', {
+      telegramId: (req as Partial<AuthenticatedRequest>).telegramUser?.telegram_id ?? null,
+      body: req.body,
+      error: error instanceof Error ? error.message : error
+    });
     next(error);
   }
 });

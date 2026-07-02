@@ -110,6 +110,11 @@ export type DailyCheckin = {
 
 export type DailyCheckinPayload = Pick<DailyCheckin, 'sleep_range' | 'mood' | 'available_minutes'> & {
   local_date?: string;
+  telegram_id?: number;
+  username?: string;
+  first_name?: string;
+  last_name?: string;
+  language_code?: string;
 };
 
 export type WellnessSummary = {
