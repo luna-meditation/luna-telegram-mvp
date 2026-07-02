@@ -3,7 +3,6 @@ import {
   BookOpen,
   CheckCircle,
   Crown,
-  Download,
   Edit3,
   Heart,
   Home,
@@ -175,6 +174,16 @@ function displayMeditationTitle(meditation: Meditation, fallbackIndex = 0) {
   const clean = meditation.title?.trim();
   if (clean) return clean;
   return ['Morning Calm', 'Deep Sleep', 'Anxiety Relief', 'Evening Reset'][fallbackIndex % 4];
+}
+
+function meditationShareSubtitle(meditation: Meditation) {
+  return meditation.subtitle?.trim() || meditation.category.replace('-', ' ');
+}
+
+function meditationShareUrl() {
+  const botUsername = import.meta.env.VITE_BOT_USERNAME;
+  if (botUsername) return `https://t.me/${botUsername}?start=luna`;
+  return window.location.origin;
 }
 
 function durationLabel(value?: DailyCheckin['available_minutes'] | null) {
@@ -1067,12 +1076,14 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
   const [duration, setDuration] = useState(meditation.duration);
   const [speed, setSpeed] = useState(1);
   const [completed, setCompleted] = useState(false);
+  const [shareMessage, setShareMessage] = useState('');
 
   useEffect(() => {
     setPosition(meditation.history?.last_position ?? 0);
     setDuration(meditation.duration);
     setLoading(true);
     setCompleted(false);
+    setShareMessage('');
   }, [meditation]);
 
   useEffect(() => {
@@ -1090,12 +1101,51 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
     if (audioRef.current) void onSave(audioRef.current.currentTime, audioRef.current.duration || duration, completed);
   };
 
+  const shareMeditation = async () => {
+    if (meditation.premium) {
+      setShareMessage('Sharing is available for free meditations.');
+      return;
+    }
+
+    const title = displayMeditationTitle(meditation);
+    const subtitle = meditationShareSubtitle(meditation);
+    const text = `Try this meditation in Luna: ${title} — ${subtitle}`;
+    const url = meditationShareUrl();
+    const telegram = getTelegram();
+
+    setShareMessage('');
+    telegram?.HapticFeedback?.impactOccurred('light');
+
+    if (telegram?.openTelegramLink) {
+      telegram.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`);
+      setShareMessage('Share opened in Telegram.');
+      return;
+    }
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text, url });
+        setShareMessage('Share sheet opened.');
+        return;
+      } catch (error) {
+        if (error instanceof DOMException && error.name === 'AbortError') return;
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(`${text}\n${url}`);
+      setShareMessage('Meditation link copied.');
+    } catch {
+      setShareMessage('Copy failed. Please try again.');
+    }
+  };
+
   return (
     <div className="relative space-y-4 luna-fade">
       <img src={meditation.cover_image} alt="" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[440px] w-full scale-110 rounded-[34px] object-cover opacity-25 blur-3xl" />
       <div className="rounded-[24px] border border-white/10 bg-ink p-4 shadow-glow">
-        <div className="relative mx-auto aspect-square w-full max-w-[300px] overflow-hidden rounded-[24px] border border-white/10">
-          <img src={meditation.cover_image} alt="" className="h-full w-full object-cover" />
+        <div className="relative mx-auto aspect-square w-full max-w-[300px] overflow-hidden rounded-[24px] border border-white/10 bg-night/80">
+          <img src={meditation.cover_image} alt="" className="h-full w-full object-contain p-2" />
           {loading && <div className="absolute left-4 top-4 rounded-full bg-night/70 px-4 py-2 text-xs text-cream backdrop-blur">Loading audio...</div>}
           {meditation.premium && <div className="absolute right-4 top-4 rounded-full bg-gold px-3 py-1 text-xs font-semibold text-night">Premium</div>}
           {completed && (
@@ -1141,12 +1191,12 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
           }}><SkipForward /></IconButton>
         </div>
 
-        <div className="mt-4 grid grid-cols-4 gap-2">
-          <button onClick={onFavorite} className="rounded-[18px] bg-surface px-2 py-2.5 text-xs"><Heart className={favorite ? 'mx-auto fill-gold text-gold' : 'mx-auto'} size={17} /><span className="mt-1 block">Favorite</span></button>
-          <button className="rounded-[18px] bg-surface px-2 py-2.5 text-xs text-lavender"><Download className="mx-auto" size={17} /><span className="mt-1 block">Download</span></button>
-          <button className="rounded-[18px] bg-surface px-2 py-2.5 text-xs text-lavender"><Share2 className="mx-auto" size={17} /><span className="mt-1 block">Share</span></button>
-          <button className="rounded-[18px] bg-surface px-2 py-2.5 text-xs text-lavender"><Timer className="mx-auto" size={17} /><span className="mt-1 block">Timer</span></button>
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          <button onClick={onFavorite} className="min-h-[72px] rounded-[18px] bg-surface px-2 py-3 text-xs"><Heart className={favorite ? 'mx-auto fill-gold text-gold' : 'mx-auto'} size={18} /><span className="mt-1.5 block">Favorite</span></button>
+          <button onClick={() => void shareMeditation()} disabled={meditation.premium} className="min-h-[72px] rounded-[18px] bg-surface px-2 py-3 text-xs text-lavender disabled:cursor-not-allowed disabled:opacity-50"><Share2 className="mx-auto" size={18} /><span className="mt-1.5 block">Share</span></button>
+          <button className="min-h-[72px] rounded-[18px] bg-surface px-2 py-3 text-xs text-lavender"><Timer className="mx-auto" size={18} /><span className="mt-1.5 block">Timer</span></button>
         </div>
+        {shareMessage && <p className="mt-2 rounded-2xl bg-gold/10 px-3 py-2 text-center text-xs text-cream/80">{shareMessage}</p>}
 
         <div className="mt-3 flex items-center justify-between rounded-[18px] bg-surface px-4 py-2.5">
           <span className="text-sm text-lavender">Playback speed</span>
@@ -1162,6 +1212,8 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
           ref={audioRef}
           src={meditation.audio_file}
           preload="auto"
+          controlsList="nodownload"
+          onContextMenu={(event) => event.preventDefault()}
           onLoadedMetadata={(event) => {
             const audio = event.currentTarget;
             setDuration(audio.duration || meditation.duration);
@@ -1666,7 +1718,7 @@ function AdminPage({
                       </div>
                       <p className="mt-1 line-clamp-1 text-xs text-lavender">{meditation.subtitle || meditation.category} · {new Date(meditation.created_at).toLocaleDateString()}</p>
                       <p className="mt-1 text-xs text-cream/60">{meditation.play_count} plays · {stats?.completionRate ?? 0}% completion</p>
-                      <audio src={meditation.audio_file} controls className="mt-2 w-full" />
+                      <audio src={meditation.audio_file} controls controlsList="nodownload" onContextMenu={(event) => event.preventDefault()} className="mt-2 w-full" />
                     </div>
                   </div>
                   <div className="mt-3 grid grid-cols-3 gap-2">
@@ -2053,7 +2105,7 @@ function AdminPreview({ form }: { form: MeditationPayload }) {
           </button>
         </div>
       </div>
-      {form.audio_file && <audio src={form.audio_file} controls className="mt-4 w-full" />}
+      {form.audio_file && <audio src={form.audio_file} controls controlsList="nodownload" onContextMenu={(event) => event.preventDefault()} className="mt-4 w-full" />}
     </div>
   );
 }
