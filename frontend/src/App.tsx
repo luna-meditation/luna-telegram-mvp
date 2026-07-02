@@ -58,6 +58,7 @@ const premiumPrices = {
   monthly: 499,
   lifetime: 2499
 };
+const lunaAvatarSrc = '/luna-avatar.png';
 const libraryCacheKey = 'luna.library.v1';
 type LibraryCache = {
   categories: Category[];
@@ -429,10 +430,13 @@ function App() {
 function Header({ plan, streak }: { plan: string; streak: number }) {
   return (
     <div className="mb-5 flex items-center justify-between">
-      <div>
-        <p className="text-xs uppercase tracking-[0.28em] text-lavender/70">Luna</p>
-        <h1 className="font-serif text-3xl tracking-wide text-cream">LUNA</h1>
-        <p className="mt-1 text-xs uppercase tracking-[0.18em] text-gold/80">AI Guided Meditation</p>
+      <div className="flex items-center gap-3">
+        <img src={lunaAvatarSrc} alt="LUNA" className="luna-avatar-ring h-12 w-12 rounded-full object-cover" />
+        <div>
+          <p className="text-xs uppercase tracking-[0.28em] text-gold">LUNA</p>
+          <h1 className="font-serif text-3xl tracking-[0.18em] text-cream">MEDITATION</h1>
+          <p className="mt-1 text-[10px] uppercase tracking-[0.22em] text-beige">AI Guided Calm Inside Telegram</p>
+        </div>
       </div>
       <div className="rounded-full border border-white/10 bg-ink px-3 py-2 text-xs text-cream shadow-glow">
         {streak > 0 ? `${streak} day streak` : plan}
@@ -456,9 +460,15 @@ function HomePage(props: {
 }) {
   return (
     <div className="space-y-5">
-      <section className="luna-fade rounded-[28px] border border-white/10 bg-ink p-5 shadow-glow">
-        <p className="text-sm text-lavender">{dayGreeting()}, {props.firstName}</p>
-        <h2 className="mt-2 font-serif text-3xl font-semibold leading-tight">Choose your state of calm.</h2>
+      <section className="luna-fade overflow-hidden rounded-[28px] border border-white/10 bg-ink p-5 shadow-glow">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm text-beige">{dayGreeting()},</p>
+            <h2 className="mt-1 font-serif text-4xl font-semibold leading-tight text-cream">{props.firstName}</h2>
+          </div>
+          <img src={lunaAvatarSrc} alt="" className="luna-avatar-ring h-20 w-20 rounded-full object-cover" />
+        </div>
+        <p className="mt-4 text-sm text-beige">How are you feeling today?</p>
         <div className="mt-4 flex flex-wrap gap-2">
           {moods.map((item) => (
             <button
@@ -690,9 +700,9 @@ function PricingPage({
     <div className="space-y-4 luna-fade">
       <section className="overflow-hidden rounded-[28px] border border-white/10 bg-ink p-5 shadow-glow">
         <p className="text-xs uppercase tracking-[0.18em] text-gold">LUNA Premium</p>
-        <h2 className="mt-2 font-serif text-3xl font-semibold">Unlock Luna Premium</h2>
-        <div className="luna-artwork mt-5 grid h-44 place-items-center rounded-[28px] border border-white/10">
-          <div className="h-20 w-20 rounded-full border border-gold/40 bg-gold/10 shadow-glow" />
+        <h2 className="mt-2 font-serif text-4xl font-semibold leading-tight">Unlock your full potential</h2>
+        <div className="luna-artwork mt-5 grid h-56 place-items-center rounded-[28px] border border-white/10">
+          <img src={lunaAvatarSrc} alt="LUNA Meditation" className="luna-avatar-ring h-40 w-40 rounded-full object-cover" />
         </div>
       </section>
       {locked && <p className="rounded-[20px] bg-surface p-4 text-sm text-cream/80">{locked.title} is part of Luna Premium.</p>}
@@ -903,7 +913,7 @@ function ProfilePage({
       </div>
       <div className="rounded-[28px] border border-white/10 bg-ink p-5 shadow-glow">
         <div className="flex items-center gap-4">
-          <div className="grid h-16 w-16 place-items-center rounded-full bg-gold/15 text-2xl font-semibold text-gold">{firstName[0]}</div>
+          <img src={lunaAvatarSrc} alt="LUNA avatar" className="luna-avatar-ring h-20 w-20 rounded-full object-cover" />
           <div>
             <h3 className="font-serif text-2xl font-semibold">{firstName}</h3>
             <p className="text-sm text-lavender">{username ? `@${username}` : 'Luna member'}</p>

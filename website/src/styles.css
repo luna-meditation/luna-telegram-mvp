@@ -1,8 +1,8 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap");
 
 :root {
-  color: #F7F4ED;
-  background: #171326;
+  color: #F5F1E9;
+  background: #1A1026;
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
 }
 
@@ -26,7 +26,10 @@ a:active {
 
 .page {
   min-height: 100vh;
-  background: #171326;
+  background:
+    radial-gradient(circle at 52% -10%, rgba(142,95,214,0.28), transparent 28rem),
+    radial-gradient(circle at 90% 4%, rgba(212,175,55,0.16), transparent 20rem),
+    #1A1026;
   overflow: hidden;
 }
 
@@ -46,7 +49,7 @@ footer {
 }
 
 .brand {
-  color: #F7F4ED;
+  color: #F5F1E9;
   font-family: "Playfair Display", Georgia, serif;
   font-size: 1.6rem;
   font-weight: 700;
@@ -68,15 +71,15 @@ footer {
 
 .nav-cta,
 .primary {
-  background: #D9AF46;
-  color: #171326;
+  background: #D4AF37;
+  color: #1A1026;
 }
 
 .secondary,
 .actions button {
   border: 1px solid rgba(255,255,255,0.08);
-  background: #3A3452;
-  color: #F7F4ED;
+  background: #4B2D6B;
+  color: #F5F1E9;
 }
 
 .hero {
@@ -89,7 +92,7 @@ footer {
 }
 
 .eyebrow {
-  color: #D9AF46;
+  color: #D4AF37;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.18em;
@@ -115,7 +118,7 @@ h2 {
 
 .lede {
   max-width: 640px;
-  color: #B7B2C6;
+  color: #C9BFD6;
   font-size: clamp(1.2rem, 3vw, 2rem);
   line-height: 1.28;
 }
@@ -132,8 +135,8 @@ h2 {
 footer {
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 28px;
-  background: #2B2542;
-  box-shadow: 0 24px 70px rgba(0,0,0,0.22);
+  background: #241334;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.3);
 }
 
 .phone {
@@ -146,7 +149,7 @@ footer {
   height: 0.32rem;
   margin: 0 auto 1.5rem;
   border-radius: 999px;
-  background: #3A3452;
+  background: #4B2D6B;
 }
 
 .preview-header,
@@ -156,7 +159,7 @@ footer {
 .faq details {
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 24px;
-  background: #3A3452;
+  background: #4B2D6B;
   padding: 1.15rem;
 }
 
@@ -165,7 +168,7 @@ footer {
 .pricing span,
 .pricing small {
   display: block;
-  color: #B7B2C6;
+  color: #C9BFD6;
 }
 
 .preview-header strong,
@@ -185,29 +188,21 @@ footer {
   place-items: center;
   overflow: hidden;
   border-radius: 28px;
-  background: #171326;
+  background: #1A1026;
 }
 
-.moon-art::before,
-.moon-art::after {
-  content: "";
-  position: absolute;
+.moon-art img {
+  position: relative;
+  z-index: 1;
+  width: min(82%, 280px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(212,175,55,0.82);
   border-radius: 999px;
-}
-
-.moon-art::before {
-  width: 150px;
-  height: 150px;
-  background: #F4D67A;
-  box-shadow: 0 0 90px rgba(244,214,122,0.22);
-}
-
-.moon-art::after {
-  bottom: 52px;
-  width: 76%;
-  height: 70px;
-  background: #2B2542;
-  filter: blur(10px);
+  object-fit: cover;
+  box-shadow:
+    0 0 0 1px rgba(142,95,214,0.55),
+    0 24px 70px rgba(0,0,0,0.35),
+    0 0 50px rgba(142,95,214,0.24);
 }
 
 .section {
@@ -223,7 +218,7 @@ footer {
 }
 
 .section p {
-  color: #B7B2C6;
+  color: #C9BFD6;
   line-height: 1.6;
 }
 
@@ -239,6 +234,22 @@ footer {
 
 .faq details + details {
   margin-top: 0.75rem;
+}
+
+.social {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: center;
+}
+
+.social img {
+  width: 180px;
+  border: 1px solid rgba(212,175,55,0.82);
+  border-radius: 28px;
+  box-shadow:
+    0 0 0 1px rgba(142,95,214,0.55),
+    0 24px 70px rgba(0,0,0,0.35);
 }
 
 .faq summary {
@@ -262,14 +273,15 @@ footer span {
 }
 
 footer a {
-  color: #B7B2C6;
+  color: #C9BFD6;
   text-decoration: none;
 }
 
 @media (max-width: 860px) {
   .hero,
   .split,
-  .grid {
+  .grid,
+  .social {
     grid-template-columns: 1fr;
   }
 

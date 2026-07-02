@@ -5,19 +5,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        cream: '#F7F4ED',
-        beige: '#B7B2C6',
-        lavender: '#B7B2C6',
-        gold: '#D9AF46',
+        cream: '#F5F1E9',
+        beige: '#C9BFD6',
+        lavender: '#8E5FD6',
+        gold: '#D4AF37',
         lightgold: '#F4D67A',
-        night: '#171326',
-        ink: '#2B2542',
-        surface: '#3A3452',
+        night: '#1A1026',
+        ink: '#241334',
+        surface: '#4B2D6B',
         success: '#79D99E',
         danger: '#FF7575'
       },
       boxShadow: {
-        glow: '0 24px 70px rgba(0, 0, 0, 0.22)'
+        glow: '0 24px 70px rgba(0, 0, 0, 0.28)',
+        gold: '0 18px 50px rgba(212, 175, 55, 0.18)'
       },
       fontFamily: {
         serif: ['"Playfair Display"', 'Georgia', 'serif'],
