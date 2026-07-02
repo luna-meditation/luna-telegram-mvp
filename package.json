@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "description": "Telegram Mini App and bot MVP for Luna wellness.",
+  "engines": {
+    "node": ">=20 <23"
+  },
   "scripts": {
     "dev": "pnpm --parallel --filter @luna/frontend --filter @luna/backend dev",
     "dev:frontend": "pnpm --filter @luna/frontend dev",
