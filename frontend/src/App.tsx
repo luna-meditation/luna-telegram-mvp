@@ -61,14 +61,6 @@ type MoodChip = 'Sleep' | 'Calm' | 'Focus' | 'Anxiety' | 'Breath' | 'Energy';
 
 const moods: MoodChip[] = ['Sleep', 'Calm', 'Focus', 'Anxiety', 'Breath', 'Energy'];
 const meditationMoods: Mood[] = ['Calm', 'Stressed', 'Tired', 'Anxious', 'Focused'];
-const moodToMeditationMood: Record<MoodChip, Mood> = {
-  Sleep: 'Tired',
-  Calm: 'Calm',
-  Focus: 'Focused',
-  Anxiety: 'Anxious',
-  Breath: 'Stressed',
-  Energy: 'Focused'
-};
 const rewardMilestones = [7, 14, 30, 100] as const;
 const premiumPrices = {
   monthly: 499,
@@ -104,6 +96,10 @@ const copy = {
     goodEvening: 'Good evening',
     feeling: 'How are you feeling today?',
     todayMeditation: "Today's Meditation",
+    recommendedForYou: 'Recommended for You',
+    forYourMood: 'For Your Mood',
+    moreToExplore: 'More to Explore',
+    exploreLibrary: 'Explore Library',
     openLibrary: 'Open Library',
     libraryTitle: 'Luna Library',
     searchByTitle: 'Search by title',
@@ -276,6 +272,10 @@ const copy = {
     goodEvening: 'Добрый вечер',
     feeling: 'Как ты себя чувствуешь сегодня?',
     todayMeditation: 'Медитация дня',
+    recommendedForYou: 'Рекомендация для тебя',
+    forYourMood: 'Под твоё настроение',
+    moreToExplore: 'Ещё для практики',
+    exploreLibrary: 'Открыть библиотеку',
     openLibrary: 'Открыть библиотеку',
     libraryTitle: 'Библиотека Luna',
     searchByTitle: 'Поиск по названию',
@@ -685,6 +685,112 @@ function displayMeditationTitle(meditation: Meditation, fallbackIndex = 0) {
   return ['Morning Calm', 'Deep Sleep', 'Anxiety Relief', 'Evening Reset'][fallbackIndex % 4];
 }
 
+function meditationText(meditation: Meditation) {
+  return [
+    meditation.title,
+    meditation.subtitle,
+    meditation.description,
+    meditation.category,
+    meditation.mood,
+    meditation.translations?.en?.title,
+    meditation.translations?.en?.subtitle,
+    meditation.translations?.ru?.title,
+    meditation.translations?.ru?.subtitle
+  ].filter(Boolean).join(' ').toLowerCase();
+}
+
+function isDemoMeditation(meditation: Meditation) {
+  const title = meditation.title?.trim().toLowerCase() ?? '';
+  const combined = meditationText(meditation);
+  return (
+    title === 'meditation free' ||
+    title === 'test' ||
+    title.startsWith('test ') ||
+    combined.includes('placeholder') ||
+    combined.includes('demo meditation') ||
+    combined.includes('test meditation')
+  );
+}
+
+function sortMeditationsStable(meditations: Meditation[]) {
+  return [...meditations].sort((left, right) => {
+    const leftTime = new Date(left.created_at ?? 0).getTime();
+    const rightTime = new Date(right.created_at ?? 0).getTime();
+    if (rightTime !== leftTime) return rightTime - leftTime;
+    return left.id.localeCompare(right.id);
+  });
+}
+
+function findMeditation(meditations: Meditation[], matcher: (meditation: Meditation) => boolean) {
+  return meditations.find(matcher);
+}
+
+function hasTitle(meditation: Meditation, title: string) {
+  return meditationText(meditation).includes(title.toLowerCase());
+}
+
+function categoryMatches(meditation: Meditation, categories: string[]) {
+  const category = normalizeSlug(meditation.category);
+  return categories.some((item) => category.includes(normalizeSlug(item)));
+}
+
+function recommendedMeditationForMood(mood: MoodChip, meditations: Meditation[]) {
+  if (mood === 'Sleep') {
+    return findMeditation(meditations, (item) => hasTitle(item, 'Deep Sleep')) ??
+      findMeditation(meditations, (item) => categoryMatches(item, ['sleep']));
+  }
+
+  if (mood === 'Anxiety') {
+    return findMeditation(meditations, (item) => hasTitle(item, 'Anxiety Relief')) ??
+      findMeditation(meditations, (item) => categoryMatches(item, ['anxiety']));
+  }
+
+  if (mood === 'Focus' || mood === 'Energy') {
+    return findMeditation(meditations, (item) => hasTitle(item, 'Morning Clarity')) ??
+      findMeditation(meditations, (item) => categoryMatches(item, ['focus', 'morning']));
+  }
+
+  if (mood === 'Breath') {
+    return findMeditation(meditations, (item) => categoryMatches(item, ['breath', 'breathing'])) ??
+      findMeditation(meditations, (item) => hasTitle(item, 'Anxiety Relief'));
+  }
+
+  return findMeditation(meditations, (item) => hasTitle(item, 'Anxiety Relief')) ??
+    findMeditation(meditations, (item) => item.mood === 'Calm' || categoryMatches(item, ['calm']));
+}
+
+function defaultDailyMeditation(meditations: Meditation[]) {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) {
+    return findMeditation(meditations, (item) => hasTitle(item, 'Morning Clarity')) ??
+      findMeditation(meditations, (item) => categoryMatches(item, ['morning', 'focus']));
+  }
+  if (hour >= 12 && hour < 18) {
+    return findMeditation(meditations, (item) => hasTitle(item, 'Anxiety Relief')) ??
+      findMeditation(meditations, (item) => item.mood === 'Calm' || categoryMatches(item, ['calm', 'anxiety']));
+  }
+  return findMeditation(meditations, (item) => hasTitle(item, 'Deep Sleep')) ??
+    findMeditation(meditations, (item) => categoryMatches(item, ['sleep']));
+}
+
+function uniqueById(meditations: Meditation[]) {
+  const seen = new Set<string>();
+  return meditations.filter((meditation) => {
+    if (seen.has(meditation.id)) return false;
+    seen.add(meditation.id);
+    return true;
+  });
+}
+
+function isInProgress(meditation: Meditation) {
+  const history = meditation.history;
+  if (!history) return false;
+  const completion = Number(history.completion_percent ?? 0);
+  const position = Number(history.last_position ?? 0);
+  const duration = Math.max(1, meditation.duration || 1);
+  return position > 0 && completion < 95 && position < duration * 0.95 && !history.completed;
+}
+
 function getLocalizedMeditation(meditation: Meditation, language: AppLanguage) {
   const english = meditation.translations?.en ?? {};
   const selected = meditation.translations?.[language] ?? {};
@@ -785,6 +891,7 @@ function App() {
   const [language, setLanguage] = useState<AppLanguage>(() => initialLanguage(user));
   const [page, setPage] = useState<Page>(window.location.pathname === '/admin' || window.location.hash === '#admin' ? 'admin' : 'home');
   const [mood, setMood] = useState<MoodChip>('Calm');
+  const [moodSelectedByUser, setMoodSelectedByUser] = useState(false);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [meditations, setMeditations] = useState<Meditation[]>(initialLibraryCache?.meditations ?? []);
@@ -905,7 +1012,7 @@ function App() {
   const favoriteIds = useMemo(() => new Set(favorites.map((item) => item.id)), [favorites]);
 
   const decoratedMeditations = useMemo(() => {
-    return meditations.map((meditation) => ({
+    return meditations.filter((meditation) => !isDemoMeditation(meditation)).map((meditation) => ({
       ...meditation,
       favorite: favoriteIds.has(meditation.id) || meditation.favorite,
       history: historyByMeditation.get(meditation.id) ?? meditation.history ?? null
@@ -923,26 +1030,59 @@ function App() {
     });
   }, [category, decoratedMeditations, language, query]);
 
-  const recommended = useMemo(() => {
-    const activeMood = wellness?.todayCheckin ? checkinMoodToMoodChip(wellness.todayCheckin.mood) : mood;
-    const minutes = wellness?.todayCheckin?.available_minutes;
-    return decoratedMeditations
-      .filter((meditation) => meditation.mood === moodToMeditationMood[activeMood])
-      .filter((meditation) => (minutes === '3' || minutes === '5' ? meditation.duration <= 600 : true))
+  const stableMeditations = useMemo(() => sortMeditationsStable(decoratedMeditations), [decoratedMeditations]);
+
+  const heroMood = useMemo(() => {
+    if (moodSelectedByUser) return mood;
+    if (wellness?.todayCheckin) return checkinMoodToMoodChip(wellness.todayCheckin.mood);
+    return null;
+  }, [mood, moodSelectedByUser, wellness]);
+
+  const dailyMeditation = useMemo(() => {
+    return (heroMood ? recommendedMeditationForMood(heroMood, stableMeditations) : defaultDailyMeditation(stableMeditations)) ??
+      stableMeditations[0];
+  }, [heroMood, stableMeditations]);
+
+  const heroLabelKey: keyof typeof copy.en = moodSelectedByUser ? 'forYourMood' : wellness?.todayCheckin ? 'recommendedForYou' : 'todayMeditation';
+
+  const homeSections = useMemo(() => {
+    const displayedIds = new Set<string>();
+    if (dailyMeditation) displayedIds.add(dailyMeditation.id);
+
+    const inProgress = uniqueById(stableMeditations)
+      .filter(isInProgress)
+      .sort((a, b) => new Date(b.history?.last_played ?? 0).getTime() - new Date(a.history?.last_played ?? 0).getTime())
+      .slice(0, 3);
+
+    const continueListening = inProgress.filter((meditation) => {
+      if (displayedIds.has(meditation.id)) return false;
+      displayedIds.add(meditation.id);
+      return true;
+    });
+
+    const recentCandidates = uniqueById(stableMeditations)
+      .filter((meditation) => meditation.history?.last_played)
+      .sort((a, b) => new Date(b.history?.last_played ?? 0).getTime() - new Date(a.history?.last_played ?? 0).getTime())
+      .filter((meditation) => !displayedIds.has(meditation.id));
+
+    const recentlyPlayed = recentCandidates.length >= 2 ? recentCandidates.slice(0, 4).filter((meditation) => {
+      displayedIds.add(meditation.id);
+      return true;
+    }) : [];
+
+    const explore = uniqueById([
+      ...stableMeditations.filter((meditation) => meditation.premium),
+      ...stableMeditations
+    ])
+      .filter((meditation) => !displayedIds.has(meditation.id))
       .slice(0, 6);
-  }, [decoratedMeditations, mood, wellness]);
 
-  const continueListening = useMemo(() => {
-    return decoratedMeditations
-      .filter((meditation) => meditation.history && meditation.history.last_position > 10 && !meditation.history.completed)
-      .sort((a, b) => {
-        return new Date(b.history?.last_played ?? 0).getTime() - new Date(a.history?.last_played ?? 0).getTime();
-      });
-  }, [decoratedMeditations]);
-
-  const popular = useMemo(() => [...decoratedMeditations].sort((a, b) => b.play_count - a.play_count).slice(0, 6), [decoratedMeditations]);
-  const newest = useMemo(() => [...decoratedMeditations].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 6), [decoratedMeditations]);
-  const dailyMeditation = recommended[0] ?? newest[0] ?? decoratedMeditations[0];
+    return {
+      continueListening,
+      recentlyPlayed,
+      explore
+    };
+  }, [dailyMeditation, stableMeditations]);
 
   const changeLanguage = (nextLanguage: AppLanguage) => {
     setLanguage(nextLanguage);
@@ -962,8 +1102,8 @@ function App() {
   }, [wellness]);
 
   useEffect(() => {
-    preloadCoverImages([dailyMeditation, ...recommended, ...continueListening, ...popular, ...newest].filter(Boolean) as Meditation[]);
-  }, [continueListening, dailyMeditation, newest, popular, recommended]);
+    preloadCoverImages([dailyMeditation, ...homeSections.continueListening, ...homeSections.recentlyPlayed, ...homeSections.explore].filter(Boolean) as Meditation[]);
+  }, [dailyMeditation, homeSections]);
 
   const openMeditation = (meditation: Meditation) => {
     const locked = meditation.premium && !access.hasPremium;
@@ -1012,6 +1152,7 @@ function App() {
 
   const selectMood = async (nextMood: MoodChip) => {
     setMood(nextMood);
+    setMoodSelectedByUser(true);
     telegram?.HapticFeedback?.impactOccurred('light');
 
     if (!wellness?.todayCheckin) {
@@ -1096,10 +1237,10 @@ function App() {
             setMood={selectMood}
             wellness={wellness}
             daily={dailyMeditation}
-            recommended={recommended}
-            continueListening={continueListening}
-            popular={popular}
-            newest={newest}
+            heroLabel={copy[language][heroLabelKey]}
+            continueListening={homeSections.continueListening}
+            recentlyPlayed={homeSections.recentlyPlayed}
+            explore={homeSections.explore}
             loading={libraryLoading}
             onOpen={openMeditation}
             onLibrary={() => setPage('library')}
@@ -1235,10 +1376,10 @@ function HomePage(props: {
   setMood: (mood: MoodChip) => void;
   wellness: WellnessSummary | null;
   daily?: Meditation;
-  recommended: Meditation[];
+  heroLabel: string;
   continueListening: Meditation[];
-  popular: Meditation[];
-  newest: Meditation[];
+  recentlyPlayed: Meditation[];
+  explore: Meditation[];
   loading: boolean;
   onOpen: (meditation: Meditation) => void;
   onLibrary: () => void;
@@ -1280,7 +1421,7 @@ function HomePage(props: {
       </section>
 
       {props.daily ? (
-        <PracticeHero label={t.todayMeditation} meditation={props.daily} onOpen={() => props.onOpen(props.daily!)} language={props.language} />
+        <PracticeHero label={props.heroLabel} meditation={props.daily} onOpen={() => props.onOpen(props.daily!)} language={props.language} />
       ) : props.loading ? (
         <PracticeHeroSkeleton />
       ) : (
@@ -1288,10 +1429,22 @@ function HomePage(props: {
       )}
 
       <Rail title={t.continueListening} meditations={props.continueListening} onOpen={props.onOpen} language={props.language} />
-      <Rail title={t.recentlyPlayed} meditations={props.continueListening} onOpen={props.onOpen} language={props.language} />
-      <Rail title={t.popularMeditations} meditations={props.popular} onOpen={props.onOpen} language={props.language} />
-      <Rail title={t.breathingExercises} meditations={props.newest.filter((item) => item.category.includes('breath'))} onOpen={props.onOpen} language={props.language} />
-      <Rail title={t.premiumRecommendations} meditations={props.recommended.filter((item) => item.premium)} onOpen={props.onOpen} language={props.language} />
+      <Rail title={t.recentlyPlayed} meditations={props.recentlyPlayed} onOpen={props.onOpen} language={props.language} />
+      {props.explore.length >= 3 ? (
+        <Rail title={t.moreToExplore} meditations={props.explore} onOpen={props.onOpen} language={props.language} />
+      ) : props.explore.length > 0 ? (
+        <section className="rounded-[24px] border border-gold/20 bg-gold/10 p-4 shadow-glow">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-gold">{t.moreToExplore}</p>
+              <h2 className="mt-1 font-serif text-2xl">{t.exploreLibrary}</h2>
+            </div>
+            <button onClick={props.onLibrary} className="rounded-full bg-gold px-4 py-2 text-sm font-semibold text-night">
+              {t.openLibrary}
+            </button>
+          </div>
+        </section>
+      ) : null}
       {props.wellness && <InsightCard title={t.weeklyTitle} body={localizeWeeklyInsight(props.wellness, props.language)} meta={text(props.language, 'recommendedFocus', { focus: translateFocus(props.wellness.recommendedFocus, props.language) })} />}
       {props.loading && !props.daily && <RailSkeleton title={t.preparingCalm} />}
 
@@ -1304,6 +1457,7 @@ function HomePage(props: {
 
 function PracticeHero({ meditation, label, onOpen, language }: { meditation: Meditation; label: string; onOpen: () => void; language: AppLanguage }) {
   const localized = getLocalizedMeditation(meditation, language);
+  const cta = isInProgress(meditation) ? copy[language].resume : copy[language].begin;
   return (
     <button onClick={onOpen} className="group relative h-[260px] w-full overflow-hidden rounded-[26px] border border-white/10 text-left shadow-glow transition duration-300 ease-in-out hover:brightness-110">
       <img src={meditation.cover_image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70 transition group-hover:scale-105" loading="eager" />
@@ -1319,7 +1473,7 @@ function PracticeHero({ meditation, label, onOpen, language }: { meditation: Med
         </p>
         {!localized.hasSelectedLanguageAudio && <p className="mt-2 text-xs text-gold">{copy[language].availableInEnglish}</p>}
         <span className="mt-3 inline-flex rounded-[18px] bg-gold px-5 py-2.5 text-sm font-semibold text-night shadow-gold">
-          {copy[language].begin}
+          {cta}
         </span>
       </div>
     </button>
