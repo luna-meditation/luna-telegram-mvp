@@ -86,6 +86,44 @@ export type ProfileStats = {
   rewards: Record<7 | 14 | 30 | 100, boolean>;
 };
 
+export type DailyCheckin = {
+  id?: string;
+  telegram_id?: number;
+  sleep_range: 'less_than_4' | '4_6' | '6_8' | '8_plus';
+  mood: 'calm' | 'stressed' | 'tired' | 'anxious' | 'focused' | 'low_energy';
+  available_minutes: '3' | '5' | '10' | '15_plus';
+  local_date: string;
+  created_at?: string;
+};
+
+export type DailyCheckinPayload = Pick<DailyCheckin, 'sleep_range' | 'mood' | 'available_minutes'> & {
+  local_date?: string;
+};
+
+export type WellnessSummary = {
+  todayCheckin: DailyCheckin | null;
+  weeklyCheckins: DailyCheckin[];
+  weeklyCheckinCount: number;
+  averageSleepHours: number;
+  averageSleepLabel: string;
+  mostCommonMood: DailyCheckin['mood'] | null;
+  mostCommonMoodLabel: string;
+  weeklyInsight: string;
+  recommendedFocus: string;
+  level: {
+    title: string;
+    current: number;
+    progress: number;
+    next: string;
+  };
+  achievements: Array<{
+    id: string;
+    title: string;
+    description: string;
+    unlocked: boolean;
+  }>;
+};
+
 export type MeditationPayload = {
   title: string;
   subtitle: string;
@@ -228,6 +266,23 @@ export async function completePractice(input: {
   }, initData);
 }
 
+export async function getTodayCheckin(initData?: string): Promise<DailyCheckin | null> {
+  const response = await request<{ checkin: DailyCheckin | null }>('/api/checkins/today', undefined, initData);
+  return response.checkin;
+}
+
+export async function saveDailyCheckin(input: DailyCheckinPayload, initData?: string): Promise<DailyCheckin> {
+  const response = await request<{ checkin: DailyCheckin }>('/api/checkins', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  }, initData);
+  return response.checkin;
+}
+
+export async function getWellnessSummary(initData?: string): Promise<WellnessSummary> {
+  return request('/api/wellness/summary', undefined, initData);
+}
+
 export async function getProfile(initData?: string): Promise<ProfileStats> {
   return request('/api/profile/me', undefined, initData);
 }
@@ -351,7 +406,22 @@ export type AdminDashboardData = {
       user?: { username?: string | null; first_name?: string | null } | null;
       meditation?: { title?: string | null } | null;
     }>;
+    latestCheckins: Array<DailyCheckin & {
+      user?: { username?: string | null; first_name?: string | null } | null;
+    }>;
     latestAdminUploads: AdminMeditationStat[];
+  };
+  wellness?: {
+    totalCheckins: number;
+    checkinsToday: number;
+    checkinsThisWeek: number;
+    mostCommonMood: DailyCheckin['mood'] | null;
+    mostCommonMoodLabel: string;
+    averageSleepLabel: string;
+    mostRequestedDuration: DailyCheckin['available_minutes'] | null;
+    latestCheckins: Array<DailyCheckin & {
+      user?: { username?: string | null; first_name?: string | null } | null;
+    }>;
   };
   charts: {
     registrationsByDay: AdminChartPoint[];

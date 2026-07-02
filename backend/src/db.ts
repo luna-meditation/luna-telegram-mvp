@@ -34,6 +34,13 @@ export type HistoryInput = {
   completed?: boolean;
 };
 
+export type DailyCheckinInput = {
+  sleep_range: 'less_than_4' | '4_6' | '6_8' | '8_plus';
+  mood: 'calm' | 'stressed' | 'tired' | 'anxious' | 'focused' | 'low_energy';
+  available_minutes: '3' | '5' | '10' | '15_plus';
+  local_date?: string;
+};
+
 export async function upsertUser(user: TelegramUserInput) {
   const { data, error } = await supabase
     .from('users')
@@ -214,6 +221,166 @@ export async function getHistory(telegramId: number) {
 
   if (error) throw error;
   return (data ?? []).map((item) => ({ ...item, meditation: item.meditations }));
+}
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function mostCommonValue<T extends string>(values: T[]) {
+  const counts = values.reduce((map, value) => map.set(value, (map.get(value) ?? 0) + 1), new Map<T, number>());
+  return [...counts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
+}
+
+function sleepScore(value: DailyCheckinInput['sleep_range']) {
+  if (value === 'less_than_4') return 3;
+  if (value === '4_6') return 5;
+  if (value === '6_8') return 7;
+  return 8;
+}
+
+function sleepLabel(value: DailyCheckinInput['sleep_range'] | null) {
+  if (!value) return 'No check-ins yet';
+  if (value === 'less_than_4') return '<4h';
+  if (value === '4_6') return '4-6h';
+  if (value === '6_8') return '6-8h';
+  return '8h+';
+}
+
+function moodLabel(value: DailyCheckinInput['mood'] | null) {
+  if (!value) return 'Not enough data yet';
+  return value.replace('_', ' ');
+}
+
+function buildWeeklyInsight(input: {
+  weeklyCheckins: Array<DailyCheckinInput & { created_at?: string }>;
+  completed: number;
+  minutesListened: number;
+  currentStreak: number;
+}) {
+  if (!input.weeklyCheckins.length && input.completed === 0) {
+    return 'Start with one short practice today. Luna will build your weekly insight as you check in and listen.';
+  }
+
+  const tiredDays = input.weeklyCheckins.filter((item) => ['less_than_4', '4_6'].includes(item.sleep_range)).length;
+  const commonMood = mostCommonValue(input.weeklyCheckins.map((item) => item.mood));
+
+  if (tiredDays >= 3) return 'Your week shows lower sleep. Choose gentler evening sessions and keep practices short.';
+  if (commonMood === 'anxious' || commonMood === 'stressed') return 'You have been carrying extra tension. Breath-led meditations may help you reset faster.';
+  if (input.currentStreak >= 3) return 'Your calm routine is becoming consistent. Keep the next session easy to protect the streak.';
+  if (input.minutesListened > 0) return `You created ${input.minutesListened} minutes of calm. A small repeat tomorrow matters more than a perfect session.`;
+  return 'A short check-in is enough to begin. Luna will personalize your next practice from there.';
+}
+
+export async function upsertDailyCheckin(telegramId: number, input: DailyCheckinInput) {
+  const payload = {
+    telegram_id: telegramId,
+    sleep_range: input.sleep_range,
+    mood: input.mood,
+    available_minutes: input.available_minutes,
+    local_date: input.local_date ?? todayKey()
+  };
+
+  const { data, error } = await supabase
+    .from('daily_checkins')
+    .upsert(payload, { onConflict: 'telegram_id,local_date' })
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getTodayCheckin(telegramId: number, localDate = todayKey()) {
+  const { data, error } = await supabase
+    .from('daily_checkins')
+    .select('*')
+    .eq('telegram_id', telegramId)
+    .eq('local_date', localDate)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function getWellnessSummary(telegramId: number) {
+  const weekStart = daysAgo(6).toISOString().slice(0, 10);
+  const [{ data: checkins, error: checkinsError }, profile] = await Promise.all([
+    supabase
+      .from('daily_checkins')
+      .select('*')
+      .eq('telegram_id', telegramId)
+      .gte('local_date', weekStart)
+      .order('local_date', { ascending: false }),
+    getProfileStats(telegramId)
+  ]);
+
+  if (checkinsError) throw checkinsError;
+
+  const weeklyCheckins = (checkins ?? []) as Array<DailyCheckinInput & { local_date: string; created_at?: string }>;
+  const todayCheckin = weeklyCheckins.find((item) => item.local_date === todayKey()) ?? null;
+  const mostCommonMood = mostCommonValue(weeklyCheckins.map((item) => item.mood));
+  const averageSleep = weeklyCheckins.length
+    ? Math.round(weeklyCheckins.reduce((sum, item) => sum + sleepScore(item.sleep_range), 0) / weeklyCheckins.length)
+    : 0;
+  const level = Math.max(1, Math.floor((profile.completed + profile.currentStreak + weeklyCheckins.length) / 5) + 1);
+  const levelProgress = Math.min(100, ((profile.completed + weeklyCheckins.length) % 5) * 20);
+
+  return {
+    todayCheckin,
+    weeklyCheckins,
+    weeklyCheckinCount: weeklyCheckins.length,
+    averageSleepHours: averageSleep,
+    averageSleepLabel: sleepLabel(mostCommonValue(weeklyCheckins.map((item) => item.sleep_range))),
+    mostCommonMood,
+    mostCommonMoodLabel: moodLabel(mostCommonMood),
+    weeklyInsight: buildWeeklyInsight({
+      weeklyCheckins,
+      completed: profile.completed,
+      minutesListened: profile.minutesListened,
+      currentStreak: profile.currentStreak
+    }),
+    recommendedFocus:
+      mostCommonMood === 'anxious' || mostCommonMood === 'stressed'
+        ? 'Breath and anxiety relief'
+        : averageSleep > 0 && averageSleep < 6
+          ? 'Sleep recovery'
+          : profile.currentStreak > 0
+            ? 'Keep the streak gentle'
+            : 'A short calm reset',
+    level: {
+      title: level >= 5 ? 'Moon Guide' : level >= 3 ? 'Calm Builder' : 'First Light',
+      current: level,
+      progress: levelProgress,
+      next: level >= 5 ? 'Deep Practice' : level >= 3 ? 'Moon Guide' : 'Calm Builder'
+    },
+    achievements: [
+      {
+        id: 'first_checkin',
+        title: 'First Check-in',
+        description: 'Shared how you feel today.',
+        unlocked: weeklyCheckins.length > 0
+      },
+      {
+        id: 'three_sessions',
+        title: 'Three Sessions',
+        description: 'Completed three meditations.',
+        unlocked: profile.completed >= 3
+      },
+      {
+        id: 'weekly_rhythm',
+        title: 'Weekly Rhythm',
+        description: 'Checked in three times this week.',
+        unlocked: weeklyCheckins.length >= 3
+      },
+      {
+        id: 'seven_day_streak',
+        title: '7 Day Streak',
+        description: 'Built a full week of calm.',
+        unlocked: profile.currentStreak >= 7
+      }
+    ]
+  };
 }
 
 export async function updateStreak(telegramId: number) {
@@ -481,13 +648,15 @@ export async function getAdminDashboard() {
     { data: payments, error: paymentsError },
     { data: meditations, error: meditationsError },
     { data: history, error: historyError },
-    { data: streaks, error: streaksError }
+    { data: streaks, error: streaksError },
+    { data: checkins, error: checkinsError }
   ] = await Promise.all([
     supabase.from('users').select('telegram_id, username, first_name, last_name, created_at, last_seen_at, active_until, lifetime_access'),
     supabase.from('payments').select('telegram_id, plan, amount_stars, status, created_at').order('created_at', { ascending: false }),
     supabase.from('meditations').select('id, title, category, premium, published, play_count, duration, created_at, updated_at').order('created_at', { ascending: false }),
     supabase.from('history').select('telegram_id, meditation_id, last_played, play_count, completion_percent, last_position, completed'),
-    supabase.from('streaks').select('telegram_id, current_streak, longest_streak')
+    supabase.from('streaks').select('telegram_id, current_streak, longest_streak'),
+    supabase.from('daily_checkins').select('telegram_id, sleep_range, mood, available_minutes, local_date, created_at').order('created_at', { ascending: false })
   ]);
 
   if (usersError) throw usersError;
@@ -495,12 +664,14 @@ export async function getAdminDashboard() {
   if (meditationsError) throw meditationsError;
   if (historyError) throw historyError;
   if (streaksError) throw streaksError;
+  if (checkinsError) throw checkinsError;
 
   const userRows = users ?? [];
   const paymentRows = (payments ?? []).filter((payment) => payment.status === 'paid');
   const meditationRows = meditations ?? [];
   const historyRows = history ?? [];
   const streakRows = streaks ?? [];
+  const checkinRows = checkins ?? [];
   const now = Date.now();
   const today = startOfUtcDay();
   const weekStart = daysAgo(6);
@@ -583,6 +754,12 @@ export async function getAdminDashboard() {
       user: userByTelegramId.get(play.telegram_id) ?? null,
       meditation: meditationRows.find((meditation) => meditation.id === play.meditation_id) ?? null
     }));
+  const latestCheckins = checkinRows.slice(0, 10).map((checkin) => ({
+    ...checkin,
+    user: userByTelegramId.get(checkin.telegram_id) ?? null
+  }));
+  const checkinMood = mostCommonValue(checkinRows.map((item) => item.mood));
+  const checkinSleep = mostCommonValue(checkinRows.map((item) => item.sleep_range));
 
   return {
     users: {
@@ -621,6 +798,16 @@ export async function getAdminDashboard() {
         : 0,
       items: meditationStats
     },
+    wellness: {
+      totalCheckins: checkinRows.length,
+      checkinsToday: checkinRows.filter((item) => item.local_date === today.toISOString().slice(0, 10)).length,
+      checkinsThisWeek: checkinRows.filter((item) => new Date(item.local_date).getTime() >= weekStart.getTime()).length,
+      mostCommonMood: checkinMood,
+      mostCommonMoodLabel: moodLabel(checkinMood),
+      averageSleepLabel: sleepLabel(checkinSleep),
+      mostRequestedDuration: mostCommonValue(checkinRows.map((item) => item.available_minutes)),
+      latestCheckins
+    },
     topUsers: {
       topListeners: [...adminUsers].sort((left, right) => right.totalMinutesListened - left.totalMinutesListened).slice(0, 10),
       longestStreaks: [...adminUsers].sort((left, right) => right.longestStreak - left.longestStreak).slice(0, 10),
@@ -630,6 +817,7 @@ export async function getAdminDashboard() {
       latestRegistrations: [...userRows].sort((left, right) => new Date(right.created_at).getTime() - new Date(left.created_at).getTime()).slice(0, 10),
       latestPurchases,
       latestMeditationPlays: latestPlays,
+      latestCheckins,
       latestAdminUploads: meditationRows.slice(0, 10)
     },
     charts: {

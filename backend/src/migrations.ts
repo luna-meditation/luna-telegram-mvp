@@ -64,6 +64,17 @@ create table if not exists public.streaks (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.daily_checkins (
+  id uuid primary key default gen_random_uuid(),
+  telegram_id bigint not null references public.users(telegram_id) on delete cascade,
+  sleep_range text not null check (sleep_range in ('less_than_4', '4_6', '6_8', '8_plus')),
+  mood text not null check (mood in ('calm', 'stressed', 'tired', 'anxious', 'focused', 'low_energy')),
+  available_minutes text not null check (available_minutes in ('3', '5', '10', '15_plus')),
+  local_date date not null,
+  created_at timestamptz not null default now(),
+  unique (telegram_id, local_date)
+);
+
 create index if not exists idx_meditations_category on public.meditations(category);
 create index if not exists idx_meditations_mood on public.meditations(mood);
 create index if not exists idx_meditations_created_at on public.meditations(created_at desc);
@@ -71,6 +82,7 @@ create index if not exists idx_meditations_play_count on public.meditations(play
 create index if not exists idx_favorites_telegram_id on public.favorites(telegram_id);
 create index if not exists idx_history_telegram_id on public.history(telegram_id);
 create index if not exists idx_history_last_played on public.history(last_played desc);
+create index if not exists idx_daily_checkins_telegram_date on public.daily_checkins(telegram_id, local_date desc);
 
 create or replace function public.increment_meditation_play_count(meditation_uuid uuid)
 returns void
@@ -88,6 +100,7 @@ alter table public.meditations enable row level security;
 alter table public.favorites enable row level security;
 alter table public.history enable row level security;
 alter table public.streaks enable row level security;
+alter table public.daily_checkins enable row level security;
 
 drop policy if exists "Categories are readable" on public.categories;
 drop policy if exists "Meditations are readable" on public.meditations;

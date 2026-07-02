@@ -33,6 +33,8 @@ import {
   getHistory,
   getMeditations,
   getProfile,
+  getWellnessSummary,
+  saveDailyCheckin,
   saveHistory,
   setFavorite,
   syncUser,
@@ -43,10 +45,13 @@ import {
   type AdminDashboardData,
   type AdminUser,
   type Category,
+  type DailyCheckin,
+  type DailyCheckinPayload,
   type Meditation,
   type MeditationPayload,
   type PlaybackHistory,
-  type ProfileStats
+  type ProfileStats,
+  type WellnessSummary
 } from './api';
 
 type Page = 'home' | 'library' | 'favorites' | 'profile' | 'pricing' | 'player' | 'admin';
@@ -134,6 +139,49 @@ function dayGreeting() {
   return 'Good evening';
 }
 
+function todayLocalDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function moodChipToCheckinMood(mood: MoodChip): DailyCheckin['mood'] {
+  if (mood === 'Sleep') return 'tired';
+  if (mood === 'Anxiety') return 'anxious';
+  if (mood === 'Breath') return 'stressed';
+  if (mood === 'Focus') return 'focused';
+  if (mood === 'Energy') return 'low_energy';
+  return 'calm';
+}
+
+function checkinMoodToMoodChip(mood?: DailyCheckin['mood'] | null): MoodChip {
+  if (mood === 'tired') return 'Sleep';
+  if (mood === 'anxious') return 'Anxiety';
+  if (mood === 'stressed') return 'Breath';
+  if (mood === 'focused') return 'Focus';
+  if (mood === 'low_energy') return 'Energy';
+  return 'Calm';
+}
+
+function moodMessage(mood: MoodChip, wellness: WellnessSummary | null) {
+  if (wellness?.todayCheckin) return `Saved for today. Luna recommends: ${wellness.recommendedFocus}.`;
+  if (mood === 'Sleep') return 'Let’s keep it gentle and help your nervous system power down.';
+  if (mood === 'Anxiety') return 'A breath-led reset can create space before the next thought.';
+  if (mood === 'Focus') return 'A short focus practice can make the next hour feel cleaner.';
+  if (mood === 'Energy') return 'We’ll start bright, then settle into steady calm.';
+  if (mood === 'Breath') return 'Your breath is the quickest door back into the body.';
+  return 'Beautiful. Luna will keep today soft and steady.';
+}
+
+function displayMeditationTitle(meditation: Meditation, fallbackIndex = 0) {
+  const clean = meditation.title?.trim();
+  if (clean) return clean;
+  return ['Morning Calm', 'Deep Sleep', 'Anxiety Relief', 'Evening Reset'][fallbackIndex % 4];
+}
+
+function durationLabel(value?: DailyCheckin['available_minutes'] | null) {
+  if (!value) return 'Not set';
+  return value === '15_plus' ? '15+ min' : `${value} min`;
+}
+
 function MoonMark({ className = '' }: { className?: string }) {
   return <span className={`luna-moon-mark ${className}`} aria-hidden="true" />;
 }
@@ -160,18 +208,22 @@ function App() {
   const [adminStatus, setAdminStatus] = useState<'checking' | 'allowed' | 'denied'>('checking');
   const [adminMeditations, setAdminMeditations] = useState<Meditation[]>([]);
   const [adminDashboard, setAdminDashboard] = useState<AdminDashboardData | null>(null);
+  const [wellness, setWellness] = useState<WellnessSummary | null>(null);
+  const [showCheckin, setShowCheckin] = useState(false);
 
   const refreshAccount = async () => {
-    const [accessState, profileStats, historyList, favoriteList] = await Promise.all([
+    const [accessState, profileStats, historyList, favoriteList, wellnessSummary] = await Promise.all([
       getAccess(initData),
       getProfile(initData).catch(() => null),
       getHistory(initData).catch(() => []),
-      getFavorites(initData).catch(() => [])
+      getFavorites(initData).catch(() => []),
+      getWellnessSummary(initData).catch(() => null)
     ]);
     setAccess(accessState);
     setProfile(profileStats);
     setHistory(historyList);
     setFavorites(favoriteList);
+    setWellness(wellnessSummary);
   };
 
   const refreshLibrary = async () => {
@@ -264,14 +316,19 @@ function App() {
   const filteredMeditations = useMemo(() => {
     return decoratedMeditations.filter((meditation) => {
       const matchesQuery = meditation.title.toLowerCase().includes(query.toLowerCase());
-      const matchesCategory = category === 'all' || meditation.category === category;
+      const matchesCategory = category === 'all' || (category === 'short' ? meditation.duration <= 600 : meditation.category === category);
       return matchesQuery && matchesCategory;
     });
   }, [category, decoratedMeditations, query]);
 
   const recommended = useMemo(() => {
-    return decoratedMeditations.filter((meditation) => meditation.mood === moodToMeditationMood[mood]).slice(0, 6);
-  }, [decoratedMeditations, mood]);
+    const activeMood = wellness?.todayCheckin ? checkinMoodToMoodChip(wellness.todayCheckin.mood) : mood;
+    const minutes = wellness?.todayCheckin?.available_minutes;
+    return decoratedMeditations
+      .filter((meditation) => meditation.mood === moodToMeditationMood[activeMood])
+      .filter((meditation) => (minutes === '3' || minutes === '5' ? meditation.duration <= 600 : true))
+      .slice(0, 6);
+  }, [decoratedMeditations, mood, wellness]);
 
   const continueListening = useMemo(() => {
     return decoratedMeditations
@@ -284,6 +341,12 @@ function App() {
   const popular = useMemo(() => [...decoratedMeditations].sort((a, b) => b.play_count - a.play_count).slice(0, 6), [decoratedMeditations]);
   const newest = useMemo(() => [...decoratedMeditations].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 6), [decoratedMeditations]);
   const dailyMeditation = recommended[0] ?? newest[0] ?? decoratedMeditations[0];
+
+  useEffect(() => {
+    if (!wellness || wellness.todayCheckin) return;
+    const dismissed = window.localStorage.getItem(`luna.checkin.dismissed.${todayLocalDate()}`);
+    if (!dismissed) setShowCheckin(true);
+  }, [wellness]);
 
   useEffect(() => {
     preloadCoverImages([dailyMeditation, ...recommended, ...continueListening, ...popular, ...newest].filter(Boolean) as Meditation[]);
@@ -305,6 +368,42 @@ function App() {
     const next = !favoriteIds.has(meditation.id);
     await setFavorite(meditation.id, next, initData);
     await refreshAccount();
+  };
+
+  const selectMood = async (nextMood: MoodChip) => {
+    setMood(nextMood);
+    telegram?.HapticFeedback?.impactOccurred('light');
+
+    if (!wellness?.todayCheckin) {
+      setShowCheckin(true);
+      return;
+    }
+
+    try {
+      const checkin = await saveDailyCheckin({
+        sleep_range: wellness.todayCheckin.sleep_range,
+        available_minutes: wellness.todayCheckin.available_minutes,
+        mood: moodChipToCheckinMood(nextMood),
+        local_date: wellness.todayCheckin.local_date
+      }, initData);
+      const nextSummary = await getWellnessSummary(initData);
+      setWellness({ ...nextSummary, todayCheckin: checkin });
+    } catch (error) {
+      console.info('[Luna check-in mood update failed]', error instanceof Error ? error.message : 'Check-in update failed.');
+    }
+  };
+
+  const saveCheckin = async (input: DailyCheckinPayload) => {
+    const checkin = await saveDailyCheckin(input, initData);
+    setMood(checkinMoodToMoodChip(checkin.mood));
+    setShowCheckin(false);
+    const nextSummary = await getWellnessSummary(initData);
+    setWellness({ ...nextSummary, todayCheckin: checkin });
+  };
+
+  const dismissCheckin = () => {
+    window.localStorage.setItem(`luna.checkin.dismissed.${todayLocalDate()}`, 'true');
+    setShowCheckin(false);
   };
 
   const buyPlan = async (plan: 'monthly' | 'lifetime') => {
@@ -354,7 +453,8 @@ function App() {
           <HomePage
             firstName={user.first_name ?? 'friend'}
             mood={mood}
-            setMood={setMood}
+            setMood={selectMood}
+            wellness={wellness}
             daily={dailyMeditation}
             recommended={recommended}
             continueListening={continueListening}
@@ -396,6 +496,7 @@ function App() {
             access={access}
             firstName={user.first_name ?? 'Luna'}
             username={user.username}
+            wellness={wellness}
             showAdminButton={adminStatus === 'allowed'}
             onAdmin={() => {
               window.history.pushState({}, '', '/admin');
@@ -435,6 +536,9 @@ function App() {
         )}
 
         {page !== 'admin' && <Nav active={page} onChange={setPage} />}
+        {showCheckin && page !== 'admin' && (
+          <DailyCheckinSheet onClose={dismissCheckin} onSave={saveCheckin} initialMood={moodChipToCheckinMood(mood)} />
+        )}
       </section>
     </main>
   );
@@ -462,6 +566,7 @@ function HomePage(props: {
   firstName: string;
   mood: MoodChip;
   setMood: (mood: MoodChip) => void;
+  wellness: WellnessSummary | null;
   daily?: Meditation;
   recommended: Meditation[];
   continueListening: Meditation[];
@@ -495,6 +600,14 @@ function HomePage(props: {
             </button>
           ))}
         </div>
+        <div className="mt-4 rounded-[20px] border border-gold/20 bg-gold/10 p-4">
+          <p className="text-sm leading-6 text-cream/85">{moodMessage(props.mood, props.wellness)}</p>
+          {props.wellness?.weeklyCheckinCount ? (
+            <p className="mt-2 text-xs uppercase tracking-[0.16em] text-gold">
+              {props.wellness.weeklyCheckinCount}/7 weekly check-ins · {props.wellness.mostCommonMoodLabel}
+            </p>
+          ) : null}
+        </div>
       </section>
 
       {props.daily ? (
@@ -510,6 +623,7 @@ function HomePage(props: {
       <Rail title="Popular meditations" meditations={props.popular} onOpen={props.onOpen} />
       <Rail title="Breathing exercises" meditations={props.newest.filter((item) => item.category.includes('breath'))} onOpen={props.onOpen} />
       <Rail title="Premium recommendations" meditations={props.recommended.filter((item) => item.premium)} onOpen={props.onOpen} />
+      {props.wellness && <InsightCard title="This week with Luna" body={props.wellness.weeklyInsight} meta={`Recommended focus: ${props.wellness.recommendedFocus}`} />}
       {props.loading && !props.daily && <RailSkeleton title="Preparing your calm" />}
 
       <button onClick={props.onLibrary} className="w-full rounded-[20px] bg-gold px-5 py-4 font-semibold text-night shadow-glow hover:brightness-110">
@@ -529,7 +643,7 @@ function PracticeHero({ meditation, label, onOpen }: { meditation: Meditation; l
       </span>
       <div className="absolute bottom-0 p-5">
         <p className="mb-2 inline-flex rounded-full bg-lavender/25 px-3 py-1 text-xs text-cream backdrop-blur">{label}</p>
-        <h3 className="font-serif text-3xl font-semibold">{meditation.title}</h3>
+        <h3 className="font-serif text-3xl font-semibold">{displayMeditationTitle(meditation)}</h3>
         <p className="mt-1 text-sm capitalize text-cream/75">
           {meditation.category.replace('-', ' ')} · {formatTime(meditation.duration)}
         </p>
@@ -581,11 +695,21 @@ function Rail({ title, meditations, onOpen }: { title: string; meditations: Medi
         {meditations.map((meditation) => (
           <button key={meditation.id} onClick={() => onOpen(meditation)} className="w-40 shrink-0 text-left">
             <img src={meditation.cover_image} alt="" className="h-40 w-40 rounded-3xl object-cover shadow-glow" loading="lazy" />
-            <p className="mt-2 line-clamp-1 font-semibold">{meditation.title}</p>
-            <p className="text-xs capitalize text-lavender">{meditation.category.replace('-', ' ')}</p>
+            <p className="mt-2 line-clamp-1 font-semibold">{displayMeditationTitle(meditation)}</p>
+            <p className="text-xs capitalize text-lavender">{meditation.category.replace('-', ' ')} · {formatTime(meditation.duration)}</p>
           </button>
         ))}
       </div>
+    </section>
+  );
+}
+
+function InsightCard({ title, body, meta }: { title: string; body: string; meta: string }) {
+  return (
+    <section className="rounded-[24px] border border-gold/20 bg-gradient-to-br from-gold/15 via-lavender/10 to-white/5 p-4 shadow-glow">
+      <p className="text-xs uppercase tracking-[0.18em] text-gold">{title}</p>
+      <p className="mt-3 text-sm leading-6 text-cream/85">{body}</p>
+      <p className="mt-3 text-xs text-lavender">{meta}</p>
     </section>
   );
 }
@@ -612,6 +736,7 @@ function LibraryPage(props: {
       </div>
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4">
         <FilterPill active={props.category === 'all'} onClick={() => props.setCategory('all')} label="All" />
+        <FilterPill active={props.category === 'short'} onClick={() => props.setCategory('short')} label="Short" />
         {props.categories.map((item) => (
           <FilterPill key={item.slug} active={props.category === item.slug} onClick={() => props.setCategory(item.slug)} label={item.name} />
         ))}
@@ -672,11 +797,17 @@ function MeditationCard({ meditation, locked, onOpen, onFavorite, onUnlock }: {
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="truncate font-semibold">{meditation.title}</h3>
+            <h3 className="truncate font-semibold">{displayMeditationTitle(meditation)}</h3>
             {meditation.premium && <Crown size={15} className="text-gold" />}
           </div>
           <p className="mt-1 text-xs capitalize text-lavender">{meditation.category.replace('-', ' ')}</p>
           <p className="mt-2 line-clamp-2 text-sm text-cream/70">{meditation.description}</p>
+          <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+            <span className="rounded-full bg-gold/15 px-2 py-1 text-gold">{meditation.premium ? 'Premium' : 'Free'}</span>
+            <span className="rounded-full bg-cream/10 px-2 py-1 text-cream/70">{formatTime(meditation.duration)}</span>
+            {meditation.play_count > 0 && <span className="rounded-full bg-lavender/15 px-2 py-1 text-lavender">Popular today</span>}
+            {meditation.history?.last_position ? <span className="rounded-full bg-cream/10 px-2 py-1 text-cream/70">Resume</span> : null}
+          </div>
         </div>
         <button onClick={() => onFavorite(meditation)} className="self-start rounded-full bg-cream/10 p-2" aria-label="Favorite meditation">
           <Heart size={17} className={meditation.favorite ? 'fill-gold text-gold' : 'text-cream'} />
@@ -692,10 +823,120 @@ function MeditationCard({ meditation, locked, onOpen, onFavorite, onUnlock }: {
 function FavoritesPage({ meditations, onOpen, onFavorite }: { meditations: Meditation[]; onOpen: (meditation: Meditation) => void; onFavorite: (meditation: Meditation) => void }) {
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-semibold">Saved meditations</h2>
+      <h2 className="font-serif text-3xl font-semibold">Your Sanctuary</h2>
       {meditations.length ? meditations.map((meditation) => (
         <MeditationCard key={meditation.id} meditation={meditation} locked={false} onOpen={onOpen} onFavorite={onFavorite} onUnlock={() => undefined} />
-      )) : <EmptyState title="Your saved calm will live here." body="Favorite meditations you want to return to later." />}
+      )) : <EmptyState title="Your saved calm will live here." body="Tap the heart on any meditation to build a small refuge you can return to anytime." />}
+    </div>
+  );
+}
+
+function DailyCheckinSheet({
+  initialMood,
+  onClose,
+  onSave
+}: {
+  initialMood: DailyCheckin['mood'];
+  onClose: () => void;
+  onSave: (input: DailyCheckinPayload) => Promise<void>;
+}) {
+  const [sleepRange, setSleepRange] = useState<DailyCheckin['sleep_range']>('6_8');
+  const [mood, setMood] = useState<DailyCheckin['mood']>(initialMood);
+  const [availableMinutes, setAvailableMinutes] = useState<DailyCheckin['available_minutes']>('5');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const save = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      await onSave({ sleep_range: sleepRange, mood, available_minutes: availableMinutes, local_date: todayLocalDate() });
+    } catch {
+      setError('Could not save your check-in. Please try again.');
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-40 flex items-end bg-night/70 px-4 pb-4 backdrop-blur-sm">
+      <section className="w-full rounded-[30px] border border-white/10 bg-ink p-5 shadow-glow luna-fade">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-gold">Daily check-in</p>
+            <h3 className="mt-1 font-serif text-3xl">How is your inner weather?</h3>
+          </div>
+          <button onClick={onClose} className="rounded-full bg-surface px-3 py-2 text-sm text-lavender">Skip</button>
+        </div>
+        <CheckinGroup
+          title="Sleep last night"
+          options={[
+            ['less_than_4', '<4h'],
+            ['4_6', '4-6h'],
+            ['6_8', '6-8h'],
+            ['8_plus', '8h+']
+          ]}
+          value={sleepRange}
+          onChange={(value) => setSleepRange(value as DailyCheckin['sleep_range'])}
+        />
+        <CheckinGroup
+          title="Mood right now"
+          options={[
+            ['calm', 'Calm'],
+            ['stressed', 'Stressed'],
+            ['tired', 'Tired'],
+            ['anxious', 'Anxious'],
+            ['focused', 'Focused'],
+            ['low_energy', 'Low energy']
+          ]}
+          value={mood}
+          onChange={(value) => setMood(value as DailyCheckin['mood'])}
+        />
+        <CheckinGroup
+          title="Time available"
+          options={[
+            ['3', '3 min'],
+            ['5', '5 min'],
+            ['10', '10 min'],
+            ['15_plus', '15+ min']
+          ]}
+          value={availableMinutes}
+          onChange={(value) => setAvailableMinutes(value as DailyCheckin['available_minutes'])}
+        />
+        {error && <p className="mt-3 rounded-2xl bg-red-500/15 p-3 text-sm text-red-100">{error}</p>}
+        <button onClick={save} disabled={saving} className="mt-5 flex w-full items-center justify-center gap-2 rounded-[20px] bg-gold px-5 py-4 font-semibold text-night disabled:opacity-70">
+          {saving && <span className="h-4 w-4 animate-spin rounded-full border-2 border-night/30 border-t-night" />}
+          {saving ? 'Saving...' : 'Save today'}
+        </button>
+      </section>
+    </div>
+  );
+}
+
+function CheckinGroup({
+  title,
+  options,
+  value,
+  onChange
+}: {
+  title: string;
+  options: Array<[string, string]>;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="mt-5">
+      <p className="mb-3 text-sm text-lavender">{title}</p>
+      <div className="flex flex-wrap gap-2">
+        {options.map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => onChange(id)}
+            className={`rounded-full px-4 py-2 text-sm transition ${value === id ? 'bg-gold text-night' : 'bg-surface text-cream'}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -728,6 +969,12 @@ function PricingPage({
         </div>
       </section>
       {locked && <p className="rounded-[20px] bg-surface p-4 text-sm text-cream/80">{locked.title} is part of Luna Premium.</p>}
+      <div className="grid grid-cols-2 gap-3">
+        <PremiumValue title="Sleep deeper" body="Evening practices made for softer endings." />
+        <PremiumValue title="Calm faster" body="Breath-led resets for anxious moments." />
+        <PremiumValue title="Build rhythm" body="Streaks, favorites, and weekly guidance." />
+        <PremiumValue title="Grow gently" body="New meditations as your needs change." />
+      </div>
       <PlanCard title="Free" price="0" features={['Basic meditations only']} />
       <PlanCard title="Monthly Premium" price={`${premiumPrices.monthly} ⭐`} features={['Unlimited meditations', 'Premium breathing practices', 'Sleep collection', 'Anxiety relief', 'Focus sessions', 'Favorites', 'Daily streak', 'Weekly new content']} action="Telegram Stars" loading={openingPlan === 'monthly'} disabled={Boolean(openingPlan)} onClick={() => onBuy('monthly')} />
       <PlanCard title="Lifetime Premium" price={`${premiumPrices.lifetime} ⭐`} features={['Premium library forever', 'All future practices', 'Best value', 'Instant Telegram unlock']} action="Telegram Stars" loading={openingPlan === 'lifetime'} disabled={Boolean(openingPlan)} onClick={() => onBuy('lifetime')} />
@@ -749,6 +996,16 @@ function PricingPage({
         </div>
       )}
     </div>
+  );
+}
+
+function PremiumValue({ title, body }: { title: string; body: string }) {
+  return (
+    <article className="rounded-[22px] border border-gold/20 bg-gold/10 p-4">
+      <Sparkles size={18} className="text-gold" />
+      <h3 className="mt-3 font-semibold">{title}</h3>
+      <p className="mt-2 text-xs leading-5 text-cream/70">{body}</p>
+    </article>
   );
 }
 
@@ -793,11 +1050,13 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
   const [position, setPosition] = useState(meditation.history?.last_position ?? 0);
   const [duration, setDuration] = useState(meditation.duration);
   const [speed, setSpeed] = useState(1);
+  const [completed, setCompleted] = useState(false);
 
   useEffect(() => {
     setPosition(meditation.history?.last_position ?? 0);
     setDuration(meditation.duration);
     setLoading(true);
+    setCompleted(false);
   }, [meditation]);
 
   useEffect(() => {
@@ -823,11 +1082,20 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
           <img src={meditation.cover_image} alt="" className="h-full w-full object-cover" />
           {loading && <div className="absolute left-4 top-4 rounded-full bg-night/70 px-4 py-2 text-xs text-cream backdrop-blur">Loading audio...</div>}
           {meditation.premium && <div className="absolute right-4 top-4 rounded-full bg-gold px-3 py-1 text-xs font-semibold text-night">Premium</div>}
+          {completed && (
+            <div className="absolute inset-0 grid place-items-center bg-night/70 p-6 text-center backdrop-blur-sm">
+              <div>
+                <CheckCircle className="mx-auto text-gold" size={42} />
+                <h3 className="mt-3 font-serif text-3xl">Session complete</h3>
+                <p className="mt-2 text-sm text-cream/75">You added {formatTime(duration)} of calm to your day.</p>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mt-6 text-center">
           <p className="text-xs uppercase tracking-[0.18em] text-gold">{meditation.category.replace('-', ' ')}</p>
-          <h2 className="mt-2 font-serif text-3xl font-semibold">{meditation.title}</h2>
+          <h2 className="mt-2 font-serif text-3xl font-semibold">{displayMeditationTitle(meditation)}</h2>
           <p className="mt-2 text-sm text-lavender">{formatTime(position)} elapsed · {formatTime(Math.max(0, duration - position))} remaining</p>
         </div>
 
@@ -897,6 +1165,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
           }}
           onEnded={() => {
             setPlaying(false);
+            setCompleted(true);
             persist(true);
           }}
         />
@@ -914,6 +1183,7 @@ function ProfilePage({
   access,
   firstName,
   username,
+  wellness,
   showAdminButton,
   onAdmin,
   onRestore
@@ -922,11 +1192,13 @@ function ProfilePage({
   access: AccessState;
   firstName: string;
   username?: string;
+  wellness: WellnessSummary | null;
   showAdminButton: boolean;
   onAdmin: () => void;
   onRestore: () => void;
 }) {
   const activeUntil = access.user?.active_until ? new Date(access.user.active_until).toLocaleDateString() : 'Not active';
+  const level = wellness?.level;
   return (
     <div className="space-y-4 luna-fade">
       <div>
@@ -941,6 +1213,21 @@ function ProfilePage({
             <p className="text-sm text-lavender">{username ? `@${username}` : 'Luna member'}</p>
           </div>
         </div>
+        {level && (
+          <div className="mt-5 rounded-[22px] border border-gold/20 bg-gold/10 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs uppercase tracking-[0.18em] text-gold">Level {level.current}</p>
+                <h3 className="mt-1 font-serif text-2xl">{level.title}</h3>
+              </div>
+              <Sparkles className="text-gold" />
+            </div>
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-night">
+              <div className="h-full rounded-full bg-gold" style={{ width: `${level.progress}%` }} />
+            </div>
+            <p className="mt-2 text-xs text-lavender">Next: {level.next}</p>
+          </div>
+        )}
         <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
           <Stat label="Member since" value="Today" />
           <Stat label="Premium status" value={access.hasPremium ? 'Active' : 'Free'} />
@@ -949,13 +1236,26 @@ function ProfilePage({
           <Stat label="Completed sessions" value={String(profile?.completed ?? 0)} />
           <Stat label="Current streak" value={`${profile?.currentStreak ?? 0} days`} />
           <Stat label="Longest streak" value={`${profile?.longestStreak ?? 0} days`} />
-          <Stat label="Favorite category" value="After listening" />
-          <Stat label="Last listened" value="After first session" />
+          <Stat label="Weekly check-ins" value={`${wellness?.weeklyCheckinCount ?? 0}/7`} />
+          <Stat label="Average sleep" value={wellness?.averageSleepLabel ?? 'No check-ins yet'} />
+          <Stat label="Current mood" value={wellness?.mostCommonMoodLabel ?? 'Not enough data'} />
+          <Stat label="Preferred length" value={durationLabel(wellness?.todayCheckin?.available_minutes)} />
         </div>
+        {wellness && <InsightCard title="Your weekly insight" body={wellness.weeklyInsight} meta={`Recommended focus: ${wellness.recommendedFocus}`} />}
         <div className="mt-5 rounded-[20px] bg-surface p-4">
           <p className="mb-3 text-sm text-lavender">Achievements</p>
-          <div className="grid grid-cols-4 gap-2 text-center text-xs">
-            {rewardMilestones.map((days) => <span key={days} className={`rounded-full px-2 py-2 ${profile?.rewards?.[days] ? 'bg-gold text-night' : 'bg-night text-lavender'}`}>{days}d</span>)}
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            {(wellness?.achievements ?? rewardMilestones.map((days) => ({
+              id: `${days}`,
+              title: `${days}d`,
+              description: 'Streak reward',
+              unlocked: Boolean(profile?.rewards?.[days])
+            }))).map((achievement) => (
+              <span key={achievement.id} className={`rounded-2xl p-3 ${achievement.unlocked ? 'bg-gold text-night' : 'bg-night text-lavender'}`}>
+                <strong className="block">{achievement.title}</strong>
+                <span className="mt-1 block opacity-75">{achievement.description}</span>
+              </span>
+            ))}
           </div>
         </div>
         {showAdminButton && (
@@ -1217,7 +1517,20 @@ function AdminPage({
             <Stat label="Premium users" value={String(dashboard.subscriptions.activePremiumUsers)} />
             <Stat label="Total Stars" value={String(dashboard.revenue.totalStars)} />
             <Stat label="Listening minutes" value={String(dashboard.meditations.totalListeningMinutes)} />
+            <Stat label="Check-ins today" value={String(dashboard.wellness?.checkinsToday ?? 0)} />
+            <Stat label="Weekly check-ins" value={String(dashboard.wellness?.checkinsThisWeek ?? 0)} />
           </AdminMetricGrid>
+          <AdminSection title="Wellness signals">
+            <AdminMetricGrid>
+              <Stat label="Common mood" value={dashboard.wellness?.mostCommonMoodLabel ?? 'No data'} />
+              <Stat label="Sleep pattern" value={dashboard.wellness?.averageSleepLabel ?? 'No data'} />
+              <Stat label="Wanted length" value={durationLabel(dashboard.wellness?.mostRequestedDuration ?? null)} />
+              <Stat label="Total check-ins" value={String(dashboard.wellness?.totalCheckins ?? 0)} />
+            </AdminMetricGrid>
+            <p className="mt-3 rounded-2xl bg-cream/10 p-3 text-sm text-cream/75">
+              Content cue: create more {dashboard.wellness?.mostCommonMoodLabel ?? 'calm'} practices around {dashboard.wellness?.averageSleepLabel ?? 'short'} needs.
+            </p>
+          </AdminSection>
           <AdminSection title="Subscriptions">
             <AdminMetricGrid>
               <Stat label="Free" value={String(dashboard.subscriptions.freeUsers)} />
@@ -1463,6 +1776,11 @@ function RecentActivity({ dashboard }: { dashboard: AdminDashboardData }) {
           Play: {play.meditation?.title ?? 'Meditation'} · {Math.round(Number(play.completion_percent ?? 0))}% completion
         </p>
       ))}
+      {dashboard.recentActivity.latestCheckins.slice(0, 4).map((checkin) => (
+        <p key={`checkin-${checkin.telegram_id}-${checkin.local_date}`} className="rounded-2xl bg-cream/10 p-3 text-sm">
+          Check-in: {checkin.user?.first_name ?? checkin.telegram_id} · {checkin.mood.replace('_', ' ')} · {durationLabel(checkin.available_minutes)}
+        </p>
+      ))}
       {dashboard.recentActivity.latestAdminUploads.slice(0, 4).map((meditation) => (
         <p key={`upload-${meditation.id}`} className="rounded-2xl bg-cream/10 p-3 text-sm">
           Upload: {meditation.title} · {new Date(meditation.created_at).toLocaleDateString()}
@@ -1598,6 +1916,14 @@ function AnalyticsPanel({ dashboard }: { dashboard: AdminDashboardData }) {
       <AdminSection title="Engagement">
         <MiniChart title="Listening minutes by day" points={dashboard.charts.listeningMinutesByDay} />
         <MiniChart title="Meditation plays by day" points={dashboard.charts.meditationPlaysByDay} />
+      </AdminSection>
+      <AdminSection title="Wellness check-ins">
+        <AdminMetricGrid>
+          <Stat label="This week" value={String(dashboard.wellness?.checkinsThisWeek ?? 0)} />
+          <Stat label="Most common mood" value={dashboard.wellness?.mostCommonMoodLabel ?? 'No data'} />
+          <Stat label="Sleep signal" value={dashboard.wellness?.averageSleepLabel ?? 'No data'} />
+          <Stat label="Practice length" value={durationLabel(dashboard.wellness?.mostRequestedDuration ?? null)} />
+        </AdminMetricGrid>
       </AdminSection>
       <AdminPeopleList title="Most completed meditations" users={dashboard.topUsers.mostCompleted} metric={(user) => `${user.completedMeditations} completed`} />
     </div>

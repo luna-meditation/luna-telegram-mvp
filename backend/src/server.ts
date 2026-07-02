@@ -16,15 +16,19 @@ import {
   getMeditations,
   getPractices,
   getProfileStats,
+  getTodayCheckin,
   getUserAccess,
+  getWellnessSummary,
   markPracticeComplete,
   supabase,
   updateMeditation,
   updateAdminUserAccess,
   upsertCategory,
+  upsertDailyCheckin,
   upsertFavorite,
   upsertHistory,
   upsertUser,
+  type DailyCheckinInput,
   type MeditationInput
 } from './db.js';
 import { runMigrations } from './migrations.js';
@@ -272,6 +276,44 @@ app.post('/api/progress', requireTelegramWebApp, async (req, res, next) => {
       mood_after: req.body.mood_after
     });
     res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/checkins/today', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    res.json({ checkin: await getTodayCheckin(authReq.telegramUser.telegram_id) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/checkins', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const input = req.body as DailyCheckinInput;
+
+    if (
+      !['less_than_4', '4_6', '6_8', '8_plus'].includes(input.sleep_range) ||
+      !['calm', 'stressed', 'tired', 'anxious', 'focused', 'low_energy'].includes(input.mood) ||
+      !['3', '5', '10', '15_plus'].includes(input.available_minutes)
+    ) {
+      res.status(400).json({ error: 'Please complete the daily check-in.' });
+      return;
+    }
+
+    res.json({ checkin: await upsertDailyCheckin(authReq.telegramUser.telegram_id, input) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/wellness/summary', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    res.json(await getWellnessSummary(authReq.telegramUser.telegram_id));
   } catch (error) {
     next(error);
   }
