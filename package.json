@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Telegram Mini App and bot MVP for Luna wellness.",
   "engines": {
-    "node": ">=20 <23"
+    "node": ">=22 <23"
   },
   "scripts": {
     "dev": "pnpm --parallel --filter @luna/frontend --filter @luna/backend dev",

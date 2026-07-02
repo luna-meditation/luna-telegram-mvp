@@ -1,9 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
+import WebSocket from 'ws';
 import { env } from './config.js';
 import { plans, type PlanId } from './plans.js';
 
+if (!globalThis.WebSocket) {
+  globalThis.WebSocket = WebSocket as unknown as typeof globalThis.WebSocket;
+}
+
 export const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { persistSession: false }
+  auth: { persistSession: false },
+  realtime: {
+    transport: WebSocket as unknown as typeof globalThis.WebSocket
+  }
 });
 
 export type TelegramUserInput = {
