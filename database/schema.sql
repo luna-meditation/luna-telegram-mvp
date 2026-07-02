@@ -85,7 +85,8 @@ create table if not exists public.meditations (
 
 alter table public.meditations
   add column if not exists subtitle text not null default '',
-  add column if not exists published boolean not null default false;
+  add column if not exists published boolean not null default false,
+  add column if not exists translations jsonb not null default '{}'::jsonb;
 
 create table if not exists public.favorites (
   id uuid primary key default gen_random_uuid(),
@@ -153,6 +154,32 @@ as $$
       updated_at = now()
   where id = meditation_uuid;
 $$;
+
+update public.meditations
+set translations = jsonb_strip_nulls(jsonb_build_object(
+  'en', jsonb_build_object(
+    'title', title,
+    'subtitle', subtitle,
+    'description', description,
+    'audioUrl', audio_file
+  ),
+  'ru', case
+    when lower(title) like '%deep%sleep%' then jsonb_build_object(
+      'title', 'Глубокий сон',
+      'subtitle', 'Отпусти этот день',
+      'description', 'Мягкая медитация для расслабления, восстановления и спокойного перехода ко сну.',
+      'audioUrl', null
+    )
+    when lower(title) like '%anxiety%' then jsonb_build_object(
+      'title', 'Спокойствие при тревоге',
+      'subtitle', 'Успокой мысли',
+      'description', 'Мягкая практика, которая помогает замедлиться, вернуться к дыханию и почувствовать больше внутренней опоры.',
+      'audioUrl', null
+    )
+    else null
+  end
+))
+where translations = '{}'::jsonb or translations is null;
 
 alter table public.users enable row level security;
 alter table public.payments enable row level security;

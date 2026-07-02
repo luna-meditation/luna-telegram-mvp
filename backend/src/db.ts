@@ -25,6 +25,12 @@ export type MeditationInput = {
   premium: boolean;
   published?: boolean;
   mood: 'Calm' | 'Stressed' | 'Focused' | 'Tired' | 'Anxious';
+  translations?: Record<string, {
+    title?: string | null;
+    subtitle?: string | null;
+    description?: string | null;
+    audioUrl?: string | null;
+  }>;
 };
 
 export type HistoryInput = {
@@ -61,7 +67,7 @@ export async function upsertUser(user: TelegramUserInput) {
 export async function getUserAccess(telegramId: number) {
   const { data, error } = await supabase
     .from('users')
-    .select('telegram_id, first_name, username, active_until, lifetime_access, free_used')
+    .select('telegram_id, first_name, username, language_code, active_until, lifetime_access, free_used')
     .eq('telegram_id', telegramId)
     .maybeSingle();
 
@@ -76,6 +82,18 @@ export async function getUserAccess(telegramId: number) {
     hasPremium,
     plan: data?.lifetime_access ? 'Lifetime' : activeUntil > now ? 'Monthly' : 'Free'
   };
+}
+
+export async function updateUserLanguage(telegramId: number, language: 'en' | 'ru') {
+  const { data, error } = await supabase
+    .from('users')
+    .update({ language_code: language, last_seen_at: new Date().toISOString() })
+    .eq('telegram_id', telegramId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
 }
 
 export async function getPractices() {
@@ -420,8 +438,32 @@ export async function updateStreak(telegramId: number) {
   return data;
 }
 
+function normalizeMeditationInput<T extends Partial<MeditationInput>>(input: T) {
+  const hasContent =
+    Object.prototype.hasOwnProperty.call(input, 'translations') ||
+    Object.prototype.hasOwnProperty.call(input, 'title') ||
+    Object.prototype.hasOwnProperty.call(input, 'subtitle') ||
+    Object.prototype.hasOwnProperty.call(input, 'description') ||
+    Object.prototype.hasOwnProperty.call(input, 'audio_file');
+
+  if (!hasContent) return input;
+
+  const translations = {
+    ...(input.translations ?? {}),
+    en: {
+      ...(input.translations?.en ?? {}),
+      title: input.translations?.en?.title ?? input.title,
+      subtitle: input.translations?.en?.subtitle ?? input.subtitle ?? '',
+      description: input.translations?.en?.description ?? input.description,
+      audioUrl: input.translations?.en?.audioUrl ?? input.audio_file
+    }
+  };
+
+  return { ...input, translations };
+}
+
 export async function createMeditation(input: MeditationInput) {
-  const { data, error } = await supabase.from('meditations').insert(input).select().single();
+  const { data, error } = await supabase.from('meditations').insert(normalizeMeditationInput(input)).select().single();
   if (error) throw error;
   return data;
 }
@@ -429,7 +471,7 @@ export async function createMeditation(input: MeditationInput) {
 export async function updateMeditation(id: string, input: Partial<MeditationInput>) {
   const { data, error } = await supabase
     .from('meditations')
-    .update({ ...input, updated_at: new Date().toISOString() })
+    .update({ ...normalizeMeditationInput(input), updated_at: new Date().toISOString() })
     .eq('id', id)
     .select()
     .single();
@@ -470,7 +512,7 @@ export async function markPracticeComplete(input: {
 export async function getProfileStats(telegramId: number) {
   const { data: user, error: userError } = await supabase
     .from('users')
-    .select('first_name, username, active_until, lifetime_access')
+    .select('first_name, username, language_code, active_until, lifetime_access')
     .eq('telegram_id', telegramId)
     .maybeSingle();
   if (userError) throw userError;

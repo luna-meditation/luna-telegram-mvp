@@ -37,12 +37,14 @@ import {
   saveHistory,
   setFavorite,
   syncUser,
+  updateUserLanguage,
   updateMeditation,
   updateAdminUserAccess,
   uploadAdminAsset,
   type AccessState,
   type AdminDashboardData,
   type AdminUser,
+  type AppLanguage,
   type Category,
   type DailyCheckin,
   type DailyCheckinPayload,
@@ -73,11 +75,87 @@ const premiumPrices = {
   lifetime: 2499
 };
 const libraryCacheKey = 'luna.library.v1';
+const languageStorageKey = 'luna.language.v1';
 type LibraryCache = {
   categories: Category[];
   meditations: Meditation[];
   savedAt: number;
 };
+
+const copy = {
+  en: {
+    tagline: 'AI Guided Calm Inside Telegram',
+    language: 'Language',
+    premium: 'Premium',
+    free: 'Free',
+    begin: 'Begin',
+    play: 'Play',
+    resume: 'Resume',
+    favorite: 'Favorite',
+    share: 'Share',
+    timer: 'Timer',
+    availableInEnglish: 'Available in English',
+    loadingAudio: 'Loading audio...',
+    sharingFreeOnly: 'Sharing is available for free meditations.',
+    linkCopied: 'Link copied.',
+    copyFailed: 'Copy failed. Please try again.',
+    goodMorning: 'Good morning',
+    goodAfternoon: 'Good afternoon',
+    goodEvening: 'Good evening',
+    feeling: 'How are you feeling today?',
+    todayMeditation: "Today's Meditation",
+    openLibrary: 'Open Library',
+    libraryTitle: 'Luna Library',
+    searchByTitle: 'Search by title',
+    all: 'All',
+    short: 'Short',
+    noMeditations: 'No meditations found.',
+    noMeditationsBody: 'Try another mood, category, or search phrase.',
+    firstPracticeTitle: 'Your first calm practice is coming soon.',
+    firstPracticeBody: 'Luna’s library will appear here as soon as new meditations are published.',
+    unlockPremium: 'Unlock Premium',
+    popularToday: 'Popular today',
+    profile: 'Profile',
+    member: 'Luna member',
+    restore: 'Restore purchases'
+  },
+  ru: {
+    tagline: 'AI-спокойствие внутри Telegram',
+    language: 'Язык',
+    premium: 'Премиум',
+    free: 'Бесплатно',
+    begin: 'Начать',
+    play: 'Слушать',
+    resume: 'Продолжить',
+    favorite: 'В избранное',
+    share: 'Поделиться',
+    timer: 'Таймер',
+    availableInEnglish: 'Доступно на английском',
+    loadingAudio: 'Загружаю аудио...',
+    sharingFreeOnly: 'Поделиться можно только бесплатными медитациями.',
+    linkCopied: 'Ссылка скопирована.',
+    copyFailed: 'Не удалось скопировать. Попробуй еще раз.',
+    goodMorning: 'Доброе утро',
+    goodAfternoon: 'Добрый день',
+    goodEvening: 'Добрый вечер',
+    feeling: 'Как ты себя чувствуешь сегодня?',
+    todayMeditation: 'Медитация дня',
+    openLibrary: 'Открыть библиотеку',
+    libraryTitle: 'Библиотека Luna',
+    searchByTitle: 'Поиск по названию',
+    all: 'Все',
+    short: 'Короткие',
+    noMeditations: 'Медитации не найдены.',
+    noMeditationsBody: 'Попробуй другое настроение, категорию или запрос.',
+    firstPracticeTitle: 'Первая практика скоро появится.',
+    firstPracticeBody: 'Библиотека Luna появится здесь, когда медитации будут опубликованы.',
+    unlockPremium: 'Открыть Premium',
+    popularToday: 'Популярно сегодня',
+    profile: 'Профиль',
+    member: 'Участник Luna',
+    restore: 'Восстановить покупки'
+  }
+} satisfies Record<AppLanguage, Record<string, string>>;
 
 let memoryLibraryCache: LibraryCache | null = null;
 
@@ -131,11 +209,36 @@ function formatTime(seconds: number) {
   return `${minutes}:${remaining}`;
 }
 
-function dayGreeting() {
+function languageFromCode(languageCode?: string | null): AppLanguage {
+  return languageCode?.toLowerCase().startsWith('ru') ? 'ru' : 'en';
+}
+
+function readStoredLanguage(): AppLanguage | null {
+  try {
+    const saved = window.localStorage.getItem(languageStorageKey);
+    return saved === 'en' || saved === 'ru' ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveStoredLanguage(language: AppLanguage) {
+  try {
+    window.localStorage.setItem(languageStorageKey, language);
+  } catch {
+    // Language persistence is best-effort in restricted browser storage.
+  }
+}
+
+function initialLanguage(user?: TelegramWebAppUser): AppLanguage {
+  return readStoredLanguage() ?? languageFromCode(user?.language_code);
+}
+
+function dayGreeting(language: AppLanguage) {
   const hour = new Date().getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return copy[language].goodMorning;
+  if (hour < 18) return copy[language].goodAfternoon;
+  return copy[language].goodEvening;
 }
 
 function todayLocalDate() {
@@ -160,8 +263,16 @@ function checkinMoodToMoodChip(mood?: DailyCheckin['mood'] | null): MoodChip {
   return 'Calm';
 }
 
-function moodMessage(mood: MoodChip, wellness: WellnessSummary | null) {
-  if (wellness?.todayCheckin) return `Saved for today. Luna recommends: ${wellness.recommendedFocus}.`;
+function moodMessage(mood: MoodChip, wellness: WellnessSummary | null, language: AppLanguage) {
+  if (wellness?.todayCheckin) return language === 'ru' ? `Сохранено на сегодня. Luna рекомендует: ${wellness.recommendedFocus}.` : `Saved for today. Luna recommends: ${wellness.recommendedFocus}.`;
+  if (language === 'ru') {
+    if (mood === 'Sleep') return 'Пусть вечер будет мягким, а нервная система постепенно замедлится.';
+    if (mood === 'Anxiety') return 'Практика с дыханием поможет создать пространство между мыслями.';
+    if (mood === 'Focus') return 'Короткая практика фокуса сделает следующий час яснее.';
+    if (mood === 'Energy') return 'Начнем бодро, а потом вернемся в устойчивое спокойствие.';
+    if (mood === 'Breath') return 'Дыхание — самый быстрый путь вернуться в тело.';
+    return 'Красиво. Luna поможет сохранить день мягким и устойчивым.';
+  }
   if (mood === 'Sleep') return 'Let’s keep it gentle and help your nervous system power down.';
   if (mood === 'Anxiety') return 'A breath-led reset can create space before the next thought.';
   if (mood === 'Focus') return 'A short focus practice can make the next hour feel cleaner.';
@@ -176,8 +287,31 @@ function displayMeditationTitle(meditation: Meditation, fallbackIndex = 0) {
   return ['Morning Calm', 'Deep Sleep', 'Anxiety Relief', 'Evening Reset'][fallbackIndex % 4];
 }
 
-function meditationShareSubtitle(meditation: Meditation) {
-  return meditation.subtitle?.trim() || meditation.category.replace('-', ' ');
+function getLocalizedMeditation(meditation: Meditation, language: AppLanguage) {
+  const english = meditation.translations?.en ?? {};
+  const selected = meditation.translations?.[language] ?? {};
+  const englishTitle = english.title?.trim() || meditation.title?.trim();
+  const englishSubtitle = english.subtitle?.trim() || meditation.subtitle?.trim();
+  const englishDescription = english.description?.trim() || meditation.description?.trim();
+  const englishAudio = english.audioUrl?.trim() || meditation.audio_file?.trim();
+  const title = selected.title?.trim() || englishTitle || displayMeditationTitle(meditation);
+  const subtitle = selected.subtitle?.trim() || englishSubtitle || meditation.category.replace('-', ' ');
+  const description = selected.description?.trim() || englishDescription || '';
+  const selectedAudio = selected.audioUrl?.trim();
+  const audioUrl = selectedAudio || englishAudio || '';
+
+  return {
+    title,
+    subtitle,
+    description,
+    audioUrl,
+    fallbackLanguageUsed: language !== 'en' && (!selected.title?.trim() || !selected.description?.trim()),
+    hasSelectedLanguageAudio: language === 'en' || Boolean(selectedAudio)
+  };
+}
+
+function meditationShareSubtitle(meditation: Meditation, language: AppLanguage) {
+  return getLocalizedMeditation(meditation, language).subtitle;
 }
 
 function botUsername() {
@@ -247,6 +381,7 @@ function App() {
   const user = telegram?.initDataUnsafe.user ?? fallbackUser;
   const initData = telegram?.initData;
   const [initialLibraryCache] = useState(() => readLibraryCache());
+  const [language, setLanguage] = useState<AppLanguage>(() => initialLanguage(user));
   const [page, setPage] = useState<Page>(window.location.pathname === '/admin' || window.location.hash === '#admin' ? 'admin' : 'home');
   const [mood, setMood] = useState<MoodChip>('Calm');
   const [query, setQuery] = useState('');
@@ -279,6 +414,11 @@ function App() {
     ]);
     setAccess(accessState);
     setProfile(profileStats);
+    const savedLanguage = profileStats?.user?.language_code ?? accessState.user?.language_code;
+    if (savedLanguage === 'en' || savedLanguage === 'ru') {
+      setLanguage(savedLanguage);
+      saveStoredLanguage(savedLanguage);
+    }
     setHistory(historyList);
     setFavorites(favoriteList);
     setWellness(wellnessSummary);
@@ -373,11 +513,14 @@ function App() {
 
   const filteredMeditations = useMemo(() => {
     return decoratedMeditations.filter((meditation) => {
-      const matchesQuery = meditation.title.toLowerCase().includes(query.toLowerCase());
+      const localized = getLocalizedMeditation(meditation, language);
+      const matchesQuery = [localized.title, localized.subtitle, localized.description].some((value) =>
+        value.toLowerCase().includes(query.toLowerCase())
+      );
       const matchesCategory = category === 'all' || (category === 'short' ? meditation.duration <= 600 : meditation.category === category);
       return matchesQuery && matchesCategory;
     });
-  }, [category, decoratedMeditations, query]);
+  }, [category, decoratedMeditations, language, query]);
 
   const recommended = useMemo(() => {
     const activeMood = wellness?.todayCheckin ? checkinMoodToMoodChip(wellness.todayCheckin.mood) : mood;
@@ -399,6 +542,17 @@ function App() {
   const popular = useMemo(() => [...decoratedMeditations].sort((a, b) => b.play_count - a.play_count).slice(0, 6), [decoratedMeditations]);
   const newest = useMemo(() => [...decoratedMeditations].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 6), [decoratedMeditations]);
   const dailyMeditation = recommended[0] ?? newest[0] ?? decoratedMeditations[0];
+
+  const changeLanguage = (nextLanguage: AppLanguage) => {
+    setLanguage(nextLanguage);
+    saveStoredLanguage(nextLanguage);
+    telegram?.HapticFeedback?.impactOccurred('light');
+    if (initData) {
+      updateUserLanguage(nextLanguage, initData).catch((error) => {
+        console.info('[Luna language save failed]', error instanceof Error ? error.message : 'Language save failed.');
+      });
+    }
+  };
 
   useEffect(() => {
     if (!wellness || wellness.todayCheckin) return;
@@ -519,7 +673,7 @@ function App() {
     <main className="min-h-screen overflow-hidden bg-night text-cream">
       <div className="fixed inset-0 luna-bg" />
       <section className="relative mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-28 pt-4">
-        <Header plan={access.plan} streak={profile?.currentStreak ?? 0} />
+        <Header plan={access.plan} streak={profile?.currentStreak ?? 0} language={language} onLanguageChange={changeLanguage} />
 
         {page === 'home' && (
           <HomePage
@@ -535,6 +689,7 @@ function App() {
             loading={libraryLoading}
             onOpen={openMeditation}
             onLibrary={() => setPage('library')}
+            language={language}
           />
         )}
 
@@ -551,11 +706,12 @@ function App() {
             onOpen={openMeditation}
             onFavorite={toggleFavorite}
             onUnlock={() => setPage('pricing')}
+            language={language}
           />
         )}
 
         {page === 'favorites' && (
-          <FavoritesPage meditations={decoratedMeditations.filter((item) => favoriteIds.has(item.id))} onOpen={openMeditation} onFavorite={toggleFavorite} />
+          <FavoritesPage meditations={decoratedMeditations.filter((item) => favoriteIds.has(item.id))} onOpen={openMeditation} onFavorite={toggleFavorite} language={language} />
         )}
 
         {page === 'pricing' && (
@@ -575,6 +731,7 @@ function App() {
               setPage('admin');
             }}
             onRestore={refreshAccount}
+            language={language}
           />
         )}
 
@@ -587,6 +744,7 @@ function App() {
             onSave={(position, duration, completed) =>
               saveHistory({ meditation_id: selectedMeditation.id, last_position: position, duration, completed }, initData).then(refreshAccount)
             }
+            language={language}
           />
         )}
 
@@ -616,7 +774,17 @@ function App() {
   );
 }
 
-function Header({ plan, streak }: { plan: string; streak: number }) {
+function Header({
+  plan,
+  streak,
+  language,
+  onLanguageChange
+}: {
+  plan: string;
+  streak: number;
+  language: AppLanguage;
+  onLanguageChange: (language: AppLanguage) => void;
+}) {
   return (
     <div className="mb-3 flex items-center justify-between">
       <div className="flex items-center gap-3">
@@ -624,11 +792,24 @@ function Header({ plan, streak }: { plan: string; streak: number }) {
         <div>
           <p className="text-[10px] uppercase tracking-[0.28em] text-gold">LUNA</p>
           <h1 className="font-serif text-2xl tracking-[0.16em] text-cream">MEDITATION</h1>
-          <p className="mt-1 text-[10px] uppercase tracking-[0.22em] text-beige">AI Guided Calm Inside Telegram</p>
+          <p className="mt-1 text-[10px] uppercase tracking-[0.22em] text-beige">{copy[language].tagline}</p>
         </div>
       </div>
-      <div className="rounded-full border border-white/10 bg-ink px-3 py-1.5 text-[11px] text-cream shadow-glow">
-        {streak > 0 ? `${streak} day streak` : plan}
+      <div className="flex flex-col items-end gap-2">
+        <div className="rounded-full border border-white/10 bg-ink px-3 py-1.5 text-[11px] text-cream shadow-glow">
+          {streak > 0 ? `${streak} day streak` : plan}
+        </div>
+        <div className="flex rounded-full border border-white/10 bg-ink p-1 text-[10px] font-semibold shadow-glow" aria-label={copy[language].language}>
+          {(['en', 'ru'] as const).map((item) => (
+            <button
+              key={item}
+              onClick={() => onLanguageChange(item)}
+              className={`rounded-full px-2 py-1 transition ${language === item ? 'bg-gold text-night' : 'text-lavender'}`}
+            >
+              {item.toUpperCase()}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -647,18 +828,20 @@ function HomePage(props: {
   loading: boolean;
   onOpen: (meditation: Meditation) => void;
   onLibrary: () => void;
+  language: AppLanguage;
 }) {
+  const t = copy[props.language];
   return (
     <div className="space-y-4">
       <section className="luna-fade overflow-hidden rounded-[24px] border border-white/10 bg-ink p-4 shadow-glow">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-sm text-beige">{dayGreeting()},</p>
+            <p className="text-sm text-beige">{dayGreeting(props.language)},</p>
             <h2 className="mt-0.5 font-serif text-3xl font-semibold leading-tight text-cream">{props.firstName}</h2>
           </div>
           <MoonMark className="h-14 w-14 shrink-0" />
         </div>
-        <p className="mt-3 text-sm text-beige">How are you feeling today?</p>
+        <p className="mt-3 text-sm text-beige">{t.feeling}</p>
         <div className="mt-3 flex flex-wrap gap-2">
           {moods.map((item) => (
             <button
@@ -673,7 +856,7 @@ function HomePage(props: {
           ))}
         </div>
         <div className="mt-3 rounded-2xl border border-gold/20 bg-gold/10 px-3 py-2">
-          <p className="line-clamp-1 text-xs font-medium text-cream/85">{props.wellness?.todayCheckin ? '✓ Today’s check-in saved' : moodMessage(props.mood, props.wellness)}</p>
+          <p className="line-clamp-1 text-xs font-medium text-cream/85">{props.wellness?.todayCheckin ? (props.language === 'ru' ? '✓ Чекин на сегодня сохранен' : '✓ Today’s check-in saved') : moodMessage(props.mood, props.wellness, props.language)}</p>
           {props.wellness?.weeklyCheckinCount ? (
             <p className="mt-1 text-[11px] capitalize text-gold">
               {props.wellness.mostCommonMoodLabel} · {props.wellness.weeklyCheckinCount}/7 check-ins
@@ -683,44 +866,46 @@ function HomePage(props: {
       </section>
 
       {props.daily ? (
-        <PracticeHero label="Today's Meditation" meditation={props.daily} onOpen={() => props.onOpen(props.daily!)} />
+        <PracticeHero label={t.todayMeditation} meditation={props.daily} onOpen={() => props.onOpen(props.daily!)} language={props.language} />
       ) : props.loading ? (
         <PracticeHeroSkeleton />
       ) : (
-        <EmptyState title="Your first calm practice is coming soon." body="Luna’s library will appear here as soon as new meditations are published." />
+        <EmptyState title={t.firstPracticeTitle} body={t.firstPracticeBody} />
       )}
 
-      <Rail title="Continue listening" meditations={props.continueListening} onOpen={props.onOpen} />
-      <Rail title="Recently played" meditations={props.continueListening} onOpen={props.onOpen} />
-      <Rail title="Popular meditations" meditations={props.popular} onOpen={props.onOpen} />
-      <Rail title="Breathing exercises" meditations={props.newest.filter((item) => item.category.includes('breath'))} onOpen={props.onOpen} />
-      <Rail title="Premium recommendations" meditations={props.recommended.filter((item) => item.premium)} onOpen={props.onOpen} />
+      <Rail title={props.language === 'ru' ? 'Продолжить слушать' : 'Continue listening'} meditations={props.continueListening} onOpen={props.onOpen} language={props.language} />
+      <Rail title={props.language === 'ru' ? 'Недавно прослушано' : 'Recently played'} meditations={props.continueListening} onOpen={props.onOpen} language={props.language} />
+      <Rail title={props.language === 'ru' ? 'Популярные медитации' : 'Popular meditations'} meditations={props.popular} onOpen={props.onOpen} language={props.language} />
+      <Rail title={props.language === 'ru' ? 'Дыхательные практики' : 'Breathing exercises'} meditations={props.newest.filter((item) => item.category.includes('breath'))} onOpen={props.onOpen} language={props.language} />
+      <Rail title={props.language === 'ru' ? 'Premium рекомендации' : 'Premium recommendations'} meditations={props.recommended.filter((item) => item.premium)} onOpen={props.onOpen} language={props.language} />
       {props.wellness && <InsightCard title="This week with Luna" body={props.wellness.weeklyInsight} meta={`Recommended focus: ${props.wellness.recommendedFocus}`} />}
       {props.loading && !props.daily && <RailSkeleton title="Preparing your calm" />}
 
       <button onClick={props.onLibrary} className="w-full rounded-[20px] bg-gold px-5 py-4 font-semibold text-night shadow-glow hover:brightness-110">
-        Open Library
+        {t.openLibrary}
       </button>
     </div>
   );
 }
 
-function PracticeHero({ meditation, label, onOpen }: { meditation: Meditation; label: string; onOpen: () => void }) {
+function PracticeHero({ meditation, label, onOpen, language }: { meditation: Meditation; label: string; onOpen: () => void; language: AppLanguage }) {
+  const localized = getLocalizedMeditation(meditation, language);
   return (
     <button onClick={onOpen} className="group relative h-[260px] w-full overflow-hidden rounded-[26px] border border-white/10 text-left shadow-glow transition duration-300 ease-in-out hover:brightness-110">
       <img src={meditation.cover_image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70 transition group-hover:scale-105" loading="eager" />
       <div className="absolute inset-0 bg-gradient-to-t from-night via-night/40 to-transparent" />
       <span className="absolute right-4 top-4 rounded-full bg-gold px-3 py-1 text-xs font-semibold text-night">
-        {meditation.premium ? 'Premium' : 'Free'}
+        {meditation.premium ? copy[language].premium : copy[language].free}
       </span>
       <div className="absolute bottom-0 p-4">
         <p className="mb-2 inline-flex rounded-full bg-lavender/25 px-3 py-1 text-xs text-cream backdrop-blur">{label}</p>
-        <h3 className="font-serif text-2xl font-semibold">{displayMeditationTitle(meditation)}</h3>
+        <h3 className="font-serif text-2xl font-semibold">{localized.title}</h3>
         <p className="mt-1 text-sm capitalize text-cream/75">
           {meditation.category.replace('-', ' ')} · {formatTime(meditation.duration)}
         </p>
+        {!localized.hasSelectedLanguageAudio && <p className="mt-2 text-xs text-gold">{copy[language].availableInEnglish}</p>}
         <span className="mt-3 inline-flex rounded-[18px] bg-gold px-5 py-2.5 text-sm font-semibold text-night shadow-gold">
-          Begin
+          {copy[language].begin}
         </span>
       </div>
     </button>
@@ -757,7 +942,7 @@ function RailSkeleton({ title }: { title: string }) {
   );
 }
 
-function Rail({ title, meditations, onOpen }: { title: string; meditations: Meditation[]; onOpen: (meditation: Meditation) => void }) {
+function Rail({ title, meditations, onOpen, language }: { title: string; meditations: Meditation[]; onOpen: (meditation: Meditation) => void; language: AppLanguage }) {
   if (!meditations.length) return null;
 
   return (
@@ -767,7 +952,7 @@ function Rail({ title, meditations, onOpen }: { title: string; meditations: Medi
         {meditations.map((meditation) => (
           <button key={meditation.id} onClick={() => onOpen(meditation)} className="w-40 shrink-0 text-left">
             <img src={meditation.cover_image} alt="" className="h-40 w-40 rounded-3xl object-cover shadow-glow" loading="lazy" />
-            <p className="mt-2 line-clamp-1 font-semibold">{displayMeditationTitle(meditation)}</p>
+            <p className="mt-2 line-clamp-1 font-semibold">{getLocalizedMeditation(meditation, language).title}</p>
             <p className="text-xs capitalize text-lavender">{meditation.category.replace('-', ' ')} · {formatTime(meditation.duration)}</p>
           </button>
         ))}
@@ -798,17 +983,19 @@ function LibraryPage(props: {
   onOpen: (meditation: Meditation) => void;
   onFavorite: (meditation: Meditation) => void;
   onUnlock: () => void;
+  language: AppLanguage;
 }) {
+  const t = copy[props.language];
   return (
     <div className="space-y-4">
-      <h2 className="text-2xl font-semibold">Luna Library</h2>
+      <h2 className="text-2xl font-semibold">{t.libraryTitle}</h2>
       <div className="flex items-center gap-2 rounded-2xl border border-cream/15 bg-white/10 px-4 py-3 backdrop-blur-xl">
         <Search size={18} className="text-lavender" />
-        <input value={props.query} onChange={(event) => props.setQuery(event.target.value)} placeholder="Search by title" className="w-full bg-transparent text-sm outline-none placeholder:text-cream/45" />
+        <input value={props.query} onChange={(event) => props.setQuery(event.target.value)} placeholder={t.searchByTitle} className="w-full bg-transparent text-sm outline-none placeholder:text-cream/45" />
       </div>
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4">
-        <FilterPill active={props.category === 'all'} onClick={() => props.setCategory('all')} label="All" />
-        <FilterPill active={props.category === 'short'} onClick={() => props.setCategory('short')} label="Short" />
+        <FilterPill active={props.category === 'all'} onClick={() => props.setCategory('all')} label={t.all} />
+        <FilterPill active={props.category === 'short'} onClick={() => props.setCategory('short')} label={t.short} />
         {props.categories.map((item) => (
           <FilterPill key={item.slug} active={props.category === item.slug} onClick={() => props.setCategory(item.slug)} label={item.name} />
         ))}
@@ -819,10 +1006,10 @@ function LibraryPage(props: {
         </div>
       ) : props.meditations.length ? (
         props.meditations.map((meditation) => (
-          <MeditationCard key={meditation.id} meditation={meditation} locked={meditation.premium && !props.hasPremium} onOpen={props.onOpen} onFavorite={props.onFavorite} onUnlock={props.onUnlock} />
+          <MeditationCard key={meditation.id} meditation={meditation} locked={meditation.premium && !props.hasPremium} onOpen={props.onOpen} onFavorite={props.onFavorite} onUnlock={props.onUnlock} language={props.language} />
         ))
       ) : (
-        <EmptyState title="No meditations found." body="Try another mood, category, or search phrase." />
+        <EmptyState title={t.noMeditations} body={t.noMeditationsBody} />
       )}
     </div>
   );
@@ -853,13 +1040,15 @@ function FilterPill({ active, label, onClick }: { active: boolean; label: string
   );
 }
 
-function MeditationCard({ meditation, locked, onOpen, onFavorite, onUnlock }: {
+function MeditationCard({ meditation, locked, onOpen, onFavorite, onUnlock, language }: {
   meditation: Meditation;
   locked: boolean;
   onOpen: (meditation: Meditation) => void;
   onFavorite: (meditation: Meditation) => void;
   onUnlock: () => void;
+  language: AppLanguage;
 }) {
+  const localized = getLocalizedMeditation(meditation, language);
   return (
     <article className="rounded-3xl border border-cream/15 bg-white/10 p-3 backdrop-blur-xl">
       <div className="flex gap-3">
@@ -869,16 +1058,17 @@ function MeditationCard({ meditation, locked, onOpen, onFavorite, onUnlock }: {
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="truncate font-semibold">{displayMeditationTitle(meditation)}</h3>
+            <h3 className="truncate font-semibold">{localized.title}</h3>
             {meditation.premium && <Crown size={15} className="text-gold" />}
           </div>
           <p className="mt-1 text-xs capitalize text-lavender">{meditation.category.replace('-', ' ')}</p>
-          <p className="mt-2 line-clamp-2 text-sm text-cream/70">{meditation.description}</p>
+          <p className="mt-2 line-clamp-2 text-sm text-cream/70">{localized.description}</p>
+          {!localized.hasSelectedLanguageAudio && <p className="mt-1 text-[11px] text-gold">{copy[language].availableInEnglish}</p>}
           <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
-            <span className="rounded-full bg-gold/15 px-2 py-1 text-gold">{meditation.premium ? 'Premium' : 'Free'}</span>
+            <span className="rounded-full bg-gold/15 px-2 py-1 text-gold">{meditation.premium ? copy[language].premium : copy[language].free}</span>
             <span className="rounded-full bg-cream/10 px-2 py-1 text-cream/70">{formatTime(meditation.duration)}</span>
-            {meditation.play_count > 0 && <span className="rounded-full bg-lavender/15 px-2 py-1 text-lavender">Popular today</span>}
-            {meditation.history?.last_position ? <span className="rounded-full bg-cream/10 px-2 py-1 text-cream/70">Resume</span> : null}
+            {meditation.play_count > 0 && <span className="rounded-full bg-lavender/15 px-2 py-1 text-lavender">{copy[language].popularToday}</span>}
+            {meditation.history?.last_position ? <span className="rounded-full bg-cream/10 px-2 py-1 text-cream/70">{copy[language].resume}</span> : null}
           </div>
         </div>
         <button onClick={() => onFavorite(meditation)} className="self-start rounded-full bg-cream/10 p-2" aria-label="Favorite meditation">
@@ -886,13 +1076,13 @@ function MeditationCard({ meditation, locked, onOpen, onFavorite, onUnlock }: {
         </button>
       </div>
       <button onClick={() => (locked ? onUnlock() : onOpen(meditation))} className={`mt-3 w-full rounded-2xl px-4 py-3 text-sm font-semibold ${locked ? 'bg-gold text-night' : 'bg-cream/15 text-cream'}`}>
-        {locked ? 'Unlock Premium' : meditation.history?.last_position ? `Resume at ${formatTime(meditation.history.last_position)}` : 'Play'}
+        {locked ? copy[language].unlockPremium : meditation.history?.last_position ? `${copy[language].resume} ${formatTime(meditation.history.last_position)}` : copy[language].play}
       </button>
     </article>
   );
 }
 
-function FavoritesPage({ meditations, onOpen, onFavorite }: { meditations: Meditation[]; onOpen: (meditation: Meditation) => void; onFavorite: (meditation: Meditation) => void }) {
+function FavoritesPage({ meditations, onOpen, onFavorite, language }: { meditations: Meditation[]; onOpen: (meditation: Meditation) => void; onFavorite: (meditation: Meditation) => void; language: AppLanguage }) {
   return (
     <div className="space-y-4">
       <div>
@@ -900,7 +1090,7 @@ function FavoritesPage({ meditations, onOpen, onFavorite }: { meditations: Medit
         <p className="mt-1 text-sm text-lavender">Practices you saved to return to.</p>
       </div>
       {meditations.length ? meditations.map((meditation) => (
-        <MeditationCard key={meditation.id} meditation={meditation} locked={false} onOpen={onOpen} onFavorite={onFavorite} onUnlock={() => undefined} />
+        <MeditationCard key={meditation.id} meditation={meditation} locked={false} onOpen={onOpen} onFavorite={onFavorite} onUnlock={() => undefined} language={language} />
       )) : <EmptyState title="Your saved calm will live here." body="Tap the heart on any meditation to build a small refuge you can return to anytime." />}
     </div>
   );
@@ -1124,14 +1314,17 @@ function PlanCard(props: { title: string; price: string; features: string[]; act
   );
 }
 
-function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }: {
+function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, language }: {
   meditation: Meditation;
   nextMeditation?: Meditation;
   favorite: boolean;
   onFavorite: () => void;
   onSave: (position: number, duration: number, completed?: boolean) => Promise<unknown>;
+  language: AppLanguage;
 }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const localized = getLocalizedMeditation(meditation, language);
+  const nextLocalized = nextMeditation ? getLocalizedMeditation(nextMeditation, language) : null;
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
   const [position, setPosition] = useState(meditation.history?.last_position ?? 0);
@@ -1141,23 +1334,25 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
   const [shareMessage, setShareMessage] = useState('');
 
   useEffect(() => {
+    audioRef.current?.pause();
+    setPlaying(false);
     setPosition(meditation.history?.last_position ?? 0);
     setDuration(meditation.duration);
     setLoading(true);
     setCompleted(false);
     setShareMessage('');
-  }, [meditation]);
+  }, [language, localized.audioUrl, meditation.duration, meditation.history?.last_position, meditation.id]);
 
   useEffect(() => {
-    if (nextMeditation?.audio_file) {
+    if (nextLocalized?.audioUrl) {
       const link = document.createElement('link');
       link.rel = 'preload';
       link.as = 'audio';
-      link.href = nextMeditation.audio_file;
+      link.href = nextLocalized.audioUrl;
       document.head.appendChild(link);
       return () => link.remove();
     }
-  }, [nextMeditation]);
+  }, [nextLocalized?.audioUrl]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -1208,7 +1403,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
       audio.removeEventListener('pause', paused);
       audio.removeEventListener('ended', ended);
     };
-  }, [meditation.audio_file, meditation.duration, meditation.history?.last_position, meditation.id, onSave]);
+  }, [localized.audioUrl, meditation.duration, meditation.history?.last_position, meditation.id, onSave]);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = speed;
@@ -1216,12 +1411,12 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
 
   const shareMeditation = async () => {
     if (meditation.premium) {
-      setShareMessage('Sharing is available for free meditations.');
+      setShareMessage(copy[language].sharingFreeOnly);
       return;
     }
 
-    const title = displayMeditationTitle(meditation);
-    const subtitle = meditationShareSubtitle(meditation);
+    const title = localized.title;
+    const subtitle = meditationShareSubtitle(meditation, language);
     const shareText = `Try this meditation in Luna: ${title} — ${subtitle}`;
     const shareUrl = meditationShareUrl(meditation.id);
 
@@ -1229,10 +1424,23 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
     getTelegram()?.HapticFeedback?.impactOccurred('light');
 
     try {
+      const sharePayload = { title: 'Luna Meditation', text: shareText, url: shareUrl };
+      if (getTelegram()?.openTelegramLink) {
+        getTelegram()?.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`);
+        setShareMessage(copy[language].linkCopied);
+        return;
+      }
+
+      if (navigator.share) {
+        await navigator.share(sharePayload);
+        setShareMessage(copy[language].linkCopied);
+        return;
+      }
+
       const copied = await copyText(shareUrl);
-      setShareMessage(copied ? 'Link copied.' : shareText);
+      setShareMessage(copied ? copy[language].linkCopied : shareText);
     } catch {
-      setShareMessage('Copy failed. Please try again.');
+      setShareMessage(copy[language].copyFailed);
     }
   };
 
@@ -1242,8 +1450,8 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
       <div className="rounded-[24px] border border-white/10 bg-ink p-4 shadow-glow">
         <div className="relative mx-auto aspect-square w-full max-w-[300px] overflow-hidden rounded-[24px] border border-white/10 bg-night/80">
           <img src={meditation.cover_image} alt="" className="h-full w-full object-contain p-2" />
-          {loading && <div className="absolute left-4 top-4 rounded-full bg-night/70 px-4 py-2 text-xs text-cream backdrop-blur">Loading audio...</div>}
-          {meditation.premium && <div className="absolute right-4 top-4 rounded-full bg-gold px-3 py-1 text-xs font-semibold text-night">Premium</div>}
+          {loading && <div className="absolute left-4 top-4 rounded-full bg-night/70 px-4 py-2 text-xs text-cream backdrop-blur">{copy[language].loadingAudio}</div>}
+          {meditation.premium && <div className="absolute right-4 top-4 rounded-full bg-gold px-3 py-1 text-xs font-semibold text-night">{copy[language].premium}</div>}
           {completed && (
             <div className="absolute inset-0 grid place-items-center bg-night/70 p-6 text-center backdrop-blur-sm">
               <div>
@@ -1257,7 +1465,9 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
 
         <div className="mt-4 text-center">
           <p className="text-xs uppercase tracking-[0.18em] text-gold">{meditation.category.replace('-', ' ')}</p>
-          <h2 className="mt-1 font-serif text-2xl font-semibold">{displayMeditationTitle(meditation)}</h2>
+          <h2 className="mt-1 font-serif text-2xl font-semibold">{localized.title}</h2>
+          <p className="mt-1 text-sm text-cream/70">{localized.subtitle}</p>
+          {!localized.hasSelectedLanguageAudio && <p className="mt-2 text-xs text-gold">{copy[language].availableInEnglish}</p>}
           <p className="mt-2 text-sm text-lavender">{formatTime(position)} elapsed · {formatTime(Math.max(0, duration - position))} remaining</p>
         </div>
 
@@ -1288,8 +1498,8 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-2">
-          <button onClick={onFavorite} className="min-h-[72px] rounded-[18px] bg-surface px-2 py-3 text-xs"><Heart className={favorite ? 'mx-auto fill-gold text-gold' : 'mx-auto'} size={18} /><span className="mt-1.5 block">Favorite</span></button>
-          <button onClick={() => void shareMeditation()} disabled={meditation.premium} className="min-h-[72px] rounded-[18px] bg-surface px-2 py-3 text-xs text-lavender disabled:cursor-not-allowed disabled:opacity-50"><Share2 className="mx-auto" size={18} /><span className="mt-1.5 block">Share</span></button>
+          <button onClick={onFavorite} className="min-h-[72px] rounded-[18px] bg-surface px-2 py-3 text-xs"><Heart className={favorite ? 'mx-auto fill-gold text-gold' : 'mx-auto'} size={18} /><span className="mt-1.5 block">{copy[language].favorite}</span></button>
+          <button onClick={() => void shareMeditation()} disabled={meditation.premium} className="min-h-[72px] rounded-[18px] bg-surface px-2 py-3 text-xs text-lavender disabled:cursor-not-allowed disabled:opacity-50"><Share2 className="mx-auto" size={18} /><span className="mt-1.5 block">{copy[language].share}</span></button>
           <div className="min-h-[72px] rounded-[18px] bg-surface px-2 py-3 text-center text-xs text-lavender"><Timer className="mx-auto" size={18} /><span className="mt-1.5 block">{formatTime(Math.max(0, duration - position))}</span></div>
         </div>
         {shareMessage && <p className="mt-2 rounded-2xl bg-gold/10 px-3 py-2 text-center text-xs text-cream/80">{shareMessage}</p>}
@@ -1305,9 +1515,9 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
           </select>
         </div>
         <audio
-          key={meditation.id}
+          key={`${meditation.id}-${language}-${localized.audioUrl}`}
           ref={audioRef}
-          src={meditation.audio_file}
+          src={localized.audioUrl}
           preload="auto"
           controlsList="nodownload"
           onContextMenu={(event) => event.preventDefault()}
@@ -1329,7 +1539,8 @@ function ProfilePage({
   wellness,
   showAdminButton,
   onAdmin,
-  onRestore
+  onRestore,
+  language
 }: {
   profile: ProfileStats | null;
   access: AccessState;
@@ -1339,6 +1550,7 @@ function ProfilePage({
   showAdminButton: boolean;
   onAdmin: () => void;
   onRestore: () => void;
+  language: AppLanguage;
 }) {
   const activeUntil = access.user?.active_until ? new Date(access.user.active_until).toLocaleDateString() : 'Not active';
   const level = wellness?.level;
@@ -1346,14 +1558,14 @@ function ProfilePage({
     <div className="space-y-3 luna-fade">
       <div>
         <p className="text-xs uppercase tracking-[0.18em] text-gold">LUNA</p>
-        <h2 className="font-serif text-3xl font-semibold">Profile</h2>
+        <h2 className="font-serif text-3xl font-semibold">{copy[language].profile}</h2>
       </div>
       <div className="rounded-[24px] border border-white/10 bg-ink p-4 shadow-glow">
         <div className="flex items-center gap-4">
           <MoonMark className="h-16 w-16 shrink-0" />
           <div>
             <h3 className="font-serif text-2xl font-semibold">{firstName}</h3>
-            <p className="text-sm text-lavender">{username ? `@${username}` : 'Luna member'}</p>
+            <p className="text-sm text-lavender">{username ? `@${username}` : copy[language].member}</p>
           </div>
         </div>
         {level && (
@@ -1407,25 +1619,44 @@ function ProfilePage({
             Admin
           </button>
         )}
-        <button onClick={onRestore} className="mt-4 w-full rounded-[20px] bg-gold px-5 py-3.5 font-semibold text-night">Restore purchases</button>
+        <button onClick={onRestore} className="mt-4 w-full rounded-[20px] bg-gold px-5 py-3.5 font-semibold text-night">{copy[language].restore}</button>
         <button className="mt-2.5 w-full rounded-[20px] bg-surface px-5 py-3.5 text-sm text-lavender">Logout</button>
       </div>
     </div>
   );
 }
 
-const emptyMeditationForm = (category = 'sleep'): MeditationPayload => ({
-  title: '',
-  subtitle: '',
-  description: '',
-  category,
-  duration: 600,
-  cover_image: '',
-  audio_file: '',
-  premium: false,
-  published: true,
-  mood: 'Calm'
-});
+function meditationPayloadFromLocalized(base: Partial<MeditationPayload> = {}, category = 'sleep'): MeditationPayload {
+  const en = base.translations?.en ?? {};
+  return {
+    title: en.title ?? base.title ?? '',
+    subtitle: en.subtitle ?? base.subtitle ?? '',
+    description: en.description ?? base.description ?? '',
+    category: base.category ?? category,
+    duration: base.duration ?? 600,
+    cover_image: base.cover_image ?? '',
+    audio_file: en.audioUrl ?? base.audio_file ?? '',
+    premium: base.premium ?? false,
+    published: base.published ?? true,
+    mood: base.mood ?? 'Calm',
+    translations: {
+      en: {
+        title: en.title ?? base.title ?? '',
+        subtitle: en.subtitle ?? base.subtitle ?? '',
+        description: en.description ?? base.description ?? '',
+        audioUrl: en.audioUrl ?? base.audio_file ?? ''
+      },
+      ru: {
+        title: base.translations?.ru?.title ?? '',
+        subtitle: base.translations?.ru?.subtitle ?? '',
+        description: base.translations?.ru?.description ?? '',
+        audioUrl: base.translations?.ru?.audioUrl ?? ''
+      }
+    }
+  };
+}
+
+const emptyMeditationForm = (category = 'sleep'): MeditationPayload => meditationPayloadFromLocalized({}, category);
 
 type AdminTab = 'dashboard' | 'meditations' | 'users' | 'subscriptions' | 'revenue' | 'analytics' | 'settings';
 const adminTabs: Array<{ id: AdminTab; label: string }> = [
@@ -1459,8 +1690,10 @@ function AdminPage({
   const [form, setForm] = useState<MeditationPayload>(emptyMeditationForm(categories[0]?.slug));
   const [editingId, setEditingId] = useState<string | null>(null);
   const [audioProgress, setAudioProgress] = useState(0);
+  const [ruAudioProgress, setRuAudioProgress] = useState(0);
   const [coverProgress, setCoverProgress] = useState(0);
   const [audioFileName, setAudioFileName] = useState('');
+  const [ruAudioFileName, setRuAudioFileName] = useState('');
   const [coverFileName, setCoverFileName] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -1483,8 +1716,10 @@ function AdminPage({
     setEditingId(null);
     setForm(emptyMeditationForm(categories[0]?.slug));
     setAudioProgress(0);
+    setRuAudioProgress(0);
     setCoverProgress(0);
     setAudioFileName('');
+    setRuAudioFileName('');
     setCoverFileName('');
     setMessage('');
     setError('');
@@ -1516,7 +1751,32 @@ function AdminPage({
     audio.onerror = () => URL.revokeObjectURL(url);
   };
 
-  const upload = async (kind: 'audio' | 'cover', file?: File) => {
+  const setTranslation = (language: AppLanguage, field: 'title' | 'subtitle' | 'description' | 'audioUrl', value: string) => {
+    setForm((current) => {
+      const translations = {
+        ...(current.translations ?? {}),
+        [language]: {
+          ...(current.translations?.[language] ?? {}),
+          [field]: value
+        }
+      };
+
+      if (language === 'en') {
+        return {
+          ...current,
+          title: field === 'title' ? value : current.title,
+          subtitle: field === 'subtitle' ? value : current.subtitle,
+          description: field === 'description' ? value : current.description,
+          audio_file: field === 'audioUrl' ? value : current.audio_file,
+          translations
+        };
+      }
+
+      return { ...current, translations };
+    });
+  };
+
+  const upload = async (kind: 'audio' | 'cover', file?: File, language: AppLanguage = 'en') => {
     if (!file) return;
     setError('');
     setMessage('');
@@ -1530,19 +1790,29 @@ function AdminPage({
     try {
       if (kind === 'audio') {
         detectDuration(file);
-        setAudioFileName(file.name);
-        setAudioProgress(1);
+        if (language === 'ru') {
+          setRuAudioFileName(file.name);
+          setRuAudioProgress(1);
+        } else {
+          setAudioFileName(file.name);
+          setAudioProgress(1);
+        }
       } else {
         setCoverFileName(file.name);
         setCoverProgress(1);
       }
 
       const result = await uploadAdminAsset(kind, file, initData, (progress) => {
-        if (kind === 'audio') setAudioProgress(progress);
+        if (kind === 'audio' && language === 'ru') setRuAudioProgress(progress);
+        else if (kind === 'audio') setAudioProgress(progress);
         else setCoverProgress(progress);
       });
 
-      setForm((current) => ({ ...current, [kind === 'audio' ? 'audio_file' : 'cover_image']: result.publicUrl }));
+      if (kind === 'audio') {
+        setTranslation(language, 'audioUrl', result.publicUrl);
+      } else {
+        setForm((current) => ({ ...current, cover_image: result.publicUrl }));
+      }
       setMessage(`${kind === 'audio' ? 'Audio' : 'Cover'} uploaded successfully.`);
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : 'Upload failed. Please try again.');
@@ -1553,22 +1823,24 @@ function AdminPage({
     setError('');
     setMessage('');
 
-    if (!form.title.trim()) {
-      setError('Title is required.');
+    const payload = meditationPayloadFromLocalized(form, categories[0]?.slug);
+
+    if (!payload.title.trim()) {
+      setError('English title is required.');
       return;
     }
 
-    if (!form.audio_file || !form.cover_image) {
-      setError('Upload both an MP3 audio file and a cover image before saving.');
+    if (!payload.audio_file || !payload.cover_image) {
+      setError('Upload an English MP3 audio file and a cover image before saving.');
       return;
     }
 
     try {
       if (editingId) {
-        await updateMeditation(editingId, form, initData);
+        await updateMeditation(editingId, payload, initData);
         setMessage('Meditation updated.');
       } else {
-        await createMeditation(form, initData);
+        await createMeditation(payload, initData);
         setMessage('Meditation created. Published items appear in Library immediately.');
       }
 
@@ -1581,7 +1853,7 @@ function AdminPage({
 
   const edit = (meditation: Meditation) => {
     setEditingId(meditation.id);
-    setForm({
+    setForm(meditationPayloadFromLocalized({
       title: meditation.title,
       subtitle: meditation.subtitle ?? '',
       description: meditation.description,
@@ -1591,10 +1863,12 @@ function AdminPage({
       audio_file: meditation.audio_file,
       premium: meditation.premium,
       published: meditation.published,
-      mood: meditation.mood
-    });
+      mood: meditation.mood,
+      translations: meditation.translations
+    }, categories[0]?.slug));
     setMessage('Editing meditation.');
-    setAudioFileName(meditation.audio_file.split('/').pop() ?? 'Audio uploaded');
+    setAudioFileName((meditation.translations?.en?.audioUrl ?? meditation.audio_file).split('/').pop() ?? 'Audio uploaded');
+    setRuAudioFileName(meditation.translations?.ru?.audioUrl?.split('/').pop() ?? '');
     setCoverFileName(meditation.cover_image.split('/').pop() ?? 'Cover uploaded');
     setError('');
   };
@@ -1713,13 +1987,28 @@ function AdminPage({
           </div>
 
           <div className="space-y-4 rounded-[28px] border border-white/10 bg-ink p-5 shadow-glow">
-            <AdminSection title="Meditation Details">
-              <AdminInput label="Title" value={form.title} onChange={(value) => setForm({ ...form, title: value })} />
-              <AdminInput label="Subtitle" value={form.subtitle} onChange={(value) => setForm({ ...form, subtitle: value })} />
+            <AdminSection title="English Content">
+              <AdminInput label="English title" value={form.translations?.en?.title ?? form.title} onChange={(value) => setTranslation('en', 'title', value)} />
+              <AdminInput label="English subtitle" value={form.translations?.en?.subtitle ?? form.subtitle} onChange={(value) => setTranslation('en', 'subtitle', value)} />
               <label className="text-sm text-lavender">
-                Description
-                <textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} className="mt-2 min-h-28 w-full rounded-2xl bg-night/70 px-4 py-3 text-sm text-cream outline-none" />
+                English description
+                <textarea value={form.translations?.en?.description ?? form.description} onChange={(event) => setTranslation('en', 'description', event.target.value)} className="mt-2 min-h-28 w-full rounded-2xl bg-night/70 px-4 py-3 text-sm text-cream outline-none" />
               </label>
+            </AdminSection>
+
+            <AdminSection title="Russian Content">
+              <AdminInput label="Russian title" value={form.translations?.ru?.title ?? ''} onChange={(value) => setTranslation('ru', 'title', value)} />
+              <AdminInput label="Russian subtitle" value={form.translations?.ru?.subtitle ?? ''} onChange={(value) => setTranslation('ru', 'subtitle', value)} />
+              <label className="text-sm text-lavender">
+                Russian description
+                <textarea value={form.translations?.ru?.description ?? ''} onChange={(event) => setTranslation('ru', 'description', event.target.value)} className="mt-2 min-h-28 w-full rounded-2xl bg-night/70 px-4 py-3 text-sm text-cream outline-none" />
+              </label>
+              <p className="rounded-2xl bg-gold/10 px-3 py-2 text-xs text-gold">
+                Leave Russian audio empty until the RU MP3 is ready. Russian users will hear the English fallback.
+              </p>
+            </AdminSection>
+
+            <AdminSection title="Meditation Details">
               <div className="grid grid-cols-2 gap-3">
                 <label className="text-sm text-lavender">
                   Category
@@ -1742,7 +2031,8 @@ function AdminPage({
 
             <AdminSection title="Media">
               <div className="grid gap-3">
-                <DropUpload title="+ Upload audio" body="MP3 only · up to 100 MB" readyText={audioFileName ? `${audioFileName} · ${formatTime(form.duration)} · Ready` : ''} icon={<Upload />} accept="audio/mpeg,audio/mp3,.mp3" progress={audioProgress} onFile={(file) => upload('audio', file)} />
+                <DropUpload title="+ Upload English audio" body="MP3 only · up to 100 MB" readyText={audioFileName ? `${audioFileName} · ${formatTime(form.duration)} · Ready` : ''} icon={<Upload />} accept="audio/mpeg,audio/mp3,.mp3" progress={audioProgress} onFile={(file) => upload('audio', file, 'en')} />
+                <DropUpload title="+ Upload Russian audio" body="MP3 only · optional" readyText={ruAudioFileName ? `${ruAudioFileName} · Ready` : ''} icon={<Upload />} accept="audio/mpeg,audio/mp3,.mp3" progress={ruAudioProgress} onFile={(file) => upload('audio', file, 'ru')} />
                 <DropUpload title="+ Upload cover" body="JPG, PNG or WebP · Ready for library cards" readyText={coverFileName ? `${coverFileName} · Ready` : ''} icon={<ImageIcon />} accept="image/jpeg,image/png,image/webp" progress={coverProgress} onFile={(file) => upload('cover', file)} />
               </div>
             </AdminSection>

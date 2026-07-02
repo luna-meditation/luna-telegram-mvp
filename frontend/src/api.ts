@@ -28,9 +28,19 @@ export type AccessState = {
   hasPremium: boolean;
   plan: string;
   user?: {
+    language_code?: string | null;
     active_until?: string | null;
     lifetime_access?: boolean;
   };
+};
+
+export type AppLanguage = 'en' | 'ru';
+
+export type MeditationTranslation = {
+  title?: string | null;
+  subtitle?: string | null;
+  description?: string | null;
+  audioUrl?: string | null;
 };
 
 export type Category = {
@@ -54,6 +64,7 @@ export type Meditation = {
   mood: 'Calm' | 'Stressed' | 'Focused' | 'Tired' | 'Anxious';
   play_count: number;
   created_at: string;
+  translations?: Partial<Record<AppLanguage, MeditationTranslation>>;
   favorite?: boolean;
   history?: PlaybackHistory | null;
 };
@@ -73,6 +84,7 @@ export type ProfileStats = {
   user?: {
     first_name?: string;
     username?: string;
+    language_code?: string | null;
     active_until?: string | null;
     lifetime_access?: boolean;
   };
@@ -135,6 +147,7 @@ export type MeditationPayload = {
   premium: boolean;
   published: boolean;
   mood: Meditation['mood'];
+  translations?: Partial<Record<AppLanguage, MeditationTranslation>>;
 };
 
 function telegramHeaders(initData?: string) {
@@ -285,6 +298,13 @@ export async function getWellnessSummary(initData?: string): Promise<WellnessSum
 
 export async function getProfile(initData?: string): Promise<ProfileStats> {
   return request('/api/profile/me', undefined, initData);
+}
+
+export async function updateUserLanguage(language: AppLanguage, initData?: string) {
+  return request<{ user: unknown }>('/api/profile/language', {
+    method: 'POST',
+    body: JSON.stringify({ language })
+  }, initData);
 }
 
 export async function checkAdmin(initData?: string) {

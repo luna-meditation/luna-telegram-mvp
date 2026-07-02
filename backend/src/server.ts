@@ -21,6 +21,7 @@ import {
   getWellnessSummary,
   markPracticeComplete,
   supabase,
+  updateUserLanguage,
   updateMeditation,
   updateAdminUserAccess,
   upsertCategory,
@@ -323,6 +324,22 @@ app.get('/api/profile/me', requireTelegramWebApp, async (req, res, next) => {
   try {
     const authReq = req as AuthenticatedRequest;
     res.json(await getProfileStats(authReq.telegramUser.telegram_id));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/profile/language', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const language = req.body?.language;
+
+    if (language !== 'en' && language !== 'ru') {
+      res.status(400).json({ error: 'Language must be en or ru.' });
+      return;
+    }
+
+    res.json({ user: await updateUserLanguage(authReq.telegramUser.telegram_id, language) });
   } catch (error) {
     next(error);
   }

@@ -10,14 +10,37 @@ import { isPlanId, plans, type PlanId } from './plans.js';
 
 export const bot = new Telegraf(env.BOT_TOKEN);
 
-const miniAppButton = Markup.button.webApp('Open Luna App', env.MINI_APP_URL);
+type BotLanguage = 'en' | 'ru';
 
-function mainKeyboard() {
+function botLanguage(languageCode?: string): BotLanguage {
+  return languageCode?.toLowerCase().startsWith('ru') ? 'ru' : 'en';
+}
+
+const botCopy = {
+  en: {
+    openApp: 'Open Luna App',
+    tryFreePractice: 'Try Free Practice',
+    explorePremium: 'Explore Premium',
+    welcome: 'Welcome to Luna 🌙\n\nYour premium AI meditation guide for deeper sleep, calmer thoughts, and emotional balance.\n\nBegin with a free practice or explore Luna Premium.'
+  },
+  ru: {
+    openApp: 'Открыть Luna',
+    tryFreePractice: 'Попробовать бесплатно',
+    explorePremium: 'Luna Premium',
+    welcome: 'Добро пожаловать в Luna 🌙\n\nТвой премиальный AI-гид по медитациям для глубокого сна, спокойствия и эмоционального баланса.\n\nНачни с бесплатной практики или открой Luna Premium.'
+  }
+} satisfies Record<BotLanguage, Record<string, string>>;
+
+function miniAppButton(language: BotLanguage) {
+  return Markup.button.webApp(botCopy[language].openApp, env.MINI_APP_URL);
+}
+
+function mainKeyboard(language: BotLanguage) {
   return Markup.inlineKeyboard([
-    [miniAppButton],
+    [miniAppButton(language)],
     [
-      Markup.button.callback('Try Free Practice', 'open_free'),
-      Markup.button.callback('View Plans', 'plans')
+      Markup.button.callback(botCopy[language].tryFreePractice, 'open_free'),
+      Markup.button.callback(botCopy[language].explorePremium, 'plans')
     ]
   ]);
 }
@@ -87,15 +110,14 @@ export async function configureTelegramBot() {
 
 bot.start(async (ctx) => {
   await ensureUser(ctx);
-  await ctx.reply(
-    'Welcome to Luna 🌙\nAI-guided meditations and breathing practices for sleep, stress, focus, and emotional balance.',
-    mainKeyboard()
-  );
+  const language = botLanguage(ctx.from?.language_code);
+  await ctx.reply(botCopy[language].welcome, mainKeyboard(language));
 });
 
 bot.command('app', async (ctx) => {
   await ensureUser(ctx);
-  await ctx.reply('Open Luna whenever you need a softer moment.', Markup.inlineKeyboard([[miniAppButton]]));
+  const language = botLanguage(ctx.from?.language_code);
+  await ctx.reply(language === 'ru' ? 'Открой Luna, когда нужен мягкий момент спокойствия.' : 'Open Luna whenever you need a softer moment.', Markup.inlineKeyboard([[miniAppButton(language)]]));
 });
 
 bot.command('plans', async (ctx) => {
@@ -105,14 +127,15 @@ bot.command('plans', async (ctx) => {
     Markup.inlineKeyboard([
       [Markup.button.callback(`Monthly - ${plans.monthly.amountStars} Stars`, 'buy_monthly')],
       [Markup.button.callback(`Lifetime - ${plans.lifetime.amountStars} Stars`, 'buy_lifetime')],
-      [miniAppButton]
+      [miniAppButton(botLanguage(ctx.from?.language_code))]
     ])
   );
 });
 
 bot.command('library', async (ctx) => {
   await ensureUser(ctx);
-  await ctx.reply('Your Luna practice library is inside the Mini App.', Markup.inlineKeyboard([[miniAppButton]]));
+  const language = botLanguage(ctx.from?.language_code);
+  await ctx.reply(language === 'ru' ? 'Библиотека практик Luna внутри Mini App.' : 'Your Luna practice library is inside the Mini App.', Markup.inlineKeyboard([[miniAppButton(language)]]));
 });
 
 bot.command('profile', async (ctx) => {
@@ -123,7 +146,7 @@ bot.command('profile', async (ctx) => {
     `Luna Profile\n\nPlan: ${access.plan}\nActive until: ${access.user?.active_until ?? 'Not active'}\nLifetime access: ${
       access.user?.lifetime_access ? 'Yes' : 'No'
     }`,
-    Markup.inlineKeyboard([[miniAppButton]])
+    Markup.inlineKeyboard([[miniAppButton(botLanguage(ctx.from?.language_code))]])
   );
 });
 
@@ -164,7 +187,8 @@ bot.action('plans', async (ctx) => {
 
 bot.action('open_free', async (ctx) => {
   await ctx.answerCbQuery();
-  await ctx.reply('Your free practice is waiting inside Luna.', Markup.inlineKeyboard([[miniAppButton]]));
+  const language = botLanguage(ctx.from?.language_code);
+  await ctx.reply(language === 'ru' ? 'Бесплатная практика уже ждет внутри Luna.' : 'Your free practice is waiting inside Luna.', Markup.inlineKeyboard([[miniAppButton(language)]]));
 });
 
 bot.action(/^buy_(monthly|lifetime)$/, async (ctx) => {
