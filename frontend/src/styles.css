@@ -37,6 +37,32 @@
     radial-gradient(circle at 50% -12%, rgba(142, 95, 214, 0.28), transparent 24rem),
     radial-gradient(circle at 88% 8%, rgba(212, 175, 55, 0.15), transparent 18rem),
     #1A1026;
+  overflow: hidden;
+}
+
+.luna-bg::before,
+.luna-bg::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  pointer-events: none;
+}
+
+.luna-bg::before {
+  background:
+    radial-gradient(circle at 18% 22%, rgba(244, 214, 122, 0.28) 0 1px, transparent 2px),
+    radial-gradient(circle at 74% 18%, rgba(245, 241, 233, 0.2) 0 1px, transparent 2px),
+    radial-gradient(circle at 82% 62%, rgba(212, 175, 55, 0.22) 0 1px, transparent 2px),
+    radial-gradient(circle at 28% 72%, rgba(245, 241, 233, 0.14) 0 1px, transparent 2px);
+  animation: lunaStars 18s ease-in-out infinite alternate;
+}
+
+.luna-bg::after {
+  background:
+    radial-gradient(ellipse at 12% 18%, rgba(142, 95, 214, 0.18), transparent 26rem),
+    radial-gradient(ellipse at 88% 4%, rgba(212, 175, 55, 0.10), transparent 22rem);
+  animation: lunaAurora 26s ease-in-out infinite alternate;
+  opacity: 0.82;
 }
 
 .luna-artwork {
@@ -54,6 +80,38 @@
     0 0 46px rgba(142, 95, 214, 0.22);
 }
 
+.luna-moon-mark {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(212, 175, 55, 0.7);
+  border-radius: 999px;
+  background: radial-gradient(circle at 40% 35%, rgba(142, 95, 214, 0.36), rgba(36, 19, 52, 0.96));
+  box-shadow:
+    0 0 0 1px rgba(142, 95, 214, 0.38),
+    0 20px 54px rgba(0, 0, 0, 0.3),
+    0 0 34px rgba(212, 175, 55, 0.16);
+}
+
+.luna-moon-mark::before {
+  content: "";
+  width: 42%;
+  height: 42%;
+  border-radius: 999px;
+  background: #D4AF37;
+  box-shadow: 0 0 24px rgba(212, 175, 55, 0.22);
+}
+
+.luna-moon-mark::after {
+  content: "";
+  position: absolute;
+  width: 36%;
+  height: 36%;
+  transform: translate(20%, -16%);
+  border-radius: 999px;
+  background: #241334;
+}
+
 .luna-fade {
   animation: lunaFade 420ms ease-in-out both;
 }
@@ -67,5 +125,33 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes lunaAurora {
+  from {
+    transform: translate3d(-1%, -1%, 0) scale(1);
+  }
+
+  to {
+    transform: translate3d(1.5%, 1%, 0) scale(1.04);
+  }
+}
+
+@keyframes lunaStars {
+  from {
+    opacity: 0.42;
+  }
+
+  to {
+    opacity: 0.76;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .luna-bg::before,
+  .luna-bg::after,
+  .luna-fade {
+    animation: none;
   }
 }

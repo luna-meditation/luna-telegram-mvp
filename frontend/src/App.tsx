@@ -51,14 +51,23 @@ import {
 
 type Page = 'home' | 'library' | 'favorites' | 'profile' | 'pricing' | 'player' | 'admin';
 type Mood = 'Calm' | 'Stressed' | 'Tired' | 'Anxious' | 'Focused';
+type MoodChip = 'Sleep' | 'Calm' | 'Focus' | 'Anxiety' | 'Breath' | 'Energy';
 
-const moods: Mood[] = ['Calm', 'Stressed', 'Tired', 'Anxious', 'Focused'];
+const moods: MoodChip[] = ['Sleep', 'Calm', 'Focus', 'Anxiety', 'Breath', 'Energy'];
+const meditationMoods: Mood[] = ['Calm', 'Stressed', 'Tired', 'Anxious', 'Focused'];
+const moodToMeditationMood: Record<MoodChip, Mood> = {
+  Sleep: 'Tired',
+  Calm: 'Calm',
+  Focus: 'Focused',
+  Anxiety: 'Anxious',
+  Breath: 'Stressed',
+  Energy: 'Focused'
+};
 const rewardMilestones = [7, 14, 30, 100] as const;
 const premiumPrices = {
   monthly: 499,
   lifetime: 2499
 };
-const lunaAvatarSrc = '/luna-avatar.png';
 const libraryCacheKey = 'luna.library.v1';
 type LibraryCache = {
   categories: Category[];
@@ -125,13 +134,17 @@ function dayGreeting() {
   return 'Good evening';
 }
 
+function MoonMark({ className = '' }: { className?: string }) {
+  return <span className={`luna-moon-mark ${className}`} aria-hidden="true" />;
+}
+
 function App() {
   const telegram = getTelegram();
   const user = telegram?.initDataUnsafe.user ?? fallbackUser;
   const initData = telegram?.initData;
   const [initialLibraryCache] = useState(() => readLibraryCache());
   const [page, setPage] = useState<Page>(window.location.pathname === '/admin' || window.location.hash === '#admin' ? 'admin' : 'home');
-  const [mood, setMood] = useState<Mood>('Calm');
+  const [mood, setMood] = useState<MoodChip>('Calm');
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [meditations, setMeditations] = useState<Meditation[]>(initialLibraryCache?.meditations ?? []);
@@ -257,7 +270,7 @@ function App() {
   }, [category, decoratedMeditations, query]);
 
   const recommended = useMemo(() => {
-    return decoratedMeditations.filter((meditation) => meditation.mood === mood).slice(0, 6);
+    return decoratedMeditations.filter((meditation) => meditation.mood === moodToMeditationMood[mood]).slice(0, 6);
   }, [decoratedMeditations, mood]);
 
   const continueListening = useMemo(() => {
@@ -431,7 +444,7 @@ function Header({ plan, streak }: { plan: string; streak: number }) {
   return (
     <div className="mb-5 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <img src={lunaAvatarSrc} alt="LUNA" className="luna-avatar-ring h-12 w-12 rounded-full object-cover" />
+        <MoonMark className="h-12 w-12 shrink-0" />
         <div>
           <p className="text-xs uppercase tracking-[0.28em] text-gold">LUNA</p>
           <h1 className="font-serif text-3xl tracking-[0.18em] text-cream">MEDITATION</h1>
@@ -447,8 +460,8 @@ function Header({ plan, streak }: { plan: string; streak: number }) {
 
 function HomePage(props: {
   firstName: string;
-  mood: Mood;
-  setMood: (mood: Mood) => void;
+  mood: MoodChip;
+  setMood: (mood: MoodChip) => void;
   daily?: Meditation;
   recommended: Meditation[];
   continueListening: Meditation[];
@@ -466,7 +479,7 @@ function HomePage(props: {
             <p className="text-sm text-beige">{dayGreeting()},</p>
             <h2 className="mt-1 font-serif text-4xl font-semibold leading-tight text-cream">{props.firstName}</h2>
           </div>
-          <img src={lunaAvatarSrc} alt="" className="luna-avatar-ring h-20 w-20 rounded-full object-cover" />
+          <MoonMark className="h-20 w-20 shrink-0" />
         </div>
         <p className="mt-4 text-sm text-beige">How are you feeling today?</p>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -485,11 +498,11 @@ function HomePage(props: {
       </section>
 
       {props.daily ? (
-        <PracticeHero label="Today’s recommendation" meditation={props.daily} onOpen={() => props.onOpen(props.daily!)} />
+        <PracticeHero label="Today's Meditation" meditation={props.daily} onOpen={() => props.onOpen(props.daily!)} />
       ) : props.loading ? (
         <PracticeHeroSkeleton />
       ) : (
-        <EmptyState title="No meditations yet" body="Upload your first meditation in the hidden admin page." />
+        <EmptyState title="Your first calm practice is coming soon." body="Luna’s library will appear here as soon as new meditations are published." />
       )}
 
       <Rail title="Continue listening" meditations={props.continueListening} onOpen={props.onOpen} />
@@ -508,15 +521,21 @@ function HomePage(props: {
 
 function PracticeHero({ meditation, label, onOpen }: { meditation: Meditation; label: string; onOpen: () => void }) {
   return (
-    <button onClick={onOpen} className="group relative h-72 w-full overflow-hidden rounded-[30px] border border-cream/15 text-left shadow-glow">
+    <button onClick={onOpen} className="group relative h-80 w-full overflow-hidden rounded-[30px] border border-white/10 text-left shadow-glow transition duration-300 ease-in-out hover:brightness-110">
       <img src={meditation.cover_image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70 transition group-hover:scale-105" loading="eager" />
       <div className="absolute inset-0 bg-gradient-to-t from-night via-night/40 to-transparent" />
+      <span className="absolute right-5 top-5 rounded-full bg-gold px-3 py-1 text-xs font-semibold text-night">
+        {meditation.premium ? 'Premium' : 'Free'}
+      </span>
       <div className="absolute bottom-0 p-5">
         <p className="mb-2 inline-flex rounded-full bg-lavender/25 px-3 py-1 text-xs text-cream backdrop-blur">{label}</p>
-        <h3 className="text-2xl font-semibold">{meditation.title}</h3>
+        <h3 className="font-serif text-3xl font-semibold">{meditation.title}</h3>
         <p className="mt-1 text-sm capitalize text-cream/75">
           {meditation.category.replace('-', ' ')} · {formatTime(meditation.duration)}
         </p>
+        <span className="mt-4 inline-flex rounded-[20px] bg-gold px-5 py-3 text-sm font-semibold text-night shadow-gold">
+          Begin
+        </span>
       </div>
     </button>
   );
@@ -606,7 +625,7 @@ function LibraryPage(props: {
           <MeditationCard key={meditation.id} meditation={meditation} locked={meditation.premium && !props.hasPremium} onOpen={props.onOpen} onFavorite={props.onFavorite} onUnlock={props.onUnlock} />
         ))
       ) : (
-        <EmptyState title="Nothing found" body="Try another search or category." />
+        <EmptyState title="No meditations found." body="Try another mood, category, or search phrase." />
       )}
     </div>
   );
@@ -676,7 +695,7 @@ function FavoritesPage({ meditations, onOpen, onFavorite }: { meditations: Medit
       <h2 className="text-2xl font-semibold">Saved meditations</h2>
       {meditations.length ? meditations.map((meditation) => (
         <MeditationCard key={meditation.id} meditation={meditation} locked={false} onOpen={onOpen} onFavorite={onFavorite} onUnlock={() => undefined} />
-      )) : <EmptyState title="No favorites yet" body="Save meditations you want to return to." />}
+      )) : <EmptyState title="Your saved calm will live here." body="Favorite meditations you want to return to later." />}
     </div>
   );
 }
@@ -700,15 +719,18 @@ function PricingPage({
     <div className="space-y-4 luna-fade">
       <section className="overflow-hidden rounded-[28px] border border-white/10 bg-ink p-5 shadow-glow">
         <p className="text-xs uppercase tracking-[0.18em] text-gold">LUNA Premium</p>
-        <h2 className="mt-2 font-serif text-4xl font-semibold leading-tight">Unlock your full potential</h2>
+        <h2 className="mt-2 font-serif text-4xl font-semibold leading-tight">Unlock your calm.</h2>
+        <p className="mt-3 text-sm leading-6 text-beige">
+          Access the full Luna library, premium breathwork, daily streaks, favorites and new practices every week.
+        </p>
         <div className="luna-artwork mt-5 grid h-56 place-items-center rounded-[28px] border border-white/10">
-          <img src={lunaAvatarSrc} alt="LUNA Meditation" className="luna-avatar-ring h-40 w-40 rounded-full object-cover" />
+          <MoonMark className="h-36 w-36" />
         </div>
       </section>
       {locked && <p className="rounded-[20px] bg-surface p-4 text-sm text-cream/80">{locked.title} is part of Luna Premium.</p>}
       <PlanCard title="Free" price="0" features={['Basic meditations only']} />
-      <PlanCard title="Monthly" price={`${premiumPrices.monthly} Stars`} features={['Unlimited meditation library', 'Exclusive Breathwork', 'Sleep Stories', 'Weekly new content', 'Offline listening']} action="Telegram Stars" loading={openingPlan === 'monthly'} disabled={Boolean(openingPlan)} onClick={() => onBuy('monthly')} />
-      <PlanCard title="Lifetime" price={`${premiumPrices.lifetime} Stars`} features={['Premium library forever', 'Best value', 'Instant Telegram unlock']} action="Telegram Stars" loading={openingPlan === 'lifetime'} disabled={Boolean(openingPlan)} onClick={() => onBuy('lifetime')} />
+      <PlanCard title="Monthly Premium" price={`${premiumPrices.monthly} ⭐`} features={['Unlimited meditations', 'Premium breathing practices', 'Sleep collection', 'Anxiety relief', 'Focus sessions', 'Favorites', 'Daily streak', 'Weekly new content']} action="Telegram Stars" loading={openingPlan === 'monthly'} disabled={Boolean(openingPlan)} onClick={() => onBuy('monthly')} />
+      <PlanCard title="Lifetime Premium" price={`${premiumPrices.lifetime} ⭐`} features={['Premium library forever', 'All future practices', 'Best value', 'Instant Telegram unlock']} action="Telegram Stars" loading={openingPlan === 'lifetime'} disabled={Boolean(openingPlan)} onClick={() => onBuy('lifetime')} />
       <div className="grid grid-cols-2 gap-3">
         <button onClick={() => setComingSoon('Card')} className="rounded-[20px] border border-white/10 bg-surface px-4 py-3 text-sm font-semibold">Card</button>
         <button onClick={() => setComingSoon('Crypto')} className="rounded-[20px] border border-white/10 bg-surface px-4 py-3 text-sm font-semibold">Crypto</button>
@@ -913,7 +935,7 @@ function ProfilePage({
       </div>
       <div className="rounded-[28px] border border-white/10 bg-ink p-5 shadow-glow">
         <div className="flex items-center gap-4">
-          <img src={lunaAvatarSrc} alt="LUNA avatar" className="luna-avatar-ring h-20 w-20 rounded-full object-cover" />
+          <MoonMark className="h-20 w-20 shrink-0" />
           <div>
             <h3 className="font-serif text-2xl font-semibold">{firstName}</h3>
             <p className="text-sm text-lavender">{username ? `@${username}` : 'Luna member'}</p>
@@ -994,6 +1016,8 @@ function AdminPage({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [audioProgress, setAudioProgress] = useState(0);
   const [coverProgress, setCoverProgress] = useState(0);
+  const [audioFileName, setAudioFileName] = useState('');
+  const [coverFileName, setCoverFileName] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [userSearch, setUserSearch] = useState('');
@@ -1016,6 +1040,8 @@ function AdminPage({
     setForm(emptyMeditationForm(categories[0]?.slug));
     setAudioProgress(0);
     setCoverProgress(0);
+    setAudioFileName('');
+    setCoverFileName('');
     setMessage('');
     setError('');
   };
@@ -1060,8 +1086,10 @@ function AdminPage({
     try {
       if (kind === 'audio') {
         detectDuration(file);
+        setAudioFileName(file.name);
         setAudioProgress(1);
       } else {
+        setCoverFileName(file.name);
         setCoverProgress(1);
       }
 
@@ -1122,6 +1150,8 @@ function AdminPage({
       mood: meditation.mood
     });
     setMessage('Editing meditation.');
+    setAudioFileName(meditation.audio_file.split('/').pop() ?? 'Audio uploaded');
+    setCoverFileName(meditation.cover_image.split('/').pop() ?? 'Cover uploaded');
     setError('');
   };
 
@@ -1225,13 +1255,8 @@ function AdminPage({
             <button onClick={reset} className="rounded-full bg-cream/10 px-4 py-2 text-sm">New</button>
           </div>
 
-          <div className="rounded-3xl border border-cream/15 bg-white/10 p-5 shadow-glow backdrop-blur-xl">
-            <div className="grid gap-3">
-              <DropUpload title="MP3 audio" body="Drag an MP3 here or tap to upload" icon={<Upload />} accept="audio/mpeg,audio/mp3,.mp3" progress={audioProgress} onFile={(file) => upload('audio', file)} />
-              <DropUpload title="Cover image" body="Drag JPG, PNG, or WebP cover here" icon={<ImageIcon />} accept="image/jpeg,image/png,image/webp" progress={coverProgress} onFile={(file) => upload('cover', file)} />
-            </div>
-
-            <div className="mt-4 grid gap-3">
+          <div className="space-y-4 rounded-[28px] border border-white/10 bg-ink p-5 shadow-glow">
+            <AdminSection title="Meditation Details">
               <AdminInput label="Title" value={form.title} onChange={(value) => setForm({ ...form, title: value })} />
               <AdminInput label="Subtitle" value={form.subtitle} onChange={(value) => setForm({ ...form, subtitle: value })} />
               <label className="text-sm text-lavender">
@@ -1248,23 +1273,33 @@ function AdminPage({
                 <label className="text-sm text-lavender">
                   Mood
                   <select value={form.mood} onChange={(event) => setForm({ ...form, mood: event.target.value as MeditationPayload['mood'] })} className="mt-2 w-full rounded-2xl bg-night px-4 py-3 text-sm text-cream">
-                    {moods.map((item) => <option key={item} value={item}>{item}</option>)}
+                    {meditationMoods.map((item) => <option key={item} value={item}>{item}</option>)}
                   </select>
                 </label>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="text-sm text-lavender">
-                  Duration seconds
-                  <input type="number" min={1} value={form.duration} onChange={(event) => setForm({ ...form, duration: Number(event.target.value) })} className="mt-2 w-full rounded-2xl bg-night/70 px-4 py-3 text-sm text-cream outline-none" />
-                </label>
-                <div className="grid gap-2 pt-7">
-                  <Toggle label={form.premium ? 'Premium' : 'Free'} checked={form.premium} onChange={(checked) => setForm({ ...form, premium: checked })} />
-                  <Toggle label={form.published ? 'Published' : 'Draft'} checked={form.published} onChange={(checked) => setForm({ ...form, published: checked })} />
-                </div>
-              </div>
-            </div>
+              <label className="text-sm text-lavender">
+                Duration seconds
+                <input type="number" min={1} value={form.duration} onChange={(event) => setForm({ ...form, duration: Number(event.target.value) })} className="mt-2 w-full rounded-2xl bg-night/70 px-4 py-3 text-sm text-cream outline-none" />
+              </label>
+            </AdminSection>
 
-            <AdminPreview form={form} />
+            <AdminSection title="Media">
+              <div className="grid gap-3">
+                <DropUpload title="+ Upload audio" body="MP3 only · up to 100 MB" readyText={audioFileName ? `${audioFileName} · ${formatTime(form.duration)} · Ready` : ''} icon={<Upload />} accept="audio/mpeg,audio/mp3,.mp3" progress={audioProgress} onFile={(file) => upload('audio', file)} />
+                <DropUpload title="+ Upload cover" body="JPG, PNG or WebP · Ready for library cards" readyText={coverFileName ? `${coverFileName} · Ready` : ''} icon={<ImageIcon />} accept="image/jpeg,image/png,image/webp" progress={coverProgress} onFile={(file) => upload('cover', file)} />
+              </div>
+            </AdminSection>
+
+            <AdminSection title="Access">
+              <div className="grid grid-cols-2 gap-3">
+                <Toggle label={form.premium ? 'Premium' : 'Free'} checked={form.premium} onChange={(checked) => setForm({ ...form, premium: checked })} />
+                <Toggle label={form.published ? 'Published' : 'Draft'} checked={form.published} onChange={(checked) => setForm({ ...form, published: checked })} />
+              </div>
+            </AdminSection>
+
+            <AdminSection title="Preview">
+              <AdminPreview form={form} />
+            </AdminSection>
             {error && <p className="mt-4 rounded-2xl bg-red-500/15 p-3 text-sm text-red-100">{error}</p>}
             {message && <p className="mt-4 rounded-2xl bg-lavender/15 p-3 text-sm text-cream">{message}</p>}
             <button onClick={save} className="mt-4 w-full rounded-2xl bg-gold px-4 py-3 font-semibold text-night">
@@ -1311,7 +1346,7 @@ function AdminPage({
                   </div>
                 </article>
               );
-            }) : <EmptyState title="No meditations" body="Upload audio and cover files, then create your first meditation." />}
+            }) : <EmptyState title="Upload your first meditation." body="Begin building Luna’s library with an MP3, cover, and calm description." />}
           </div>
         </div>
       )}
@@ -1323,6 +1358,9 @@ function AdminPage({
       {dashboard && activeTab === 'settings' && <SettingsPanel />}
 
       <button onClick={onBack} className="w-full rounded-2xl bg-gold px-5 py-4 font-semibold text-night">Back to Luna</button>
+      <button onClick={onBack} className="sticky bottom-4 z-20 ml-auto block rounded-full border border-white/10 bg-gold px-4 py-2 text-xs font-semibold text-night shadow-gold">
+        Back to Luna
+      </button>
     </div>
   );
 }
@@ -1588,8 +1626,25 @@ function AdminInput({ label, value, onChange }: { label: string; value: string; 
   );
 }
 
-function DropUpload({ title, body, icon, accept, progress, onFile }: { title: string; body: string; icon: React.ReactNode; accept: string; progress: number; onFile: (file: File) => void }) {
+function DropUpload({
+  title,
+  body,
+  readyText,
+  icon,
+  accept,
+  progress,
+  onFile
+}: {
+  title: string;
+  body: string;
+  readyText?: string;
+  icon: React.ReactNode;
+  accept: string;
+  progress: number;
+  onFile: (file: File) => void;
+}) {
   const [dragging, setDragging] = useState(false);
+  const ready = Boolean(readyText);
 
   return (
     <label
@@ -1604,17 +1659,21 @@ function DropUpload({ title, body, icon, accept, progress, onFile }: { title: st
         const file = event.dataTransfer.files[0];
         if (file) onFile(file);
       }}
-      className={`block cursor-pointer rounded-3xl border border-dashed p-4 transition ${dragging ? 'border-gold bg-gold/10' : 'border-cream/20 bg-night/40'}`}
+      className={`block cursor-pointer rounded-[24px] border p-4 transition duration-300 ease-in-out ${
+        ready ? 'border-success/50 bg-success/10' : dragging ? 'border-gold bg-gold/10' : 'border-dashed border-white/10 bg-night/40'
+      }`}
     >
       <input type="file" accept={accept} onChange={(event) => {
         const file = event.target.files?.[0];
         if (file) onFile(file);
       }} className="hidden" />
       <div className="flex items-center gap-3">
-        <span className="grid h-11 w-11 place-items-center rounded-2xl bg-cream/10 text-gold">{icon}</span>
+        <span className={`grid h-11 w-11 place-items-center rounded-2xl ${ready ? 'bg-success/15 text-success' : 'bg-cream/10 text-gold'}`}>
+          {ready ? <CheckCircle size={20} /> : icon}
+        </span>
         <span>
-          <span className="block font-semibold">{title}</span>
-          <span className="text-sm text-cream/60">{body}</span>
+          <span className="block font-semibold">{ready ? 'Ready' : title}</span>
+          <span className="text-sm text-cream/60">{readyText || body}</span>
         </span>
       </div>
       {progress > 0 && (
@@ -1636,17 +1695,19 @@ function Toggle({ label, checked, onChange }: { label: string; checked: boolean;
 
 function AdminPreview({ form }: { form: MeditationPayload }) {
   return (
-    <div className="mt-5 rounded-3xl border border-cream/15 bg-night/50 p-4">
-      <p className="mb-3 text-sm text-lavender">Preview before publishing</p>
+    <div className="rounded-[24px] border border-white/10 bg-night/50 p-3">
       <div className="flex gap-3">
-        {form.cover_image ? <img src={form.cover_image} alt="" className="h-24 w-24 rounded-2xl object-cover" /> : <div className="grid h-24 w-24 place-items-center rounded-2xl bg-cream/10 text-cream/40">Cover</div>}
+        <div className="relative">
+          {form.cover_image ? <img src={form.cover_image} alt="" className="h-28 w-28 rounded-[20px] object-cover" /> : <div className="grid h-28 w-28 place-items-center rounded-[20px] bg-cream/10 text-cream/40">Cover</div>}
+          <span className="absolute bottom-2 left-2 rounded-full bg-gold px-2 py-1 text-[10px] font-semibold text-night">{form.premium ? 'Premium' : 'Free'}</span>
+        </div>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="truncate font-semibold">{form.title || 'Meditation title'}</h3>
-            {form.premium && <Crown size={15} className="text-gold" />}
-          </div>
-          <p className="mt-1 line-clamp-1 text-xs text-lavender">{form.subtitle || form.category}</p>
-          <p className="mt-2 text-sm text-cream/70">{formatTime(form.duration)} · {form.published ? 'Published' : 'Draft'}</p>
+          <h3 className="truncate font-serif text-xl font-semibold">{form.title || 'Meditation title'}</h3>
+          <p className="mt-1 line-clamp-1 text-xs text-lavender">{form.subtitle || 'Subtitle'}</p>
+          <p className="mt-2 text-sm capitalize text-cream/70">{formatTime(form.duration)} · {form.category.replace('-', ' ')} · {form.published ? 'Published' : 'Draft'}</p>
+          <button type="button" className="mt-4 inline-flex items-center gap-2 rounded-[18px] bg-gold px-4 py-2 text-sm font-semibold text-night">
+            <Play size={14} /> Play
+          </button>
         </div>
       </div>
       {form.audio_file && <audio src={form.audio_file} controls className="mt-4 w-full" />}
