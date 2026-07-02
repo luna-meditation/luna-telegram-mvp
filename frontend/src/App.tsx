@@ -90,7 +90,7 @@ const copy = {
     free: 'Free',
     begin: 'Begin',
     play: 'Play',
-    resume: 'Resume',
+    resume: 'Continue',
     favorite: 'Favorite',
     share: 'Share',
     timer: 'Timer',
@@ -127,6 +127,8 @@ const copy = {
     checkinSave: 'Save today',
     checkinSaving: 'Saving...',
     checkinSkip: 'Skip',
+    checkinSaved: '✓ Today’s check-in saved',
+    checkins: 'Check-Ins',
     sleepLess4: '<4h',
     sleep4To6: '4-6h',
     sleep6To8: '6-8h',
@@ -140,7 +142,118 @@ const copy = {
     minutes3: '3 min',
     minutes5: '5 min',
     minutes10: '10 min',
-    minutes15Plus: '15+ min'
+    minutes15Plus: '15+ min',
+    navHome: 'Home',
+    navLibrary: 'Library',
+    navSaved: 'Saved',
+    navPremium: 'Premium',
+    navProfile: 'Profile',
+    categorySleep: 'Sleep',
+    categoryCalm: 'Calm',
+    categoryFocus: 'Focus',
+    categoryAnxiety: 'Anxiety',
+    categoryBreath: 'Breath',
+    categoryEnergy: 'Energy',
+    categoryStress: 'Stress',
+    categoryMorning: 'Morning',
+    categoryEvening: 'Evening',
+    categoryBreathing: 'Breathing',
+    categoryQuickReset: 'Quick Reset',
+    categoryDeepRelaxation: 'Deep Relaxation',
+    moodSleep: 'Sleep',
+    moodEnergy: 'Energy',
+    continueListening: 'Continue listening',
+    recentlyPlayed: 'Recently played',
+    popularMeditations: 'Popular meditations',
+    breathingExercises: 'Breathing exercises',
+    premiumRecommendations: 'Premium recommendations',
+    weeklyTitle: 'This week with Luna',
+    weeklyInsightMinutes: 'You created {minutes} minutes of calm. A small repeat tomorrow matters more than a perfect session.',
+    weeklyInsightStart: 'A short check-in is enough to begin. Luna will personalize your next practice from there.',
+    weeklyInsightShort: 'Start with one short practice today. Luna will build your weekly insight as you check in and listen.',
+    recommendedFocus: 'Recommended focus: {focus}',
+    focusBreathAnxiety: 'Breath and anxiety relief',
+    focusSleepRecovery: 'Sleep recovery',
+    focusKeepStreak: 'Keep the streak gentle',
+    focusShortReset: 'A short calm reset',
+    preparingCalm: 'Preparing your calm',
+    savedTitle: 'Your Sanctuary',
+    savedSubtitle: 'Practices you saved to return to.',
+    savedEmptyTitle: 'Your saved calm will live here.',
+    savedEmptyBody: 'Tap the heart on any meditation to build a small refuge you can return to anytime.',
+    premiumTitle: 'Luna Premium',
+    premiumHeadline: 'Unlock your calm.',
+    premiumBody: 'Full library, premium breathwork, daily streaks and new practices every week.',
+    premiumLibrary: 'Premium Library',
+    weeklyContent: 'Weekly Content',
+    dailyStreak: 'Daily Streak',
+    lockedPremium: '{title} is part of Luna Premium.',
+    monthlyPremium: 'Monthly Premium',
+    lifetimePremium: 'Lifetime Premium',
+    unlimitedMeditations: 'Unlimited meditations',
+    premiumBreathing: 'Premium breathing',
+    sleepAnxietyFocus: 'Sleep, anxiety and focus',
+    dailyStreaks: 'Daily streaks',
+    premiumForever: 'Premium library forever',
+    allFuturePractices: 'All future practices',
+    bestValue: 'Best value',
+    instantTelegramUnlock: 'Instant Telegram unlock',
+    unlockMonthly: 'Unlock Monthly',
+    getLifetime: 'Get Lifetime',
+    sleepDeeper: 'Sleep deeper',
+    sleepDeeperBody: 'Evening practices made for softer endings.',
+    calmFaster: 'Calm faster',
+    calmFasterBody: 'Breath-led resets for anxious moments.',
+    buildRhythm: 'Build rhythm',
+    buildRhythmBody: 'Streaks, favorites, and weekly guidance.',
+    growGently: 'Grow gently',
+    growGentlyBody: 'New meditations as your needs change.',
+    freePlanFeature: 'Basic meditations only',
+    comingSoon: 'Coming Soon',
+    starsAvailable: 'Telegram Stars are available now for Luna Premium.',
+    close: 'Close',
+    openPremiumLibrary: 'Open Premium Library',
+    openingPayment: 'Opening payment...',
+    openingStarsPayment: 'Opening Telegram Stars payment...',
+    paymentSuccessful: 'Payment successful. Your Luna access is unlocked.',
+    paymentCancelled: 'Payment cancelled. You can restart checkout anytime.',
+    paymentPending: 'Payment is pending. Telegram will confirm it shortly.',
+    invoiceOpened: 'Invoice opened in Telegram. Complete payment there to unlock access.',
+    paymentFailed: 'Payment could not open. Please try again, or open the bot and use /plans.',
+    sessionComplete: 'Session complete',
+    sessionCompleteBody: 'You added {time} of calm to your day.',
+    elapsedRemaining: '{elapsed} elapsed · {remaining} remaining',
+    playbackSpeed: 'Playback speed',
+    rewind15: 'Rewind 15 seconds',
+    forward15: 'Forward 15 seconds',
+    profileLevel: 'Level {level}',
+    levelFirstLight: 'First Light',
+    levelCalmBuilder: 'Calm Builder',
+    levelMoonGuide: 'Moon Guide',
+    levelDeepPractice: 'Deep Practice',
+    nextLevel: 'Next: {level}',
+    memberSince: 'Member since',
+    premiumStatus: 'Premium status',
+    active: 'Active',
+    activeUntil: 'Active until',
+    notActive: 'Not active',
+    minutesMeditated: 'Minutes meditated',
+    completedSessions: 'Completed sessions',
+    currentStreak: 'Current streak',
+    longestStreak: 'Longest streak',
+    calmScore: 'Calm score',
+    weeklyCheckins: 'Weekly check-ins',
+    averageSleep: 'Average sleep',
+    currentMood: 'Current mood',
+    preferredLength: 'Preferred length',
+    today: 'Today',
+    noCheckinsYet: 'No check-ins yet',
+    notEnoughData: 'Not enough data',
+    notSet: 'Not set',
+    weeklyInsightTitle: 'Your weekly insight',
+    achievements: 'Achievements',
+    streakReward: 'Streak reward',
+    logout: 'Logout'
   },
   ru: {
     tagline: 'AI-спокойствие внутри Telegram',
@@ -186,6 +299,8 @@ const copy = {
     checkinSave: 'Сохранить',
     checkinSaving: 'Сохраняю...',
     checkinSkip: 'Пропустить',
+    checkinSaved: '✓ Чекин на сегодня сохранен',
+    checkins: 'Чек-ины',
     sleepLess4: '<4 ч',
     sleep4To6: '4–6 ч',
     sleep6To8: '6–8 ч',
@@ -199,7 +314,118 @@ const copy = {
     minutes3: '3 мин',
     minutes5: '5 мин',
     minutes10: '10 мин',
-    minutes15Plus: '15+ мин'
+    minutes15Plus: '15+ мин',
+    navHome: 'Главная',
+    navLibrary: 'Библиотека',
+    navSaved: 'Сохранённое',
+    navPremium: 'Премиум',
+    navProfile: 'Профиль',
+    categorySleep: 'Сон',
+    categoryCalm: 'Спокойствие',
+    categoryFocus: 'Фокус',
+    categoryAnxiety: 'Тревога',
+    categoryBreath: 'Дыхание',
+    categoryEnergy: 'Энергия',
+    categoryStress: 'Стресс',
+    categoryMorning: 'Утро',
+    categoryEvening: 'Вечер',
+    categoryBreathing: 'Дыхание',
+    categoryQuickReset: 'Быстрый сброс',
+    categoryDeepRelaxation: 'Глубокое расслабление',
+    moodSleep: 'Сон',
+    moodEnergy: 'Энергия',
+    continueListening: 'Продолжить слушать',
+    recentlyPlayed: 'Недавно прослушано',
+    popularMeditations: 'Популярные медитации',
+    breathingExercises: 'Дыхательные практики',
+    premiumRecommendations: 'Премиум-рекомендации',
+    weeklyTitle: 'Эта неделя с Luna',
+    weeklyInsightMinutes: 'Ты создал(а) {minutes} минут спокойствия. Небольшая практика завтра важнее идеальной сессии.',
+    weeklyInsightStart: 'Короткого чек-ина достаточно, чтобы начать. Luna подберёт следующую практику по твоему состоянию.',
+    weeklyInsightShort: 'Начни с одной короткой практики сегодня. Luna соберёт недельный инсайт по чек-инам и прослушиваниям.',
+    recommendedFocus: 'Рекомендация: {focus}',
+    focusBreathAnxiety: 'Дыхание и снижение тревоги',
+    focusSleepRecovery: 'Восстановление сна',
+    focusKeepStreak: 'поддерживай серию мягко',
+    focusShortReset: 'Короткий сброс к спокойствию',
+    preparingCalm: 'Готовим твоё спокойствие',
+    savedTitle: 'Твоё пространство',
+    savedSubtitle: 'Практики, к которым ты хочешь вернуться.',
+    savedEmptyTitle: 'Здесь будет твоё сохранённое спокойствие.',
+    savedEmptyBody: 'Нажми сердечко на любой медитации, чтобы собрать практики для возвращения.',
+    premiumTitle: 'Luna Premium',
+    premiumHeadline: 'Открой своё спокойствие.',
+    premiumBody: 'Полная библиотека, премиальные дыхательные практики, ежедневные серии и новые медитации каждую неделю.',
+    premiumLibrary: 'Премиум-библиотека',
+    weeklyContent: 'Новый контент каждую неделю',
+    dailyStreak: 'Ежедневная серия',
+    lockedPremium: '{title} входит в Luna Premium.',
+    monthlyPremium: 'Месячный Premium',
+    lifetimePremium: 'Lifetime Premium',
+    unlimitedMeditations: 'Безлимитные медитации',
+    premiumBreathing: 'Премиальное дыхание',
+    sleepAnxietyFocus: 'Сон, тревога и фокус',
+    dailyStreaks: 'Ежедневные серии',
+    premiumForever: 'Премиум-библиотека навсегда',
+    allFuturePractices: 'Все будущие практики',
+    bestValue: 'Лучшая ценность',
+    instantTelegramUnlock: 'Мгновенный доступ в Telegram',
+    unlockMonthly: 'Открыть на месяц',
+    getLifetime: 'Получить навсегда',
+    sleepDeeper: 'Глубже засыпать',
+    sleepDeeperBody: 'Вечерние практики для мягкого расслабления.',
+    calmFaster: 'Быстрее успокоиться',
+    calmFasterBody: 'Дыхательные практики для тревожных моментов.',
+    buildRhythm: 'Создать ритм',
+    buildRhythmBody: 'Серии, избранное и еженедельная поддержка.',
+    growGently: 'Расти мягко',
+    growGentlyBody: 'Новые медитации под твои меняющиеся состояния.',
+    freePlanFeature: 'Только базовые медитации',
+    comingSoon: 'Скоро',
+    starsAvailable: 'Telegram Stars уже доступны для Luna Premium.',
+    close: 'Закрыть',
+    openPremiumLibrary: 'Открыть Premium-библиотеку',
+    openingPayment: 'Открываем оплату...',
+    openingStarsPayment: 'Открываем оплату Telegram Stars...',
+    paymentSuccessful: 'Оплата прошла. Доступ Luna открыт.',
+    paymentCancelled: 'Оплата отменена. Можно начать снова в любой момент.',
+    paymentPending: 'Оплата ожидает подтверждения. Telegram скоро подтвердит её.',
+    invoiceOpened: 'Счёт открыт в Telegram. Заверши оплату там, чтобы открыть доступ.',
+    paymentFailed: 'Не удалось открыть оплату. Попробуй ещё раз или открой бота и используй /plans.',
+    sessionComplete: 'Сессия завершена',
+    sessionCompleteBody: 'Ты добавил(а) {time} спокойствия в свой день.',
+    elapsedRemaining: '{elapsed} прошло · {remaining} осталось',
+    playbackSpeed: 'Скорость воспроизведения',
+    rewind15: 'Назад на 15 секунд',
+    forward15: 'Вперёд на 15 секунд',
+    profileLevel: 'Уровень {level}',
+    levelFirstLight: 'Первый свет',
+    levelCalmBuilder: 'Спокойствие',
+    levelMoonGuide: 'Лунный проводник',
+    levelDeepPractice: 'Глубокая практика',
+    nextLevel: 'Далее: {level}',
+    memberSince: 'С нами с',
+    premiumStatus: 'Статус Premium',
+    active: 'Активен',
+    activeUntil: 'Активен до',
+    notActive: 'Не активен',
+    minutesMeditated: 'Минут медитации',
+    completedSessions: 'Завершено сессий',
+    currentStreak: 'Текущая серия',
+    longestStreak: 'Лучшая серия',
+    calmScore: 'Индекс спокойствия',
+    weeklyCheckins: 'Чек-ины за неделю',
+    averageSleep: 'Средний сон',
+    currentMood: 'Текущее настроение',
+    preferredLength: 'Желаемая длина',
+    today: 'Сегодня',
+    noCheckinsYet: 'Пока нет чек-инов',
+    notEnoughData: 'Недостаточно данных',
+    notSet: 'Не выбрано',
+    weeklyInsightTitle: 'Твой недельный инсайт',
+    achievements: 'Достижения',
+    streakReward: 'Награда за серию',
+    logout: 'Выйти'
   }
 } satisfies Record<AppLanguage, Record<string, string>>;
 
@@ -287,6 +513,132 @@ function dayGreeting(language: AppLanguage) {
   return copy[language].goodEvening;
 }
 
+function text(language: AppLanguage, key: keyof typeof copy.en, replacements: Record<string, string | number> = {}) {
+  return Object.entries(replacements).reduce((value, [name, replacement]) => {
+    return value.replace(`{${name}}`, String(replacement));
+  }, copy[language][key]);
+}
+
+function streakLabel(count: number, language: AppLanguage) {
+  if (language === 'en') return count === 1 ? '1 day streak' : `${count} days streak`;
+  if (count === 1) return 'Серия: 1 день';
+  if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return `Серия: ${count} дня`;
+  return `Серия: ${count} дней`;
+}
+
+function dayCountLabel(count: number, language: AppLanguage) {
+  if (language === 'en') return count === 1 ? '1 day' : `${count} days`;
+  if (count === 1) return '1 день';
+  if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return `${count} дня`;
+  return `${count} дней`;
+}
+
+function normalizeSlug(value?: string | null) {
+  return (value ?? '').trim().toLowerCase().replace(/_/g, '-').replace(/\s+/g, '-');
+}
+
+function translateCategory(category: string | null | undefined, language: AppLanguage) {
+  const keyBySlug: Record<string, keyof typeof copy.en> = {
+    sleep: 'categorySleep',
+    calm: 'categoryCalm',
+    focus: 'categoryFocus',
+    anxiety: 'categoryAnxiety',
+    breath: 'categoryBreath',
+    breathing: 'categoryBreathing',
+    energy: 'categoryEnergy',
+    stress: 'categoryStress',
+    stressed: 'categoryStress',
+    morning: 'categoryMorning',
+    evening: 'categoryEvening',
+    'quick-reset': 'categoryQuickReset',
+    'deep-relaxation': 'categoryDeepRelaxation',
+    premium: 'premium'
+  };
+  const key = keyBySlug[normalizeSlug(category)];
+  return key ? copy[language][key] : (category ?? '');
+}
+
+function translateMoodLabel(label: string | null | undefined, language: AppLanguage) {
+  const keyBySlug: Record<string, keyof typeof copy.en> = {
+    sleep: 'moodSleep',
+    calm: 'moodCalm',
+    focused: 'moodFocused',
+    focus: 'moodFocused',
+    anxious: 'moodAnxious',
+    anxiety: 'moodAnxious',
+    stressed: 'moodStressed',
+    stress: 'moodStressed',
+    tired: 'moodTired',
+    energy: 'moodEnergy',
+    'low-energy': 'moodLowEnergy',
+    'not-enough-data-yet': 'notEnoughData'
+  };
+  const key = keyBySlug[normalizeSlug(label)];
+  return key ? copy[language][key] : (label ?? '');
+}
+
+function translateSleepLabel(label: string | null | undefined, language: AppLanguage) {
+  const keyByLabel: Record<string, keyof typeof copy.en> = {
+    '<4h': 'sleepLess4',
+    '4-6h': 'sleep4To6',
+    '6-8h': 'sleep6To8',
+    '8h+': 'sleep8Plus',
+    'No check-ins yet': 'noCheckinsYet'
+  };
+  const key = label ? keyByLabel[label] : null;
+  return key ? copy[language][key] : (label ?? copy[language].noCheckinsYet);
+}
+
+function translateFocus(focus: string | null | undefined, language: AppLanguage) {
+  const keyByFocus: Record<string, keyof typeof copy.en> = {
+    'breath and anxiety relief': 'focusBreathAnxiety',
+    'sleep recovery': 'focusSleepRecovery',
+    'keep the streak gentle': 'focusKeepStreak',
+    'a short calm reset': 'focusShortReset'
+  };
+  const key = keyByFocus[(focus ?? '').trim().toLowerCase()];
+  return key ? copy[language][key] : (focus ?? '');
+}
+
+function localizeWeeklyInsight(wellness: WellnessSummary, language: AppLanguage) {
+  if (language === 'en') return wellness.weeklyInsight;
+  const minutesMatch = wellness.weeklyInsight.match(/You created (\d+) minutes/);
+  if (minutesMatch) return text(language, 'weeklyInsightMinutes', { minutes: minutesMatch[1] });
+  if (wellness.weeklyCheckinCount > 0) return copy[language].weeklyInsightStart;
+  return copy[language].weeklyInsightShort;
+}
+
+function localizeLevelName(name: string | null | undefined, language: AppLanguage) {
+  const keyByName: Record<string, keyof typeof copy.en> = {
+    'First Light': 'levelFirstLight',
+    'Calm Builder': 'levelCalmBuilder',
+    'Moon Guide': 'levelMoonGuide',
+    'Deep Practice': 'levelDeepPractice'
+  };
+  const key = name ? keyByName[name] : null;
+  return key ? copy[language][key] : (name ?? '');
+}
+
+function localizeAchievement(achievement: { id: string; title: string; description: string }, language: AppLanguage) {
+  if (language === 'en') return achievement;
+
+  const translations: Record<string, { title: string; description: string }> = {
+    first_checkin: { title: 'Первый чек-ин', description: 'Ты поделился(ась), как чувствуешь себя сегодня.' },
+    three_sessions: { title: 'Три сессии', description: 'Завершено три медитации.' },
+    weekly_rhythm: { title: 'Недельный ритм', description: 'Три чек-ина за эту неделю.' },
+    seven_day_streak: { title: 'Серия 7 дней', description: 'Целая неделя спокойствия.' }
+  };
+
+  return translations[achievement.id] ?? achievement;
+}
+
+function planLabel(plan: string, language: AppLanguage) {
+  if (plan.toLowerCase() === 'free') return copy[language].free;
+  if (plan.toLowerCase() === 'monthly') return language === 'ru' ? copy[language].monthlyPremium : plan;
+  if (plan.toLowerCase() === 'lifetime') return language === 'ru' ? copy[language].lifetimePremium : plan;
+  return plan;
+}
+
 function todayLocalDate() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -310,7 +662,7 @@ function checkinMoodToMoodChip(mood?: DailyCheckin['mood'] | null): MoodChip {
 }
 
 function moodMessage(mood: MoodChip, wellness: WellnessSummary | null, language: AppLanguage) {
-  if (wellness?.todayCheckin) return language === 'ru' ? `Сохранено на сегодня. Luna рекомендует: ${wellness.recommendedFocus}.` : `Saved for today. Luna recommends: ${wellness.recommendedFocus}.`;
+  if (wellness?.todayCheckin) return text(language, 'recommendedFocus', { focus: translateFocus(wellness.recommendedFocus, language) });
   if (language === 'ru') {
     if (mood === 'Sleep') return 'Пусть вечер будет мягким, а нервная система постепенно замедлится.';
     if (mood === 'Anxiety') return 'Практика с дыханием поможет создать пространство между мыслями.';
@@ -341,7 +693,7 @@ function getLocalizedMeditation(meditation: Meditation, language: AppLanguage) {
   const englishDescription = english.description?.trim() || meditation.description?.trim();
   const englishAudio = english.audioUrl?.trim() || meditation.audio_file?.trim();
   const title = selected.title?.trim() || englishTitle || displayMeditationTitle(meditation);
-  const subtitle = selected.subtitle?.trim() || englishSubtitle || meditation.category.replace('-', ' ');
+  const subtitle = selected.subtitle?.trim() || englishSubtitle || translateCategory(meditation.category, language);
   const description = selected.description?.trim() || englishDescription || '';
   const selectedAudio = selected.audioUrl?.trim();
   const audioUrl = selectedAudio || englishAudio || '';
@@ -413,9 +765,12 @@ async function copyText(text: string) {
   }
 }
 
-function durationLabel(value?: DailyCheckin['available_minutes'] | null) {
-  if (!value) return 'Not set';
-  return value === '15_plus' ? '15+ min' : `${value} min`;
+function durationLabel(value: DailyCheckin['available_minutes'] | null | undefined, language: AppLanguage) {
+  if (!value) return copy[language].notSet;
+  if (value === '15_plus') return copy[language].minutes15Plus;
+  if (value === '10') return copy[language].minutes10;
+  if (value === '5') return copy[language].minutes5;
+  return copy[language].minutes3;
 }
 
 function MoonMark({ className = '' }: { className?: string }) {
@@ -695,31 +1050,31 @@ function App() {
     if (openingPlan) return;
 
     setOpeningPlan(plan);
-    setPaymentMessage('Opening payment...');
+    setPaymentMessage(copy[language].openingPayment);
     telegram?.HapticFeedback?.impactOccurred('light');
     try {
       const { invoiceLink } = await createInvoiceLink(plan, initData);
-      setPaymentMessage('Opening Telegram Stars payment...');
+      setPaymentMessage(copy[language].openingStarsPayment);
 
       if (telegram?.openInvoice) {
         telegram.openInvoice(invoiceLink, (status) => {
           setOpeningPlan(null);
           if (status === 'paid') {
-            setPaymentMessage('Payment successful. Your Luna access is unlocked.');
+            setPaymentMessage(copy[language].paymentSuccessful);
             void refreshAccount();
             return;
           }
-          setPaymentMessage(status === 'cancelled' ? 'Payment cancelled. You can restart checkout anytime.' : 'Payment is pending. Telegram will confirm it shortly.');
+          setPaymentMessage(status === 'cancelled' ? copy[language].paymentCancelled : copy[language].paymentPending);
         });
       } else {
         telegram?.openTelegramLink(invoiceLink);
         setOpeningPlan(null);
-        setPaymentMessage('Invoice opened in Telegram. Complete payment there to unlock access.');
+        setPaymentMessage(copy[language].invoiceOpened);
       }
     } catch {
       setOpeningPlan(null);
       const botUsername = import.meta.env.VITE_BOT_USERNAME;
-      setPaymentMessage('Payment could not open. Please try again, or open the bot and use /plans.');
+      setPaymentMessage(copy[language].paymentFailed);
       if (botUsername) telegram?.openTelegramLink(`https://t.me/${botUsername}?start=luna`);
     }
   };
@@ -774,7 +1129,7 @@ function App() {
         )}
 
         {page === 'pricing' && (
-          <PricingPage onBuy={buyPlan} message={paymentMessage} openingPlan={openingPlan} onLibrary={() => setPage('library')} locked={selectedMeditation} />
+          <PricingPage onBuy={buyPlan} message={paymentMessage} openingPlan={openingPlan} onLibrary={() => setPage('library')} locked={selectedMeditation} language={language} />
         )}
 
         {page === 'profile' && (
@@ -824,7 +1179,7 @@ function App() {
           />
         )}
 
-        {page !== 'admin' && <Nav active={page} onChange={setPage} />}
+        {page !== 'admin' && <Nav active={page} onChange={setPage} language={language} />}
         {showCheckin && page !== 'admin' && (
           <DailyCheckinSheet onClose={dismissCheckin} onSave={saveCheckin} initialMood={moodChipToCheckinMood(mood)} language={language} />
         )}
@@ -856,7 +1211,7 @@ function Header({
       </div>
       <div className="flex flex-col items-end gap-2">
         <div className="rounded-full border border-white/10 bg-ink px-3 py-1.5 text-[11px] text-cream shadow-glow">
-          {streak > 0 ? `${streak} day streak` : plan}
+          {streak > 0 ? streakLabel(streak, language) : planLabel(plan, language)}
         </div>
         <div className="flex rounded-full border border-white/10 bg-ink p-1 text-[10px] font-semibold shadow-glow" aria-label={copy[language].language}>
           {(['en', 'ru'] as const).map((item) => (
@@ -910,15 +1265,15 @@ function HomePage(props: {
                 props.mood === item ? 'bg-gold text-night' : 'bg-surface text-cream'
               }`}
             >
-              {item}
+              {translateCategory(item, props.language)}
             </button>
           ))}
         </div>
         <div className="mt-3 rounded-2xl border border-gold/20 bg-gold/10 px-3 py-2">
-          <p className="line-clamp-1 text-xs font-medium text-cream/85">{props.wellness?.todayCheckin ? (props.language === 'ru' ? '✓ Чекин на сегодня сохранен' : '✓ Today’s check-in saved') : moodMessage(props.mood, props.wellness, props.language)}</p>
+          <p className="line-clamp-1 text-xs font-medium text-cream/85">{props.wellness?.todayCheckin ? t.checkinSaved : moodMessage(props.mood, props.wellness, props.language)}</p>
           {props.wellness?.weeklyCheckinCount ? (
             <p className="mt-1 text-[11px] capitalize text-gold">
-              {props.wellness.mostCommonMoodLabel} · {props.wellness.weeklyCheckinCount}/7 check-ins
+              {translateMoodLabel(props.wellness.mostCommonMoodLabel, props.language)} · {props.wellness.weeklyCheckinCount}/7 {t.checkins}
             </p>
           ) : null}
         </div>
@@ -932,13 +1287,13 @@ function HomePage(props: {
         <EmptyState title={t.firstPracticeTitle} body={t.firstPracticeBody} />
       )}
 
-      <Rail title={props.language === 'ru' ? 'Продолжить слушать' : 'Continue listening'} meditations={props.continueListening} onOpen={props.onOpen} language={props.language} />
-      <Rail title={props.language === 'ru' ? 'Недавно прослушано' : 'Recently played'} meditations={props.continueListening} onOpen={props.onOpen} language={props.language} />
-      <Rail title={props.language === 'ru' ? 'Популярные медитации' : 'Popular meditations'} meditations={props.popular} onOpen={props.onOpen} language={props.language} />
-      <Rail title={props.language === 'ru' ? 'Дыхательные практики' : 'Breathing exercises'} meditations={props.newest.filter((item) => item.category.includes('breath'))} onOpen={props.onOpen} language={props.language} />
-      <Rail title={props.language === 'ru' ? 'Premium рекомендации' : 'Premium recommendations'} meditations={props.recommended.filter((item) => item.premium)} onOpen={props.onOpen} language={props.language} />
-      {props.wellness && <InsightCard title="This week with Luna" body={props.wellness.weeklyInsight} meta={`Recommended focus: ${props.wellness.recommendedFocus}`} />}
-      {props.loading && !props.daily && <RailSkeleton title="Preparing your calm" />}
+      <Rail title={t.continueListening} meditations={props.continueListening} onOpen={props.onOpen} language={props.language} />
+      <Rail title={t.recentlyPlayed} meditations={props.continueListening} onOpen={props.onOpen} language={props.language} />
+      <Rail title={t.popularMeditations} meditations={props.popular} onOpen={props.onOpen} language={props.language} />
+      <Rail title={t.breathingExercises} meditations={props.newest.filter((item) => item.category.includes('breath'))} onOpen={props.onOpen} language={props.language} />
+      <Rail title={t.premiumRecommendations} meditations={props.recommended.filter((item) => item.premium)} onOpen={props.onOpen} language={props.language} />
+      {props.wellness && <InsightCard title={t.weeklyTitle} body={localizeWeeklyInsight(props.wellness, props.language)} meta={text(props.language, 'recommendedFocus', { focus: translateFocus(props.wellness.recommendedFocus, props.language) })} />}
+      {props.loading && !props.daily && <RailSkeleton title={t.preparingCalm} />}
 
       <button onClick={props.onLibrary} className="w-full rounded-[20px] bg-gold px-5 py-4 font-semibold text-night shadow-glow hover:brightness-110">
         {t.openLibrary}
@@ -960,7 +1315,7 @@ function PracticeHero({ meditation, label, onOpen, language }: { meditation: Med
         <p className="mb-2 inline-flex rounded-full bg-lavender/25 px-3 py-1 text-xs text-cream backdrop-blur">{label}</p>
         <h3 className="font-serif text-2xl font-semibold">{localized.title}</h3>
         <p className="mt-1 text-sm capitalize text-cream/75">
-          {meditation.category.replace('-', ' ')} · {formatTime(meditation.duration)}
+          {translateCategory(meditation.category, language)} · {formatTime(meditation.duration)}
         </p>
         {!localized.hasSelectedLanguageAudio && <p className="mt-2 text-xs text-gold">{copy[language].availableInEnglish}</p>}
         <span className="mt-3 inline-flex rounded-[18px] bg-gold px-5 py-2.5 text-sm font-semibold text-night shadow-gold">
@@ -1012,7 +1367,7 @@ function Rail({ title, meditations, onOpen, language }: { title: string; meditat
           <button key={meditation.id} onClick={() => onOpen(meditation)} className="w-40 shrink-0 text-left">
             <img src={meditation.cover_image} alt="" className="h-40 w-40 rounded-3xl object-cover shadow-glow" loading="lazy" />
             <p className="mt-2 line-clamp-1 font-semibold">{getLocalizedMeditation(meditation, language).title}</p>
-            <p className="text-xs capitalize text-lavender">{meditation.category.replace('-', ' ')} · {formatTime(meditation.duration)}</p>
+            <p className="text-xs capitalize text-lavender">{translateCategory(meditation.category, language)} · {formatTime(meditation.duration)}</p>
           </button>
         ))}
       </div>
@@ -1056,7 +1411,7 @@ function LibraryPage(props: {
         <FilterPill active={props.category === 'all'} onClick={() => props.setCategory('all')} label={t.all} />
         <FilterPill active={props.category === 'short'} onClick={() => props.setCategory('short')} label={t.short} />
         {props.categories.map((item) => (
-          <FilterPill key={item.slug} active={props.category === item.slug} onClick={() => props.setCategory(item.slug)} label={item.name} />
+          <FilterPill key={item.slug} active={props.category === item.slug} onClick={() => props.setCategory(item.slug)} label={translateCategory(item.slug || item.name, props.language)} />
         ))}
       </div>
       {props.loading && !props.meditations.length ? (
@@ -1120,7 +1475,7 @@ function MeditationCard({ meditation, locked, onOpen, onFavorite, onUnlock, lang
             <h3 className="truncate font-semibold">{localized.title}</h3>
             {meditation.premium && <Crown size={15} className="text-gold" />}
           </div>
-          <p className="mt-1 text-xs capitalize text-lavender">{meditation.category.replace('-', ' ')}</p>
+          <p className="mt-1 text-xs capitalize text-lavender">{translateCategory(meditation.category, language)}</p>
           <p className="mt-2 line-clamp-2 text-sm text-cream/70">{localized.description}</p>
           {!localized.hasSelectedLanguageAudio && <p className="mt-1 text-[11px] text-gold">{copy[language].availableInEnglish}</p>}
           <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
@@ -1145,12 +1500,12 @@ function FavoritesPage({ meditations, onOpen, onFavorite, language }: { meditati
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-serif text-3xl font-semibold">Your Sanctuary</h2>
-        <p className="mt-1 text-sm text-lavender">Practices you saved to return to.</p>
+        <h2 className="font-serif text-3xl font-semibold">{copy[language].savedTitle}</h2>
+        <p className="mt-1 text-sm text-lavender">{copy[language].savedSubtitle}</p>
       </div>
       {meditations.length ? meditations.map((meditation) => (
         <MeditationCard key={meditation.id} meditation={meditation} locked={false} onOpen={onOpen} onFavorite={onFavorite} onUnlock={() => undefined} language={language} />
-      )) : <EmptyState title="Your saved calm will live here." body="Tap the heart on any meditation to build a small refuge you can return to anytime." />}
+      )) : <EmptyState title={copy[language].savedEmptyTitle} body={copy[language].savedEmptyBody} />}
     </div>
   );
 }
@@ -1274,59 +1629,62 @@ function PricingPage({
   message,
   openingPlan,
   onLibrary,
-  locked
+  locked,
+  language
 }: {
   onBuy: (plan: 'monthly' | 'lifetime') => void;
   message: string;
   openingPlan: 'monthly' | 'lifetime' | null;
   onLibrary: () => void;
   locked: Meditation | null;
+  language: AppLanguage;
 }) {
   const [comingSoon, setComingSoon] = useState('');
+  const t = copy[language];
 
   return (
     <div className="space-y-2.5 luna-fade">
       <section className="overflow-hidden rounded-[24px] border border-white/10 bg-ink p-4 shadow-glow">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-gold">LUNA Premium</p>
-            <h2 className="mt-1 font-serif text-3xl font-semibold leading-tight">Unlock your calm.</h2>
+            <p className="text-xs uppercase tracking-[0.18em] text-gold">{t.premiumTitle}</p>
+            <h2 className="mt-1 font-serif text-3xl font-semibold leading-tight">{t.premiumHeadline}</h2>
           </div>
           <MoonMark className="h-14 w-14 shrink-0" />
         </div>
         <p className="mt-2 text-sm leading-5 text-beige">
-          Full library, premium breathwork, daily streaks and new practices every week.
+          {t.premiumBody}
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <PremiumBadge label="Premium Library" />
-          <PremiumBadge label="Weekly Content" />
-          <PremiumBadge label="Daily Streak" />
+          <PremiumBadge label={t.premiumLibrary} />
+          <PremiumBadge label={t.weeklyContent} />
+          <PremiumBadge label={t.dailyStreak} />
         </div>
       </section>
-      {locked && <p className="rounded-[20px] bg-surface p-4 text-sm text-cream/80">{locked.title} is part of Luna Premium.</p>}
-      <PlanCard title="Monthly Premium" price={`${premiumPrices.monthly} ⭐`} features={['Unlimited meditations', 'Premium breathing', 'Sleep, anxiety and focus', 'Daily streaks']} action="Unlock Monthly" loading={openingPlan === 'monthly'} disabled={Boolean(openingPlan)} onClick={() => onBuy('monthly')} featured />
-      <PlanCard title="Lifetime Premium" price={`${premiumPrices.lifetime} ⭐`} features={['Premium library forever', 'All future practices', 'Best value', 'Instant Telegram unlock']} action="Get Lifetime" loading={openingPlan === 'lifetime'} disabled={Boolean(openingPlan)} onClick={() => onBuy('lifetime')} />
+      {locked && <p className="rounded-[20px] bg-surface p-4 text-sm text-cream/80">{text(language, 'lockedPremium', { title: getLocalizedMeditation(locked, language).title })}</p>}
+      <PlanCard title={t.monthlyPremium} price={`${premiumPrices.monthly} ⭐`} features={[t.unlimitedMeditations, t.premiumBreathing, t.sleepAnxietyFocus, t.dailyStreaks]} action={t.unlockMonthly} loading={openingPlan === 'monthly'} disabled={Boolean(openingPlan)} onClick={() => onBuy('monthly')} language={language} featured />
+      <PlanCard title={t.lifetimePremium} price={`${premiumPrices.lifetime} ⭐`} features={[t.premiumForever, t.allFuturePractices, t.bestValue, t.instantTelegramUnlock]} action={t.getLifetime} loading={openingPlan === 'lifetime'} disabled={Boolean(openingPlan)} onClick={() => onBuy('lifetime')} language={language} />
       <div className="grid grid-cols-2 gap-2">
-        <PremiumValue title="Sleep deeper" body="Evening practices made for softer endings." />
-        <PremiumValue title="Calm faster" body="Breath-led resets for anxious moments." />
-        <PremiumValue title="Build rhythm" body="Streaks, favorites, and weekly guidance." />
-        <PremiumValue title="Grow gently" body="New meditations as your needs change." />
+        <PremiumValue title={t.sleepDeeper} body={t.sleepDeeperBody} />
+        <PremiumValue title={t.calmFaster} body={t.calmFasterBody} />
+        <PremiumValue title={t.buildRhythm} body={t.buildRhythmBody} />
+        <PremiumValue title={t.growGently} body={t.growGentlyBody} />
       </div>
-      <PlanCard title="Free" price="0" features={['Basic meditations only']} />
+      <PlanCard title={t.free} price="0" features={[t.freePlanFeature]} language={language} />
       <div className="grid grid-cols-2 gap-3">
         <button onClick={() => setComingSoon('Card')} className="rounded-[20px] border border-white/10 bg-surface px-4 py-3 text-sm font-semibold">Card</button>
         <button onClick={() => setComingSoon('Crypto')} className="rounded-[20px] border border-white/10 bg-surface px-4 py-3 text-sm font-semibold">Crypto</button>
       </div>
       {message && <p className="rounded-2xl bg-lavender/15 p-4 text-sm text-cream/80">{message}</p>}
       {openingPlan && <div className="h-1 overflow-hidden rounded-full bg-cream/10"><div className="h-full w-1/2 animate-pulse rounded-full bg-gold" /></div>}
-      {message.includes('unlocked') && <button onClick={onLibrary} className="w-full rounded-2xl bg-cream px-5 py-4 font-semibold text-night">Open Premium Library</button>}
+      {message === t.paymentSuccessful && <button onClick={onLibrary} className="w-full rounded-2xl bg-cream px-5 py-4 font-semibold text-night">{t.openPremiumLibrary}</button>}
       {comingSoon && (
         <div className="fixed inset-0 z-30 grid place-items-center bg-night/80 px-5 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-[28px] border border-white/10 bg-ink p-5 text-center shadow-glow">
             <p className="text-xs uppercase tracking-[0.18em] text-gold">{comingSoon}</p>
-            <h3 className="mt-2 font-serif text-2xl">Coming Soon</h3>
-            <p className="mt-2 text-sm text-lavender">Telegram Stars are available now for Luna Premium.</p>
-            <button onClick={() => setComingSoon('')} className="mt-5 w-full rounded-[20px] bg-gold px-4 py-3 font-semibold text-night">Close</button>
+            <h3 className="mt-2 font-serif text-2xl">{t.comingSoon}</h3>
+            <p className="mt-2 text-sm text-lavender">{t.starsAvailable}</p>
+            <button onClick={() => setComingSoon('')} className="mt-5 w-full rounded-[20px] bg-gold px-4 py-3 font-semibold text-night">{t.close}</button>
           </div>
         </div>
       )}
@@ -1350,7 +1708,7 @@ function PremiumValue({ title, body }: { title: string; body: string }) {
   );
 }
 
-function PlanCard(props: { title: string; price: string; features: string[]; action?: string; loading?: boolean; disabled?: boolean; featured?: boolean; onClick?: () => void }) {
+function PlanCard(props: { title: string; price: string; features: string[]; action?: string; loading?: boolean; disabled?: boolean; featured?: boolean; onClick?: () => void; language: AppLanguage }) {
   return (
     <article className={`rounded-[22px] border p-3.5 shadow-glow ${props.featured ? 'border-gold/40 bg-gold/10' : 'border-white/10 bg-ink'}`}>
       <div className="flex items-start justify-between gap-4">
@@ -1370,7 +1728,7 @@ function PlanCard(props: { title: string; price: string; features: string[]; act
           className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-gold px-4 py-2.5 font-semibold text-night transition disabled:cursor-not-allowed disabled:opacity-70"
         >
           {props.loading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-night/30 border-t-night" />}
-          {props.loading ? 'Opening payment...' : props.action}
+          {props.loading ? copy[props.language].openingPayment : props.action}
         </button>
       )}
     </article>
@@ -1519,19 +1877,19 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
             <div className="absolute inset-0 grid place-items-center bg-night/70 p-6 text-center backdrop-blur-sm">
               <div>
                 <CheckCircle className="mx-auto text-gold" size={42} />
-                <h3 className="mt-3 font-serif text-3xl">Session complete</h3>
-                <p className="mt-2 text-sm text-cream/75">You added {formatTime(duration)} of calm to your day.</p>
+                <h3 className="mt-3 font-serif text-3xl">{copy[language].sessionComplete}</h3>
+                <p className="mt-2 text-sm text-cream/75">{text(language, 'sessionCompleteBody', { time: formatTime(duration) })}</p>
               </div>
             </div>
           )}
         </div>
 
         <div className="mt-4 text-center">
-          <p className="text-xs uppercase tracking-[0.18em] text-gold">{meditation.category.replace('-', ' ')}</p>
+          <p className="text-xs uppercase tracking-[0.18em] text-gold">{translateCategory(meditation.category, language)}</p>
           <h2 className="mt-1 font-serif text-2xl font-semibold">{localized.title}</h2>
           <p className="mt-1 text-sm text-cream/70">{localized.subtitle}</p>
           {!localized.hasSelectedLanguageAudio && <p className="mt-2 text-xs text-gold">{copy[language].availableInEnglish}</p>}
-          <p className="mt-2 text-sm text-lavender">{formatTime(position)} elapsed · {formatTime(Math.max(0, duration - position))} remaining</p>
+          <p className="mt-2 text-sm text-lavender">{text(language, 'elapsedRemaining', { elapsed: formatTime(position), remaining: formatTime(Math.max(0, duration - position)) })}</p>
         </div>
 
         <input className="mt-5 h-8 w-full accent-gold" type="range" min={0} max={duration || 1} value={position} onChange={(event) => {
@@ -1545,7 +1903,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
         </div>
 
         <div className="mt-4 flex items-center justify-center gap-5">
-          <IconButton label="Rewind 15 seconds" onClick={() => {
+          <IconButton label={copy[language].rewind15} onClick={() => {
             if (audioRef.current) audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 15);
           }}><SkipBack /></IconButton>
           <button onClick={() => {
@@ -1555,7 +1913,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
           }} className="grid h-16 w-16 place-items-center rounded-full bg-gold text-night shadow-glow hover:brightness-110">
             {playing ? <Pause /> : <Play />}
           </button>
-          <IconButton label="Forward 15 seconds" onClick={() => {
+          <IconButton label={copy[language].forward15} onClick={() => {
             if (audioRef.current) audioRef.current.currentTime = Math.min(duration, audioRef.current.currentTime + 15);
           }}><SkipForward /></IconButton>
         </div>
@@ -1568,7 +1926,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
         {shareMessage && <p className="mt-2 rounded-2xl bg-gold/10 px-3 py-2 text-center text-xs text-cream/80">{shareMessage}</p>}
 
         <div className="mt-3 flex items-center justify-between rounded-[18px] bg-surface px-4 py-2.5">
-          <span className="text-sm text-lavender">Playback speed</span>
+          <span className="text-sm text-lavender">{copy[language].playbackSpeed}</span>
           <select value={speed} onChange={(event) => {
             const next = Number(event.target.value);
             setSpeed(next);
@@ -1615,7 +1973,7 @@ function ProfilePage({
   onRestore: () => void;
   language: AppLanguage;
 }) {
-  const activeUntil = access.user?.active_until ? new Date(access.user.active_until).toLocaleDateString() : 'Not active';
+  const activeUntil = access.user?.active_until ? new Date(access.user.active_until).toLocaleDateString() : copy[language].notActive;
   const level = wellness?.level;
   return (
     <div className="space-y-3 luna-fade">
@@ -1635,46 +1993,49 @@ function ProfilePage({
           <div className="mt-4 rounded-[20px] border border-gold/20 bg-gold/10 p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-gold">Level {level.current}</p>
-                <h3 className="mt-1 font-serif text-2xl">{level.title}</h3>
+                <p className="text-xs uppercase tracking-[0.18em] text-gold">{text(language, 'profileLevel', { level: level.current })}</p>
+                <h3 className="mt-1 font-serif text-2xl">{localizeLevelName(level.title, language)}</h3>
               </div>
               <Sparkles className="text-gold" />
             </div>
             <div className="mt-3 h-2 overflow-hidden rounded-full bg-night">
               <div className="h-full rounded-full bg-gold" style={{ width: `${level.progress}%` }} />
             </div>
-            <p className="mt-2 text-xs text-lavender">Next: {level.next}</p>
+            <p className="mt-2 text-xs text-lavender">{text(language, 'nextLevel', { level: localizeLevelName(level.next, language) })}</p>
           </div>
         )}
         <div className="mt-4 grid grid-cols-2 gap-2.5 text-sm">
-          <Stat label="Member since" value="Today" />
-          <Stat label="Premium status" value={access.hasPremium ? 'Active' : 'Free'} />
-          <Stat label="Active until" value={activeUntil} />
-          <Stat label="Minutes meditated" value={String(profile?.minutesListened ?? 0)} />
-          <Stat label="Completed sessions" value={String(profile?.completed ?? 0)} />
-          <Stat label="Current streak" value={`${profile?.currentStreak ?? 0} days`} />
-          <Stat label="Longest streak" value={`${profile?.longestStreak ?? 0} days`} />
-          <Stat label="Calm score" value={`${profile?.calmScore ?? 0}%`} />
-          <Stat label="Weekly check-ins" value={`${wellness?.weeklyCheckinCount ?? 0}/7`} />
-          <Stat label="Average sleep" value={wellness?.averageSleepLabel ?? 'No check-ins yet'} />
-          <Stat label="Current mood" value={wellness?.mostCommonMoodLabel ?? 'Not enough data'} />
-          <Stat label="Preferred length" value={durationLabel(wellness?.todayCheckin?.available_minutes)} />
+          <Stat label={copy[language].memberSince} value={copy[language].today} />
+          <Stat label={copy[language].premiumStatus} value={access.hasPremium ? copy[language].active : copy[language].free} />
+          <Stat label={copy[language].activeUntil} value={activeUntil} />
+          <Stat label={copy[language].minutesMeditated} value={String(profile?.minutesListened ?? 0)} />
+          <Stat label={copy[language].completedSessions} value={String(profile?.completed ?? 0)} />
+          <Stat label={copy[language].currentStreak} value={dayCountLabel(profile?.currentStreak ?? 0, language)} />
+          <Stat label={copy[language].longestStreak} value={dayCountLabel(profile?.longestStreak ?? 0, language)} />
+          <Stat label={copy[language].calmScore} value={`${profile?.calmScore ?? 0}%`} />
+          <Stat label={copy[language].weeklyCheckins} value={`${wellness?.weeklyCheckinCount ?? 0}/7`} />
+          <Stat label={copy[language].averageSleep} value={wellness?.averageSleepLabel ? translateSleepLabel(wellness.averageSleepLabel, language) : copy[language].noCheckinsYet} />
+          <Stat label={copy[language].currentMood} value={wellness?.mostCommonMoodLabel ? translateMoodLabel(wellness.mostCommonMoodLabel, language) : copy[language].notEnoughData} />
+          <Stat label={copy[language].preferredLength} value={durationLabel(wellness?.todayCheckin?.available_minutes, language)} />
         </div>
-        {wellness && <InsightCard title="Your weekly insight" body={wellness.weeklyInsight} meta={`Recommended focus: ${wellness.recommendedFocus}`} />}
+        {wellness && <InsightCard title={copy[language].weeklyInsightTitle} body={localizeWeeklyInsight(wellness, language)} meta={text(language, 'recommendedFocus', { focus: translateFocus(wellness.recommendedFocus, language) })} />}
         <div className="mt-4 rounded-[20px] bg-surface p-4">
-          <p className="mb-3 text-sm text-lavender">Achievements</p>
+          <p className="mb-3 text-sm text-lavender">{copy[language].achievements}</p>
           <div className="grid grid-cols-2 gap-2 text-xs">
             {(wellness?.achievements ?? rewardMilestones.map((days) => ({
               id: `${days}`,
               title: `${days}d`,
-              description: 'Streak reward',
+              description: copy[language].streakReward,
               unlocked: Boolean(profile?.rewards?.[days])
-            }))).map((achievement) => (
-              <span key={achievement.id} className={`flex min-h-[78px] flex-col justify-between rounded-2xl p-3 ${achievement.unlocked ? 'bg-gold text-night' : 'bg-night text-lavender'}`}>
-                <strong className="block">{achievement.title}</strong>
-                <span className="mt-1 block opacity-75">{achievement.description}</span>
-              </span>
-            ))}
+            }))).map((achievement) => {
+              const localized = localizeAchievement(achievement, language);
+              return (
+                <span key={achievement.id} className={`flex min-h-[78px] flex-col justify-between rounded-2xl p-3 ${achievement.unlocked ? 'bg-gold text-night' : 'bg-night text-lavender'}`}>
+                  <strong className="block">{localized.title}</strong>
+                  <span className="mt-1 block opacity-75">{localized.description}</span>
+                </span>
+              );
+            })}
           </div>
         </div>
         {showAdminButton && (
@@ -1683,7 +2044,7 @@ function ProfilePage({
           </button>
         )}
         <button onClick={onRestore} className="mt-4 w-full rounded-[20px] bg-gold px-5 py-3.5 font-semibold text-night">{copy[language].restore}</button>
-        <button className="mt-2.5 w-full rounded-[20px] bg-surface px-5 py-3.5 text-sm text-lavender">Logout</button>
+        <button className="mt-2.5 w-full rounded-[20px] bg-surface px-5 py-3.5 text-sm text-lavender">{copy[language].logout}</button>
       </div>
     </div>
   );
@@ -2005,7 +2366,7 @@ function AdminPage({
             <AdminMetricGrid>
               <Stat label="Common mood" value={dashboard.wellness?.mostCommonMoodLabel ?? 'No data'} />
               <Stat label="Sleep pattern" value={dashboard.wellness?.averageSleepLabel ?? 'No data'} />
-              <Stat label="Wanted length" value={durationLabel(dashboard.wellness?.mostRequestedDuration ?? null)} />
+              <Stat label="Wanted length" value={durationLabel(dashboard.wellness?.mostRequestedDuration ?? null, 'en')} />
               <Stat label="Total check-ins" value={String(dashboard.wellness?.totalCheckins ?? 0)} />
             </AdminMetricGrid>
             <p className="mt-3 rounded-2xl bg-cream/10 p-3 text-sm text-cream/75">
@@ -2275,7 +2636,7 @@ function RecentActivity({ dashboard }: { dashboard: AdminDashboardData }) {
       ))}
       {dashboard.recentActivity.latestCheckins.slice(0, 4).map((checkin) => (
         <p key={`checkin-${checkin.telegram_id}-${checkin.local_date}`} className="rounded-2xl bg-cream/10 p-3 text-sm">
-          Check-in: {checkin.user?.first_name ?? checkin.telegram_id} · {checkin.mood.replace('_', ' ')} · {durationLabel(checkin.available_minutes)}
+          Check-in: {checkin.user?.first_name ?? checkin.telegram_id} · {checkin.mood.replace('_', ' ')} · {durationLabel(checkin.available_minutes, 'en')}
         </p>
       ))}
       {dashboard.recentActivity.latestAdminUploads.slice(0, 4).map((meditation) => (
@@ -2419,7 +2780,7 @@ function AnalyticsPanel({ dashboard }: { dashboard: AdminDashboardData }) {
           <Stat label="This week" value={String(dashboard.wellness?.checkinsThisWeek ?? 0)} />
           <Stat label="Most common mood" value={dashboard.wellness?.mostCommonMoodLabel ?? 'No data'} />
           <Stat label="Sleep signal" value={dashboard.wellness?.averageSleepLabel ?? 'No data'} />
-          <Stat label="Practice length" value={durationLabel(dashboard.wellness?.mostRequestedDuration ?? null)} />
+          <Stat label="Practice length" value={durationLabel(dashboard.wellness?.mostRequestedDuration ?? null, 'en')} />
         </AdminMetricGrid>
       </AdminSection>
       <AdminPeopleList title="Most completed meditations" users={dashboard.topUsers.mostCompleted} metric={(user) => `${user.completedMeditations} completed`} />
@@ -2551,13 +2912,13 @@ function EmptyState({ title, body }: { title: string; body: string }) {
   return <div className="rounded-[24px] border border-white/10 bg-ink p-4 text-center shadow-glow"><Sparkles className="mx-auto text-gold" /><h3 className="mt-3 font-serif text-xl font-semibold">{title}</h3><p className="mt-1 text-sm text-lavender">{body}</p></div>;
 }
 
-function Nav({ active, onChange }: { active: Page; onChange: (page: Page) => void }) {
+function Nav({ active, onChange, language }: { active: Page; onChange: (page: Page) => void; language: AppLanguage }) {
   const items: Array<{ page: Page; label: string; icon: typeof Home }> = [
-    { page: 'home', label: 'Home', icon: Home },
-    { page: 'library', label: 'Library', icon: BookOpen },
-    { page: 'favorites', label: 'Saved', icon: Heart },
-    { page: 'pricing', label: 'Premium', icon: Crown },
-    { page: 'profile', label: 'Profile', icon: User }
+    { page: 'home', label: copy[language].navHome, icon: Home },
+    { page: 'library', label: copy[language].navLibrary, icon: BookOpen },
+    { page: 'favorites', label: copy[language].navSaved, icon: Heart },
+    { page: 'pricing', label: copy[language].navPremium, icon: Crown },
+    { page: 'profile', label: copy[language].navProfile, icon: User }
   ];
 
   return (
