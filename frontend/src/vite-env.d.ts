@@ -13,6 +13,7 @@ interface TelegramWebApp {
   initDataUnsafe: {
     user?: TelegramWebAppUser;
     chat?: { id: number };
+    start_param?: string;
   };
   ready: () => void;
   expand: () => void;

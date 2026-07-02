@@ -180,10 +180,57 @@ function meditationShareSubtitle(meditation: Meditation) {
   return meditation.subtitle?.trim() || meditation.category.replace('-', ' ');
 }
 
-function meditationShareUrl() {
-  const botUsername = import.meta.env.VITE_BOT_USERNAME;
-  if (botUsername) return `https://t.me/${botUsername}?start=luna`;
-  return window.location.origin;
+function botUsername() {
+  return import.meta.env.VITE_BOT_USERNAME?.trim().replace(/^@/, '') ?? '';
+}
+
+function meditationShareUrl(meditationId: string) {
+  const username = botUsername();
+  if (!username) return window.location.origin;
+  return `https://t.me/${username}?startapp=meditation_${encodeURIComponent(meditationId)}`;
+}
+
+function miniAppStartParam() {
+  const search = new URLSearchParams(window.location.search);
+  return (
+    window.Telegram?.WebApp?.initDataUnsafe?.start_param ||
+    search.get('tgWebAppStartParam') ||
+    search.get('startapp') ||
+    ''
+  );
+}
+
+function meditationIdFromStartParam(startParam: string) {
+  if (!startParam.startsWith('meditation_')) return null;
+  const id = startParam.slice('meditation_'.length);
+  if (!id) return null;
+
+  try {
+    return decodeURIComponent(id);
+  } catch {
+    return null;
+  }
+}
+
+async function copyText(text: string) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return true;
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', 'true');
+  textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.select();
+
+  try {
+    return document.execCommand('copy');
+  } finally {
+    document.body.removeChild(textarea);
+  }
 }
 
 function durationLabel(value?: DailyCheckin['available_minutes'] | null) {
@@ -219,6 +266,8 @@ function App() {
   const [adminDashboard, setAdminDashboard] = useState<AdminDashboardData | null>(null);
   const [wellness, setWellness] = useState<WellnessSummary | null>(null);
   const [showCheckin, setShowCheckin] = useState(false);
+  const [pendingMeditationId, setPendingMeditationId] = useState(() => meditationIdFromStartParam(miniAppStartParam()));
+  const [openedStartMeditationId, setOpenedStartMeditationId] = useState<string | null>(null);
 
   const refreshAccount = async () => {
     const [accessState, profileStats, historyList, favoriteList, wellnessSummary] = await Promise.all([
@@ -372,6 +421,20 @@ function App() {
     setSelectedMeditation(meditation);
     setPage('player');
   };
+
+  useEffect(() => {
+    if (!pendingMeditationId || openedStartMeditationId === pendingMeditationId || !decoratedMeditations.length) return;
+
+    const meditation = decoratedMeditations.find((item) => item.id === pendingMeditationId);
+    if (!meditation) {
+      if (!libraryLoading) setPendingMeditationId(null);
+      return;
+    }
+
+    setOpenedStartMeditationId(pendingMeditationId);
+    setPendingMeditationId(null);
+    openMeditation(meditation);
+  }, [decoratedMeditations, libraryLoading, openedStartMeditationId, pendingMeditationId]);
 
   const toggleFavorite = async (meditation: Meditation) => {
     const next = !favoriteIds.has(meditation.id);
@@ -1069,7 +1132,6 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
   onSave: (position: number, duration: number, completed?: boolean) => Promise<unknown>;
 }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const saveTimer = useRef<number | undefined>();
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
   const [position, setPosition] = useState(meditation.history?.last_position ?? 0);
@@ -1097,9 +1159,60 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
     }
   }, [nextMeditation]);
 
-  const persist = (completed = false) => {
-    if (audioRef.current) void onSave(audioRef.current.currentTime, audioRef.current.duration || duration, completed);
-  };
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const audioDuration = () => (Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : meditation.duration);
+    const syncProgress = () => {
+      const nextDuration = audioDuration();
+      setDuration(nextDuration);
+      setPosition(Math.min(audio.currentTime, nextDuration));
+    };
+    const loadedMetadata = () => {
+      audio.playbackRate = speed;
+      if (meditation.history?.last_position) audio.currentTime = meditation.history.last_position;
+      setLoading(false);
+      syncProgress();
+    };
+    const played = () => {
+      setPlaying(true);
+      syncProgress();
+    };
+    const paused = () => {
+      setPlaying(false);
+      syncProgress();
+      void onSave(audio.currentTime, audioDuration(), false);
+    };
+    const ended = () => {
+      const nextDuration = audioDuration();
+      setPlaying(false);
+      setCompleted(true);
+      setDuration(nextDuration);
+      setPosition(nextDuration);
+      void onSave(nextDuration, nextDuration, true);
+    };
+
+    audio.addEventListener('loadedmetadata', loadedMetadata);
+    audio.addEventListener('timeupdate', syncProgress);
+    audio.addEventListener('play', played);
+    audio.addEventListener('pause', paused);
+    audio.addEventListener('ended', ended);
+    audio.load();
+
+    return () => {
+      audio.pause();
+      audio.removeEventListener('loadedmetadata', loadedMetadata);
+      audio.removeEventListener('timeupdate', syncProgress);
+      audio.removeEventListener('play', played);
+      audio.removeEventListener('pause', paused);
+      audio.removeEventListener('ended', ended);
+    };
+  }, [meditation.audio_file, meditation.duration, meditation.history?.last_position, meditation.id, onSave]);
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.playbackRate = speed;
+  }, [speed]);
 
   const shareMeditation = async () => {
     if (meditation.premium) {
@@ -1109,32 +1222,15 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
 
     const title = displayMeditationTitle(meditation);
     const subtitle = meditationShareSubtitle(meditation);
-    const text = `Try this meditation in Luna: ${title} — ${subtitle}`;
-    const url = meditationShareUrl();
-    const telegram = getTelegram();
+    const shareText = `Try this meditation in Luna: ${title} — ${subtitle}`;
+    const shareUrl = meditationShareUrl(meditation.id);
 
     setShareMessage('');
-    telegram?.HapticFeedback?.impactOccurred('light');
-
-    if (telegram?.openTelegramLink) {
-      telegram.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`);
-      setShareMessage('Share opened in Telegram.');
-      return;
-    }
-
-    if (navigator.share) {
-      try {
-        await navigator.share({ title, text, url });
-        setShareMessage('Share sheet opened.');
-        return;
-      } catch (error) {
-        if (error instanceof DOMException && error.name === 'AbortError') return;
-      }
-    }
+    getTelegram()?.HapticFeedback?.impactOccurred('light');
 
     try {
-      await navigator.clipboard.writeText(`${text}\n${url}`);
-      setShareMessage('Meditation link copied.');
+      const copied = await copyText(shareUrl);
+      setShareMessage(copied ? 'Link copied.' : shareText);
     } catch {
       setShareMessage('Copy failed. Please try again.');
     }
@@ -1194,7 +1290,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
         <div className="mt-4 grid grid-cols-3 gap-2">
           <button onClick={onFavorite} className="min-h-[72px] rounded-[18px] bg-surface px-2 py-3 text-xs"><Heart className={favorite ? 'mx-auto fill-gold text-gold' : 'mx-auto'} size={18} /><span className="mt-1.5 block">Favorite</span></button>
           <button onClick={() => void shareMeditation()} disabled={meditation.premium} className="min-h-[72px] rounded-[18px] bg-surface px-2 py-3 text-xs text-lavender disabled:cursor-not-allowed disabled:opacity-50"><Share2 className="mx-auto" size={18} /><span className="mt-1.5 block">Share</span></button>
-          <button className="min-h-[72px] rounded-[18px] bg-surface px-2 py-3 text-xs text-lavender"><Timer className="mx-auto" size={18} /><span className="mt-1.5 block">Timer</span></button>
+          <div className="min-h-[72px] rounded-[18px] bg-surface px-2 py-3 text-center text-xs text-lavender"><Timer className="mx-auto" size={18} /><span className="mt-1.5 block">{formatTime(Math.max(0, duration - position))}</span></div>
         </div>
         {shareMessage && <p className="mt-2 rounded-2xl bg-gold/10 px-3 py-2 text-center text-xs text-cream/80">{shareMessage}</p>}
 
@@ -1209,33 +1305,12 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave }
           </select>
         </div>
         <audio
+          key={meditation.id}
           ref={audioRef}
           src={meditation.audio_file}
           preload="auto"
           controlsList="nodownload"
           onContextMenu={(event) => event.preventDefault()}
-          onLoadedMetadata={(event) => {
-            const audio = event.currentTarget;
-            setDuration(audio.duration || meditation.duration);
-            audio.playbackRate = speed;
-            if (meditation.history?.last_position) audio.currentTime = meditation.history.last_position;
-            setLoading(false);
-          }}
-          onPlay={() => setPlaying(true)}
-          onPause={() => {
-            setPlaying(false);
-            persist(false);
-          }}
-          onTimeUpdate={(event) => {
-            setPosition(event.currentTarget.currentTime);
-            window.clearTimeout(saveTimer.current);
-            saveTimer.current = window.setTimeout(() => persist(false), 1200);
-          }}
-          onEnded={() => {
-            setPlaying(false);
-            setCompleted(true);
-            persist(true);
-          }}
         />
       </div>
     </div>
