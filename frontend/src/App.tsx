@@ -433,6 +433,7 @@ const copy = {
     moonSeedsInfo: 'Moon Seeds grow when you complete practices.',
     calmPoints: 'Calm Points',
     totalPractice: 'Total Practice',
+    thisWeek: 'This Week',
     quietRhythm: 'Quiet Rhythm',
     totalMinutesWithLuna: 'Total minutes with Luna',
     totalPracticeMinutes: 'Total practice minutes',
@@ -671,6 +672,7 @@ const copy = {
     moonSeedsInfo: 'Лунные семена растут, когда ты завершаешь практики.',
     calmPoints: 'Баллы спокойствия',
     totalPractice: 'Практика',
+    thisWeek: 'За неделю',
     quietRhythm: 'Тихий ритм',
     totalMinutesWithLuna: 'Минут с Luna',
     totalPracticeMinutes: 'Всего минут практики',
@@ -3031,15 +3033,15 @@ function MoonGardenCard({ profile, language }: { profile: ProfileStats | null; l
   const seeds = moonSeedCount(profile);
 
   return (
-    <section className="mt-4 overflow-hidden rounded-[28px] border border-gold/25 bg-gradient-to-br from-gold/20 via-lavender/10 to-night p-5 shadow-glow">
+    <section className="mt-4 overflow-hidden rounded-[28px] border border-gold/25 bg-gradient-to-br from-gold/20 via-lavender/10 to-night p-4 shadow-glow">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].moonGarden}</p>
           <h3 className="mt-1 font-serif text-3xl leading-tight">{level.title}</h3>
           <p className="mt-1 text-sm leading-5 text-cream/70">{copy[language].moonGardenBody}</p>
         </div>
-        <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full border border-gold/30 bg-night/70 shadow-gold">
-          <MoonMark className="h-10 w-10" />
+        <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full border border-gold/30 bg-night/70 shadow-gold">
+          <MoonMark className="h-9 w-9" />
         </div>
       </div>
       <div className="mt-4 h-2 overflow-hidden rounded-full bg-night/80">
@@ -3086,10 +3088,10 @@ function ProfilePage({
   onRestore: () => void;
   language: AppLanguage;
 }) {
-  const totalMinutes = profile?.totalPracticeMinutes ?? profile?.minutesListened ?? 0;
+  const weeklyMinutes = profile?.weeklyPracticeMinutes ?? 0;
   const currentMood = wellness?.mostCommonMoodLabel ? translateMoodLabel(wellness.mostCommonMoodLabel, language) : copy[language].notEnoughData;
   return (
-    <div className="space-y-3 pt-[calc(env(safe-area-inset-top,0px)+16px)] luna-fade">
+    <div className="space-y-3 pt-[calc(env(safe-area-inset-top,0px)+56px)] luna-fade">
       <div>
         <p className="text-xs uppercase tracking-[0.18em] text-gold">LUNA</p>
         <h2 className="font-serif text-3xl font-semibold">{copy[language].profile}</h2>
@@ -3108,17 +3110,21 @@ function ProfilePage({
           </div>
         </div>
         <MoonGardenCard profile={profile} language={language} />
-        <div className="mt-4 grid grid-cols-2 gap-2.5 text-sm">
-          <Stat label={copy[language].totalPractice} value={minutesCountLabel(totalMinutes, language)} />
+        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+          <Stat label={copy[language].thisWeek} value={minutesCountLabel(weeklyMinutes, language)} />
           <Stat label={copy[language].quietRhythm} value={quietDayCountLabel(profile?.currentStreak ?? 0, language)} />
           <Stat label={copy[language].weeklyCheckins} value={`${wellness?.weeklyCheckinCount ?? 0}/7`} />
           <Stat label={copy[language].currentMood} value={currentMood} />
         </div>
-        <InsightCard title={copy[language].weeklyInsightTitle} body={profileWeeklyInsight(profile, language)} />
+        <div className="mt-6">
+          <InsightCard title={copy[language].weeklyInsightTitle} body={profileWeeklyInsight(profile, language)} />
+        </div>
         {showAdminButton && (
-          <button onClick={onAdmin} className="mt-4 w-full rounded-[20px] bg-gold px-5 py-3.5 font-semibold text-night">
-            Admin
-          </button>
+          <div className="mt-6 border-t border-white/10 pt-3">
+            <button onClick={onAdmin} className="rounded-full border border-gold/25 bg-gold/10 px-4 py-2 text-xs font-semibold text-gold">
+              Admin
+            </button>
+          </div>
         )}
         <button onClick={onRestore} className="mt-4 w-full rounded-[20px] bg-gold px-5 py-3.5 font-semibold text-night">{copy[language].restore}</button>
         <button className="mt-2.5 w-full rounded-[20px] bg-surface px-5 py-3.5 text-sm text-lavender">{copy[language].logout}</button>
