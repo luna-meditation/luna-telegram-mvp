@@ -238,6 +238,33 @@ export async function upsertHistory(telegramId: number, input: HistoryInput) {
   return { completion_percent: completion, completed };
 }
 
+export async function recordBreathSession(telegramId: number, input: {
+  mode: string;
+  duration_seconds: number;
+  breath_count: number;
+}) {
+  const mode = ['calm', 'box', 'reset'].includes(input.mode) ? input.mode : 'calm';
+  const durationSeconds = Math.max(30, Math.min(600, Math.floor(input.duration_seconds || 60)));
+  const breathCount = Math.max(1, Math.min(120, Math.floor(input.breath_count || 1)));
+
+  const { error } = await supabase.from('breath_sessions').insert({
+    telegram_id: telegramId,
+    mode,
+    duration_seconds: durationSeconds,
+    breath_count: breathCount
+  });
+
+  if (error) throw error;
+  await updateStreak(telegramId);
+
+  return {
+    completed: true,
+    mode,
+    duration_seconds: durationSeconds,
+    breath_count: breathCount
+  };
+}
+
 export async function getHistory(telegramId: number) {
   const { data, error } = await supabase
     .from('history')
@@ -527,7 +554,7 @@ export async function getProfileStats(telegramId: number) {
 
   const [{ data: history, error: historyError }, { data: streak, error: streakError }, { data: payments, error: paymentsError }] =
     await Promise.all([
-      supabase.from('history').select('completion_percent, last_position, completed').eq('telegram_id', telegramId),
+      supabase.from('history').select('completion_percent, last_position, completed, last_played').eq('telegram_id', telegramId),
       supabase.from('streaks').select('*').eq('telegram_id', telegramId).maybeSingle(),
       supabase.from('payments').select('plan, created_at').eq('telegram_id', telegramId).order('created_at', { ascending: false })
     ]);
@@ -542,13 +569,37 @@ export async function getProfileStats(telegramId: number) {
     .order('completed_at', { ascending: false });
   if (progressError) throw progressError;
 
-  const completed = (history ?? []).filter((item) => item.completed).length + (legacyProgress?.length ?? 0);
-  const minutesListened = Math.round((history ?? []).reduce((sum, item) => sum + (item.last_position ?? 0), 0) / 60);
+  const { data: breathSessions, error: breathError } = await supabase
+    .from('breath_sessions')
+    .select('duration_seconds, completed_at')
+    .eq('telegram_id', telegramId)
+    .order('completed_at', { ascending: false });
+
+  const safeBreathSessions = breathError ? [] : (breathSessions ?? []);
+  if (breathError) {
+    console.warn('Breath session stats unavailable; continuing with meditation stats only.', breathError.message);
+  }
+
+  const completedMeditations = (history ?? []).filter((item) => item.completed).length + (legacyProgress?.length ?? 0);
+  const completedBreathSessions = safeBreathSessions.length;
+  const completed = completedMeditations + completedBreathSessions;
+  const meditationMinutes = Math.round((history ?? []).reduce((sum, item) => sum + (item.last_position ?? 0), 0) / 60);
+  const breathMinutes = Math.round(safeBreathSessions.reduce((sum, item) => sum + (item.duration_seconds ?? 0), 0) / 60);
+  const minutesListened = meditationMinutes + breathMinutes;
   const calmScore = Math.min(100, 42 + completed * 7);
+  const lastMeditationDate = (history ?? [])
+    .map((item) => item.last_played)
+    .filter(Boolean)
+    .sort()
+    .at(-1);
+  const lastBreathDate = safeBreathSessions[0]?.completed_at;
+  const lastPracticeDate = [lastMeditationDate, lastBreathDate].filter(Boolean).sort().at(-1) ?? null;
 
   return {
     user,
     completed,
+    completedMeditations,
+    completedBreathSessions,
     dayStreak: streak?.current_streak ?? 0,
     currentStreak: streak?.current_streak ?? 0,
     longestStreak: streak?.longest_streak ?? 0,
@@ -559,6 +610,11 @@ export async function getProfileStats(telegramId: number) {
       100: Boolean(streak?.reward_100)
     },
     minutesListened,
+    totalPracticeMinutes: minutesListened,
+    calmPoints: completed,
+    moonSeeds: completed,
+    streakDays: streak?.current_streak ?? 0,
+    lastPracticeDate,
     purchasedPlan: payments?.[0]?.plan ?? 'free',
     calmScore
   };

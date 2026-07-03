@@ -20,6 +20,7 @@ import {
   getUserAccess,
   getWellnessSummary,
   markPracticeComplete,
+  recordBreathSession,
   supabase,
   updateUserLanguage,
   updateMeditation,
@@ -226,6 +227,16 @@ app.post('/api/history', requireTelegramWebApp, async (req, res, next) => {
     const authReq = req as AuthenticatedRequest;
     res.json(await upsertHistory(authReq.telegramUser.telegram_id, req.body));
   } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/breath-sessions', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    res.json(await recordBreathSession(authReq.telegramUser.telegram_id, req.body));
+  } catch (error) {
+    console.error('Could not save breath session.', error);
     next(error);
   }
 });

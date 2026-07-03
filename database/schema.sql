@@ -132,6 +132,15 @@ create table if not exists public.daily_checkins (
   unique (telegram_id, local_date)
 );
 
+create table if not exists public.breath_sessions (
+  id uuid primary key default gen_random_uuid(),
+  telegram_id bigint not null references public.users(telegram_id) on delete cascade,
+  mode text not null check (mode in ('calm', 'box', 'reset')),
+  duration_seconds integer not null check (duration_seconds > 0),
+  breath_count integer not null default 1 check (breath_count > 0),
+  completed_at timestamptz not null default now()
+);
+
 create index if not exists idx_users_telegram_id on public.users(telegram_id);
 create index if not exists idx_payments_telegram_id on public.payments(telegram_id);
 create index if not exists idx_progress_telegram_id on public.progress(telegram_id);
@@ -143,6 +152,7 @@ create index if not exists idx_favorites_telegram_id on public.favorites(telegra
 create index if not exists idx_history_telegram_id on public.history(telegram_id);
 create index if not exists idx_history_last_played on public.history(last_played desc);
 create index if not exists idx_daily_checkins_telegram_date on public.daily_checkins(telegram_id, local_date desc);
+create index if not exists idx_breath_sessions_telegram_completed on public.breath_sessions(telegram_id, completed_at desc);
 
 create or replace function public.increment_meditation_play_count(meditation_uuid uuid)
 returns void
@@ -191,6 +201,7 @@ alter table public.favorites enable row level security;
 alter table public.history enable row level security;
 alter table public.streaks enable row level security;
 alter table public.daily_checkins enable row level security;
+alter table public.breath_sessions enable row level security;
 
 drop policy if exists "Practices are readable" on public.practices;
 drop policy if exists "Categories are readable" on public.categories;

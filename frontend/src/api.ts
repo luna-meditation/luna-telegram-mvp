@@ -89,10 +89,17 @@ export type ProfileStats = {
     lifetime_access?: boolean;
   };
   completed: number;
+  completedMeditations?: number;
+  completedBreathSessions?: number;
   dayStreak: number;
   currentStreak: number;
   longestStreak: number;
   minutesListened: number;
+  totalPracticeMinutes?: number;
+  calmPoints?: number;
+  moonSeeds?: number;
+  streakDays?: number;
+  lastPracticeDate?: string | null;
   purchasedPlan: string;
   calmScore: number;
   rewards: Record<7 | 14 | 30 | 100, boolean>;
@@ -261,6 +268,17 @@ export async function saveHistory(input: {
   completed?: boolean;
 }, initData?: string) {
   return request('/api/history', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  }, initData);
+}
+
+export async function saveBreathSession(input: {
+  mode: 'calm' | 'box' | 'reset';
+  duration_seconds: number;
+  breath_count: number;
+}, initData?: string) {
+  return request('/api/breath-sessions', {
     method: 'POST',
     body: JSON.stringify(input)
   }, initData);

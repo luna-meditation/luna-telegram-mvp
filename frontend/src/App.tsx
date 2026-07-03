@@ -37,6 +37,7 @@ import {
   getProfile,
   getWellnessSummary,
   saveDailyCheckin,
+  saveBreathSession,
   saveHistory,
   setFavorite,
   syncUser,
@@ -58,11 +59,12 @@ import {
   type WellnessSummary
 } from './api';
 
-type Page = 'home' | 'library' | 'favorites' | 'profile' | 'pricing' | 'player' | 'scenePlayer' | 'admin';
+type Page = 'home' | 'library' | 'favorites' | 'profile' | 'pricing' | 'player' | 'scenePlayer' | 'breathCircle' | 'admin';
 type Mood = 'Calm' | 'Stressed' | 'Tired' | 'Anxious' | 'Focused';
 type MoodChip = 'Sleep' | 'Calm' | 'Focus' | 'Anxiety' | 'Breath' | 'Energy';
 type LibraryMode = 'meditations' | 'scenes';
 type SceneAccess = 'free' | 'premium';
+type BreathMode = 'calm' | 'box' | 'reset';
 type SceneDefinition = {
   id: string;
   title: Record<AppLanguage, string>;
@@ -397,8 +399,15 @@ const copy = {
     paymentPending: 'Payment is pending. Telegram will confirm it shortly.',
     invoiceOpened: 'Invoice opened in Telegram. Complete payment there to unlock access.',
     paymentFailed: 'Payment could not open. Please try again, or open the bot and use /plans.',
-    sessionComplete: 'Session complete',
-    sessionCompleteBody: 'You added {time} of calm to your day.',
+    sessionComplete: 'Session Complete',
+    sessionCompleteBody: 'You gave yourself a moment of calm.',
+    sessionCompleteAlt: 'You returned to yourself for a few minutes.',
+    minutesPracticed: 'Minutes practiced',
+    plusCalmPoint: '+1 Calm Point',
+    plusMoonSeed: '+1 Moon Seed',
+    returnHome: 'Return Home',
+    continueListeningButton: 'Continue Listening',
+    viewProgress: 'View Progress',
     elapsedRemaining: '{elapsed} elapsed · {remaining} remaining',
     playbackSpeed: 'Playback speed',
     rewind15: 'Rewind 15 seconds',
@@ -418,6 +427,39 @@ const copy = {
     completedSessions: 'Completed sessions',
     currentStreak: 'Current streak',
     longestStreak: 'Longest streak',
+    moonGarden: 'Moon Garden',
+    moonGardenBody: 'Your calm grows with every practice.',
+    gardenLevel: 'Garden level',
+    moonSeeds: 'Moon Seeds',
+    calmPoints: 'Calm Points',
+    totalPracticeMinutes: 'Total practice minutes',
+    breathSessions: 'Breath sessions',
+    yourRhythm: 'Your rhythm is growing.',
+    returnedToday: 'You returned today.',
+    newBeginning: 'Every day is a new beginning.',
+    levelGentleRhythm: 'Gentle Rhythm',
+    levelQuietGarden: 'Quiet Garden',
+    levelMoonlitPath: 'Moonlit Path',
+    levelInnerSanctuary: 'Inner Sanctuary',
+    breathCircle: 'Breath Circle',
+    breathCircleSubtitle: 'Breathe with the moon',
+    breathCircleBody: 'A quiet visual guide for returning to yourself.',
+    startBreathing: 'Start breathing',
+    pauseBreathing: 'Pause',
+    calmBreath: 'Calm Breath',
+    calmBreathBody: 'Inhale 4 · Exhale 6',
+    boxBreath: 'Box Breath',
+    boxBreathBody: 'Inhale 4 · Hold 4 · Exhale 4 · Hold 4',
+    softReset: 'Soft Reset',
+    softResetBody: 'A natural slow visual guide',
+    inhale: 'Inhale',
+    hold: 'Hold',
+    exhale: 'Exhale',
+    breatheNaturally: 'Breathe naturally',
+    breathComplete: 'Breath practice complete',
+    calmBreathsComplete: 'You completed {count} calm breaths.',
+    minutesToReturn: 'You took {minutes} minutes to return.',
+    breathSaveError: 'Could not save your breath practice. Your moment still counts.',
     calmScore: 'Calm score',
     weeklyCheckins: 'Weekly check-ins',
     averageSleep: 'Average sleep',
@@ -587,7 +629,14 @@ const copy = {
     invoiceOpened: 'Счёт открыт в Telegram. Заверши оплату там, чтобы открыть доступ.',
     paymentFailed: 'Не удалось открыть оплату. Попробуй ещё раз или открой бота и используй /plans.',
     sessionComplete: 'Сессия завершена',
-    sessionCompleteBody: 'Ты добавил(а) {time} спокойствия в свой день.',
+    sessionCompleteBody: 'Ты подарил(а) себе момент спокойствия.',
+    sessionCompleteAlt: 'Ты вернулся(ась) к себе на несколько минут.',
+    minutesPracticed: 'Минут практики',
+    plusCalmPoint: '+1 балл спокойствия',
+    plusMoonSeed: '+1 лунное семя',
+    returnHome: 'На главную',
+    continueListeningButton: 'Продолжить слушать',
+    viewProgress: 'Посмотреть прогресс',
     elapsedRemaining: '{elapsed} прошло · {remaining} осталось',
     playbackSpeed: 'Скорость воспроизведения',
     rewind15: 'Назад на 15 секунд',
@@ -607,6 +656,39 @@ const copy = {
     completedSessions: 'Завершено сессий',
     currentStreak: 'Текущая серия',
     longestStreak: 'Лучшая серия',
+    moonGarden: 'Лунный сад',
+    moonGardenBody: 'Твоё спокойствие растёт с каждой практикой.',
+    gardenLevel: 'Уровень сада',
+    moonSeeds: 'Лунные семена',
+    calmPoints: 'Баллы спокойствия',
+    totalPracticeMinutes: 'Всего минут практики',
+    breathSessions: 'Дыхательные сессии',
+    yourRhythm: 'Твой ритм растёт.',
+    returnedToday: 'Сегодня ты вернулся(ась).',
+    newBeginning: 'Каждый день — новое начало.',
+    levelGentleRhythm: 'Мягкий ритм',
+    levelQuietGarden: 'Тихий сад',
+    levelMoonlitPath: 'Лунная тропа',
+    levelInnerSanctuary: 'Внутреннее убежище',
+    breathCircle: 'Круг дыхания',
+    breathCircleSubtitle: 'Дыши вместе с луной',
+    breathCircleBody: 'Спокойный визуальный ритм, чтобы вернуться к себе.',
+    startBreathing: 'Начать дыхание',
+    pauseBreathing: 'Пауза',
+    calmBreath: 'Спокойное дыхание',
+    calmBreathBody: 'Вдох 4 · Выдох 6',
+    boxBreath: 'Квадратное дыхание',
+    boxBreathBody: 'Вдох 4 · Пауза 4 · Выдох 4 · Пауза 4',
+    softReset: 'Мягкий сброс',
+    softResetBody: 'Естественный медленный визуальный ритм',
+    inhale: 'Вдох',
+    hold: 'Пауза',
+    exhale: 'Выдох',
+    breatheNaturally: 'Дыши естественно',
+    breathComplete: 'Дыхательная практика завершена',
+    calmBreathsComplete: 'Ты сделал(а) {count} спокойных вдохов.',
+    minutesToReturn: 'Ты взял(а) {minutes} мин, чтобы вернуться.',
+    breathSaveError: 'Не удалось сохранить дыхательную практику. Этот момент всё равно считается.',
     calmScore: 'Индекс спокойствия',
     weeklyCheckins: 'Чек-ины за неделю',
     averageSleep: 'Средний сон',
@@ -714,10 +796,10 @@ function text(language: AppLanguage, key: keyof typeof copy.en, replacements: Re
 }
 
 function streakLabel(count: number, language: AppLanguage) {
-  if (language === 'en') return count === 1 ? '1 day streak' : `${count} days streak`;
-  if (count === 1) return 'Серия: 1 день';
-  if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return `Серия: ${count} дня`;
-  return `Серия: ${count} дней`;
+  if (language === 'en') return count === 1 ? '1 quiet day' : `${count} quiet days with Luna`;
+  if (count === 1) return '1 тихий день';
+  if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return `${count} тихих дня с Luna`;
+  return `${count} тихих дней с Luna`;
 }
 
 function dayCountLabel(count: number, language: AppLanguage) {
@@ -725,6 +807,21 @@ function dayCountLabel(count: number, language: AppLanguage) {
   if (count === 1) return '1 день';
   if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return `${count} дня`;
   return `${count} дней`;
+}
+
+function moonGardenLevel(minutes: number, language: AppLanguage) {
+  if (minutes >= 150) return { level: 5, title: copy[language].levelInnerSanctuary, floor: 150, ceiling: 150, progress: 100 };
+  if (minutes >= 60) return { level: 4, title: copy[language].levelMoonlitPath, floor: 60, ceiling: 150, progress: ((minutes - 60) / 90) * 100 };
+  if (minutes >= 30) return { level: 3, title: copy[language].levelQuietGarden, floor: 30, ceiling: 60, progress: ((minutes - 30) / 30) * 100 };
+  if (minutes >= 10) return { level: 2, title: copy[language].levelGentleRhythm, floor: 10, ceiling: 30, progress: ((minutes - 10) / 20) * 100 };
+  return { level: 1, title: copy[language].levelFirstLight, floor: 0, ceiling: 10, progress: (minutes / 10) * 100 };
+}
+
+function rhythmMessage(profile: ProfileStats | null, language: AppLanguage) {
+  const lastPractice = profile?.lastPracticeDate ? new Date(profile.lastPracticeDate).toDateString() : '';
+  if (lastPractice === new Date().toDateString()) return copy[language].returnedToday;
+  if ((profile?.currentStreak ?? 0) > 1) return copy[language].yourRhythm;
+  return copy[language].newBeginning;
 }
 
 function normalizeSlug(value?: string | null) {
@@ -1377,6 +1474,21 @@ function App() {
     setPage('library');
   };
 
+  const openBreathCircle = () => {
+    telegram?.HapticFeedback?.impactOccurred('light');
+    setPage('breathCircle');
+  };
+
+  const completeBreathCircle = async (mode: BreathMode, durationSeconds: number, breathCount: number) => {
+    try {
+      await saveBreathSession({ mode, duration_seconds: durationSeconds, breath_count: breathCount }, initData);
+      await refreshAccount();
+    } catch (error) {
+      console.info('[Luna breath session save failed]', error instanceof Error ? error.message : 'Breath session save failed.');
+      throw error;
+    }
+  };
+
   useEffect(() => {
     if (!pendingMeditationId || openedStartMeditationId === pendingMeditationId || !decoratedMeditations.length) return;
 
@@ -1535,6 +1647,7 @@ function App() {
               setLibraryMode('scenes');
               setPage('library');
             }}
+            onBreath={openBreathCircle}
             language={language}
           />
         )}
@@ -1594,6 +1707,12 @@ function App() {
             onSave={(position, duration, completed) =>
               saveHistory({ meditation_id: selectedMeditation.id, last_position: position, duration, completed }, initData).then(refreshAccount)
             }
+            onHome={() => setPage('home')}
+            onProgress={() => setPage('profile')}
+            onContinue={() => {
+              if (nextMeditation && nextMeditation.id !== selectedMeditation.id) openMeditation(nextMeditation);
+              else setPage('library');
+            }}
             language={language}
           />
         )}
@@ -1609,6 +1728,16 @@ function App() {
             onToggle={() => void toggleScenePlayback()}
             onScene={openScene}
             onClose={closeScenePlayer}
+            language={language}
+          />
+        )}
+
+        {page === 'breathCircle' && (
+          <BreathCirclePage
+            hasPremium={access.hasPremium}
+            onComplete={completeBreathCircle}
+            onClose={() => setPage('home')}
+            onPremium={() => setPage('pricing')}
             language={language}
           />
         )}
@@ -1706,6 +1835,7 @@ function HomePage(props: {
   onOpen: (meditation: Meditation) => void;
   onLibrary: () => void;
   onScenes: () => void;
+  onBreath: () => void;
   language: AppLanguage;
 }) {
   const t = copy[props.language];
@@ -1760,6 +1890,14 @@ function HomePage(props: {
         <p className="text-xs uppercase tracking-[0.18em] text-gold">{t.scenesHomeTitle}</p>
         <h3 className="mt-1 font-serif text-2xl">{t.scenesTitle}</h3>
         <p className="mt-2 max-w-[250px] text-sm leading-5 text-cream/75">{t.scenesHomeBody}</p>
+      </button>
+      <button onClick={props.onBreath} className="relative w-full overflow-hidden rounded-[24px] border border-white/10 bg-ink p-4 text-left shadow-glow">
+        <div className="absolute right-4 top-4 grid h-12 w-12 place-items-center rounded-full border border-gold/30 bg-gold/10 text-gold">
+          <Sparkles size={22} />
+        </div>
+        <p className="text-xs uppercase tracking-[0.18em] text-gold">{t.categoryBreath}</p>
+        <h3 className="mt-1 font-serif text-2xl">{t.breathCircle}</h3>
+        <p className="mt-2 max-w-[250px] text-sm leading-5 text-cream/75">{t.breathCircleSubtitle}</p>
       </button>
       {props.explore.length >= 3 ? (
         <Rail title={t.moreToExplore} meditations={props.explore} onOpen={props.onOpen} language={props.language} />
@@ -2384,17 +2522,22 @@ function PlanCard(props: { title: string; price: string; features: string[]; act
   );
 }
 
-function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, language }: {
+function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, onHome, onProgress, onContinue, language }: {
   meditation: Meditation;
   nextMeditation?: Meditation;
   favorite: boolean;
   onFavorite: () => void;
   onSave: (position: number, duration: number, completed?: boolean) => Promise<unknown>;
+  onHome: () => void;
+  onProgress: () => void;
+  onContinue: () => void;
   language: AppLanguage;
 }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const hasInitializedPlaybackRef = useRef(false);
   const livePositionRef = useRef(0);
+  const savedCompletionRef = useRef(false);
+  const onSaveRef = useRef(onSave);
   const localized = getLocalizedMeditation(meditation, language);
   const nextLocalized = nextMeditation ? getLocalizedMeditation(nextMeditation, language) : null;
   const savedProgress = meditation.history?.last_position ?? 0;
@@ -2411,6 +2554,10 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, language
   const [speed, setSpeed] = useState(1);
   const [completed, setCompleted] = useState(false);
   const [shareMessage, setShareMessage] = useState('');
+
+  useEffect(() => {
+    onSaveRef.current = onSave;
+  }, [onSave]);
 
   const setLiveTime = (source: string, next: number, audio = audioRef.current) => {
     const safeDuration = Math.max(1, duration || meditation.duration || 1);
@@ -2479,6 +2626,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, language
     setDuration(meditation.duration);
     setLoading(true);
     setCompleted(false);
+    savedCompletionRef.current = false;
     setShareMessage('');
     console.log('[PLAYER_ISOLATION_LOAD]', {
       initialPosition,
@@ -2553,6 +2701,12 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, language
       setPosition(nextDuration);
       setAudioTime(nextDuration);
       livePositionRef.current = nextDuration;
+      if (!savedCompletionRef.current) {
+        savedCompletionRef.current = true;
+        void onSaveRef.current(nextDuration, nextDuration, true).catch((error) => {
+          console.info('[Luna meditation completion save failed]', error instanceof Error ? error.message : 'Completion save failed.');
+        });
+      }
     };
 
     audio.addEventListener('loadedmetadata', loadedMetadata);
@@ -2620,11 +2774,29 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, language
           {loading && <div className="absolute left-4 top-4 rounded-full bg-night/70 px-4 py-2 text-xs text-cream backdrop-blur">{copy[language].loadingAudio}</div>}
           {meditation.premium && <div className="absolute right-4 top-4 rounded-full bg-gold px-3 py-1 text-xs font-semibold text-night">{copy[language].premium}</div>}
           {completed && (
-            <div className="absolute inset-0 grid place-items-center bg-night/70 p-6 text-center backdrop-blur-sm">
-              <div>
+            <div className="absolute inset-0 grid place-items-center bg-night/80 p-5 text-center backdrop-blur-sm">
+              <div className="w-full rounded-[22px] border border-gold/25 bg-gradient-to-br from-gold/15 via-lavender/10 to-night/80 p-4 shadow-glow">
                 <CheckCircle className="mx-auto text-gold" size={42} />
                 <h3 className="mt-3 font-serif text-3xl">{copy[language].sessionComplete}</h3>
-                <p className="mt-2 text-sm text-cream/75">{text(language, 'sessionCompleteBody', { time: formatTime(duration) })}</p>
+                <p className="mt-2 text-sm text-cream/75">{copy[language].sessionCompleteBody}</p>
+                <div className="mt-4 grid grid-cols-2 gap-2 text-left text-xs">
+                  <span className="rounded-2xl bg-night/70 p-3 text-lavender">
+                    {copy[language].minutesPracticed}
+                    <strong className="mt-1 block text-lg text-cream">{Math.max(1, Math.round(duration / 60))}</strong>
+                  </span>
+                  <span className="rounded-2xl bg-night/70 p-3 text-lavender">
+                    {translateCategory(meditation.category, language)}
+                    <strong className="mt-1 block text-gold">{copy[language].plusCalmPoint}</strong>
+                  </span>
+                </div>
+                <p className="mt-3 rounded-full bg-gold/15 px-3 py-2 text-xs font-semibold text-gold">{copy[language].plusMoonSeed}</p>
+                <div className="mt-4 grid gap-2">
+                  <button onClick={onHome} className="rounded-[16px] bg-gold px-4 py-2.5 text-sm font-semibold text-night">{copy[language].returnHome}</button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button onClick={onContinue} className="rounded-[16px] bg-cream/10 px-3 py-2.5 text-xs text-cream">{copy[language].continueListeningButton}</button>
+                    <button onClick={onProgress} className="rounded-[16px] bg-cream/10 px-3 py-2.5 text-xs text-cream">{copy[language].viewProgress}</button>
+                  </div>
+                </div>
               </div>
             </div>
           )}
@@ -2705,6 +2877,194 @@ function IconButton({ label, children, onClick }: { label: string; children: Rea
   return <button aria-label={label} onClick={onClick} className="grid h-11 w-11 place-items-center rounded-full bg-surface text-cream">{children}</button>;
 }
 
+const breathModes: Array<{ id: BreathMode; key: 'calmBreath' | 'boxBreath' | 'softReset'; body: 'calmBreathBody' | 'boxBreathBody' | 'softResetBody' }> = [
+  { id: 'calm', key: 'calmBreath', body: 'calmBreathBody' },
+  { id: 'box', key: 'boxBreath', body: 'boxBreathBody' },
+  { id: 'reset', key: 'softReset', body: 'softResetBody' }
+];
+
+function breathPhase(mode: BreathMode, elapsed: number, language: AppLanguage) {
+  if (mode === 'box') {
+    const step = elapsed % 16;
+    if (step < 4) return { label: copy[language].inhale, scale: 1 + step / 4 * 0.34 };
+    if (step < 8) return { label: copy[language].hold, scale: 1.34 };
+    if (step < 12) return { label: copy[language].exhale, scale: 1.34 - (step - 8) / 4 * 0.34 };
+    return { label: copy[language].hold, scale: 1 };
+  }
+
+  if (mode === 'reset') {
+    const wave = (Math.sin((elapsed / 8) * Math.PI * 2 - Math.PI / 2) + 1) / 2;
+    return { label: copy[language].breatheNaturally, scale: 1 + wave * 0.26 };
+  }
+
+  const step = elapsed % 10;
+  if (step < 4) return { label: copy[language].inhale, scale: 1 + step / 4 * 0.34 };
+  return { label: copy[language].exhale, scale: 1.34 - (step - 4) / 6 * 0.34 };
+}
+
+function breathCycleLength(mode: BreathMode) {
+  if (mode === 'box') return 16;
+  if (mode === 'reset') return 8;
+  return 10;
+}
+
+function BreathCirclePage({
+  hasPremium,
+  onComplete,
+  onClose,
+  onPremium,
+  language
+}: {
+  hasPremium: boolean;
+  onComplete: (mode: BreathMode, durationSeconds: number, breathCount: number) => Promise<void>;
+  onClose: () => void;
+  onPremium: () => void;
+  language: AppLanguage;
+}) {
+  const [mode, setMode] = useState<BreathMode>('calm');
+  const [minutes, setMinutes] = useState(1);
+  const [running, setRunning] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+  const [done, setDone] = useState(false);
+  const [savingError, setSavingError] = useState('');
+  const startedAtRef = useRef<number | null>(null);
+  const durationSeconds = minutes * 60;
+  const phase = breathPhase(mode, elapsed, language);
+
+  useEffect(() => {
+    if (!running) return;
+    const timer = window.setInterval(() => {
+      const startedAt = startedAtRef.current ?? Date.now();
+      const nextElapsed = Math.min(durationSeconds, (Date.now() - startedAt) / 1000);
+      setElapsed(nextElapsed);
+      if (nextElapsed >= durationSeconds) {
+        window.clearInterval(timer);
+        setRunning(false);
+        setDone(true);
+        const completedBreaths = Math.max(1, Math.floor(durationSeconds / breathCycleLength(mode)));
+        onComplete(mode, durationSeconds, completedBreaths).catch(() => setSavingError(copy[language].breathSaveError));
+      }
+    }, 180);
+    return () => window.clearInterval(timer);
+  }, [durationSeconds, language, mode, onComplete, running]);
+
+  const start = () => {
+    if (minutes > 1 && !hasPremium) {
+      onPremium();
+      return;
+    }
+    setSavingError('');
+    setDone(false);
+    setElapsed(0);
+    startedAtRef.current = Date.now();
+    setRunning(true);
+  };
+
+  return (
+    <div className="space-y-4 luna-fade">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].categoryBreath}</p>
+          <h2 className="font-serif text-3xl font-semibold">{copy[language].breathCircle}</h2>
+          <p className="mt-1 text-sm text-lavender">{copy[language].breathCircleSubtitle}</p>
+        </div>
+        <button onClick={onClose} className="grid h-11 w-11 place-items-center rounded-full bg-surface text-cream" aria-label={copy[language].close}>
+          <X size={18} />
+        </button>
+      </div>
+
+      <section className="rounded-[28px] border border-gold/20 bg-gradient-to-br from-gold/10 via-lavender/10 to-ink p-5 text-center shadow-glow">
+        <div className="mx-auto grid aspect-square w-[240px] max-w-full place-items-center rounded-full border border-gold/20 bg-night/70">
+          <div
+            className="grid h-36 w-36 place-items-center rounded-full border border-gold/40 bg-gradient-to-br from-gold/35 via-lavender/30 to-night text-center shadow-glow transition-transform duration-700 ease-in-out"
+            style={{ transform: `scale(${phase.scale})` }}
+          >
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-gold">{phase.label}</p>
+              <p className="mt-1 font-serif text-2xl">{formatTime(Math.max(0, durationSeconds - elapsed))}</p>
+            </div>
+          </div>
+        </div>
+        <p className="mt-5 text-sm leading-6 text-cream/75">{copy[language].breathCircleBody}</p>
+      </section>
+
+      <section className="space-y-3">
+        <div className="grid gap-2">
+          {breathModes.map((item) => (
+            <button key={item.id} onClick={() => setMode(item.id)} disabled={running} className={`rounded-[20px] border p-3 text-left ${mode === item.id ? 'border-gold bg-gold/15' : 'border-white/10 bg-surface'}`}>
+              <strong className="block text-cream">{copy[language][item.key]}</strong>
+              <span className="mt-1 block text-xs text-lavender">{copy[language][item.body]}</span>
+            </button>
+          ))}
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {[1, 3, 5].map((item) => (
+            <button key={item} onClick={() => setMinutes(item)} disabled={running} className={`min-h-[48px] rounded-[18px] text-sm font-semibold ${minutes === item ? 'bg-gold text-night' : 'bg-surface text-cream'}`}>
+              {item} {language === 'en' ? 'min' : 'мин'} {item > 1 && !hasPremium ? '⭐' : ''}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {done ? (
+        <div className="rounded-[24px] border border-gold/20 bg-gold/10 p-4 text-center">
+          <CheckCircle className="mx-auto text-gold" />
+          <h3 className="mt-2 font-serif text-2xl">{copy[language].breathComplete}</h3>
+          <p className="mt-2 text-sm text-cream/75">
+            {mode === 'reset'
+              ? text(language, 'minutesToReturn', { minutes })
+              : text(language, 'calmBreathsComplete', { count: Math.max(1, Math.floor(durationSeconds / breathCycleLength(mode))) })}
+          </p>
+          {savingError && <p className="mt-2 text-xs text-gold">{savingError}</p>}
+        </div>
+      ) : null}
+
+      <button onClick={running ? () => setRunning(false) : start} className="w-full rounded-[20px] bg-gold px-5 py-4 font-semibold text-night shadow-glow">
+        {running ? copy[language].pauseBreathing : copy[language].startBreathing}
+      </button>
+    </div>
+  );
+}
+
+function MoonGardenCard({ profile, language }: { profile: ProfileStats | null; language: AppLanguage }) {
+  const minutes = profile?.totalPracticeMinutes ?? profile?.minutesListened ?? 0;
+  const level = moonGardenLevel(minutes, language);
+  const progress = Math.max(0, Math.min(100, level.progress));
+
+  return (
+    <section className="mt-4 overflow-hidden rounded-[24px] border border-gold/20 bg-gradient-to-br from-gold/15 via-lavender/10 to-night p-4 shadow-glow">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].moonGarden}</p>
+          <h3 className="mt-1 font-serif text-2xl">{level.title}</h3>
+          <p className="mt-1 text-sm leading-5 text-cream/70">{copy[language].moonGardenBody}</p>
+        </div>
+        <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full border border-gold/30 bg-night/70">
+          <MoonMark className="h-9 w-9" />
+        </div>
+      </div>
+      <div className="mt-4 h-2 overflow-hidden rounded-full bg-night/80">
+        <div className="h-full rounded-full bg-gold transition-all duration-500" style={{ width: `${progress}%` }} />
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
+        <span className="rounded-2xl bg-night/70 p-3 text-lavender">
+          {copy[language].moonSeeds}
+          <strong className="mt-1 block text-lg text-cream">{profile?.moonSeeds ?? profile?.completed ?? 0}</strong>
+        </span>
+        <span className="rounded-2xl bg-night/70 p-3 text-lavender">
+          {copy[language].totalPracticeMinutes}
+          <strong className="mt-1 block text-lg text-cream">{minutes}</strong>
+        </span>
+        <span className="rounded-2xl bg-night/70 p-3 text-lavender">
+          {copy[language].calmPoints}
+          <strong className="mt-1 block text-lg text-cream">{profile?.calmPoints ?? profile?.completed ?? 0}</strong>
+        </span>
+      </div>
+      <p className="mt-3 text-xs text-gold">{rhythmMessage(profile, language)}</p>
+    </section>
+  );
+}
+
 function ProfilePage({
   profile,
   access,
@@ -2742,6 +3102,7 @@ function ProfilePage({
             <p className="text-sm text-lavender">{username ? `@${username}` : copy[language].member}</p>
           </div>
         </div>
+        <MoonGardenCard profile={profile} language={language} />
         {level && (
           <div className="mt-4 rounded-[20px] border border-gold/20 bg-gold/10 p-4">
             <div className="flex items-center justify-between">
@@ -2763,8 +3124,9 @@ function ProfilePage({
           <Stat label={copy[language].activeUntil} value={activeUntil} />
           <Stat label={copy[language].minutesMeditated} value={String(profile?.minutesListened ?? 0)} />
           <Stat label={copy[language].completedSessions} value={String(profile?.completed ?? 0)} />
-          <Stat label={copy[language].currentStreak} value={dayCountLabel(profile?.currentStreak ?? 0, language)} />
+          <Stat label={copy[language].currentStreak} value={(profile?.currentStreak ?? 0) > 0 ? streakLabel(profile?.currentStreak ?? 0, language) : copy[language].newBeginning} />
           <Stat label={copy[language].longestStreak} value={dayCountLabel(profile?.longestStreak ?? 0, language)} />
+          <Stat label={copy[language].breathSessions} value={String(profile?.completedBreathSessions ?? 0)} />
           <Stat label={copy[language].calmScore} value={`${profile?.calmScore ?? 0}%`} />
           <Stat label={copy[language].weeklyCheckins} value={`${wellness?.weeklyCheckinCount ?? 0}/7`} />
           <Stat label={copy[language].averageSleep} value={wellness?.averageSleepLabel ? translateSleepLabel(wellness.averageSleepLabel, language) : copy[language].noCheckinsYet} />
