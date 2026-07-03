@@ -68,6 +68,7 @@ const premiumPrices = {
 };
 const libraryCacheKey = 'luna.library.v1';
 const languageStorageKey = 'luna.language.v1';
+const playerFixVersion = 'pause-seek-isolation-v5';
 type LibraryCache = {
   categories: Category[];
   meditations: Meditation[];
@@ -1889,7 +1890,7 @@ function PlanCard(props: { title: string; price: string; features: string[]; act
   );
 }
 
-function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, language }: {
+function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, language }: {
   meditation: Meditation;
   nextMeditation?: Meditation;
   favorite: boolean;
@@ -1898,25 +1899,100 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
   language: AppLanguage;
 }) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const hasInitializedPlaybackRef = useRef(false);
+  const livePositionRef = useRef(0);
   const localized = getLocalizedMeditation(meditation, language);
   const nextLocalized = nextMeditation ? getLocalizedMeditation(nextMeditation, language) : null;
+  const savedProgress = meditation.history?.last_position ?? 0;
+  const initialPosition = meditation.history?.completed ||
+    Number(meditation.history?.completion_percent ?? 0) >= 95 ||
+    savedProgress >= Math.max(1, meditation.duration || 1) * 0.95
+    ? 0
+    : savedProgress;
   const [playing, setPlaying] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [position, setPosition] = useState(meditation.history?.last_position ?? 0);
+  const [position, setPosition] = useState(initialPosition);
+  const [audioTime, setAudioTime] = useState(initialPosition);
   const [duration, setDuration] = useState(meditation.duration);
   const [speed, setSpeed] = useState(1);
   const [completed, setCompleted] = useState(false);
   const [shareMessage, setShareMessage] = useState('');
 
+  const setLiveTime = (source: string, next: number, audio = audioRef.current) => {
+    const safeDuration = Math.max(1, duration || meditation.duration || 1);
+    const safeNext = Math.max(0, Math.min(next, safeDuration));
+    console.log('[PLAYER_TIME_SET]', {
+      source,
+      newTime: safeNext,
+      oldCurrentTime: position,
+      audioTime: audio?.currentTime ?? null,
+      savedProgress,
+      livePosition: livePositionRef.current,
+      meditationId: meditation.id,
+      version: playerFixVersion,
+      stack: new Error().stack
+    });
+    livePositionRef.current = safeNext;
+    setPosition(safeNext);
+    setAudioTime(audio?.currentTime ?? safeNext);
+  };
+
+  const seekTo = (next: number) => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    hasInitializedPlaybackRef.current = true;
+    audio.currentTime = next;
+    setLiveTime('seekTo', next, audio);
+    setAudioTime(audio.currentTime);
+  };
+
+  const pausePlayback = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const t = audio.currentTime;
+    console.log('[PLAYER_PAUSE_CLICK]', {
+      beforeAudioTime: t,
+      beforeStateTime: position,
+      savedProgress,
+      livePosition: livePositionRef.current,
+      meditationId: meditation.id,
+      version: playerFixVersion
+    });
+
+    audio.pause();
+    setPlaying(false);
+    setLiveTime('pausePlayback:isolation-no-save', t, audio);
+    setAudioTime(audio.currentTime);
+
+    console.log('[PLAYER_AFTER_PAUSE]', {
+      afterAudioTime: audio.currentTime,
+      afterStateTime: t,
+      savedProgress,
+      livePosition: livePositionRef.current,
+      meditationId: meditation.id,
+      version: playerFixVersion
+    });
+  };
+
   useEffect(() => {
     audioRef.current?.pause();
+    hasInitializedPlaybackRef.current = false;
+    livePositionRef.current = initialPosition;
     setPlaying(false);
-    setPosition(meditation.history?.last_position ?? 0);
+    setPosition(initialPosition);
+    setAudioTime(initialPosition);
     setDuration(meditation.duration);
     setLoading(true);
     setCompleted(false);
     setShareMessage('');
-  }, [language, localized.audioUrl, meditation.duration, meditation.history?.last_position, meditation.id]);
+    console.log('[PLAYER_ISOLATION_LOAD]', {
+      initialPosition,
+      savedProgress,
+      meditationId: meditation.id,
+      version: playerFixVersion
+    });
+  }, [language, localized.audioUrl, meditation.duration, meditation.id]);
 
   useEffect(() => {
     if (nextLocalized?.audioUrl) {
@@ -1936,12 +2012,27 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
     const audioDuration = () => (Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : meditation.duration);
     const syncProgress = () => {
       const nextDuration = audioDuration();
+      const nextPosition = Math.min(audio.currentTime, nextDuration);
       setDuration(nextDuration);
-      setPosition(Math.min(audio.currentTime, nextDuration));
+      livePositionRef.current = nextPosition;
+      setPosition(nextPosition);
+      setAudioTime(audio.currentTime);
     };
     const loadedMetadata = () => {
       audio.playbackRate = speed;
-      if (meditation.history?.last_position) audio.currentTime = meditation.history.last_position;
+      if (!hasInitializedPlaybackRef.current) {
+        audio.currentTime = initialPosition;
+        livePositionRef.current = initialPosition;
+        setPosition(initialPosition);
+        setAudioTime(audio.currentTime);
+        hasInitializedPlaybackRef.current = true;
+        console.log('[PLAYER_METADATA_INIT]', {
+          initialPosition,
+          savedProgress,
+          meditationId: meditation.id,
+          version: playerFixVersion
+        });
+      }
       setLoading(false);
       syncProgress();
     };
@@ -1951,8 +2042,14 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
     };
     const paused = () => {
       setPlaying(false);
-      syncProgress();
-      void onSave(audio.currentTime, audioDuration(), false);
+      console.log('[PLAYER_NATIVE_PAUSE_ISOLATED]', {
+        audioTime: audio.currentTime,
+        stateTime: position,
+        livePosition: livePositionRef.current,
+        savedProgress,
+        meditationId: meditation.id,
+        version: playerFixVersion
+      });
     };
     const ended = () => {
       const nextDuration = audioDuration();
@@ -1960,7 +2057,8 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
       setCompleted(true);
       setDuration(nextDuration);
       setPosition(nextDuration);
-      void onSave(nextDuration, nextDuration, true);
+      setAudioTime(nextDuration);
+      livePositionRef.current = nextDuration;
     };
 
     audio.addEventListener('loadedmetadata', loadedMetadata);
@@ -1968,17 +2066,17 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
     audio.addEventListener('play', played);
     audio.addEventListener('pause', paused);
     audio.addEventListener('ended', ended);
-    audio.load();
+    if (audio.readyState >= 1) loadedMetadata();
 
     return () => {
-      audio.pause();
       audio.removeEventListener('loadedmetadata', loadedMetadata);
       audio.removeEventListener('timeupdate', syncProgress);
       audio.removeEventListener('play', played);
       audio.removeEventListener('pause', paused);
       audio.removeEventListener('ended', ended);
+      audio.pause();
     };
-  }, [localized.audioUrl, meditation.duration, meditation.history?.last_position, meditation.id, onSave]);
+  }, [localized.audioUrl, meditation.duration, meditation.id]);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = speed;
@@ -2048,8 +2146,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
 
         <input className="mt-5 h-8 w-full accent-gold" type="range" min={0} max={duration || 1} value={position} onChange={(event) => {
           const next = Number(event.target.value);
-          setPosition(next);
-          if (audioRef.current) audioRef.current.currentTime = next;
+          seekTo(next);
         }} />
         <div className="mt-1 flex justify-between text-xs text-lavender">
           <span>{formatTime(position)}</span>
@@ -2058,18 +2155,27 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
 
         <div className="mt-4 flex items-center justify-center gap-5">
           <IconButton label={copy[language].rewind15} onClick={() => {
-            if (audioRef.current) audioRef.current.currentTime = Math.max(0, audioRef.current.currentTime - 15);
+            seekTo((audioRef.current?.currentTime ?? position) - 15);
           }}><SkipBack /></IconButton>
           <button onClick={() => {
             if (!audioRef.current) return;
             if (audioRef.current.paused) void audioRef.current.play();
-            else audioRef.current.pause();
+            else pausePlayback();
           }} className="grid h-16 w-16 place-items-center rounded-full bg-gold text-night shadow-glow hover:brightness-110">
             {playing ? <Pause /> : <Play />}
           </button>
           <IconButton label={copy[language].forward15} onClick={() => {
-            if (audioRef.current) audioRef.current.currentTime = Math.min(duration, audioRef.current.currentTime + 15);
+            seekTo((audioRef.current?.currentTime ?? position) + 15);
           }}><SkipForward /></IconButton>
+        </div>
+
+        <div className="mt-4 rounded-[18px] border border-gold/20 bg-night/70 p-3 text-left text-[11px] leading-5 text-lavender">
+          <p className="font-semibold text-gold">Player isolation debug</p>
+          <p>version: {playerFixVersion}</p>
+          <p>currentTime state: {position.toFixed(2)}</p>
+          <p>audio.currentTime: {audioTime.toFixed(2)}</p>
+          <p>savedProgress: {Number(savedProgress).toFixed(2)}</p>
+          <p>livePositionRef: {livePositionRef.current.toFixed(2)}</p>
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-2">
@@ -2090,7 +2196,6 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
           </select>
         </div>
         <audio
-          key={`${meditation.id}-${language}-${localized.audioUrl}`}
           ref={audioRef}
           src={localized.audioUrl}
           preload="auto"
