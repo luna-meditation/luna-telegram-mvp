@@ -48,6 +48,19 @@ export type HistoryInput = {
   completed?: boolean;
 };
 
+const moonGardenElements = [
+  { id: 'moon-flower', cost: 2 },
+  { id: 'calm-stone', cost: 3 },
+  { id: 'water-ripple', cost: 5 },
+  { id: 'golden-lantern', cost: 8 },
+  { id: 'night-lily', cost: 10 },
+  { id: 'crescent-tree', cost: 12 },
+  { id: 'star-path', cost: 20 },
+  { id: 'breathing-pond', cost: 25 }
+];
+
+const moonGardenElementCost = new Map(moonGardenElements.map((element) => [element.id, element.cost]));
+
 export type DailyCheckinInput = {
   sleep_range: 'less_than_4' | '4_6' | '6_8' | '8_plus';
   mood: 'calm' | 'stressed' | 'tired' | 'anxious' | 'focused' | 'low_energy';
@@ -233,7 +246,10 @@ export async function upsertHistory(telegramId: number, input: HistoryInput) {
     }
   });
 
-  if (completed) await updateStreak(telegramId);
+  if (completed) {
+    await awardMoonSeeds(telegramId, 1);
+    await updateStreak(telegramId);
+  }
 
   return { completion_percent: completion, completed };
 }
@@ -255,6 +271,7 @@ export async function recordBreathSession(telegramId: number, input: {
   });
 
   if (error) throw error;
+  await awardMoonSeeds(telegramId, 1);
   await updateStreak(telegramId);
 
   return {
@@ -262,6 +279,23 @@ export async function recordBreathSession(telegramId: number, input: {
     mode,
     duration_seconds: durationSeconds,
     breath_count: breathCount
+  };
+}
+
+export async function recordSceneMoonSeed(telegramId: number, input: {
+  scene_id?: string;
+  duration_seconds: number;
+}) {
+  const durationSeconds = Math.max(0, Math.floor(input.duration_seconds || 0));
+  if (durationSeconds < 300) {
+    return { awarded: false, moonSeeds: 0 };
+  }
+
+  await awardMoonSeeds(telegramId, 1);
+  return {
+    awarded: true,
+    moonSeeds: 1,
+    scene_id: input.scene_id ?? null
   };
 }
 
@@ -470,6 +504,9 @@ export async function updateStreak(telegramId: number) {
     .single();
 
   if (error) throw error;
+  if (nextStreak >= 7 && !current?.reward_7) {
+    await awardMoonSeeds(telegramId, 5);
+  }
   return data;
 }
 
@@ -544,6 +581,126 @@ export async function markPracticeComplete(input: {
   if (error) throw error;
 }
 
+function plantedElementIds(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string' && moonGardenElementCost.has(item))
+    : [];
+}
+
+function plantedElementsCost(ids: string[]) {
+  return ids.reduce((sum, id) => sum + (moonGardenElementCost.get(id) ?? 0), 0);
+}
+
+function earnedMoonSeeds(input: {
+  completedMeditations: number;
+  completedBreathSessions: number;
+  currentStreak: number;
+  longestStreak: number;
+}) {
+  const streakBonus = Math.max(input.currentStreak, input.longestStreak) >= 7 ? 5 : 0;
+  return input.completedMeditations + input.completedBreathSessions + streakBonus;
+}
+
+async function awardMoonSeeds(telegramId: number, amount: number) {
+  if (amount <= 0) return;
+
+  const { data: existing, error: readError } = await supabase
+    .from('moon_gardens')
+    .select('*')
+    .eq('telegram_id', telegramId)
+    .maybeSingle();
+
+  if (readError) {
+    console.warn('Moon Seeds could not be awarded yet; Moon Garden table may be pending migration.', readError.message);
+    return;
+  }
+
+  const plantedGardenElements = plantedElementIds(existing?.planted_garden_elements);
+  const moonSeedsEarnedTotal = Number(existing?.moon_seeds_earned_total ?? 0) + amount;
+  const moonSeedsAvailable = Math.max(0, moonSeedsEarnedTotal - plantedElementsCost(plantedGardenElements));
+
+  const { error } = await supabase
+    .from('moon_gardens')
+    .upsert(
+      {
+        telegram_id: telegramId,
+        moon_seeds_available: moonSeedsAvailable,
+        moon_seeds_earned_total: moonSeedsEarnedTotal,
+        planted_garden_elements: plantedGardenElements,
+        last_moon_seed_earned_at: new Date().toISOString(),
+        garden_level: existing?.garden_level ?? 1,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'telegram_id' }
+    );
+
+  if (error) {
+    console.warn('Moon Seeds award could not be saved.', error.message);
+  }
+}
+
+async function getMoonGardenState(telegramId: number, input: {
+  completedMeditations: number;
+  completedBreathSessions: number;
+  currentStreak: number;
+  longestStreak: number;
+  gardenLevel: number;
+}) {
+  const earnedFromPractice = earnedMoonSeeds(input);
+  const { data: existing, error } = await supabase
+    .from('moon_gardens')
+    .select('*')
+    .eq('telegram_id', telegramId)
+    .maybeSingle();
+
+  if (error) {
+    console.warn('Moon Garden state unavailable; using safe fallback.', error.message);
+    return {
+      moonSeedsAvailable: earnedFromPractice,
+      moonSeedsEarnedTotal: earnedFromPractice,
+      plantedGardenElements: [] as string[],
+      plantedElementsCount: 0,
+      lastMoonSeedEarnedAt: null as string | null,
+      gardenLevel: input.gardenLevel
+    };
+  }
+
+  const plantedGardenElements = plantedElementIds(existing?.planted_garden_elements);
+  const moonSeedsEarnedTotal = Math.max(Number(existing?.moon_seeds_earned_total ?? 0), earnedFromPractice);
+  const moonSeedsAvailable = Math.max(0, moonSeedsEarnedTotal - plantedElementsCost(plantedGardenElements));
+  const lastMoonSeedEarnedAt =
+    moonSeedsEarnedTotal > Number(existing?.moon_seeds_earned_total ?? 0)
+      ? new Date().toISOString()
+      : existing?.last_moon_seed_earned_at ?? null;
+
+  const payload = {
+    telegram_id: telegramId,
+    moon_seeds_available: moonSeedsAvailable,
+    moon_seeds_earned_total: moonSeedsEarnedTotal,
+    planted_garden_elements: plantedGardenElements,
+    last_moon_seed_earned_at: lastMoonSeedEarnedAt,
+    garden_level: input.gardenLevel,
+    updated_at: new Date().toISOString()
+  };
+
+  const { error: upsertError } = await supabase
+    .from('moon_gardens')
+    .upsert(payload, { onConflict: 'telegram_id' });
+
+  if (upsertError) {
+    console.warn('Moon Garden state could not be synced; using computed state.', upsertError.message);
+  }
+
+  return {
+    moonSeedsAvailable,
+    moonSeedsEarnedTotal,
+    plantedGardenElements,
+    plantedElementsCount: plantedGardenElements.length,
+    lastMoonSeedEarnedAt,
+    gardenLevel: input.gardenLevel
+  };
+}
+
 export async function getProfileStats(telegramId: number) {
   const { data: user, error: userError } = await supabase
     .from('users')
@@ -602,6 +759,14 @@ export async function getProfileStats(telegramId: number) {
     .at(-1);
   const lastBreathDate = safeBreathSessions[0]?.completed_at;
   const lastPracticeDate = [lastMeditationDate, lastBreathDate].filter(Boolean).sort().at(-1) ?? null;
+  const gardenLevel = minutesListened >= 150 ? 5 : minutesListened >= 60 ? 4 : minutesListened >= 30 ? 3 : minutesListened >= 10 ? 2 : 1;
+  const moonGarden = await getMoonGardenState(telegramId, {
+    completedMeditations,
+    completedBreathSessions,
+    currentStreak: streak?.current_streak ?? 0,
+    longestStreak: streak?.longest_streak ?? 0,
+    gardenLevel
+  });
 
   return {
     user,
@@ -621,11 +786,70 @@ export async function getProfileStats(telegramId: number) {
     weeklyPracticeMinutes,
     totalPracticeMinutes: minutesListened,
     calmPoints: completed,
-    moonSeeds: completed,
+    moonSeeds: moonGarden.moonSeedsAvailable,
+    moonSeedsAvailable: moonGarden.moonSeedsAvailable,
+    moonSeedsEarnedTotal: moonGarden.moonSeedsEarnedTotal,
+    plantedGardenElements: moonGarden.plantedGardenElements,
+    plantedElementsCount: moonGarden.plantedElementsCount,
+    lastMoonSeedEarnedAt: moonGarden.lastMoonSeedEarnedAt,
+    gardenLevel: moonGarden.gardenLevel,
     streakDays: streak?.current_streak ?? 0,
     lastPracticeDate,
     purchasedPlan: payments?.[0]?.plan ?? 'free',
     calmScore
+  };
+}
+
+export async function plantMoonGardenElement(telegramId: number, elementId: string) {
+  const element = moonGardenElements.find((item) => item.id === elementId);
+  if (!element) {
+    return { error: 'Unknown garden element.' as const, status: 400 };
+  }
+
+  const profile = await getProfileStats(telegramId);
+  const planted = plantedElementIds(profile.plantedGardenElements);
+
+  if (planted.includes(element.id)) {
+    return { error: 'Garden element already planted.' as const, status: 409, profile };
+  }
+
+  const availableSeeds = Number(profile.moonSeedsAvailable ?? profile.moonSeeds ?? 0);
+  if (availableSeeds < element.cost) {
+    return {
+      error: 'Not enough Moon Seeds.' as const,
+      status: 400,
+      needed: element.cost - availableSeeds,
+      profile
+    };
+  }
+
+  const nextPlanted = [...planted, element.id];
+  const moonSeedsEarnedTotal = Number(profile.moonSeedsEarnedTotal ?? 0);
+  const moonSeedsAvailable = Math.max(0, moonSeedsEarnedTotal - plantedElementsCost(nextPlanted));
+
+  const { error } = await supabase
+    .from('moon_gardens')
+    .upsert(
+      {
+        telegram_id: telegramId,
+        moon_seeds_available: moonSeedsAvailable,
+        moon_seeds_earned_total: moonSeedsEarnedTotal,
+        planted_garden_elements: nextPlanted,
+        last_moon_seed_earned_at: profile.lastMoonSeedEarnedAt ?? null,
+        garden_level: profile.gardenLevel ?? 1,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'telegram_id' }
+    );
+
+  if (error) throw error;
+
+  return {
+    planted: true,
+    elementId: element.id,
+    moonSeedsAvailable,
+    plantedGardenElements: nextPlanted,
+    profile: await getProfileStats(telegramId)
   };
 }
 

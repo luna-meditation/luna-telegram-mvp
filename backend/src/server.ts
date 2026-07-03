@@ -20,7 +20,9 @@ import {
   getUserAccess,
   getWellnessSummary,
   markPracticeComplete,
+  plantMoonGardenElement,
   recordBreathSession,
+  recordSceneMoonSeed,
   supabase,
   updateUserLanguage,
   updateMeditation,
@@ -241,6 +243,15 @@ app.post('/api/breath-sessions', requireTelegramWebApp, async (req, res, next) =
   }
 });
 
+app.post('/api/scene-sessions/moon-seed', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    res.json(await recordSceneMoonSeed(authReq.telegramUser.telegram_id, req.body));
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.post('/api/payments/invoice', requireTelegramWebApp, async (req, res, next) => {
   try {
     const authReq = req as AuthenticatedRequest;
@@ -345,6 +356,20 @@ app.get('/api/profile/me', requireTelegramWebApp, async (req, res, next) => {
   try {
     const authReq = req as AuthenticatedRequest;
     res.json(await getProfileStats(authReq.telegramUser.telegram_id));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/moon-garden/plant', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const result = await plantMoonGardenElement(authReq.telegramUser.telegram_id, String(req.body?.elementId ?? ''));
+    if ('error' in result) {
+      res.status(result.status ?? 400).json(result);
+      return;
+    }
+    res.json(result);
   } catch (error) {
     next(error);
   }

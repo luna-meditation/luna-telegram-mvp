@@ -83,6 +83,18 @@ create table if not exists public.breath_sessions (
   completed_at timestamptz not null default now()
 );
 
+create table if not exists public.moon_gardens (
+  id uuid primary key default gen_random_uuid(),
+  telegram_id bigint not null unique references public.users(telegram_id) on delete cascade,
+  moon_seeds_available integer not null default 0 check (moon_seeds_available >= 0),
+  moon_seeds_earned_total integer not null default 0 check (moon_seeds_earned_total >= 0),
+  planted_garden_elements jsonb not null default '[]'::jsonb,
+  last_moon_seed_earned_at timestamptz,
+  garden_level integer not null default 1 check (garden_level >= 1),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create index if not exists idx_meditations_category on public.meditations(category);
 create index if not exists idx_meditations_mood on public.meditations(mood);
 create index if not exists idx_meditations_created_at on public.meditations(created_at desc);
@@ -91,6 +103,7 @@ create index if not exists idx_favorites_telegram_id on public.favorites(telegra
 create index if not exists idx_history_telegram_id on public.history(telegram_id);
 create index if not exists idx_history_last_played on public.history(last_played desc);
 create index if not exists idx_breath_sessions_telegram_completed on public.breath_sessions(telegram_id, completed_at desc);
+create index if not exists idx_moon_gardens_telegram_id on public.moon_gardens(telegram_id);
 
 create or replace function public.increment_meditation_play_count(meditation_uuid uuid)
 returns void
@@ -135,6 +148,7 @@ alter table public.favorites enable row level security;
 alter table public.history enable row level security;
 alter table public.streaks enable row level security;
 alter table public.breath_sessions enable row level security;
+alter table public.moon_gardens enable row level security;
 
 drop policy if exists "Categories are readable" on public.categories;
 drop policy if exists "Meditations are readable" on public.meditations;

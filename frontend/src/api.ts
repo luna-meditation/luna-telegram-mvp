@@ -99,6 +99,12 @@ export type ProfileStats = {
   totalPracticeMinutes?: number;
   calmPoints?: number;
   moonSeeds?: number;
+  moonSeedsAvailable?: number;
+  moonSeedsEarnedTotal?: number;
+  plantedGardenElements?: string[];
+  plantedElementsCount?: number;
+  lastMoonSeedEarnedAt?: string | null;
+  gardenLevel?: number;
   streakDays?: number;
   lastPracticeDate?: string | null;
   purchasedPlan: string;
@@ -280,6 +286,29 @@ export async function saveBreathSession(input: {
   breath_count: number;
 }, initData?: string) {
   return request('/api/breath-sessions', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  }, initData);
+}
+
+export async function plantMoonGardenElement(elementId: string, initData?: string) {
+  return request<{
+    planted: boolean;
+    elementId: string;
+    moonSeedsAvailable: number;
+    plantedGardenElements: string[];
+    profile: ProfileStats;
+  }>('/api/moon-garden/plant', {
+    method: 'POST',
+    body: JSON.stringify({ elementId })
+  }, initData);
+}
+
+export async function recordSceneMoonSeed(input: {
+  scene_id: string;
+  duration_seconds: number;
+}, initData?: string) {
+  return request<{ awarded: boolean; moonSeeds: number }>('/api/scene-sessions/moon-seed', {
     method: 'POST',
     body: JSON.stringify(input)
   }, initData);
