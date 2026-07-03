@@ -586,6 +586,14 @@ export async function getProfileStats(telegramId: number) {
   const meditationMinutes = Math.round((history ?? []).reduce((sum, item) => sum + (item.last_position ?? 0), 0) / 60);
   const breathMinutes = Math.round(safeBreathSessions.reduce((sum, item) => sum + (item.duration_seconds ?? 0), 0) / 60);
   const minutesListened = meditationMinutes + breathMinutes;
+  const weekStart = daysAgo(6).toISOString();
+  const weeklyMeditationMinutes = Math.round((history ?? [])
+    .filter((item) => item.last_played && new Date(item.last_played).toISOString() >= weekStart)
+    .reduce((sum, item) => sum + (item.last_position ?? 0), 0) / 60);
+  const weeklyBreathMinutes = Math.round(safeBreathSessions
+    .filter((item) => item.completed_at && new Date(item.completed_at).toISOString() >= weekStart)
+    .reduce((sum, item) => sum + (item.duration_seconds ?? 0), 0) / 60);
+  const weeklyPracticeMinutes = weeklyMeditationMinutes + weeklyBreathMinutes;
   const calmScore = Math.min(100, 42 + completed * 7);
   const lastMeditationDate = (history ?? [])
     .map((item) => item.last_played)
@@ -610,6 +618,7 @@ export async function getProfileStats(telegramId: number) {
       100: Boolean(streak?.reward_100)
     },
     minutesListened,
+    weeklyPracticeMinutes,
     totalPracticeMinutes: minutesListened,
     calmPoints: completed,
     moonSeeds: completed,

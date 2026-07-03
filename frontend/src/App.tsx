@@ -80,7 +80,6 @@ type SceneDefinition = {
 
 const moods: MoodChip[] = ['Sleep', 'Calm', 'Focus', 'Anxiety', 'Breath', 'Energy'];
 const meditationMoods: Mood[] = ['Calm', 'Stressed', 'Tired', 'Anxious', 'Focused'];
-const rewardMilestones = [7, 14, 30, 100] as const;
 const premiumPrices = {
   monthly: 499,
   lifetime: 2499
@@ -431,7 +430,11 @@ const copy = {
     moonGardenBody: 'Your calm grows with every practice.',
     gardenLevel: 'Garden level',
     moonSeeds: 'Moon Seeds',
+    moonSeedsInfo: 'Moon Seeds are earned through completed practices.',
     calmPoints: 'Calm Points',
+    totalPractice: 'Total Practice',
+    quietRhythm: 'Quiet Rhythm',
+    totalMinutesWithLuna: 'Total minutes with Luna',
     totalPracticeMinutes: 'Total practice minutes',
     breathSessions: 'Breath sessions',
     yourRhythm: 'Your rhythm is growing.',
@@ -464,6 +467,11 @@ const copy = {
     weeklyCheckins: 'Weekly check-ins',
     averageSleep: 'Average sleep',
     currentMood: 'Current mood',
+    premiumActive: 'Premium Active',
+    premiumFree: 'Free Plan',
+    weeklyInsightZero: 'Your calm can begin with one minute today.',
+    weeklyInsightSmall: 'You started your rhythm this week. Even a few minutes can become a gentle habit.',
+    weeklyInsightStrong: 'You spent {minutes} minutes with Luna this week. A small return tomorrow matters more than a perfect session.',
     preferredLength: 'Preferred length',
     today: 'Today',
     noCheckinsYet: 'No check-ins yet',
@@ -660,7 +668,11 @@ const copy = {
     moonGardenBody: 'Твоё спокойствие растёт с каждой практикой.',
     gardenLevel: 'Уровень сада',
     moonSeeds: 'Лунные семена',
+    moonSeedsInfo: 'Лунные семена появляются за завершённые практики.',
     calmPoints: 'Баллы спокойствия',
+    totalPractice: 'Практика',
+    quietRhythm: 'Тихий ритм',
+    totalMinutesWithLuna: 'Минут с Luna',
     totalPracticeMinutes: 'Всего минут практики',
     breathSessions: 'Дыхательные сессии',
     yourRhythm: 'Твой ритм растёт.',
@@ -693,6 +705,11 @@ const copy = {
     weeklyCheckins: 'Чек-ины за неделю',
     averageSleep: 'Средний сон',
     currentMood: 'Текущее настроение',
+    premiumActive: 'Premium активен',
+    premiumFree: 'Бесплатный план',
+    weeklyInsightZero: 'Твоё спокойствие может начаться с одной минуты сегодня.',
+    weeklyInsightSmall: 'Ты начал(а) свой ритм на этой неделе. Даже несколько минут могут стать мягкой привычкой.',
+    weeklyInsightStrong: 'Ты провёл(а) {minutes} минут с Luna на этой неделе. Небольшое возвращение завтра важнее идеальной сессии.',
     preferredLength: 'Желаемая длина',
     today: 'Сегодня',
     noCheckinsYet: 'Пока нет чек-инов',
@@ -802,19 +819,36 @@ function streakLabel(count: number, language: AppLanguage) {
   return `${count} тихих дней с Luna`;
 }
 
-function dayCountLabel(count: number, language: AppLanguage) {
-  if (language === 'en') return count === 1 ? '1 day' : `${count} days`;
-  if (count === 1) return '1 день';
-  if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return `${count} дня`;
-  return `${count} дней`;
+function quietDayCountLabel(count: number, language: AppLanguage) {
+  if (language === 'en') return count === 1 ? '1 quiet day' : `${count} quiet days`;
+  if (count === 1) return '1 тихий день';
+  if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return `${count} тихих дня`;
+  return `${count} тихих дней`;
+}
+
+function minutesCountLabel(minutes: number, language: AppLanguage) {
+  return `${minutes} ${language === 'en' ? 'min' : 'мин'}`;
 }
 
 function moonGardenLevel(minutes: number, language: AppLanguage) {
-  if (minutes >= 150) return { level: 5, title: copy[language].levelInnerSanctuary, floor: 150, ceiling: 150, progress: 100 };
-  if (minutes >= 60) return { level: 4, title: copy[language].levelMoonlitPath, floor: 60, ceiling: 150, progress: ((minutes - 60) / 90) * 100 };
-  if (minutes >= 30) return { level: 3, title: copy[language].levelQuietGarden, floor: 30, ceiling: 60, progress: ((minutes - 30) / 30) * 100 };
-  if (minutes >= 10) return { level: 2, title: copy[language].levelGentleRhythm, floor: 10, ceiling: 30, progress: ((minutes - 10) / 20) * 100 };
-  return { level: 1, title: copy[language].levelFirstLight, floor: 0, ceiling: 10, progress: (minutes / 10) * 100 };
+  if (minutes >= 150) return { level: 5, title: copy[language].levelInnerSanctuary, next: copy[language].levelInnerSanctuary, ceiling: 150, progress: 100 };
+  if (minutes >= 60) return { level: 4, title: copy[language].levelMoonlitPath, next: copy[language].levelInnerSanctuary, ceiling: 150, progress: ((minutes - 60) / 90) * 100 };
+  if (minutes >= 30) return { level: 3, title: copy[language].levelQuietGarden, next: copy[language].levelMoonlitPath, ceiling: 60, progress: ((minutes - 30) / 30) * 100 };
+  if (minutes >= 10) return { level: 2, title: copy[language].levelGentleRhythm, next: copy[language].levelQuietGarden, ceiling: 30, progress: ((minutes - 10) / 20) * 100 };
+  return { level: 1, title: copy[language].levelFirstLight, next: copy[language].levelGentleRhythm, ceiling: 10, progress: (minutes / 10) * 100 };
+}
+
+function moonSeedCount(profile: ProfileStats | null) {
+  const minutes = profile?.totalPracticeMinutes ?? profile?.minutesListened ?? 0;
+  const completedPractices = profile?.moonSeeds ?? profile?.completed ?? 0;
+  return completedPractices > 0 ? completedPractices : Math.floor(minutes / 5);
+}
+
+function profileWeeklyInsight(profile: ProfileStats | null, language: AppLanguage) {
+  const minutes = profile?.weeklyPracticeMinutes ?? 0;
+  if (minutes <= 0) return copy[language].weeklyInsightZero;
+  if (minutes <= 10) return copy[language].weeklyInsightSmall;
+  return text(language, 'weeklyInsightStrong', { minutes });
 }
 
 function rhythmMessage(profile: ProfileStats | null, language: AppLanguage) {
@@ -868,18 +902,6 @@ function translateMoodLabel(label: string | null | undefined, language: AppLangu
   return key ? copy[language][key] : (label ?? '');
 }
 
-function translateSleepLabel(label: string | null | undefined, language: AppLanguage) {
-  const keyByLabel: Record<string, keyof typeof copy.en> = {
-    '<4h': 'sleepLess4',
-    '4-6h': 'sleep4To6',
-    '6-8h': 'sleep6To8',
-    '8h+': 'sleep8Plus',
-    'No check-ins yet': 'noCheckinsYet'
-  };
-  const key = label ? keyByLabel[label] : null;
-  return key ? copy[language][key] : (label ?? copy[language].noCheckinsYet);
-}
-
 function translateFocus(focus: string | null | undefined, language: AppLanguage) {
   const keyByFocus: Record<string, keyof typeof copy.en> = {
     'breath and anxiety relief': 'focusBreathAnxiety',
@@ -897,30 +919,6 @@ function localizeWeeklyInsight(wellness: WellnessSummary, language: AppLanguage)
   if (minutesMatch) return text(language, 'weeklyInsightMinutes', { minutes: minutesMatch[1] });
   if (wellness.weeklyCheckinCount > 0) return copy[language].weeklyInsightStart;
   return copy[language].weeklyInsightShort;
-}
-
-function localizeLevelName(name: string | null | undefined, language: AppLanguage) {
-  const keyByName: Record<string, keyof typeof copy.en> = {
-    'First Light': 'levelFirstLight',
-    'Calm Builder': 'levelCalmBuilder',
-    'Moon Guide': 'levelMoonGuide',
-    'Deep Practice': 'levelDeepPractice'
-  };
-  const key = name ? keyByName[name] : null;
-  return key ? copy[language][key] : (name ?? '');
-}
-
-function localizeAchievement(achievement: { id: string; title: string; description: string }, language: AppLanguage) {
-  if (language === 'en') return achievement;
-
-  const translations: Record<string, { title: string; description: string }> = {
-    first_checkin: { title: 'Первый чек-ин', description: 'Ты поделился(ась), как чувствуешь себя сегодня.' },
-    three_sessions: { title: 'Три сессии', description: 'Завершено три медитации.' },
-    weekly_rhythm: { title: 'Недельный ритм', description: 'Три чек-ина за эту неделю.' },
-    seven_day_streak: { title: 'Серия 7 дней', description: 'Целая неделя спокойствия.' }
-  };
-
-  return translations[achievement.id] ?? achievement;
 }
 
 function planLabel(plan: string, language: AppLanguage) {
@@ -3030,36 +3028,38 @@ function MoonGardenCard({ profile, language }: { profile: ProfileStats | null; l
   const minutes = profile?.totalPracticeMinutes ?? profile?.minutesListened ?? 0;
   const level = moonGardenLevel(minutes, language);
   const progress = Math.max(0, Math.min(100, level.progress));
+  const seeds = moonSeedCount(profile);
 
   return (
-    <section className="mt-4 overflow-hidden rounded-[24px] border border-gold/20 bg-gradient-to-br from-gold/15 via-lavender/10 to-night p-4 shadow-glow">
+    <section className="mt-4 overflow-hidden rounded-[28px] border border-gold/25 bg-gradient-to-br from-gold/20 via-lavender/10 to-night p-5 shadow-glow">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].moonGarden}</p>
-          <h3 className="mt-1 font-serif text-2xl">{level.title}</h3>
+          <h3 className="mt-1 font-serif text-3xl leading-tight">{level.title}</h3>
           <p className="mt-1 text-sm leading-5 text-cream/70">{copy[language].moonGardenBody}</p>
         </div>
-        <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full border border-gold/30 bg-night/70">
-          <MoonMark className="h-9 w-9" />
+        <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full border border-gold/30 bg-night/70 shadow-gold">
+          <MoonMark className="h-10 w-10" />
         </div>
       </div>
       <div className="mt-4 h-2 overflow-hidden rounded-full bg-night/80">
         <div className="h-full rounded-full bg-gold transition-all duration-500" style={{ width: `${progress}%` }} />
       </div>
-      <div className="mt-4 grid grid-cols-3 gap-2 text-xs">
+      <div className="mt-2 flex items-center justify-between text-xs text-lavender">
+        <span>{copy[language].gardenLevel} {level.level}</span>
+        <span>{text(language, 'nextLevel', { level: level.next })}</span>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
+        <span className="rounded-2xl bg-night/70 p-3 text-lavender">
+          {copy[language].totalMinutesWithLuna}
+          <strong className="mt-1 block text-2xl text-cream">{minutesCountLabel(minutes, language)}</strong>
+        </span>
         <span className="rounded-2xl bg-night/70 p-3 text-lavender">
           {copy[language].moonSeeds}
-          <strong className="mt-1 block text-lg text-cream">{profile?.moonSeeds ?? profile?.completed ?? 0}</strong>
-        </span>
-        <span className="rounded-2xl bg-night/70 p-3 text-lavender">
-          {copy[language].totalPracticeMinutes}
-          <strong className="mt-1 block text-lg text-cream">{minutes}</strong>
-        </span>
-        <span className="rounded-2xl bg-night/70 p-3 text-lavender">
-          {copy[language].calmPoints}
-          <strong className="mt-1 block text-lg text-cream">{profile?.calmPoints ?? profile?.completed ?? 0}</strong>
+          <strong className="mt-1 block text-2xl text-cream">{seeds}</strong>
         </span>
       </div>
+      <p className="mt-3 text-[11px] leading-5 text-cream/55">{copy[language].moonSeedsInfo}</p>
       <p className="mt-3 text-xs text-gold">{rhythmMessage(profile, language)}</p>
     </section>
   );
@@ -3086,8 +3086,8 @@ function ProfilePage({
   onRestore: () => void;
   language: AppLanguage;
 }) {
-  const activeUntil = access.user?.active_until ? new Date(access.user.active_until).toLocaleDateString() : copy[language].notActive;
-  const level = wellness?.level;
+  const totalMinutes = profile?.totalPracticeMinutes ?? profile?.minutesListened ?? 0;
+  const currentMood = wellness?.mostCommonMoodLabel ? translateMoodLabel(wellness.mostCommonMoodLabel, language) : copy[language].notEnoughData;
   return (
     <div className="space-y-3 luna-fade">
       <div>
@@ -3097,62 +3097,24 @@ function ProfilePage({
       <div className="rounded-[24px] border border-white/10 bg-ink p-4 shadow-glow">
         <div className="flex items-center gap-4">
           <MoonMark className="h-16 w-16 shrink-0" />
-          <div>
-            <h3 className="font-serif text-2xl font-semibold">{firstName}</h3>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-serif text-2xl font-semibold">{firstName}</h3>
+              <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${access.hasPremium ? 'bg-gold text-night' : 'bg-cream/10 text-lavender'}`}>
+                {access.hasPremium ? copy[language].premiumActive : copy[language].premiumFree}
+              </span>
+            </div>
             <p className="text-sm text-lavender">{username ? `@${username}` : copy[language].member}</p>
           </div>
         </div>
         <MoonGardenCard profile={profile} language={language} />
-        {level && (
-          <div className="mt-4 rounded-[20px] border border-gold/20 bg-gold/10 p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-gold">{text(language, 'profileLevel', { level: level.current })}</p>
-                <h3 className="mt-1 font-serif text-2xl">{localizeLevelName(level.title, language)}</h3>
-              </div>
-              <Sparkles className="text-gold" />
-            </div>
-            <div className="mt-3 h-2 overflow-hidden rounded-full bg-night">
-              <div className="h-full rounded-full bg-gold" style={{ width: `${level.progress}%` }} />
-            </div>
-            <p className="mt-2 text-xs text-lavender">{text(language, 'nextLevel', { level: localizeLevelName(level.next, language) })}</p>
-          </div>
-        )}
         <div className="mt-4 grid grid-cols-2 gap-2.5 text-sm">
-          <Stat label={copy[language].memberSince} value={copy[language].today} />
-          <Stat label={copy[language].premiumStatus} value={access.hasPremium ? copy[language].active : copy[language].free} />
-          <Stat label={copy[language].activeUntil} value={activeUntil} />
-          <Stat label={copy[language].minutesMeditated} value={String(profile?.minutesListened ?? 0)} />
-          <Stat label={copy[language].completedSessions} value={String(profile?.completed ?? 0)} />
-          <Stat label={copy[language].currentStreak} value={(profile?.currentStreak ?? 0) > 0 ? streakLabel(profile?.currentStreak ?? 0, language) : copy[language].newBeginning} />
-          <Stat label={copy[language].longestStreak} value={dayCountLabel(profile?.longestStreak ?? 0, language)} />
-          <Stat label={copy[language].breathSessions} value={String(profile?.completedBreathSessions ?? 0)} />
-          <Stat label={copy[language].calmScore} value={`${profile?.calmScore ?? 0}%`} />
+          <Stat label={copy[language].totalPractice} value={minutesCountLabel(totalMinutes, language)} />
+          <Stat label={copy[language].quietRhythm} value={quietDayCountLabel(profile?.currentStreak ?? 0, language)} />
           <Stat label={copy[language].weeklyCheckins} value={`${wellness?.weeklyCheckinCount ?? 0}/7`} />
-          <Stat label={copy[language].averageSleep} value={wellness?.averageSleepLabel ? translateSleepLabel(wellness.averageSleepLabel, language) : copy[language].noCheckinsYet} />
-          <Stat label={copy[language].currentMood} value={wellness?.mostCommonMoodLabel ? translateMoodLabel(wellness.mostCommonMoodLabel, language) : copy[language].notEnoughData} />
-          <Stat label={copy[language].preferredLength} value={durationLabel(wellness?.todayCheckin?.available_minutes, language)} />
+          <Stat label={copy[language].currentMood} value={currentMood} />
         </div>
-        {wellness && <InsightCard title={copy[language].weeklyInsightTitle} body={localizeWeeklyInsight(wellness, language)} meta={text(language, 'recommendedFocus', { focus: translateFocus(wellness.recommendedFocus, language) })} />}
-        <div className="mt-4 rounded-[20px] bg-surface p-4">
-          <p className="mb-3 text-sm text-lavender">{copy[language].achievements}</p>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            {(wellness?.achievements ?? rewardMilestones.map((days) => ({
-              id: `${days}`,
-              title: `${days}d`,
-              description: copy[language].streakReward,
-              unlocked: Boolean(profile?.rewards?.[days])
-            }))).map((achievement) => {
-              const localized = localizeAchievement(achievement, language);
-              return (
-                <span key={achievement.id} className={`flex min-h-[78px] flex-col justify-between rounded-2xl p-3 ${achievement.unlocked ? 'bg-gold text-night' : 'bg-night text-lavender'}`}>
-                  <strong className="block">{localized.title}</strong>
-                  <span className="mt-1 block opacity-75">{localized.description}</span>
-                </span>
-              );
-            })}
-          </div>
-        </div>
+        <InsightCard title={copy[language].weeklyInsightTitle} body={profileWeeklyInsight(profile, language)} meta={rhythmMessage(profile, language)} />
         {showAdminButton && (
           <button onClick={onAdmin} className="mt-4 w-full rounded-[20px] bg-gold px-5 py-3.5 font-semibold text-night">
             Admin

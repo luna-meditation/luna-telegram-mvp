@@ -95,6 +95,7 @@ export type ProfileStats = {
   currentStreak: number;
   longestStreak: number;
   minutesListened: number;
+  weeklyPracticeMinutes?: number;
   totalPracticeMinutes?: number;
   calmPoints?: number;
   moonSeeds?: number;
