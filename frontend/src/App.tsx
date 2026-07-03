@@ -1313,6 +1313,8 @@ function App() {
       setPage('pricing');
       return;
     }
+    sceneAudioRef.current?.pause();
+    setScenePlaying(false);
     setSelectedMeditation(meditation);
     setPage('player');
   };
@@ -1321,14 +1323,26 @@ function App() {
     telegram?.HapticFeedback?.impactOccurred('light');
     if (scene.access === 'premium' && !access.hasPremium) {
       setPaymentMessage(copy[language].scenePremiumLocked);
+      setSelectedMeditation(null);
       setPage('pricing');
       return;
     }
 
+    const shouldContinuePlaying = Boolean(selectedScene && selectedScene.id !== scene.id && scenePlaying);
     if (selectedScene?.id !== scene.id) {
-      sceneAudioRef.current?.pause();
+      const nextUrl = createSceneAudioUrl(scene.sound);
+      const audio = sceneAudioRef.current;
+      audio?.pause();
       setScenePlaying(false);
-      setSceneAudioUrl(createSceneAudioUrl(scene.sound));
+      setSceneAudioUrl(nextUrl);
+      if (audio) {
+        audio.src = nextUrl;
+        audio.loop = true;
+        audio.volume = sceneVolume;
+      }
+      if (shouldContinuePlaying && audio) {
+        void audio.play().then(() => setScenePlaying(true)).catch(() => setScenePlaying(false));
+      }
     }
     setSelectedScene(scene);
     setPage('scenePlayer');
@@ -1479,7 +1493,7 @@ function App() {
   useEffect(() => {
     const audio = sceneAudioRef.current;
     if (!audio || !sceneAudioUrl) return;
-    audio.src = sceneAudioUrl;
+    if (audio.src !== sceneAudioUrl) audio.src = sceneAudioUrl;
     audio.loop = true;
     audio.volume = sceneVolume;
   }, [sceneAudioUrl, sceneVolume]);
