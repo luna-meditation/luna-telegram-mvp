@@ -17,6 +17,9 @@ import {
   Sparkles,
   Timer,
   Upload,
+  Volume2,
+  Waves,
+  X,
   User
 } from 'lucide-react';
 import {
@@ -55,9 +58,23 @@ import {
   type WellnessSummary
 } from './api';
 
-type Page = 'home' | 'library' | 'favorites' | 'profile' | 'pricing' | 'player' | 'admin';
+type Page = 'home' | 'library' | 'favorites' | 'profile' | 'pricing' | 'player' | 'scenePlayer' | 'admin';
 type Mood = 'Calm' | 'Stressed' | 'Tired' | 'Anxious' | 'Focused';
 type MoodChip = 'Sleep' | 'Calm' | 'Focus' | 'Anxiety' | 'Breath' | 'Energy';
+type LibraryMode = 'meditations' | 'scenes';
+type SceneAccess = 'free' | 'premium';
+type SceneDefinition = {
+  id: string;
+  title: Record<AppLanguage, string>;
+  subtitle: Record<AppLanguage, string>;
+  description: Record<AppLanguage, string>;
+  mood: string;
+  category: string;
+  access: SceneAccess;
+  sortOrder: number;
+  cover: string;
+  sound: 'water' | 'ocean' | 'mist' | 'forest' | 'rain';
+};
 
 const moods: MoodChip[] = ['Sleep', 'Calm', 'Focus', 'Anxiety', 'Breath', 'Energy'];
 const meditationMoods: Mood[] = ['Calm', 'Stressed', 'Tired', 'Anxious', 'Focused'];
@@ -69,11 +86,161 @@ const premiumPrices = {
 const libraryCacheKey = 'luna.library.v1';
 const languageStorageKey = 'luna.language.v1';
 const playerFixVersion = 'pause-seek-isolation-v5';
+const sceneAudioCache = new Map<string, string>();
 type LibraryCache = {
   categories: Category[];
   meditations: Meditation[];
   savedAt: number;
 };
+
+function sceneCover(seed: string, accent: string, glow: string) {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+      <defs>
+        <radialGradient id="moon" cx="50%" cy="35%" r="70%">
+          <stop offset="0%" stop-color="${glow}"/>
+          <stop offset="46%" stop-color="${accent}"/>
+          <stop offset="100%" stop-color="#140f26"/>
+        </radialGradient>
+        <linearGradient id="gold" x1="0" x2="1">
+          <stop stop-color="#f5f1e9"/>
+          <stop offset="1" stop-color="#d4af37"/>
+        </linearGradient>
+      </defs>
+      <rect width="512" height="512" rx="56" fill="url(#moon)"/>
+      <circle cx="382" cy="116" r="54" fill="#f5f1e9" opacity=".92"/>
+      <circle cx="404" cy="96" r="54" fill="${accent}" opacity=".55"/>
+      <path d="M0 345 C78 306 142 385 229 340 C314 296 366 310 512 258 L512 512 L0 512 Z" fill="#0d0b18" opacity=".72"/>
+      <path d="M0 390 C120 350 193 425 305 375 C380 342 430 354 512 318" fill="none" stroke="url(#gold)" stroke-width="5" opacity=".6"/>
+      <path d="M74 174 C126 148 177 150 224 176" fill="none" stroke="#f5f1e9" stroke-width="3" opacity=".34"/>
+      <path d="M292 188 C339 160 394 163 442 193" fill="none" stroke="#d4af37" stroke-width="3" opacity=".42"/>
+      <text x="44" y="444" fill="#f5f1e9" font-family="Georgia, serif" font-size="38" letter-spacing="4">${seed}</text>
+    </svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+const scenes = ([
+  {
+    id: 'moon-lake',
+    title: { en: 'Moon Lake', ru: 'Лунное озеро' },
+    subtitle: { en: 'Soft water · Night', ru: 'Тихая вода · Ночь' },
+    description: { en: 'A slow night lake for sleep and soft calm.', ru: 'Медленное ночное озеро для сна и спокойствия.' },
+    mood: 'Sleep / Calm',
+    category: 'sleep',
+    access: 'free',
+    sortOrder: 1,
+    cover: sceneCover('MOON LAKE', '#4b2d68', '#8e5fd6'),
+    sound: 'water'
+  },
+  {
+    id: 'ocean-breath',
+    title: { en: 'Ocean Breath', ru: 'Дыхание океана' },
+    subtitle: { en: 'Gentle waves · Breath', ru: 'Мягкие волны · Дыхание' },
+    description: { en: 'A breathing ocean pulse for exhale-led rest.', ru: 'Океанский ритм для мягкого выдоха и отдыха.' },
+    mood: 'Breath / Calm',
+    category: 'breath',
+    access: 'premium',
+    sortOrder: 2,
+    cover: sceneCover('OCEAN', '#214562', '#77b8d8'),
+    sound: 'ocean'
+  },
+  {
+    id: 'morning-mist',
+    title: { en: 'Morning Mist', ru: 'Утренний туман' },
+    subtitle: { en: 'Soft air · Focus', ru: 'Мягкий воздух · Фокус' },
+    description: { en: 'A clear, airy layer for gentle focus.', ru: 'Прозрачный воздушный фон для мягкого фокуса.' },
+    mood: 'Morning / Focus',
+    category: 'focus',
+    access: 'premium',
+    sortOrder: 3,
+    cover: sceneCover('MIST', '#5c4a82', '#e0b7c9'),
+    sound: 'mist'
+  },
+  {
+    id: 'forest-calm',
+    title: { en: 'Forest Calm', ru: 'Лесное спокойствие' },
+    subtitle: { en: 'Leaves · Calm', ru: 'Листья · Спокойствие' },
+    description: { en: 'A quiet forest bed with slow leaf movement.', ru: 'Тихий лесной фон с мягким движением листвы.' },
+    mood: 'Calm / Nature',
+    category: 'nature',
+    access: 'premium',
+    sortOrder: 4,
+    cover: sceneCover('FOREST', '#1f513b', '#9fcf9d'),
+    sound: 'forest'
+  },
+  {
+    id: 'soft-rain',
+    title: { en: 'Soft Rain', ru: 'Мягкий дождь' },
+    subtitle: { en: 'Light rain · Rest', ru: 'Лёгкий дождь · Отдых' },
+    description: { en: 'A soft rain loop for winding down.', ru: 'Мягкий дождевой цикл для замедления.' },
+    mood: 'Sleep / Rest',
+    category: 'sleep',
+    access: 'premium',
+    sortOrder: 5,
+    cover: sceneCover('RAIN', '#28375e', '#9fb5ff'),
+    sound: 'rain'
+  }
+] satisfies SceneDefinition[]).sort((left, right) => left.sortOrder - right.sortOrder);
+
+function createSceneAudioUrl(kind: SceneDefinition['sound']) {
+  const cached = sceneAudioCache.get(kind);
+  if (cached) return cached;
+
+  const sampleRate = 22050;
+  const seconds = 5;
+  const totalSamples = sampleRate * seconds;
+  const samples = new Float32Array(totalSamples);
+  const base = kind === 'ocean' ? 0.18 : kind === 'rain' ? 0.12 : kind === 'forest' ? 0.1 : kind === 'mist' ? 0.08 : 0.11;
+
+  for (let index = 0; index < totalSamples; index += 1) {
+    const t = index / sampleRate;
+    const cycle = t / seconds;
+    const fade = Math.min(1, index / 1400, (totalSamples - index) / 1400);
+    const wave = Math.sin(Math.PI * 2 * cycle);
+    const noise = (Math.random() * 2 - 1) * base;
+    const low = Math.sin(Math.PI * 2 * (kind === 'mist' ? 110 : 72) * t) * 0.025;
+    const pulse = kind === 'ocean'
+      ? Math.sin(Math.PI * 2 * 0.32 * t) * 0.12
+      : kind === 'water'
+        ? Math.sin(Math.PI * 2 * 0.21 * t) * 0.08
+        : kind === 'rain'
+          ? Math.random() * 0.12
+          : kind === 'forest'
+            ? Math.sin(Math.PI * 2 * 0.17 * t) * 0.05
+            : Math.sin(Math.PI * 2 * 0.12 * t) * 0.035;
+    samples[index] = Math.max(-0.8, Math.min(0.8, (noise * (0.55 + Math.abs(wave) * 0.45) + low + pulse) * fade));
+  }
+
+  const dataSize = totalSamples * 2;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+  const writeString = (offset: number, value: string) => {
+    for (let index = 0; index < value.length; index += 1) view.setUint8(offset + index, value.charCodeAt(index));
+  };
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, dataSize, true);
+
+  let offset = 44;
+  samples.forEach((sample) => {
+    view.setInt16(offset, sample * 32767, true);
+    offset += 2;
+  });
+
+  const url = URL.createObjectURL(new Blob([view], { type: 'audio/wav' }));
+  sceneAudioCache.set(kind, url);
+  return url;
+}
 
 const copy = {
   en: {
@@ -103,6 +270,19 @@ const copy = {
     exploreLibrary: 'Explore Library',
     openLibrary: 'Open Library',
     libraryTitle: 'Luna Library',
+    meditationsTab: 'Meditations',
+    scenesTab: 'Scenes',
+    scenesTitle: 'Soundscapes',
+    scenesHomeTitle: 'Scenes',
+    scenesHomeBody: 'Play calming soundscapes while Luna is open.',
+    scenesLibraryBody: 'Loopable ambience for sleep, breath, and focus.',
+    sceneLoop: 'Loop enabled',
+    sceneVolume: 'Scene volume',
+    scenePremiumLocked: 'Premium soundscape',
+    sceneUpgradeBody: 'Unlock premium scenes with Luna Premium.',
+    noScene: 'Choose a scene to begin.',
+    closeScene: 'Close scene player',
+    changeScene: 'Change scene',
     searchByTitle: 'Search by title',
     all: 'All',
     short: 'Short',
@@ -279,6 +459,19 @@ const copy = {
     exploreLibrary: 'Открыть библиотеку',
     openLibrary: 'Открыть библиотеку',
     libraryTitle: 'Библиотека Luna',
+    meditationsTab: 'Медитации',
+    scenesTab: 'Сцены',
+    scenesTitle: 'Саундскейпы',
+    scenesHomeTitle: 'Сцены',
+    scenesHomeBody: 'Включи спокойный фон, пока Luna открыта.',
+    scenesLibraryBody: 'Зацикленные звуки для сна, дыхания и фокуса.',
+    sceneLoop: 'Повтор включён',
+    sceneVolume: 'Громкость сцены',
+    scenePremiumLocked: 'Премиум-сцена',
+    sceneUpgradeBody: 'Открой премиум-сцены с Luna Premium.',
+    noScene: 'Выбери сцену, чтобы начать.',
+    closeScene: 'Закрыть плеер сцен',
+    changeScene: 'Сменить сцену',
     searchByTitle: 'Поиск по названию',
     all: 'Все',
     short: 'Короткие',
@@ -888,9 +1081,11 @@ function App() {
   const telegram = getTelegram();
   const user = telegram?.initDataUnsafe.user ?? fallbackUser;
   const initData = telegram?.initData;
+  const sceneAudioRef = useRef<HTMLAudioElement | null>(null);
   const [initialLibraryCache] = useState(() => readLibraryCache());
   const [language, setLanguage] = useState<AppLanguage>(() => initialLanguage(user));
   const [page, setPage] = useState<Page>(window.location.pathname === '/admin' || window.location.hash === '#admin' ? 'admin' : 'home');
+  const [libraryMode, setLibraryMode] = useState<LibraryMode>('meditations');
   const [mood, setMood] = useState<MoodChip>('Calm');
   const [moodSelectedByUser, setMoodSelectedByUser] = useState(false);
   const [query, setQuery] = useState('');
@@ -903,6 +1098,10 @@ function App() {
   const [access, setAccess] = useState<AccessState>({ hasPremium: false, plan: 'Free' });
   const [profile, setProfile] = useState<ProfileStats | null>(null);
   const [selectedMeditation, setSelectedMeditation] = useState<Meditation | null>(null);
+  const [selectedScene, setSelectedScene] = useState<SceneDefinition | null>(null);
+  const [scenePlaying, setScenePlaying] = useState(false);
+  const [sceneVolume, setSceneVolume] = useState(0.35);
+  const [sceneAudioUrl, setSceneAudioUrl] = useState('');
   const [paymentMessage, setPaymentMessage] = useState('');
   const [openingPlan, setOpeningPlan] = useState<'monthly' | 'lifetime' | null>(null);
   const [adminStatus, setAdminStatus] = useState<'checking' | 'allowed' | 'denied'>('checking');
@@ -1118,6 +1317,52 @@ function App() {
     setPage('player');
   };
 
+  const openScene = (scene: SceneDefinition) => {
+    telegram?.HapticFeedback?.impactOccurred('light');
+    if (scene.access === 'premium' && !access.hasPremium) {
+      setPaymentMessage(copy[language].scenePremiumLocked);
+      setPage('pricing');
+      return;
+    }
+
+    if (selectedScene?.id !== scene.id) {
+      sceneAudioRef.current?.pause();
+      setScenePlaying(false);
+      setSceneAudioUrl(createSceneAudioUrl(scene.sound));
+    }
+    setSelectedScene(scene);
+    setPage('scenePlayer');
+  };
+
+  const toggleScenePlayback = async () => {
+    const audio = sceneAudioRef.current;
+    if (!audio || !selectedScene) return;
+
+    if (!sceneAudioUrl) {
+      const nextUrl = createSceneAudioUrl(selectedScene.sound);
+      setSceneAudioUrl(nextUrl);
+      audio.src = nextUrl;
+    }
+
+    audio.loop = true;
+    audio.volume = sceneVolume;
+
+    if (audio.paused) {
+      await audio.play();
+      setScenePlaying(true);
+      return;
+    }
+
+    audio.pause();
+    setScenePlaying(false);
+  };
+
+  const closeScenePlayer = () => {
+    sceneAudioRef.current?.pause();
+    setScenePlaying(false);
+    setPage('library');
+  };
+
   useEffect(() => {
     if (!pendingMeditationId || openedStartMeditationId === pendingMeditationId || !decoratedMeditations.length) return;
 
@@ -1225,6 +1470,33 @@ function App() {
     ? decoratedMeditations[(decoratedMeditations.findIndex((item) => item.id === selectedMeditation.id) + 1) % decoratedMeditations.length]
     : undefined;
 
+  useEffect(() => {
+    const audio = sceneAudioRef.current;
+    if (!audio) return;
+    audio.volume = sceneVolume;
+  }, [sceneVolume]);
+
+  useEffect(() => {
+    const audio = sceneAudioRef.current;
+    if (!audio || !sceneAudioUrl) return;
+    audio.src = sceneAudioUrl;
+    audio.loop = true;
+    audio.volume = sceneVolume;
+  }, [sceneAudioUrl, sceneVolume]);
+
+  useEffect(() => {
+    const audio = sceneAudioRef.current;
+    if (!audio) return;
+    const syncPause = () => setScenePlaying(false);
+    const syncPlay = () => setScenePlaying(true);
+    audio.addEventListener('pause', syncPause);
+    audio.addEventListener('play', syncPlay);
+    return () => {
+      audio.removeEventListener('pause', syncPause);
+      audio.removeEventListener('play', syncPlay);
+    };
+  }, []);
+
   return (
     <main className="min-h-screen overflow-hidden bg-night text-cream">
       <div className="fixed inset-0 luna-bg" />
@@ -1245,6 +1517,10 @@ function App() {
             loading={libraryLoading}
             onOpen={openMeditation}
             onLibrary={() => setPage('library')}
+            onScenes={() => {
+              setLibraryMode('scenes');
+              setPage('library');
+            }}
             language={language}
           />
         )}
@@ -1256,10 +1532,14 @@ function App() {
             setQuery={setQuery}
             category={category}
             setCategory={setCategory}
+            mode={libraryMode}
+            setMode={setLibraryMode}
             meditations={filteredMeditations}
+            scenes={scenes}
             hasPremium={access.hasPremium}
             loading={libraryLoading}
             onOpen={openMeditation}
+            onOpenScene={openScene}
             onFavorite={toggleFavorite}
             onUnlock={() => setPage('pricing')}
             language={language}
@@ -1304,6 +1584,21 @@ function App() {
           />
         )}
 
+        {page === 'scenePlayer' && selectedScene && (
+          <ScenePlayerPage
+            scene={selectedScene}
+            scenes={scenes}
+            hasPremium={access.hasPremium}
+            playing={scenePlaying}
+            volume={sceneVolume}
+            onVolume={setSceneVolume}
+            onToggle={() => void toggleScenePlayback()}
+            onScene={openScene}
+            onClose={closeScenePlayer}
+            language={language}
+          />
+        )}
+
         {page === 'admin' && (
           <AdminPage
             status={adminStatus}
@@ -1321,6 +1616,18 @@ function App() {
           />
         )}
 
+        <audio ref={sceneAudioRef} loop preload="none" />
+        {selectedScene && page !== 'scenePlayer' && page !== 'admin' && (
+          <SceneMiniPlayer
+            scene={selectedScene}
+            playing={scenePlaying}
+            volume={sceneVolume}
+            onToggle={() => void toggleScenePlayback()}
+            onOpen={() => setPage('scenePlayer')}
+            onVolume={setSceneVolume}
+            language={language}
+          />
+        )}
         {page !== 'admin' && <Nav active={page} onChange={setPage} language={language} />}
         {showCheckin && page !== 'admin' && (
           <DailyCheckinSheet onClose={dismissCheckin} onSave={saveCheckin} initialMood={moodChipToCheckinMood(mood)} language={language} />
@@ -1384,6 +1691,7 @@ function HomePage(props: {
   loading: boolean;
   onOpen: (meditation: Meditation) => void;
   onLibrary: () => void;
+  onScenes: () => void;
   language: AppLanguage;
 }) {
   const t = copy[props.language];
@@ -1431,6 +1739,14 @@ function HomePage(props: {
 
       <Rail title={t.continueListening} meditations={props.continueListening} onOpen={props.onOpen} language={props.language} />
       <Rail title={t.recentlyPlayed} meditations={props.recentlyPlayed} onOpen={props.onOpen} language={props.language} />
+      <button onClick={props.onScenes} className="relative w-full overflow-hidden rounded-[24px] border border-gold/20 bg-gradient-to-br from-lavender/25 via-gold/10 to-white/5 p-4 text-left shadow-glow">
+        <div className="absolute right-4 top-4 grid h-12 w-12 place-items-center rounded-full bg-gold/15 text-gold">
+          <Waves size={24} />
+        </div>
+        <p className="text-xs uppercase tracking-[0.18em] text-gold">{t.scenesHomeTitle}</p>
+        <h3 className="mt-1 font-serif text-2xl">{t.scenesTitle}</h3>
+        <p className="mt-2 max-w-[250px] text-sm leading-5 text-cream/75">{t.scenesHomeBody}</p>
+      </button>
       {props.explore.length >= 3 ? (
         <Rail title={t.moreToExplore} meditations={props.explore} onOpen={props.onOpen} language={props.language} />
       ) : props.explore.length > 0 ? (
@@ -1546,37 +1862,65 @@ function LibraryPage(props: {
   setQuery: (query: string) => void;
   category: string;
   setCategory: (category: string) => void;
+  mode: LibraryMode;
+  setMode: (mode: LibraryMode) => void;
   meditations: Meditation[];
+  scenes: SceneDefinition[];
   hasPremium: boolean;
   loading: boolean;
   onOpen: (meditation: Meditation) => void;
+  onOpenScene: (scene: SceneDefinition) => void;
   onFavorite: (meditation: Meditation) => void;
   onUnlock: () => void;
   language: AppLanguage;
 }) {
   const t = copy[props.language];
+  const filteredScenes = props.scenes.filter((scene) =>
+    [scene.title[props.language], scene.subtitle[props.language], scene.mood, scene.category].join(' ').toLowerCase().includes(props.query.toLowerCase())
+  );
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-semibold">{t.libraryTitle}</h2>
+      <div className="grid grid-cols-2 gap-2 rounded-[18px] bg-cream/10 p-1">
+        <button onClick={() => props.setMode('meditations')} className={`rounded-[14px] px-3 py-2 text-sm font-semibold ${props.mode === 'meditations' ? 'bg-gold text-night' : 'text-lavender'}`}>
+          {t.meditationsTab}
+        </button>
+        <button onClick={() => props.setMode('scenes')} className={`rounded-[14px] px-3 py-2 text-sm font-semibold ${props.mode === 'scenes' ? 'bg-gold text-night' : 'text-lavender'}`}>
+          {t.scenesTab}
+        </button>
+      </div>
       <div className="flex items-center gap-2 rounded-2xl border border-cream/15 bg-white/10 px-4 py-3 backdrop-blur-xl">
         <Search size={18} className="text-lavender" />
         <input value={props.query} onChange={(event) => props.setQuery(event.target.value)} placeholder={t.searchByTitle} className="w-full bg-transparent text-sm outline-none placeholder:text-cream/45" />
       </div>
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4">
-        <FilterPill active={props.category === 'all'} onClick={() => props.setCategory('all')} label={t.all} />
-        <FilterPill active={props.category === 'short'} onClick={() => props.setCategory('short')} label={t.short} />
-        {props.categories.map((item) => (
-          <FilterPill key={item.slug} active={props.category === item.slug} onClick={() => props.setCategory(item.slug)} label={translateCategory(item.slug || item.name, props.language)} />
-        ))}
-      </div>
-      {props.loading && !props.meditations.length ? (
-        <div className="space-y-3">
-          {[0, 1, 2].map((item) => <MeditationCardSkeleton key={item} />)}
-        </div>
-      ) : props.meditations.length ? (
-        props.meditations.map((meditation) => (
-          <MeditationCard key={meditation.id} meditation={meditation} locked={meditation.premium && !props.hasPremium} onOpen={props.onOpen} onFavorite={props.onFavorite} onUnlock={props.onUnlock} language={props.language} />
-        ))
+      {props.mode === 'meditations' ? (
+        <>
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4">
+            <FilterPill active={props.category === 'all'} onClick={() => props.setCategory('all')} label={t.all} />
+            <FilterPill active={props.category === 'short'} onClick={() => props.setCategory('short')} label={t.short} />
+            {props.categories.map((item) => (
+              <FilterPill key={item.slug} active={props.category === item.slug} onClick={() => props.setCategory(item.slug)} label={translateCategory(item.slug || item.name, props.language)} />
+            ))}
+          </div>
+          {props.loading && !props.meditations.length ? (
+            <div className="space-y-3">
+              {[0, 1, 2].map((item) => <MeditationCardSkeleton key={item} />)}
+            </div>
+          ) : props.meditations.length ? (
+            props.meditations.map((meditation) => (
+              <MeditationCard key={meditation.id} meditation={meditation} locked={meditation.premium && !props.hasPremium} onOpen={props.onOpen} onFavorite={props.onFavorite} onUnlock={props.onUnlock} language={props.language} />
+            ))
+          ) : (
+            <EmptyState title={t.noMeditations} body={t.noMeditationsBody} />
+          )}
+        </>
+      ) : filteredScenes.length ? (
+        <section className="space-y-3">
+          <p className="text-sm leading-6 text-lavender">{t.scenesLibraryBody}</p>
+          {filteredScenes.map((scene) => (
+            <SceneCard key={scene.id} scene={scene} locked={scene.access === 'premium' && !props.hasPremium} onOpen={props.onOpenScene} language={props.language} />
+          ))}
+        </section>
       ) : (
         <EmptyState title={t.noMeditations} body={t.noMeditationsBody} />
       )}
@@ -1648,6 +1992,142 @@ function MeditationCard({ meditation, locked, onOpen, onFavorite, onUnlock, lang
         {locked ? copy[language].unlockPremium : meditation.history?.last_position ? `${copy[language].resume} ${formatTime(meditation.history.last_position)}` : copy[language].play}
       </button>
     </article>
+  );
+}
+
+function SceneCard({ scene, locked, onOpen, language }: {
+  scene: SceneDefinition;
+  locked: boolean;
+  onOpen: (scene: SceneDefinition) => void;
+  language: AppLanguage;
+}) {
+  return (
+    <button onClick={() => onOpen(scene)} className="group w-full rounded-3xl border border-cream/15 bg-white/10 p-3 text-left backdrop-blur-xl transition hover:border-gold/35">
+      <div className="flex gap-3">
+        <div className="relative">
+          <img src={scene.cover} alt="" className={`h-24 w-24 rounded-2xl object-cover shadow-glow ${locked ? 'blur-[2px]' : ''}`} loading="lazy" />
+          {locked && <Lock className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gold" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h3 className="truncate font-semibold">{scene.title[language]}</h3>
+            {scene.access === 'premium' && <Crown size={15} className="text-gold" />}
+          </div>
+          <p className="mt-1 text-xs text-lavender">{scene.subtitle[language]}</p>
+          <p className="mt-2 line-clamp-2 text-sm text-cream/70">{scene.description[language]}</p>
+          <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+            <span className="rounded-full bg-gold/15 px-2 py-1 text-gold">{scene.access === 'premium' ? copy[language].premium : copy[language].free}</span>
+            <span className="rounded-full bg-cream/10 px-2 py-1 text-cream/70">{scene.mood}</span>
+            <span className="rounded-full bg-lavender/15 px-2 py-1 text-lavender">{copy[language].sceneLoop}</span>
+          </div>
+        </div>
+        <Waves className="mt-1 text-gold" size={20} />
+      </div>
+    </button>
+  );
+}
+
+function ScenePlayerPage({
+  scene,
+  scenes,
+  hasPremium,
+  playing,
+  volume,
+  onVolume,
+  onToggle,
+  onScene,
+  onClose,
+  language
+}: {
+  scene: SceneDefinition;
+  scenes: SceneDefinition[];
+  hasPremium: boolean;
+  playing: boolean;
+  volume: number;
+  onVolume: (volume: number) => void;
+  onToggle: () => void;
+  onScene: (scene: SceneDefinition) => void;
+  onClose: () => void;
+  language: AppLanguage;
+}) {
+  return (
+    <div className="relative space-y-4 luna-fade">
+      <img src={scene.cover} alt="" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[520px] w-full scale-110 rounded-[34px] object-cover opacity-25 blur-3xl" />
+      <div className="rounded-[28px] border border-white/10 bg-ink p-4 shadow-glow">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].scenesTitle}</p>
+            <h2 className="mt-1 font-serif text-3xl">{scene.title[language]}</h2>
+          </div>
+          <button onClick={onClose} aria-label={copy[language].closeScene} className="grid h-10 w-10 place-items-center rounded-full bg-cream/10 text-cream">
+            <X size={18} />
+          </button>
+        </div>
+
+        <img src={scene.cover} alt="" className="mt-4 aspect-square w-full rounded-[26px] object-cover shadow-glow" />
+        <p className="mt-4 text-center text-sm text-lavender">{scene.subtitle[language]}</p>
+        <p className="mt-2 text-center text-xs uppercase tracking-[0.18em] text-gold">{copy[language].sceneLoop}</p>
+
+        <button onClick={onToggle} className="mx-auto mt-5 grid h-16 w-16 place-items-center rounded-full bg-gold text-night shadow-glow">
+          {playing ? <Pause /> : <Play />}
+        </button>
+
+        <div className="mt-5 rounded-[20px] bg-surface p-4">
+          <div className="mb-2 flex items-center justify-between text-sm text-lavender">
+            <span className="inline-flex items-center gap-2"><Volume2 size={16} />{copy[language].sceneVolume}</span>
+            <span>{Math.round(volume * 100)}%</span>
+          </div>
+          <input type="range" min={0} max={1} step={0.01} value={volume} onChange={(event) => onVolume(Number(event.target.value))} className="h-8 w-full accent-gold" />
+        </div>
+      </div>
+
+      <section>
+        <h3 className="mb-3 text-lg font-semibold">{copy[language].changeScene}</h3>
+        <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+          {scenes.map((item) => {
+            const locked = item.access === 'premium' && !hasPremium;
+            return (
+              <button key={item.id} onClick={() => onScene(item)} className={`w-32 shrink-0 text-left ${locked ? 'opacity-70' : ''}`}>
+                <div className="relative">
+                  <img src={item.cover} alt="" className="h-32 w-32 rounded-3xl object-cover shadow-glow" />
+                  {locked && <Lock className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gold" />}
+                </div>
+                <p className="mt-2 line-clamp-1 text-sm font-semibold">{item.title[language]}</p>
+                <p className="text-xs text-lavender">{item.access === 'premium' ? copy[language].premium : copy[language].free}</p>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function SceneMiniPlayer({ scene, playing, volume, onToggle, onOpen, onVolume, language }: {
+  scene: SceneDefinition;
+  playing: boolean;
+  volume: number;
+  onToggle: () => void;
+  onOpen: () => void;
+  onVolume: (volume: number) => void;
+  language: AppLanguage;
+}) {
+  return (
+    <div className="fixed inset-x-4 bottom-[86px] z-20 mx-auto max-w-md rounded-[22px] border border-gold/20 bg-night/90 p-3 shadow-glow backdrop-blur-xl">
+      <div className="flex items-center gap-3">
+        <button onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+          <img src={scene.cover} alt="" className="h-12 w-12 rounded-2xl object-cover" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold">{scene.title[language]}</p>
+            <p className="truncate text-xs text-lavender">{scene.subtitle[language]}</p>
+          </div>
+        </button>
+        <button onClick={onToggle} className="grid h-11 w-11 place-items-center rounded-full bg-gold text-night">
+          {playing ? <Pause size={18} /> : <Play size={18} />}
+        </button>
+      </div>
+      <input aria-label={copy[language].sceneVolume} type="range" min={0} max={1} step={0.01} value={volume} onChange={(event) => onVolume(Number(event.target.value))} className="mt-2 h-6 w-full accent-gold" />
+    </div>
   );
 }
 
