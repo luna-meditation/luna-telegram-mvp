@@ -430,7 +430,7 @@ const copy = {
     moonGardenBody: 'Your calm grows with every practice.',
     gardenLevel: 'Garden level',
     moonSeeds: 'Moon Seeds',
-    moonSeedsInfo: 'Moon Seeds are earned through completed practices.',
+    moonSeedsInfo: 'Moon Seeds grow when you complete practices.',
     calmPoints: 'Calm Points',
     totalPractice: 'Total Practice',
     quietRhythm: 'Quiet Rhythm',
@@ -668,7 +668,7 @@ const copy = {
     moonGardenBody: 'Твоё спокойствие растёт с каждой практикой.',
     gardenLevel: 'Уровень сада',
     moonSeeds: 'Лунные семена',
-    moonSeedsInfo: 'Лунные семена появляются за завершённые практики.',
+    moonSeedsInfo: 'Лунные семена растут, когда ты завершаешь практики.',
     calmPoints: 'Баллы спокойствия',
     totalPractice: 'Практика',
     quietRhythm: 'Тихий ритм',
@@ -1996,12 +1996,12 @@ function Rail({ title, meditations, onOpen, language }: { title: string; meditat
   );
 }
 
-function InsightCard({ title, body, meta }: { title: string; body: string; meta: string }) {
+function InsightCard({ title, body, meta }: { title: string; body: string; meta?: string }) {
   return (
     <section className="rounded-[24px] border border-gold/20 bg-gradient-to-br from-gold/15 via-lavender/10 to-white/5 p-4 shadow-glow">
       <p className="text-xs uppercase tracking-[0.18em] text-gold">{title}</p>
       <p className="mt-3 text-sm leading-6 text-cream/85">{body}</p>
-      <p className="mt-3 text-xs text-lavender">{meta}</p>
+      {meta ? <p className="mt-3 text-xs text-lavender">{meta}</p> : null}
     </section>
   );
 }
@@ -3046,7 +3046,7 @@ function MoonGardenCard({ profile, language }: { profile: ProfileStats | null; l
         <div className="h-full rounded-full bg-gold transition-all duration-500" style={{ width: `${progress}%` }} />
       </div>
       <div className="mt-2 flex items-center justify-between text-xs text-lavender">
-        <span>{copy[language].gardenLevel} {level.level}</span>
+        <span>{copy[language].profileLevel.replace('{level}', `${level.level}`)} · {level.title}</span>
         <span>{text(language, 'nextLevel', { level: level.next })}</span>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
@@ -3089,7 +3089,7 @@ function ProfilePage({
   const totalMinutes = profile?.totalPracticeMinutes ?? profile?.minutesListened ?? 0;
   const currentMood = wellness?.mostCommonMoodLabel ? translateMoodLabel(wellness.mostCommonMoodLabel, language) : copy[language].notEnoughData;
   return (
-    <div className="space-y-3 luna-fade">
+    <div className="space-y-3 pt-[calc(env(safe-area-inset-top,0px)+16px)] luna-fade">
       <div>
         <p className="text-xs uppercase tracking-[0.18em] text-gold">LUNA</p>
         <h2 className="font-serif text-3xl font-semibold">{copy[language].profile}</h2>
@@ -3114,7 +3114,7 @@ function ProfilePage({
           <Stat label={copy[language].weeklyCheckins} value={`${wellness?.weeklyCheckinCount ?? 0}/7`} />
           <Stat label={copy[language].currentMood} value={currentMood} />
         </div>
-        <InsightCard title={copy[language].weeklyInsightTitle} body={profileWeeklyInsight(profile, language)} meta={rhythmMessage(profile, language)} />
+        <InsightCard title={copy[language].weeklyInsightTitle} body={profileWeeklyInsight(profile, language)} />
         {showAdminButton && (
           <button onClick={onAdmin} className="mt-4 w-full rounded-[20px] bg-gold px-5 py-3.5 font-semibold text-night">
             Admin
