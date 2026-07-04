@@ -1429,14 +1429,44 @@ function meditationShareUrl(meditationId: string) {
   return `https://t.me/${username}?startapp=meditation_${encodeURIComponent(meditationId)}`;
 }
 
+function launchSearchParams() {
+  const params = new URLSearchParams(window.location.search);
+  const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
+
+  if (hash.includes('=')) {
+    const hashParams = new URLSearchParams(hash.startsWith('?') ? hash.slice(1) : hash);
+    hashParams.forEach((value, key) => {
+      if (!params.has(key)) params.set(key, value);
+    });
+  }
+
+  return params;
+}
+
 function miniAppStartParam() {
-  const search = new URLSearchParams(window.location.search);
+  const search = launchSearchParams();
+  // BotFather Main Mini App should point to the deployed frontend URL. Telegram
+  // then delivers startapp payloads through initDataUnsafe.start_param or query params.
   return (
     window.Telegram?.WebApp?.initDataUnsafe?.start_param ||
     search.get('tgWebAppStartParam') ||
     search.get('startapp') ||
     ''
   );
+}
+
+function pageFromStartParam(startParam: string): Page {
+  const normalized = startParam.trim().toLowerCase();
+  if (normalized === 'library') return 'library';
+  if (normalized === 'premium') return 'pricing';
+  if (normalized === 'profile') return 'profile';
+  if (normalized === 'moon-garden') return 'moonGarden';
+  return 'home';
+}
+
+function initialPageFromLaunch(startParam: string): Page {
+  if (window.location.pathname === '/admin' || window.location.hash === '#admin') return 'admin';
+  return pageFromStartParam(startParam);
 }
 
 function meditationIdFromStartParam(startParam: string) {
@@ -1488,13 +1518,14 @@ function App() {
   const telegram = getTelegram();
   const user = telegram?.initDataUnsafe.user ?? fallbackUser;
   const initData = telegram?.initData;
+  const launchStartParam = miniAppStartParam();
   const sceneAudioRef = useRef<HTMLAudioElement | null>(null);
   const moonGardenAudioRef = useRef<HTMLAudioElement | null>(null);
   const sceneListenSecondsRef = useRef(0);
   const sceneMoonSeedAwardedRef = useRef(false);
   const [initialLibraryCache] = useState(() => readLibraryCache());
   const [language, setLanguage] = useState<AppLanguage>(() => initialLanguage(user));
-  const [page, setPage] = useState<Page>(window.location.pathname === '/admin' || window.location.hash === '#admin' ? 'admin' : 'home');
+  const [page, setPage] = useState<Page>(() => initialPageFromLaunch(launchStartParam));
   const [libraryMode, setLibraryMode] = useState<LibraryMode>('meditations');
   const [mood, setMood] = useState<MoodChip>('Calm');
   const [moodSelectedByUser, setMoodSelectedByUser] = useState(false);
@@ -1522,7 +1553,7 @@ function App() {
   const [adminDashboard, setAdminDashboard] = useState<AdminDashboardData | null>(null);
   const [wellness, setWellness] = useState<WellnessSummary | null>(null);
   const [showCheckin, setShowCheckin] = useState(false);
-  const [pendingMeditationId, setPendingMeditationId] = useState(() => meditationIdFromStartParam(miniAppStartParam()));
+  const [pendingMeditationId, setPendingMeditationId] = useState(() => meditationIdFromStartParam(launchStartParam));
   const [openedStartMeditationId, setOpenedStartMeditationId] = useState<string | null>(null);
 
   const refreshAccount = async () => {
