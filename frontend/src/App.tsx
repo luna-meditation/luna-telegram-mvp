@@ -102,6 +102,7 @@ const premiumPrices = {
 const libraryCacheKey = 'luna.library.v1';
 const languageStorageKey = 'luna.language.v1';
 const moonGardenVolumeStorageKey = 'luna.moonGarden.volume.v1';
+const moonGardenAmbienceUrl = '/assets/audio/moon-garden/moon-garden-ambience.wav';
 const playerFixVersion = 'pause-seek-isolation-v5';
 const sceneAudioCache = new Map<string, string>();
 type LibraryCache = {
@@ -596,6 +597,7 @@ const copy = {
     playGardenAmbience: 'Play ambience',
     pauseGardenAmbience: 'Pause ambience',
     gardenAmbience: 'Moon Garden ambience',
+    gardenAmbienceUnavailable: 'Ambience unavailable',
     developerTools: 'Admin Garden Tools',
     grant100Seeds: 'Grant 100 Seeds',
     unlockFullGarden: 'Unlock Full Garden',
@@ -871,6 +873,7 @@ const copy = {
     playGardenAmbience: 'Включить атмосферу',
     pauseGardenAmbience: 'Пауза атмосферы',
     gardenAmbience: 'Атмосфера Лунного сада',
+    gardenAmbienceUnavailable: 'Атмосфера недоступна',
     developerTools: 'Admin Garden Tools',
     grant100Seeds: 'Добавить 100 семян',
     unlockFullGarden: 'Открыть весь сад',
@@ -1013,9 +1016,9 @@ function saveStoredLanguage(language: AppLanguage) {
 function readMoonGardenVolume() {
   try {
     const saved = Number(window.localStorage.getItem(moonGardenVolumeStorageKey));
-    return Number.isFinite(saved) ? Math.max(0, Math.min(1, saved)) : 0.18;
+    return Number.isFinite(saved) ? Math.max(0, Math.min(1, saved)) : 0.14;
   } catch {
-    return 0.18;
+    return 0.14;
   }
 }
 
@@ -1510,6 +1513,7 @@ function App() {
   const [sceneAudioUrl, setSceneAudioUrl] = useState('');
   const [moonGardenAmbiencePlaying, setMoonGardenAmbiencePlaying] = useState(false);
   const [moonGardenVolume, setMoonGardenVolume] = useState(readMoonGardenVolume);
+  const [moonGardenAmbienceError, setMoonGardenAmbienceError] = useState(false);
   const [paymentMessage, setPaymentMessage] = useState('');
   const [openingPlan, setOpeningPlan] = useState<'monthly' | 'lifetime' | null>(null);
   const [adminStatus, setAdminStatus] = useState<'checking' | 'allowed' | 'denied'>('checking');
@@ -1723,6 +1727,8 @@ function App() {
     }
     sceneAudioRef.current?.pause();
     setScenePlaying(false);
+    moonGardenAudioRef.current?.pause();
+    setMoonGardenAmbiencePlaying(false);
     setSelectedMeditation(meditation);
     setPage('player');
   };
@@ -1791,8 +1797,8 @@ function App() {
     const audio = moonGardenAudioRef.current;
     if (!audio) return;
 
-    if (!audio.src) {
-      audio.src = createSceneAudioUrl('mist');
+    if (!audio.src || !audio.src.endsWith(moonGardenAmbienceUrl)) {
+      audio.src = moonGardenAmbienceUrl;
     }
     audio.loop = true;
     audio.volume = moonGardenVolume;
@@ -1800,12 +1806,24 @@ function App() {
     if (audio.paused) {
       sceneAudioRef.current?.pause();
       setScenePlaying(false);
-      await audio.play();
-      setMoonGardenAmbiencePlaying(true);
+      setMoonGardenAmbienceError(false);
+      try {
+        await audio.play();
+        setMoonGardenAmbiencePlaying(true);
+      } catch (error) {
+        console.info('[Luna Moon Garden ambience failed]', error instanceof Error ? error.message : 'Ambience playback failed.');
+        setMoonGardenAmbienceError(true);
+        setMoonGardenAmbiencePlaying(false);
+      }
       return;
     }
 
     audio.pause();
+    setMoonGardenAmbiencePlaying(false);
+  };
+
+  const pauseMoonGardenAmbience = () => {
+    moonGardenAudioRef.current?.pause();
     setMoonGardenAmbiencePlaying(false);
   };
 
@@ -1985,12 +2003,25 @@ function App() {
     const audio = moonGardenAudioRef.current;
     if (!audio) return;
     const syncPause = () => setMoonGardenAmbiencePlaying(false);
-    const syncPlay = () => setMoonGardenAmbiencePlaying(true);
+    const syncPlay = () => {
+      setMoonGardenAmbienceError(false);
+      setMoonGardenAmbiencePlaying(true);
+    };
+    const syncError = () => {
+      console.info('[Luna Moon Garden ambience missing or failed to load]', moonGardenAmbienceUrl);
+      setMoonGardenAmbienceError(true);
+      setMoonGardenAmbiencePlaying(false);
+    };
+    audio.src = moonGardenAmbienceUrl;
+    audio.loop = true;
+    audio.volume = readMoonGardenVolume();
     audio.addEventListener('pause', syncPause);
     audio.addEventListener('play', syncPlay);
+    audio.addEventListener('error', syncError);
     return () => {
       audio.removeEventListener('pause', syncPause);
       audio.removeEventListener('play', syncPlay);
+      audio.removeEventListener('error', syncError);
     };
   }, []);
 
@@ -2100,6 +2131,7 @@ function App() {
             isAdmin={adminStatus === 'allowed'}
             ambiencePlaying={moonGardenAmbiencePlaying}
             ambienceVolume={moonGardenVolume}
+            ambienceError={moonGardenAmbienceError}
             onToggleAmbience={toggleMoonGardenAmbience}
             onAmbienceVolume={changeMoonGardenVolume}
             onDevAction={runMoonGardenDevAction}
@@ -2121,6 +2153,7 @@ function App() {
             }
             onHome={() => setPage('home')}
             onProgress={() => setPage('profile')}
+            onPlaybackStart={pauseMoonGardenAmbience}
             onContinue={() => {
               if (nextMeditation && nextMeditation.id !== selectedMeditation.id) openMeditation(nextMeditation);
               else setPage('library');
@@ -2172,7 +2205,7 @@ function App() {
         )}
 
         <audio ref={sceneAudioRef} loop preload="none" />
-        <audio ref={moonGardenAudioRef} loop preload="none" />
+        <audio ref={moonGardenAudioRef} src={moonGardenAmbienceUrl} loop preload="none" />
         {selectedScene && page !== 'scenePlayer' && page !== 'admin' && (
           <SceneMiniPlayer
             scene={selectedScene}
@@ -2935,7 +2968,7 @@ function PlanCard(props: { title: string; price: string; features: string[]; act
   );
 }
 
-function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, onHome, onProgress, onContinue, language }: {
+function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, onHome, onProgress, onPlaybackStart, onContinue, language }: {
   meditation: Meditation;
   nextMeditation?: Meditation;
   favorite: boolean;
@@ -2943,6 +2976,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
   onSave: (position: number, duration: number, completed?: boolean) => Promise<unknown>;
   onHome: () => void;
   onProgress: () => void;
+  onPlaybackStart?: () => void;
   onContinue: () => void;
   language: AppLanguage;
 }) {
@@ -3094,6 +3128,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
       syncProgress();
     };
     const played = () => {
+      onPlaybackStart?.();
       setPlaying(true);
       syncProgress();
     };
@@ -3150,7 +3185,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
       audio.removeEventListener('ended', ended);
       audio.pause();
     };
-  }, [localized.audioUrl, meditation.duration, meditation.id]);
+  }, [localized.audioUrl, meditation.duration, meditation.id, onPlaybackStart]);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = speed;
@@ -3580,6 +3615,7 @@ function MoonGardenPage({
   isAdmin,
   ambiencePlaying,
   ambienceVolume,
+  ambienceError,
   onToggleAmbience,
   onAmbienceVolume,
   onDevAction,
@@ -3591,6 +3627,7 @@ function MoonGardenPage({
   isAdmin: boolean;
   ambiencePlaying: boolean;
   ambienceVolume: number;
+  ambienceError: boolean;
   onToggleAmbience: () => Promise<void>;
   onAmbienceVolume: (volume: number) => void;
   onDevAction: (input: { action: MoonGardenDevAction; seedBalance?: number; amount?: number; stageLevel?: number }) => Promise<ProfileStats>;
@@ -3840,6 +3877,7 @@ function MoonGardenPage({
             className="mt-2 h-6 w-full accent-gold"
           />
         </label>
+        {ambienceError && <p className="mt-3 rounded-2xl bg-gold/10 px-3 py-2 text-xs text-gold">{copy[language].gardenAmbienceUnavailable}</p>}
       </section>
 
       {isAdmin && (
