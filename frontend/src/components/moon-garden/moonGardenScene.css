@@ -1,0 +1,381 @@
+.moon-garden-scene {
+  --garden-intensity: 0;
+  --garden-level: 0;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(212, 175, 55, 0.26);
+  border-radius: 30px;
+  background: #120c22;
+  box-shadow: 0 20px 80px rgba(212, 175, 55, 0.12);
+  isolation: isolate;
+}
+
+.moon-garden-scene-immersive {
+  min-height: 58vh;
+  height: clamp(430px, 58vh, 620px);
+}
+
+.moon-garden-scene-compact {
+  min-height: 300px;
+}
+
+.moon-garden-scene-image,
+.moon-garden-scene-fallback {
+  position: absolute;
+  inset: 0;
+  height: 100%;
+  width: 100%;
+}
+
+.moon-garden-scene-image {
+  object-fit: cover;
+  object-position: center 58%;
+  transform: scale(1.015);
+}
+
+.moon-garden-scene-fallback {
+  background:
+    radial-gradient(circle at 50% 20%, rgba(142, 95, 214, 0.32), transparent 34%),
+    radial-gradient(circle at 70% 70%, rgba(212, 175, 55, 0.16), transparent 28%),
+    linear-gradient(180deg, #1a1026 0%, #100b1c 58%, #07060d 100%);
+}
+
+.moon-garden-scene-vignette {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(10, 8, 18, 0.58), rgba(10, 8, 18, 0.08) 34%, rgba(10, 8, 18, 0.44) 100%),
+    radial-gradient(circle at 50% 84%, rgba(212, 175, 55, calc(0.05 + var(--garden-intensity) * 0.08)), transparent 42%);
+}
+
+.moon-garden-stars,
+.moon-garden-fireflies,
+.moon-garden-water-shimmer,
+.moon-garden-water-ripples,
+.moon-garden-mist,
+.moon-garden-bloom-glow,
+.moon-garden-lantern-glow,
+.moon-garden-bridge-reflection {
+  position: absolute;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.moon-garden-star {
+  position: absolute;
+  border-radius: 999px;
+  background: rgba(245, 241, 233, 0.9);
+  box-shadow: 0 0 10px rgba(245, 241, 233, 0.65);
+  opacity: 0.26;
+  animation: moonGardenStarTwinkle 5.8s ease-in-out infinite;
+}
+
+.moon-garden-water-shimmer {
+  left: 8%;
+  right: 8%;
+  bottom: 12%;
+  height: 34%;
+  opacity: calc(0.12 + var(--garden-intensity) * 0.22);
+  mix-blend-mode: screen;
+  background:
+    linear-gradient(105deg, transparent 0%, rgba(245, 241, 233, 0.1) 14%, transparent 28%),
+    repeating-linear-gradient(170deg, transparent 0 18px, rgba(142, 95, 214, 0.12) 20px, transparent 26px);
+  filter: blur(1.5px);
+  transform: rotate(-3deg) translateY(2%);
+  animation: moonGardenWaterShimmer 12s ease-in-out infinite;
+}
+
+.moon-garden-water-ripples {
+  right: 13%;
+  bottom: 17%;
+  width: 42%;
+  height: 26%;
+  opacity: calc(0.08 + var(--garden-intensity) * 0.24);
+}
+
+.moon-garden-water-ripples span {
+  position: absolute;
+  left: 50%;
+  top: 54%;
+  width: 42%;
+  aspect-ratio: 1 / 0.38;
+  border: 1px solid rgba(245, 241, 233, 0.3);
+  border-radius: 999px;
+  transform: translate(-50%, -50%) scale(0.7);
+  animation: moonGardenRipple 8.5s ease-out infinite;
+}
+
+.moon-garden-water-ripples span:nth-child(2) {
+  animation-delay: 2.7s;
+}
+
+.moon-garden-water-ripples span:nth-child(3) {
+  animation-delay: 5.1s;
+}
+
+.moon-garden-mist {
+  left: -10%;
+  right: -10%;
+  height: 26%;
+  opacity: calc(0.13 + var(--garden-intensity) * 0.12);
+  background:
+    radial-gradient(ellipse at 18% 50%, rgba(245, 241, 233, 0.18), transparent 44%),
+    radial-gradient(ellipse at 52% 44%, rgba(142, 95, 214, 0.16), transparent 42%),
+    radial-gradient(ellipse at 82% 58%, rgba(245, 241, 233, 0.12), transparent 36%);
+  filter: blur(16px);
+}
+
+.moon-garden-mist-a {
+  bottom: 27%;
+  animation: moonGardenMistA 24s ease-in-out infinite alternate;
+}
+
+.moon-garden-mist-b {
+  bottom: 6%;
+  opacity: calc(0.1 + var(--garden-intensity) * 0.1);
+  animation: moonGardenMistB 30s ease-in-out infinite alternate;
+}
+
+.moon-garden-bloom-glow {
+  left: 12%;
+  bottom: 18%;
+  width: 34%;
+  height: 28%;
+  border-radius: 999px;
+  opacity: calc(0.08 + var(--garden-intensity) * 0.16);
+  background: radial-gradient(circle, rgba(245, 241, 233, 0.28), rgba(212, 175, 55, 0.12) 38%, transparent 70%);
+  filter: blur(14px);
+  animation: moonGardenSoftPulse 8s ease-in-out infinite;
+}
+
+.moon-garden-lantern-glow {
+  right: 12%;
+  bottom: 30%;
+  width: 30%;
+  height: 34%;
+  border-radius: 999px;
+  opacity: calc(0.12 + var(--garden-intensity) * 0.18);
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.34), rgba(212, 175, 55, 0.12) 34%, transparent 70%);
+  filter: blur(16px);
+  animation: moonGardenLanternGlow 5.8s ease-in-out infinite;
+}
+
+.moon-garden-bridge-reflection {
+  left: 22%;
+  right: 14%;
+  bottom: 13%;
+  height: 22%;
+  opacity: calc(0.12 + var(--garden-intensity) * 0.16);
+  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.16), rgba(142, 95, 214, 0.12), transparent);
+  filter: blur(10px);
+  transform: skewY(-4deg);
+  animation: moonGardenReflection 10s ease-in-out infinite;
+}
+
+.moon-garden-mote {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(212, 175, 55, 0.9);
+  box-shadow: 0 0 16px rgba(212, 175, 55, 0.72);
+  opacity: 0;
+  animation: moonGardenMoteDrift 12s ease-in-out infinite;
+}
+
+.moon-garden-scene-copy {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  z-index: 4;
+  max-width: min(310px, 78%);
+  border-radius: 24px;
+  background: rgba(10, 8, 18, 0.34);
+  padding: 12px;
+  backdrop-filter: blur(10px);
+}
+
+.moon-garden-scene-copy p {
+  margin: 0;
+  color: #d4af37;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.moon-garden-scene-copy h3 {
+  margin: 4px 0 0;
+  font-family: Playfair Display, Georgia, serif;
+  font-size: clamp(26px, 8vw, 40px);
+  line-height: 1.05;
+}
+
+.moon-garden-scene-copy span {
+  display: block;
+  margin-top: 6px;
+  color: rgba(245, 241, 233, 0.76);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.moon-garden-scene-compact .moon-garden-scene-copy h3 {
+  font-size: 24px;
+}
+
+.moon-garden-empty-message {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: 24px;
+  width: min(240px, 78%);
+  margin: 0;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 18px;
+  background: rgba(10, 8, 18, 0.7);
+  padding: 10px 12px;
+  color: rgba(214, 198, 239, 0.9);
+  text-align: center;
+  font-size: 12px;
+  backdrop-filter: blur(10px);
+}
+
+.moon-garden-scene-listening .moon-garden-scene-image {
+  animation: moonGardenImageBreathe 12s ease-in-out infinite;
+}
+
+@keyframes moonGardenStarTwinkle {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.88);
+  }
+
+  48% {
+    opacity: 0.72;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes moonGardenWaterShimmer {
+  0%,
+  100% {
+    background-position: 0% 50%, 0 0;
+    transform: rotate(-3deg) translateY(2%) translateX(-1%);
+  }
+
+  50% {
+    background-position: 90% 50%, 20px 8px;
+    transform: rotate(-3deg) translateY(0) translateX(1%);
+  }
+}
+
+@keyframes moonGardenRipple {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.55);
+  }
+
+  32% {
+    opacity: 0.5;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.55);
+  }
+}
+
+@keyframes moonGardenMistA {
+  from {
+    transform: translateX(-4%) translateY(4px);
+  }
+
+  to {
+    transform: translateX(6%) translateY(-4px);
+  }
+}
+
+@keyframes moonGardenMistB {
+  from {
+    transform: translateX(5%) translateY(2px);
+  }
+
+  to {
+    transform: translateX(-7%) translateY(-5px);
+  }
+}
+
+@keyframes moonGardenSoftPulse {
+  0%,
+  100% {
+    transform: scale(0.95);
+  }
+
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes moonGardenLanternGlow {
+  0%,
+  100% {
+    opacity: calc(0.1 + var(--garden-intensity) * 0.18);
+    transform: scale(0.96);
+  }
+
+  54% {
+    opacity: calc(0.16 + var(--garden-intensity) * 0.24);
+    transform: scale(1.06);
+  }
+}
+
+@keyframes moonGardenReflection {
+  0%,
+  100% {
+    transform: skewY(-4deg) translateX(-2%);
+  }
+
+  50% {
+    transform: skewY(-4deg) translateX(3%);
+  }
+}
+
+@keyframes moonGardenMoteDrift {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.82);
+  }
+
+  28% {
+    opacity: 0.76;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate3d(18px, -30px, 0) scale(1.12);
+  }
+}
+
+@keyframes moonGardenImageBreathe {
+  0%,
+  100% {
+    transform: scale(1.015);
+  }
+
+  50% {
+    transform: scale(1.028);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moon-garden-scene *,
+  .moon-garden-scene::before,
+  .moon-garden-scene::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

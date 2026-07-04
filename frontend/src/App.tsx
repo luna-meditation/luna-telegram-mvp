@@ -62,6 +62,7 @@ import {
   type ProfileStats,
   type WellnessSummary
 } from './api';
+import { MoonGardenScene as AnimatedMoonGardenScene } from './components/moon-garden/MoonGardenScene';
 
 type Page = 'home' | 'library' | 'favorites' | 'profile' | 'pricing' | 'player' | 'scenePlayer' | 'breathCircle' | 'moonGarden' | 'admin';
 type Mood = 'Calm' | 'Stressed' | 'Tired' | 'Anxious' | 'Focused';
@@ -3564,47 +3565,20 @@ function MoonGardenScene({
 }) {
   const plantedCount = plantedGardenElements(profile).length;
   const stage = getCurrentGardenStage(plantedCount);
-  const [failedPath, setFailedPath] = useState<string | null>(null);
-
-  useEffect(() => {
-    setFailedPath(null);
-  }, [stage.path]);
-
-  const handleImageError = () => {
-    setFailedPath(stage.path);
-    if (import.meta.env.DEV) {
-      console.warn('[MOON_GARDEN_STAGE_IMAGE_MISSING]', stage.path);
-    }
-  };
 
   return (
-    <section className={`relative overflow-hidden border border-gold/25 bg-[#120c22] shadow-glow ${ambiencePlaying ? 'moon-garden-listening' : ''} ${expanded ? 'min-h-[58vh] rounded-[30px] p-4' : 'rounded-[30px] p-4'}`}>
-      {!failedPath ? (
-        <img
-          key={stage.path}
-          src={stage.path}
-          alt={`${copy[language].moonGarden} level ${stage.level}`}
-          onError={handleImageError}
-          className="moon-garden-stage-image absolute inset-0 h-full w-full object-cover object-[center_58%]"
-          draggable={false}
-        />
-      ) : (
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(142,95,214,0.32),transparent_34%),radial-gradient(circle_at_70%_70%,rgba(212,175,55,0.16),transparent_28%),linear-gradient(180deg,#1a1026_0%,#100b1c_58%,#07060d_100%)]" />
-      )}
-      <div className="absolute inset-0 bg-gradient-to-b from-night/55 via-transparent to-night/45" />
-      <div className={`relative ${expanded ? 'h-[58vh] min-h-[430px] max-h-[620px]' : 'h-[280px]'}`}>
-        <div className={`absolute left-0 top-0 rounded-3xl bg-night/35 p-3 backdrop-blur-sm ${expanded ? 'max-w-[300px]' : 'max-w-[240px]'}`}>
-          <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].moonGarden}</p>
-          <h3 className={`mt-1 font-serif ${expanded ? 'text-4xl' : 'text-2xl'}`}>{stage.title[language]}</h3>
-          <p className={`mt-1 leading-5 text-cream/70 ${expanded ? 'text-base' : 'text-xs'}`}>{stage.subtitle[language]}</p>
-        </div>
-        {stage.level === 0 && (
-          <p className="absolute bottom-6 left-1/2 w-56 -translate-x-1/2 rounded-2xl border border-white/10 bg-night/70 px-3 py-2 text-center text-xs text-lavender backdrop-blur">
-            {language === 'en' ? 'Your garden is waiting for its first seed.' : 'Твой сад ждёт первое семя.'}
-          </p>
-        )}
-      </div>
-    </section>
+    <AnimatedMoonGardenScene
+      stage={{
+        level: stage.level,
+        path: stage.path,
+        title: stage.title[language],
+        subtitle: stage.subtitle[language]
+      }}
+      heading={copy[language].moonGarden}
+      emptyMessage={language === 'en' ? 'Your garden is waiting for its first seed.' : 'Твой сад ждёт первое семя.'}
+      compact={!expanded}
+      ambiencePlaying={ambiencePlaying}
+    />
   );
 }
 
@@ -3763,6 +3737,32 @@ function MoonGardenPage({
 
       <MoonGardenScene profile={activeProfile} language={language} appearedElementId={appearedElementId} expanded ambiencePlaying={ambiencePlaying} />
 
+      <section className="rounded-[24px] border border-white/10 bg-ink/90 p-4 shadow-glow">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.16em] text-gold">{copy[language].gardenAmbience}</p>
+            <p className="mt-1 text-sm text-lavender">{language === 'en' ? 'A soft night layer for your garden.' : 'Мягкий ночной слой для твоего сада.'}</p>
+          </div>
+          <button onClick={() => void onToggleAmbience()} className="rounded-2xl bg-gold px-4 py-3 text-sm font-semibold text-night">
+            {ambiencePlaying ? copy[language].pauseGardenAmbience : copy[language].playGardenAmbience}
+          </button>
+        </div>
+        <label className="mt-3 block text-xs text-lavender">
+          <span className="inline-flex items-center gap-2"><Volume2 size={14} />{Math.round(ambienceVolume * 100)}%</span>
+          <input
+            aria-label={copy[language].gardenAmbience}
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={ambienceVolume}
+            onChange={(event) => onAmbienceVolume(Number(event.target.value))}
+            className="mt-2 h-6 w-full accent-gold"
+          />
+        </label>
+        {ambienceError && <p className="mt-3 rounded-2xl bg-gold/10 px-3 py-2 text-xs text-gold">{copy[language].gardenAmbienceUnavailable}</p>}
+      </section>
+
       <section className="rounded-[26px] border border-gold/20 bg-ink p-4 shadow-glow">
         <div className="grid grid-cols-3 gap-2 text-xs">
           <Stat label={copy[language].availableMoonSeeds} value={String(seeds)} />
@@ -3852,32 +3852,6 @@ function MoonGardenPage({
             </article>
           );
         })}
-      </section>
-
-      <section className="rounded-[24px] border border-white/10 bg-ink/90 p-4 shadow-glow">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <p className="text-xs uppercase tracking-[0.16em] text-gold">{copy[language].gardenAmbience}</p>
-            <p className="mt-1 text-sm text-lavender">{language === 'en' ? 'A soft night layer for your garden.' : 'Мягкий ночной слой для твоего сада.'}</p>
-          </div>
-          <button onClick={() => void onToggleAmbience()} className="rounded-2xl bg-gold px-4 py-3 text-sm font-semibold text-night">
-            {ambiencePlaying ? copy[language].pauseGardenAmbience : copy[language].playGardenAmbience}
-          </button>
-        </div>
-        <label className="mt-3 block text-xs text-lavender">
-          <span className="inline-flex items-center gap-2"><Volume2 size={14} />{Math.round(ambienceVolume * 100)}%</span>
-          <input
-            aria-label={copy[language].gardenAmbience}
-            type="range"
-            min={0}
-            max={1}
-            step={0.01}
-            value={ambienceVolume}
-            onChange={(event) => onAmbienceVolume(Number(event.target.value))}
-            className="mt-2 h-6 w-full accent-gold"
-          />
-        </label>
-        {ambienceError && <p className="mt-3 rounded-2xl bg-gold/10 px-3 py-2 text-xs text-gold">{copy[language].gardenAmbienceUnavailable}</p>}
       </section>
 
       {isAdmin && (

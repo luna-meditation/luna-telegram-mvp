@@ -116,31 +116,6 @@
   animation: lunaFade 420ms ease-in-out both;
 }
 
-.moon-garden-stage-image {
-  transform-origin: 50% 50%;
-  animation: moonGardenStageFade 720ms ease-out both;
-  transition: filter 700ms ease, transform 700ms ease, opacity 700ms ease;
-}
-
-.moon-garden-listening .moon-garden-stage-image {
-  filter: saturate(1.08) brightness(1.05);
-  transform: scale(1.012);
-}
-
-@keyframes moonGardenStageFade {
-  from {
-    opacity: 0;
-    transform: scale(1.018);
-    filter: blur(5px) saturate(0.92);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-    filter: blur(0) saturate(1);
-  }
-}
-
 @keyframes lunaFade {
   from {
     opacity: 0;
@@ -174,10 +149,9 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .luna-bg::before,
-  .luna-bg::after,
-  .luna-fade,
-  .moon-garden-stage-image {
-    animation: none;
-  }
-}
+	  .luna-bg::before,
+	  .luna-bg::after,
+	  .luna-fade {
+	    animation: none;
+	  }
+	}
