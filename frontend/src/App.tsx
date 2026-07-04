@@ -583,6 +583,9 @@ const copy = {
     needMoreSeeds: 'Need {count} more seeds',
     gardenElements: 'Garden Upgrades',
     nextSuggestedElement: 'Next suggested upgrade',
+    gardenComplete: 'Garden Complete',
+    plantUpgrade: 'Plant Upgrade',
+    cost: 'Cost',
     gardenGrew: 'Your garden grew a little today.',
     elementPlanted: '{name} planted.',
     alreadyPlanted: 'This upgrade is already planted.',
@@ -602,8 +605,6 @@ const copy = {
     setSeeds: 'Set to {count}',
     gardenUpdated: 'Moon Garden updated.',
     unlocksLevel: 'Unlocks Level {level}',
-    viewFullGarden: 'View Full Garden',
-    closeFullGarden: 'Close Garden',
     gardenTakingShape: 'Your garden is taking shape.',
     gardenFlourishing: 'Your moon garden is flourishing.',
     gardenQuietPlace: 'Your quiet place is growing.',
@@ -857,6 +858,9 @@ const copy = {
     needMoreSeeds: 'Нужно ещё {count} сем.',
     gardenElements: 'Улучшения сада',
     nextSuggestedElement: 'Следующее улучшение',
+    gardenComplete: 'Сад завершён',
+    plantUpgrade: 'Посадить улучшение',
+    cost: 'Стоимость',
     gardenGrew: 'Твой сад сегодня немного вырос.',
     elementPlanted: '{name} посажен.',
     alreadyPlanted: 'Это улучшение уже посажено.',
@@ -876,8 +880,6 @@ const copy = {
     setSeeds: 'Поставить {count}',
     gardenUpdated: 'Лунный сад обновлён.',
     unlocksLevel: 'Открывает уровень {level}',
-    viewFullGarden: 'Открыть весь сад',
-    closeFullGarden: 'Закрыть сад',
     gardenTakingShape: 'Твой сад обретает форму.',
     gardenFlourishing: 'Твой лунный сад расцветает.',
     gardenQuietPlace: 'Твоё тихое место растёт.',
@@ -3541,7 +3543,7 @@ function MoonGardenScene({
   };
 
   return (
-    <section className={`relative overflow-hidden border border-gold/25 bg-[#120c22] shadow-glow ${ambiencePlaying ? 'moon-garden-listening' : ''} ${expanded ? 'min-h-[74vh] rounded-[34px] p-4' : 'rounded-[30px] p-4'}`}>
+    <section className={`relative overflow-hidden border border-gold/25 bg-[#120c22] shadow-glow ${ambiencePlaying ? 'moon-garden-listening' : ''} ${expanded ? 'min-h-[58vh] rounded-[30px] p-4' : 'rounded-[30px] p-4'}`}>
       {!failedPath ? (
         <img
           key={stage.path}
@@ -3555,7 +3557,7 @@ function MoonGardenScene({
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(142,95,214,0.32),transparent_34%),radial-gradient(circle_at_70%_70%,rgba(212,175,55,0.16),transparent_28%),linear-gradient(180deg,#1a1026_0%,#100b1c_58%,#07060d_100%)]" />
       )}
       <div className="absolute inset-0 bg-gradient-to-b from-night/55 via-transparent to-night/45" />
-      <div className={`relative ${expanded ? 'h-[70vh] min-h-[520px]' : 'h-[280px]'}`}>
+      <div className={`relative ${expanded ? 'h-[58vh] min-h-[430px] max-h-[620px]' : 'h-[280px]'}`}>
         <div className={`absolute left-0 top-0 rounded-3xl bg-night/35 p-3 backdrop-blur-sm ${expanded ? 'max-w-[300px]' : 'max-w-[240px]'}`}>
           <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].moonGarden}</p>
           <h3 className={`mt-1 font-serif ${expanded ? 'text-4xl' : 'text-2xl'}`}>{stage.title[language]}</h3>
@@ -3599,7 +3601,6 @@ function MoonGardenPage({
   const [liveProfile, setLiveProfile] = useState<ProfileStats | null>(profile);
   const [message, setMessage] = useState('');
   const [appearedElementId, setAppearedElementId] = useState<string | null>(null);
-  const [expandedGarden, setExpandedGarden] = useState(false);
   const [devOpen, setDevOpen] = useState(false);
   const [grantAmount, setGrantAmount] = useState(40);
   const [exactBalance, setExactBalance] = useState(25);
@@ -3611,6 +3612,9 @@ function MoonGardenPage({
   const nextElement = nextGardenElement(activeProfile);
   const readyElement = gardenElements.find((element) => !planted.has(element.id) && element.cost <= seeds) ?? null;
   const nextSuggestedElement = readyElement ?? nextElement;
+  const isGardenComplete = plantedCount >= gardenElements.length;
+  const nextUpgradeNeeded = nextSuggestedElement ? Math.max(0, nextSuggestedElement.cost - seeds) : 0;
+  const canPlantNextUpgrade = Boolean(nextSuggestedElement && nextUpgradeNeeded === 0 && !workingId);
   const progressMessage = plantedCount >= gardenElements.length
     ? copy[language].gardenFlourishing
     : plantedCount >= 3
@@ -3720,11 +3724,98 @@ function MoonGardenPage({
         </button>
       </div>
 
-      <MoonGardenScene profile={activeProfile} language={language} appearedElementId={appearedElementId} ambiencePlaying={ambiencePlaying} />
+      <MoonGardenScene profile={activeProfile} language={language} appearedElementId={appearedElementId} expanded ambiencePlaying={ambiencePlaying} />
 
-      <button onClick={() => setExpandedGarden(true)} className="w-full rounded-[22px] border border-gold/30 bg-gold/15 px-5 py-4 text-sm font-semibold text-gold shadow-glow">
-        {copy[language].viewFullGarden}
-      </button>
+      <section className="rounded-[26px] border border-gold/20 bg-ink p-4 shadow-glow">
+        <div className="grid grid-cols-3 gap-2 text-xs">
+          <Stat label={copy[language].availableMoonSeeds} value={String(seeds)} />
+          <Stat label={copy[language].gardenLevel} value={`${stage.level} · ${stage.title[language]}`} />
+          <Stat label={copy[language].plantedElements} value={String(plantedCount)} />
+        </div>
+        {message && <p className="mt-3 rounded-2xl bg-night/70 px-3 py-2 text-sm text-gold">{message}</p>}
+      </section>
+
+      <section className="rounded-[26px] border border-gold/20 bg-gradient-to-br from-gold/15 via-surface/80 to-night p-4 shadow-glow">
+        {isGardenComplete ? (
+          <>
+            <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].gardenComplete}</p>
+            <h3 className="mt-1 font-serif text-2xl">{stage.title[language]}</h3>
+            <p className="mt-2 text-sm leading-6 text-cream/75">{copy[language].gardenFlourishing}</p>
+            <p className="mt-3 rounded-2xl bg-night/60 px-3 py-2 text-sm text-gold">{plantedCount} / {gardenElements.length} {copy[language].plantedElements.toLowerCase()}</p>
+          </>
+        ) : nextSuggestedElement ? (
+          <>
+            <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].nextUnlock}</p>
+            <div className="mt-3 flex items-center gap-3">
+              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[20px] border border-gold/30 bg-gold/10">
+                <GardenUpgradeIcon visual={nextSuggestedElement.visual} active />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h3 className="font-serif text-2xl">{nextSuggestedElement.name[language]}</h3>
+                <p className="mt-1 text-xs text-lavender">{text(language, 'unlocksLevel', { level: nextSuggestedElement.unlockLevel })} · {copy[language].cost}: {nextSuggestedElement.cost} {copy[language].moonSeeds}</p>
+              </div>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-cream/75">{nextSuggestedElement.description[language]}</p>
+            <button
+              onClick={() => void plant(nextSuggestedElement)}
+              disabled={!canPlantNextUpgrade}
+              className={`mt-4 w-full rounded-[18px] px-4 py-3 text-sm font-semibold ${
+                canPlantNextUpgrade ? 'bg-gold text-night' : 'bg-surface text-lavender'
+              } disabled:cursor-not-allowed disabled:opacity-80`}
+            >
+              {canPlantNextUpgrade
+                ? (workingId === nextSuggestedElement.id ? copy[language].planting : copy[language].plantUpgrade)
+                : text(language, 'needMoreSeeds', { count: nextUpgradeNeeded })}
+            </button>
+          </>
+        ) : (
+          <p className="text-sm text-lavender">{progressMessage}</p>
+        )}
+      </section>
+
+      <section className="space-y-3">
+        <h3 className="font-serif text-2xl">{copy[language].gardenElements}</h3>
+        {gardenElements.map((element) => {
+          const isPlanted = planted.has(element.id);
+          const needed = Math.max(0, element.cost - seeds);
+          const canPlant = !isPlanted && needed === 0;
+          const status = isPlanted ? copy[language].planted : canPlant ? copy[language].availableToPlant : copy[language].locked;
+          return (
+            <article key={element.id} className="rounded-[24px] border border-white/10 bg-gradient-to-br from-ink via-surface/70 to-night p-4 shadow-glow">
+              <div className="flex items-center gap-3">
+                <span className={`grid h-16 w-16 shrink-0 place-items-center rounded-[22px] border ${isPlanted ? 'border-gold bg-gold/20 shadow-gold' : canPlant ? 'border-gold/30 bg-gold/10' : 'border-white/10 bg-night/70'}`}>
+                  <GardenUpgradeIcon visual={element.visual} active={isPlanted || canPlant} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <h4 className="truncate font-serif text-xl">{element.name[language]}</h4>
+                    <span className={`rounded-full px-2 py-1 text-[11px] ${isPlanted ? 'bg-white/10 text-lavender' : 'bg-gold/15 text-gold'}`}>{element.cost} {copy[language].moonSeeds}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-lavender">{text(language, 'unlocksLevel', { level: element.unlockLevel })} · {status}</p>
+                  <p className="mt-2 text-sm leading-5 text-cream/70">{element.description[language]}</p>
+                </div>
+              </div>
+              {isPlanted ? (
+                <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-gold/15 px-3 py-2 text-xs font-semibold text-gold">
+                  <CheckCircle size={14} /> {copy[language].planted}
+                </p>
+              ) : (
+                <button
+                  onClick={() => void plant(element)}
+                  disabled={Boolean(workingId) || !canPlant}
+                  className={`mt-3 w-full rounded-[18px] px-4 py-3 text-sm font-semibold ${
+                    canPlant ? 'bg-gold text-night' : 'bg-surface text-lavender'
+                  } disabled:cursor-not-allowed disabled:opacity-80`}
+                >
+                  {canPlant
+                    ? (workingId === element.id ? copy[language].planting : copy[language].plantUpgrade)
+                    : text(language, 'needMoreSeeds', { count: needed })}
+                </button>
+              )}
+            </article>
+          );
+        })}
+      </section>
 
       <section className="rounded-[24px] border border-white/10 bg-ink/90 p-4 shadow-glow">
         <div className="flex items-center justify-between gap-3">
@@ -3749,20 +3840,6 @@ function MoonGardenPage({
             className="mt-2 h-6 w-full accent-gold"
           />
         </label>
-      </section>
-
-      <section className="rounded-[26px] border border-gold/20 bg-ink p-4 shadow-glow">
-        <div className="grid grid-cols-3 gap-2 text-xs">
-          <Stat label={copy[language].availableMoonSeeds} value={String(seeds)} />
-          <Stat label={copy[language].gardenLevel} value={`${stage.level} · ${stage.title[language]}`} />
-          <Stat label={copy[language].plantedElements} value={String(plantedCount)} />
-        </div>
-        <p className="mt-4 rounded-2xl bg-night/60 p-3 text-sm text-cream/75">{progressMessage}</p>
-        <div className="mt-4 rounded-2xl bg-gold/10 p-3 text-sm text-cream/80">
-          <span className="text-gold">{readyElement ? copy[language].availableToPlant : copy[language].nextSuggestedElement}: </span>
-          {nextSuggestedElement ? nextSuggestedElement.name[language] : copy[language].yourRhythm}
-        </div>
-        {message && <p className="mt-3 rounded-2xl bg-night/70 px-3 py-2 text-sm text-gold">{message}</p>}
       </section>
 
       {isAdmin && (
@@ -3858,88 +3935,6 @@ function MoonGardenPage({
           )}
         </section>
       )}
-
-      {expandedGarden && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-night/95 px-4 pb-[calc(120px+env(safe-area-inset-bottom))] pt-[calc(18px+env(safe-area-inset-top))] backdrop-blur-xl">
-          <div className="mx-auto flex max-w-xl items-center justify-between gap-3 pb-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].moonGarden}</p>
-              <p className="mt-1 text-sm text-lavender">{progressMessage}</p>
-            </div>
-            <button onClick={() => setExpandedGarden(false)} className="grid h-11 w-11 place-items-center rounded-full bg-surface text-cream" aria-label={copy[language].closeFullGarden}>
-              <X size={18} />
-            </button>
-          </div>
-          <div className="mx-auto max-w-xl space-y-4">
-            <MoonGardenScene profile={activeProfile} language={language} appearedElementId={appearedElementId} expanded ambiencePlaying={ambiencePlaying} />
-            <section className="rounded-[24px] border border-white/10 bg-ink/90 p-4 shadow-glow">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.16em] text-gold">{copy[language].gardenAmbience}</p>
-                  <p className="mt-1 text-sm text-lavender">{plantedCount} {copy[language].plantedElements.toLowerCase()}</p>
-                </div>
-                <button onClick={() => void onToggleAmbience()} className="rounded-2xl bg-gold px-4 py-3 text-sm font-semibold text-night">
-                  {ambiencePlaying ? copy[language].pauseGardenAmbience : copy[language].playGardenAmbience}
-                </button>
-              </div>
-              <input
-                aria-label={copy[language].gardenAmbience}
-                type="range"
-                min={0}
-                max={1}
-                step={0.01}
-                value={ambienceVolume}
-                onChange={(event) => onAmbienceVolume(Number(event.target.value))}
-                className="mt-3 h-6 w-full accent-gold"
-              />
-            </section>
-          </div>
-        </div>
-      )}
-
-      <section className="space-y-3">
-        <h3 className="font-serif text-2xl">{copy[language].gardenElements}</h3>
-        {gardenElements.map((element) => {
-          const isPlanted = planted.has(element.id);
-          const needed = Math.max(0, element.cost - seeds);
-          const canPlant = !isPlanted && needed === 0;
-          const status = isPlanted ? copy[language].planted : canPlant ? copy[language].availableToPlant : copy[language].locked;
-          return (
-            <article key={element.id} className="rounded-[24px] border border-white/10 bg-gradient-to-br from-ink via-surface/70 to-night p-4 shadow-glow">
-              <div className="flex items-center gap-3">
-                <span className={`grid h-16 w-16 shrink-0 place-items-center rounded-[22px] border ${isPlanted ? 'border-gold bg-gold/20 shadow-gold' : canPlant ? 'border-gold/30 bg-gold/10' : 'border-white/10 bg-night/70'}`}>
-                  <GardenUpgradeIcon visual={element.visual} active={isPlanted || canPlant} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <h4 className="truncate font-serif text-xl">{element.name[language]}</h4>
-                    <span className="rounded-full bg-gold/15 px-2 py-1 text-[11px] text-gold">{element.cost} {copy[language].moonSeeds}</span>
-                  </div>
-                  <p className="mt-1 text-xs text-lavender">{text(language, 'unlocksLevel', { level: element.unlockLevel })} · {status}</p>
-                  <p className="mt-2 text-sm leading-5 text-cream/70">{element.description[language]}</p>
-                </div>
-              </div>
-              {isPlanted ? (
-                <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-gold/15 px-3 py-2 text-xs font-semibold text-gold">
-                  <CheckCircle size={14} /> {copy[language].planted}
-                </p>
-              ) : (
-                <button
-                  onClick={() => void plant(element)}
-                  disabled={Boolean(workingId) || !canPlant}
-                  className={`mt-3 w-full rounded-[18px] px-4 py-3 text-sm font-semibold ${
-                    canPlant ? 'bg-gold text-night' : 'bg-surface text-lavender'
-                  } disabled:cursor-not-allowed disabled:opacity-80`}
-                >
-                  {canPlant
-                    ? (workingId === element.id ? copy[language].planting : copy[language].plant)
-                    : text(language, 'needMoreSeeds', { count: needed })}
-                </button>
-              )}
-            </article>
-          );
-        })}
-      </section>
     </div>
   );
 }
