@@ -274,6 +274,17 @@ const gardenElements: GardenElement[] = [
   }
 ];
 
+const gardenStages = [
+  { level: 0, path: '/assets/moon-garden/level-0-empty-garden.png' },
+  { level: 1, path: '/assets/moon-garden/level-1-first-bloom.png' },
+  { level: 2, path: '/assets/moon-garden/level-2-lantern-glow.png' },
+  { level: 3, path: '/assets/moon-garden/level-3-stone-path.png' },
+  { level: 4, path: '/assets/moon-garden/level-4-twin-bloom.png' },
+  { level: 5, path: '/assets/moon-garden/level-5-moon-bridge.png' },
+  { level: 6, path: '/assets/moon-garden/level-6-reflection-garden.png' },
+  { level: 7, path: '/assets/moon-garden/level-7-full-moon-garden.png' }
+];
+
 function createSceneAudioUrl(kind: SceneDefinition['sound']) {
   const cached = sceneAudioCache.get(kind);
   if (cached) return cached;
@@ -3363,21 +3374,6 @@ function MoonGardenCard({ profile, onOpen, language }: { profile: ProfileStats |
   );
 }
 
-const moonGardenStars = [
-  { left: '9%', top: '18%', size: 1.5, opacity: 0.42 },
-  { left: '17%', top: '31%', size: 1, opacity: 0.3 },
-  { left: '28%', top: '13%', size: 2, opacity: 0.5 },
-  { left: '39%', top: '24%', size: 1.2, opacity: 0.28 },
-  { left: '48%', top: '10%', size: 1.5, opacity: 0.36 },
-  { left: '57%', top: '34%', size: 1, opacity: 0.25 },
-  { left: '66%', top: '17%', size: 2.2, opacity: 0.48 },
-  { left: '76%', top: '38%', size: 1.2, opacity: 0.3 },
-  { left: '86%', top: '22%', size: 1.6, opacity: 0.4 },
-  { left: '93%', top: '47%', size: 1, opacity: 0.24 },
-  { left: '23%', top: '47%', size: 1.4, opacity: 0.28 },
-  { left: '51%', top: '51%', size: 1.1, opacity: 0.24 }
-];
-
 function GardenElementVisual({ visual }: { visual: GardenVisual }) {
   if (visual === 'stone') {
     return (
@@ -3451,118 +3447,9 @@ function GardenElementVisual({ visual }: { visual: GardenVisual }) {
   );
 }
 
-const gardenObjectPositions: Record<string, { x: number; y: number; scale: number }> = {
-  moon_flower: { x: 166, y: 348, scale: 1 },
-  calm_stone: { x: 300, y: 374, scale: 1 },
-  water_ripple: { x: 444, y: 358, scale: 1 },
-  golden_lantern: { x: 506, y: 300, scale: 1 },
-  night_lily: { x: 392, y: 344, scale: 0.95 },
-  crescent_tree: { x: 196, y: 270, scale: 1.05 },
-  star_path: { x: 320, y: 418, scale: 1 },
-  breathing_pond: { x: 430, y: 386, scale: 1 }
-};
-
-function GardenSceneObject({ id, appeared }: { id: string; appeared: boolean }) {
-  const position = gardenObjectPositions[id] ?? { x: 320, y: 360, scale: 1 };
-  const className = `moon-garden-svg-object ${appeared ? 'moon-garden-svg-appear' : ''}`;
-  const transform = `translate(${position.x} ${position.y}) scale(${position.scale})`;
-
-  if (id === 'moon_flower') {
-    return (
-      <g className={className} transform={transform}>
-        <ellipse cx="0" cy="24" rx="32" ry="8" fill="rgba(7,5,13,0.32)" />
-        <path className="garden-flower" d="M0 24 C-2 8 0 -8 2 -24" stroke="#D4AF37" strokeWidth="3" strokeLinecap="round" fill="none" />
-        <g className="garden-flower">
-          <ellipse cx="0" cy="-35" rx="9" ry="22" fill="#F5F1E9" opacity="0.92" />
-          <ellipse cx="-15" cy="-25" rx="8" ry="19" fill="#D4AF37" opacity="0.86" transform="rotate(-42 -15 -25)" />
-          <ellipse cx="15" cy="-25" rx="8" ry="19" fill="#F5D98A" opacity="0.78" transform="rotate(42 15 -25)" />
-          <circle cx="0" cy="-24" r="7" fill="#D4AF37" filter="url(#gardenGoldGlow)" />
-        </g>
-      </g>
-    );
-  }
-
-  if (id === 'calm_stone') {
-    return (
-      <g className={className} transform={transform}>
-        <ellipse cx="0" cy="19" rx="44" ry="10" fill="rgba(7,5,13,0.35)" />
-        <path className="garden-stone" d="M-44 8 C-34 -18 26 -24 47 2 C38 24 -26 30 -44 8Z" fill="url(#gardenStone)" />
-        <path d="M-22 -2 C-8 -9 15 -10 29 -1" stroke="#F5F1E9" strokeOpacity="0.35" strokeWidth="3" strokeLinecap="round" fill="none" />
-      </g>
-    );
-  }
-
-  if (id === 'water_ripple') {
-    return (
-      <g className={className} transform={transform}>
-        <ellipse cx="0" cy="0" rx="56" ry="21" fill="rgba(142,95,214,0.12)" />
-        <ellipse className="garden-ripple" cx="0" cy="0" rx="46" ry="16" fill="none" stroke="#F5F1E9" strokeOpacity="0.38" strokeWidth="2" />
-        <ellipse className="garden-ripple moon-garden-delay-2" cx="0" cy="0" rx="28" ry="9" fill="none" stroke="#D4AF37" strokeOpacity="0.34" strokeWidth="2" />
-        <ellipse cx="0" cy="0" rx="8" ry="3" fill="#F5F1E9" opacity="0.42" />
-      </g>
-    );
-  }
-
-  if (id === 'golden_lantern') {
-    return (
-      <g className={className} transform={transform}>
-        <ellipse cx="0" cy="49" rx="28" ry="8" fill="rgba(7,5,13,0.35)" />
-        <path d="M-16 -18 C-13 -42 13 -42 16 -18" fill="none" stroke="#D4AF37" strokeOpacity="0.72" strokeWidth="3" />
-        <rect className="garden-lantern" x="-19" y="-18" width="38" height="58" rx="13" fill="rgba(212,175,55,0.22)" stroke="#D4AF37" strokeOpacity="0.75" strokeWidth="2" />
-        <ellipse className="garden-lantern" cx="0" cy="11" rx="12" ry="23" fill="#F5F1E9" opacity="0.72" filter="url(#gardenGoldGlow)" />
-        <path d="M-24 44 L24 44" stroke="#D4AF37" strokeOpacity="0.5" strokeWidth="3" strokeLinecap="round" />
-      </g>
-    );
-  }
-
-  if (id === 'night_lily') {
-    return (
-      <g className={className} transform={transform}>
-        <ellipse cx="0" cy="25" rx="42" ry="12" fill="rgba(142,95,214,0.18)" />
-        <path className="garden-lily" d="M0 -20 C8 -2 5 12 0 24 C-5 12 -8 -2 0 -20Z" fill="#F5F1E9" opacity="0.9" />
-        <path className="garden-lily" d="M-22 -7 C-5 0 3 10 0 24 C-13 18 -23 9 -22 -7Z" fill="#D4AF37" opacity="0.72" />
-        <path className="garden-lily" d="M22 -7 C5 0 -3 10 0 24 C13 18 23 9 22 -7Z" fill="#F5D98A" opacity="0.78" />
-        <circle cx="0" cy="14" r="5" fill="#D4AF37" filter="url(#gardenGoldGlow)" />
-      </g>
-    );
-  }
-
-  if (id === 'crescent_tree') {
-    return (
-      <g className={className} transform={transform}>
-        <ellipse cx="0" cy="93" rx="55" ry="13" fill="rgba(7,5,13,0.35)" />
-        <path d="M0 91 C-2 52 0 20 7 -20" stroke="#8C653E" strokeWidth="8" strokeLinecap="round" fill="none" />
-        <path className="garden-tree" d="M8 -70 C-46 -39 -50 34 3 54 C-23 18 -13 -38 34 -58 C25 -64 17 -68 8 -70Z" fill="url(#gardenTree)" filter="url(#gardenPurpleGlow)" />
-        <path className="garden-tree" d="M15 -50 C-12 -24 -13 16 17 36" stroke="#D4AF37" strokeOpacity="0.5" strokeWidth="3" strokeLinecap="round" fill="none" />
-      </g>
-    );
-  }
-
-  if (id === 'star_path') {
-    return (
-      <g className={className} transform={transform}>
-        {[-92, -58, -22, 14, 48, 82].map((x, index) => (
-          <circle key={x} className="garden-path" cx={x} cy={Math.sin(index) * 10} r={index % 2 ? 4 : 3} fill="#D4AF37" filter="url(#gardenGoldGlow)" opacity="0.9" />
-        ))}
-        <path d="M-102 12 C-48 -14 34 18 100 -10" stroke="#D4AF37" strokeOpacity="0.16" strokeWidth="8" strokeLinecap="round" fill="none" />
-      </g>
-    );
-  }
-
-  return (
-    <g className={className} transform={transform}>
-      <ellipse cx="0" cy="0" rx="92" ry="31" fill="url(#gardenPond)" stroke="#D4AF37" strokeOpacity="0.28" strokeWidth="2" />
-      <ellipse className="garden-pond" cx="-12" cy="-3" rx="62" ry="17" fill="none" stroke="#F5F1E9" strokeOpacity="0.22" strokeWidth="2" />
-      <path className="garden-pond" d="M-52 -2 C-23 -12 22 -12 53 -1" stroke="#F5F1E9" strokeOpacity="0.3" strokeWidth="3" strokeLinecap="round" fill="none" />
-      <path d="M-84 19 C-42 31 42 31 84 17" stroke="#D4AF37" strokeOpacity="0.17" strokeWidth="5" strokeLinecap="round" fill="none" />
-    </g>
-  );
-}
-
 function MoonGardenScene({
   profile,
   language,
-  appearedElementId,
   expanded = false,
   ambiencePlaying = false
 }: {
@@ -3572,106 +3459,44 @@ function MoonGardenScene({
   expanded?: boolean;
   ambiencePlaying?: boolean;
 }) {
-  const planted = new Set(plantedGardenElements(profile));
-  const plantedElements = gardenElements.filter((element) => planted.has(element.id));
+  const plantedCount = plantedGardenElements(profile).length;
+  const stageIndex = Math.min(plantedCount, gardenStages.length - 1);
+  const stage = gardenStages[stageIndex];
+  const [failedPath, setFailedPath] = useState<string | null>(null);
+
+  useEffect(() => {
+    setFailedPath(null);
+  }, [stage.path]);
+
+  const handleImageError = () => {
+    setFailedPath(stage.path);
+    if (import.meta.env.DEV) {
+      console.warn('[MOON_GARDEN_STAGE_IMAGE_MISSING]', stage.path);
+    }
+  };
 
   return (
     <section className={`relative overflow-hidden border border-gold/25 bg-[#120c22] shadow-glow ${ambiencePlaying ? 'moon-garden-listening' : ''} ${expanded ? 'min-h-[76vh] rounded-[34px] p-5' : 'rounded-[30px] p-4'}`}>
-      <svg className={`moon-garden-sanctuary absolute inset-0 h-full w-full ${expanded ? 'scale-[1.03]' : ''}`} viewBox="0 0 640 460" preserveAspectRatio="xMidYMid slice" role="img" aria-label={copy[language].moonGarden}>
-        <defs>
-          <radialGradient id="gardenSky" cx="48%" cy="18%" r="78%">
-            <stop offset="0%" stopColor="#32204e" />
-            <stop offset="52%" stopColor="#171025" />
-            <stop offset="100%" stopColor="#08070f" />
-          </radialGradient>
-          <radialGradient id="gardenMoon" cx="42%" cy="38%" r="58%">
-            <stop offset="0%" stopColor="#fff8e9" />
-            <stop offset="55%" stopColor="#f5f1e9" />
-            <stop offset="100%" stopColor="#d4af37" />
-          </radialGradient>
-          <linearGradient id="gardenGround" x1="0" x2="1" y1="0" y2="1">
-            <stop offset="0%" stopColor="#2b1742" />
-            <stop offset="58%" stopColor="#171021" />
-            <stop offset="100%" stopColor="#08070f" />
-          </linearGradient>
-          <linearGradient id="gardenPond" x1="0" x2="1">
-            <stop offset="0%" stopColor="#2b2f62" stopOpacity="0.9" />
-            <stop offset="55%" stopColor="#443279" stopOpacity="0.82" />
-            <stop offset="100%" stopColor="#d4af37" stopOpacity="0.22" />
-          </linearGradient>
-          <linearGradient id="gardenStone" x1="0" x2="1">
-            <stop offset="0%" stopColor="#8f83a0" />
-            <stop offset="55%" stopColor="#5b4d68" />
-            <stop offset="100%" stopColor="#2b2134" />
-          </linearGradient>
-          <radialGradient id="gardenTree" cx="50%" cy="45%" r="70%">
-            <stop offset="0%" stopColor="#6b3f8d" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#160f24" />
-          </radialGradient>
-          <filter id="gardenGoldGlow" x="-80%" y="-80%" width="260%" height="260%">
-            <feGaussianBlur stdDeviation="7" result="blur" />
-            <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0.83 0 1 0 0 0.69 0 0 1 0 0.22 0 0 0 0.75 0" result="glow" />
-            <feMerge>
-              <feMergeNode in="glow" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-          <filter id="gardenPurpleGlow" x="-80%" y="-80%" width="260%" height="260%">
-            <feGaussianBlur stdDeviation="10" result="blur" />
-            <feColorMatrix in="blur" type="matrix" values="1 0 0 0 0.42 0 1 0 0 0.25 0 0 1 0 0.72 0 0 0 0.42 0" result="glow" />
-            <feMerge>
-              <feMergeNode in="glow" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-        <rect width="640" height="460" fill="url(#gardenSky)" />
-        <circle className="moon-garden-moon" cx="500" cy="92" r={expanded ? 58 : 42} fill="url(#gardenMoon)" filter="url(#gardenGoldGlow)" />
-        <circle cx={expanded ? 532 : 524} cy={expanded ? 70 : 76} r={expanded ? 58 : 42} fill="#171025" opacity="0.98" />
-        <g opacity="0.72">
-          {moonGardenStars.map((star) => (
-            <circle
-              key={`${star.left}-${star.top}`}
-              className="moon-garden-star"
-              cx={(Number.parseFloat(star.left) / 100) * 640}
-              cy={(Number.parseFloat(star.top) / 100) * 260}
-              r={star.size}
-              fill="#f5f1e9"
-              opacity={star.opacity}
-              style={{ animationDelay: `${Number.parseFloat(star.left) * 0.13}s` }}
-            />
-          ))}
-          <circle className="moon-garden-star" cx="122" cy="82" r="1.4" fill="#d4af37" opacity="0.42" />
-          <circle className="moon-garden-star" cx="574" cy="183" r="1.2" fill="#f5f1e9" opacity="0.34" />
-          <circle className="moon-garden-star" cx="62" cy="178" r="1" fill="#d4af37" opacity="0.28" />
-        </g>
-        <path d="M0 266 C122 213 212 238 322 262 C440 288 514 237 640 222 L640 460 L0 460Z" fill="#140f24" opacity="0.78" />
-        <path d="M0 322 C110 284 217 305 320 326 C446 352 538 312 640 286 L640 460 L0 460Z" fill="url(#gardenGround)" />
-        <path d="M0 384 C112 348 236 360 350 382 C460 404 546 370 640 345 L640 460 L0 460Z" fill="#090710" opacity="0.88" />
-        <ellipse className="moon-garden-ground-glow" cx="356" cy="360" rx="210" ry="38" fill="#d4af37" opacity="0.13" />
-        <ellipse className="moon-garden-mist" cx="310" cy="292" rx="360" ry="42" fill="#f5f1e9" opacity="0.08" />
-        <circle className="moon-garden-mote" cx="108" cy="264" r="2" fill="#d4af37" opacity="0.42" />
-        <circle className="moon-garden-mote moon-garden-delay-2" cx="520" cy="238" r="2.5" fill="#f5f1e9" opacity="0.28" />
-        <circle className="moon-garden-mote moon-garden-delay-3" cx="302" cy="292" r="1.8" fill="#8e5fd6" opacity="0.45" />
-        {!plantedElements.length && (
-          <g opacity="0.6">
-            <ellipse cx="166" cy="374" rx="28" ry="7" fill="#d4af37" opacity="0.14" />
-            <ellipse cx="300" cy="391" rx="34" ry="8" fill="#d4af37" opacity="0.12" />
-            <ellipse cx="430" cy="383" rx="76" ry="21" fill="#8e5fd6" opacity="0.12" />
-            <ellipse cx="506" cy="350" rx="34" ry="8" fill="#d4af37" opacity="0.12" />
-          </g>
-        )}
-        {plantedElements.map((element) => (
-          <GardenSceneObject key={element.id} id={element.id} appeared={appearedElementId === element.id} />
-        ))}
-      </svg>
+      {!failedPath ? (
+        <img
+          key={stage.path}
+          src={stage.path}
+          alt={`${copy[language].moonGarden} level ${stage.level}`}
+          onError={handleImageError}
+          className="moon-garden-stage-image absolute inset-0 h-full w-full object-cover"
+          draggable={false}
+        />
+      ) : (
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(142,95,214,0.32),transparent_34%),radial-gradient(circle_at_70%_70%,rgba(212,175,55,0.16),transparent_28%),linear-gradient(180deg,#1a1026_0%,#100b1c_58%,#07060d_100%)]" />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-b from-night/10 via-transparent to-night/35" />
       <div className={`relative ${expanded ? 'h-[72vh] min-h-[560px]' : 'h-60'}`}>
         <div className="absolute left-0 top-0 rounded-3xl bg-night/10">
           <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].moonGarden}</p>
           <h3 className={`mt-1 font-serif ${expanded ? 'text-4xl' : 'text-2xl'}`}>{language === 'en' ? 'Your Moon Garden' : 'Твой Лунный сад'}</h3>
           <p className={`mt-1 leading-5 text-cream/60 ${expanded ? 'max-w-[280px] text-sm' : 'max-w-[210px] text-xs'}`}>{language === 'en' ? 'Plant elements to shape your quiet place.' : 'Сажай элементы, чтобы создать своё тихое место.'}</p>
         </div>
-        {!plantedElements.length && (
+        {stage.level === 0 && (
           <p className="absolute bottom-6 left-1/2 w-56 -translate-x-1/2 rounded-2xl border border-white/10 bg-night/70 px-3 py-2 text-center text-xs text-lavender backdrop-blur">
             {language === 'en' ? 'Your garden is waiting for its first seed.' : 'Твой сад ждёт первое семя.'}
           </p>
