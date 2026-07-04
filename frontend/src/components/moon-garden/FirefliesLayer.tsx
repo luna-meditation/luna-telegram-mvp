@@ -5,13 +5,16 @@ const motePositions = [
   [61, 66, 1.1],
   [74, 58, 2.4],
   [83, 72, 3.8],
-  [54, 52, 4.5]
+  [54, 52, 4.5],
+  [25, 48, 5.2],
+  [68, 44, 0.7],
+  [88, 50, 2.9]
 ] as const;
 
 export function FirefliesLayer({ level }: { level: number }) {
   if (level < 3) return null;
 
-  const visibleMotes = Math.min(motePositions.length, level);
+  const visibleMotes = Math.min(motePositions.length, level + 1);
 
   return (
     <div className="moon-garden-fireflies" aria-hidden="true">

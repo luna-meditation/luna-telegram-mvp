@@ -46,8 +46,8 @@
   z-index: 2;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(10, 8, 18, 0.18), rgba(10, 8, 18, 0.04) 34%, rgba(10, 8, 18, 0.34) 100%),
-    radial-gradient(circle at 50% 84%, rgba(212, 175, 55, calc(0.08 + var(--garden-intensity) * 0.1)), transparent 42%);
+    linear-gradient(180deg, rgba(10, 8, 18, 0.1), rgba(10, 8, 18, 0.02) 34%, rgba(10, 8, 18, 0.26) 100%),
+    radial-gradient(circle at 50% 84%, rgba(212, 175, 55, calc(0.1 + var(--garden-intensity) * 0.12)), transparent 42%);
 }
 
 .moon-garden-stars,
@@ -57,7 +57,10 @@
 .moon-garden-mist,
 .moon-garden-bloom-glow,
 .moon-garden-lantern-glow,
-.moon-garden-bridge-reflection {
+.moon-garden-path-glow,
+.moon-garden-bridge-reflection,
+.moon-garden-deep-atmosphere,
+.moon-garden-full-moon-aura {
   position: absolute;
   z-index: 3;
   pointer-events: none;
@@ -73,7 +76,7 @@
   border-radius: 999px;
   background: rgba(245, 241, 233, 0.95);
   box-shadow: 0 0 12px rgba(245, 241, 233, 0.78), 0 0 22px rgba(212, 175, 55, 0.28);
-  opacity: 0.36;
+  opacity: 0.42;
   animation: moonGardenStarTwinkle 5.8s ease-in-out infinite;
 }
 
@@ -82,12 +85,11 @@
   right: 8%;
   bottom: 12%;
   height: 34%;
-  opacity: calc(0.24 + var(--garden-intensity) * 0.28);
-  mix-blend-mode: screen;
+  opacity: calc(0.3 + var(--garden-intensity) * 0.32);
   background:
-    linear-gradient(105deg, transparent 0%, rgba(245, 241, 233, 0.2) 14%, transparent 30%),
-    repeating-linear-gradient(170deg, transparent 0 16px, rgba(142, 95, 214, 0.18) 20px, transparent 28px);
-  filter: blur(1.5px);
+    linear-gradient(105deg, transparent 0%, rgba(245, 241, 233, 0.24) 14%, transparent 32%),
+    repeating-linear-gradient(170deg, transparent 0 14px, rgba(142, 95, 214, 0.22) 19px, transparent 28px);
+  filter: blur(1px);
   transform: rotate(-3deg) translateY(2%);
   animation: moonGardenWaterShimmer 12s ease-in-out infinite;
 }
@@ -97,7 +99,7 @@
   bottom: 17%;
   width: 42%;
   height: 26%;
-  opacity: calc(0.18 + var(--garden-intensity) * 0.28);
+  opacity: calc(0.24 + var(--garden-intensity) * 0.32);
 }
 
 .moon-garden-water-ripples span {
@@ -106,8 +108,8 @@
   top: 54%;
   width: 42%;
   aspect-ratio: 1 / 0.38;
-  border: 1px solid rgba(245, 241, 233, 0.42);
-  box-shadow: 0 0 18px rgba(142, 95, 214, 0.2);
+  border: 1px solid rgba(245, 241, 233, 0.5);
+  box-shadow: 0 0 20px rgba(142, 95, 214, 0.26);
   border-radius: 999px;
   transform: translate(-50%, -50%) scale(0.7);
   animation: moonGardenRipple 8.5s ease-out infinite;
@@ -125,7 +127,7 @@
   left: -10%;
   right: -10%;
   height: 26%;
-  opacity: calc(0.18 + var(--garden-intensity) * 0.16);
+  opacity: calc(0.24 + var(--garden-intensity) * 0.18);
   background:
     radial-gradient(ellipse at 18% 50%, rgba(245, 241, 233, 0.18), transparent 44%),
     radial-gradient(ellipse at 52% 44%, rgba(142, 95, 214, 0.16), transparent 42%),
@@ -140,7 +142,7 @@
 
 .moon-garden-mist-b {
   bottom: 6%;
-  opacity: calc(0.14 + var(--garden-intensity) * 0.12);
+  opacity: calc(0.18 + var(--garden-intensity) * 0.14);
   animation: moonGardenMistB 30s ease-in-out infinite alternate;
 }
 
@@ -150,8 +152,8 @@
   width: 34%;
   height: 28%;
   border-radius: 999px;
-  opacity: calc(0.16 + var(--garden-intensity) * 0.2);
-  background: radial-gradient(circle, rgba(245, 241, 233, 0.34), rgba(212, 175, 55, 0.16) 38%, transparent 70%);
+  opacity: calc(0.26 + var(--garden-intensity) * 0.22);
+  background: radial-gradient(circle, rgba(245, 241, 233, 0.44), rgba(212, 175, 55, 0.22) 38%, transparent 72%);
   filter: blur(14px);
   animation: moonGardenSoftPulse 8s ease-in-out infinite;
 }
@@ -162,10 +164,27 @@
   width: 30%;
   height: 34%;
   border-radius: 999px;
-  opacity: calc(0.2 + var(--garden-intensity) * 0.22);
-  background: radial-gradient(circle, rgba(212, 175, 55, 0.46), rgba(212, 175, 55, 0.16) 34%, transparent 70%);
+  opacity: calc(0.32 + var(--garden-intensity) * 0.26);
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.58), rgba(212, 175, 55, 0.2) 34%, transparent 72%);
   filter: blur(16px);
   animation: moonGardenLanternGlow 5.8s ease-in-out infinite;
+}
+
+.moon-garden-path-glow {
+  left: 10%;
+  right: 18%;
+  bottom: 13%;
+  height: 24%;
+  opacity: calc(0.22 + var(--garden-intensity) * 0.28);
+  background:
+    radial-gradient(circle at 16% 70%, rgba(212, 175, 55, 0.5) 0 2px, transparent 5px),
+    radial-gradient(circle at 32% 58%, rgba(245, 241, 233, 0.38) 0 2px, transparent 5px),
+    radial-gradient(circle at 48% 48%, rgba(212, 175, 55, 0.44) 0 2px, transparent 5px),
+    radial-gradient(circle at 64% 38%, rgba(245, 241, 233, 0.3) 0 2px, transparent 5px),
+    radial-gradient(circle at 80% 30%, rgba(212, 175, 55, 0.4) 0 2px, transparent 5px),
+    linear-gradient(12deg, transparent 14%, rgba(212, 175, 55, 0.12), transparent 72%);
+  filter: blur(0.3px);
+  animation: moonGardenPathGlow 9s ease-in-out infinite;
 }
 
 .moon-garden-bridge-reflection {
@@ -173,20 +192,45 @@
   right: 14%;
   bottom: 13%;
   height: 22%;
-  opacity: calc(0.18 + var(--garden-intensity) * 0.18);
-  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.22), rgba(142, 95, 214, 0.18), transparent);
-  filter: blur(10px);
+  opacity: calc(0.28 + var(--garden-intensity) * 0.22);
+  background:
+    linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.26), rgba(142, 95, 214, 0.24), transparent),
+    repeating-linear-gradient(175deg, transparent 0 16px, rgba(245, 241, 233, 0.12) 18px, transparent 24px);
+  filter: blur(8px);
   transform: skewY(-4deg);
   animation: moonGardenReflection 10s ease-in-out infinite;
 }
 
+.moon-garden-deep-atmosphere {
+  inset: 0;
+  opacity: calc(0.14 + var(--garden-intensity) * 0.16);
+  background:
+    radial-gradient(circle at 46% 20%, rgba(245, 241, 233, 0.2), transparent 24%),
+    radial-gradient(circle at 72% 70%, rgba(142, 95, 214, 0.18), transparent 34%),
+    radial-gradient(circle at 22% 78%, rgba(212, 175, 55, 0.12), transparent 30%);
+  filter: blur(10px);
+  animation: moonGardenDeepAtmosphere 16s ease-in-out infinite alternate;
+}
+
+.moon-garden-full-moon-aura {
+  left: 20%;
+  top: -8%;
+  width: 60%;
+  height: 42%;
+  border-radius: 999px;
+  opacity: 0.26;
+  background: radial-gradient(circle, rgba(245, 241, 233, 0.28), rgba(212, 175, 55, 0.14) 36%, transparent 68%);
+  filter: blur(18px);
+  animation: moonGardenFullMoonAura 10s ease-in-out infinite;
+}
+
 .moon-garden-mote {
   position: absolute;
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
   border-radius: 999px;
   background: rgba(212, 175, 55, 0.9);
-  box-shadow: 0 0 16px rgba(212, 175, 55, 0.72);
+  box-shadow: 0 0 18px rgba(212, 175, 55, 0.82), 0 0 30px rgba(142, 95, 214, 0.2);
   opacity: 0;
   animation: moonGardenMoteDrift 12s ease-in-out infinite;
 }
@@ -306,13 +350,13 @@
 @keyframes moonGardenStarTwinkle {
   0%,
   100% {
-    opacity: 0.28;
+    opacity: 0.36;
     transform: scale(0.88);
   }
 
   48% {
-    opacity: 0.88;
-    transform: scale(1.2);
+    opacity: 0.96;
+    transform: scale(1.28);
   }
 }
 
@@ -324,8 +368,8 @@
   }
 
   50% {
-    background-position: 90% 50%, 20px 8px;
-    transform: rotate(-3deg) translateY(0) translateX(1%);
+    background-position: 110% 50%, 28px 10px;
+    transform: rotate(-3deg) translateY(-1%) translateX(2%);
   }
 }
 
@@ -336,7 +380,7 @@
   }
 
   32% {
-    opacity: 0.68;
+    opacity: 0.78;
   }
 
   100% {
@@ -372,20 +416,33 @@
   }
 
   50% {
-    transform: scale(1.08);
+    transform: scale(1.14);
   }
 }
 
 @keyframes moonGardenLanternGlow {
   0%,
   100% {
-    opacity: calc(0.1 + var(--garden-intensity) * 0.18);
+    opacity: calc(0.22 + var(--garden-intensity) * 0.22);
     transform: scale(0.96);
   }
 
   54% {
-    opacity: calc(0.16 + var(--garden-intensity) * 0.24);
-    transform: scale(1.06);
+    opacity: calc(0.36 + var(--garden-intensity) * 0.28);
+    transform: scale(1.1);
+  }
+}
+
+@keyframes moonGardenPathGlow {
+  0%,
+  100% {
+    opacity: calc(0.18 + var(--garden-intensity) * 0.24);
+    transform: translateX(-1%) translateY(2px);
+  }
+
+  50% {
+    opacity: calc(0.34 + var(--garden-intensity) * 0.34);
+    transform: translateX(2%) translateY(-2px);
   }
 }
 
@@ -400,6 +457,29 @@
   }
 }
 
+@keyframes moonGardenDeepAtmosphere {
+  from {
+    transform: translate3d(-1%, 1%, 0) scale(1);
+  }
+
+  to {
+    transform: translate3d(1%, -1%, 0) scale(1.04);
+  }
+}
+
+@keyframes moonGardenFullMoonAura {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform: scale(0.96);
+  }
+
+  50% {
+    opacity: 0.36;
+    transform: scale(1.08);
+  }
+}
+
 @keyframes moonGardenMoteDrift {
   0% {
     opacity: 0;
@@ -407,7 +487,7 @@
   }
 
   28% {
-    opacity: 0.86;
+    opacity: 0.94;
   }
 
   100% {

@@ -84,7 +84,10 @@ export function MoonGardenScene({
       <div className="moon-garden-mist moon-garden-mist-b" aria-hidden="true" />
       {level >= 1 && <div className="moon-garden-bloom-glow" aria-hidden="true" />}
       {level >= 2 && <div className="moon-garden-lantern-glow" aria-hidden="true" />}
+      {level >= 3 && <div className="moon-garden-path-glow" aria-hidden="true" />}
       {level >= 5 && <div className="moon-garden-bridge-reflection" aria-hidden="true" />}
+      {level >= 6 && <div className="moon-garden-deep-atmosphere" aria-hidden="true" />}
+      {level >= 7 && <div className="moon-garden-full-moon-aura" aria-hidden="true" />}
       <FirefliesLayer level={level} />
 
       <div className="moon-garden-scene-chip">{statusLabel}</div>

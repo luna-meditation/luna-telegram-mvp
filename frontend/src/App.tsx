@@ -2359,8 +2359,21 @@ function HomePage(props: {
         <EmptyState title={t.firstPracticeTitle} body={t.firstPracticeBody} />
       )}
 
-      <Rail title={t.continueListening} meditations={props.continueListening} onOpen={props.onOpen} language={props.language} />
-      <Rail title={t.recentlyPlayed} meditations={props.recentlyPlayed} onOpen={props.onOpen} language={props.language} />
+      {props.explore.length >= 3 ? (
+        <Rail title={t.moreToExplore} meditations={props.explore} onOpen={props.onOpen} language={props.language} />
+      ) : props.explore.length > 0 ? (
+        <section className="rounded-[24px] border border-gold/20 bg-gold/10 p-4 shadow-glow">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-gold">{t.moreToExplore}</p>
+              <h2 className="mt-1 font-serif text-2xl">{t.exploreLibrary}</h2>
+            </div>
+            <button onClick={props.onLibrary} className="rounded-full bg-gold px-4 py-2 text-sm font-semibold text-night">
+              {t.openLibrary}
+            </button>
+          </div>
+        </section>
+      ) : null}
       <button onClick={props.onScenes} className="relative w-full overflow-hidden rounded-[24px] border border-gold/20 bg-gradient-to-br from-lavender/25 via-gold/10 to-white/5 p-4 text-left shadow-glow">
         <div className="absolute right-4 top-4 grid h-12 w-12 place-items-center rounded-full bg-gold/15 text-gold">
           <Waves size={24} />
@@ -2377,27 +2390,14 @@ function HomePage(props: {
         <h3 className="mt-1 font-serif text-2xl">{t.breathCircle}</h3>
         <p className="mt-2 max-w-[250px] text-sm leading-5 text-cream/75">{t.breathCircleSubtitle}</p>
       </button>
-      {props.explore.length >= 3 ? (
-        <Rail title={t.moreToExplore} meditations={props.explore} onOpen={props.onOpen} language={props.language} />
-      ) : props.explore.length > 0 ? (
-        <section className="rounded-[24px] border border-gold/20 bg-gold/10 p-4 shadow-glow">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-gold">{t.moreToExplore}</p>
-              <h2 className="mt-1 font-serif text-2xl">{t.exploreLibrary}</h2>
-            </div>
-            <button onClick={props.onLibrary} className="rounded-full bg-gold px-4 py-2 text-sm font-semibold text-night">
-              {t.openLibrary}
-            </button>
-          </div>
-        </section>
-      ) : null}
       {props.wellness && <InsightCard title={t.weeklyTitle} body={localizeWeeklyInsight(props.wellness, props.language)} meta={text(props.language, 'recommendedFocus', { focus: translateFocus(props.wellness.recommendedFocus, props.language) })} />}
       {props.loading && !props.daily && <RailSkeleton title={t.preparingCalm} />}
 
       <button onClick={props.onLibrary} className="w-full rounded-[20px] bg-gold px-5 py-4 font-semibold text-night shadow-glow hover:brightness-110">
         {t.openLibrary}
       </button>
+      <ContinueListeningSection title={t.continueListening} meditations={props.continueListening} onOpen={props.onOpen} language={props.language} />
+      <Rail title={t.recentlyPlayed} meditations={props.recentlyPlayed} onOpen={props.onOpen} language={props.language} />
     </div>
   );
 }
@@ -2472,6 +2472,31 @@ function Rail({ title, meditations, onOpen, language }: { title: string; meditat
           </button>
         ))}
       </div>
+    </section>
+  );
+}
+
+function ContinueListeningSection({ title, meditations, onOpen, language }: { title: string; meditations: Meditation[]; onOpen: (meditation: Meditation) => void; language: AppLanguage }) {
+  if (!meditations.length) return null;
+  if (meditations.length > 1) return <Rail title={title} meditations={meditations} onOpen={onOpen} language={language} />;
+
+  const meditation = meditations[0];
+  const localized = getLocalizedMeditation(meditation, language);
+  const progress = Math.max(0, Math.min(100, Number(meditation.history?.completion_percent ?? 0)));
+
+  return (
+    <section>
+      <h2 className="mb-3 text-lg font-semibold">{title}</h2>
+      <button onClick={() => onOpen(meditation)} className="flex w-full items-center gap-3 rounded-[24px] border border-white/10 bg-ink p-3 text-left shadow-glow">
+        <img src={meditation.cover_image} alt="" className="h-20 w-20 shrink-0 rounded-[20px] object-cover shadow-glow" loading="lazy" />
+        <div className="min-w-0 flex-1">
+          <p className="line-clamp-1 font-serif text-xl">{localized.title}</p>
+          <p className="mt-1 text-xs capitalize text-lavender">{translateCategory(meditation.category, language)} · {formatTime(meditation.duration)}</p>
+          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-night">
+            <div className="h-full rounded-full bg-gold" style={{ width: `${progress}%` }} />
+          </div>
+        </div>
+      </button>
     </section>
   );
 }
@@ -3263,7 +3288,8 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
       <img src={meditation.cover_image} alt="" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[440px] w-full scale-110 rounded-[34px] object-cover opacity-25 blur-3xl" />
       <div className="rounded-[24px] border border-white/10 bg-ink p-4 shadow-glow">
         <div className="relative mx-auto aspect-square w-full max-w-[300px] overflow-hidden rounded-[24px] border border-white/10 bg-night/80">
-          <img src={meditation.cover_image} alt="" className="h-full w-full object-contain p-2" />
+          <img src={meditation.cover_image} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-20 blur-xl" />
+          <img src={meditation.cover_image} alt="" className="relative h-full w-full object-contain p-3" />
           {loading && <div className="absolute left-4 top-4 rounded-full bg-night/70 px-4 py-2 text-xs text-cream backdrop-blur">{copy[language].loadingAudio}</div>}
           {meditation.premium && <div className="absolute right-4 top-4 rounded-full bg-gold px-3 py-1 text-xs font-semibold text-night">{copy[language].premium}</div>}
           {completed && (
@@ -3328,14 +3354,16 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
           }}><SkipForward /></IconButton>
         </div>
 
-        <div className="mt-4 rounded-[18px] border border-gold/20 bg-night/70 p-3 text-left text-[11px] leading-5 text-lavender">
-          <p className="font-semibold text-gold">Player isolation debug</p>
-          <p>version: {playerFixVersion}</p>
-          <p>currentTime state: {position.toFixed(2)}</p>
-          <p>audio.currentTime: {audioTime.toFixed(2)}</p>
-          <p>savedProgress: {Number(savedProgress).toFixed(2)}</p>
-          <p>livePositionRef: {livePositionRef.current.toFixed(2)}</p>
-        </div>
+        {import.meta.env.DEV && (
+          <div className="mt-4 rounded-[18px] border border-gold/20 bg-night/70 p-3 text-left text-[11px] leading-5 text-lavender">
+            <p className="font-semibold text-gold">Player isolation debug</p>
+            <p>version: {playerFixVersion}</p>
+            <p>currentTime state: {position.toFixed(2)}</p>
+            <p>audio.currentTime: {audioTime.toFixed(2)}</p>
+            <p>savedProgress: {Number(savedProgress).toFixed(2)}</p>
+            <p>livePositionRef: {livePositionRef.current.toFixed(2)}</p>
+          </div>
+        )}
 
         <div className="mt-4 grid grid-cols-3 gap-2">
           <button onClick={onFavorite} className="min-h-[72px] rounded-[18px] bg-surface px-2 py-3 text-xs"><Heart className={favorite ? 'mx-auto fill-gold text-gold' : 'mx-auto'} size={18} /><span className="mt-1.5 block">{copy[language].favorite}</span></button>
@@ -3769,11 +3797,11 @@ function MoonGardenPage({
   };
 
   return (
-      <div className="space-y-4 pb-[calc(120px+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top,0px)+56px)] luna-fade">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="font-serif text-3xl font-semibold">{copy[language].moonGarden}</h2>
-            <p className="mt-1 text-sm text-lavender">{copy[language].moonGardenBody}</p>
+    <div className="space-y-4 pb-[calc(120px+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top,0px)+24px)] luna-fade">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="font-serif text-3xl font-semibold">{copy[language].moonGarden}</h2>
+          <p className="mt-1 text-sm text-lavender">{copy[language].moonGardenBody}</p>
         </div>
         <button onClick={onBack} className="grid h-11 w-11 place-items-center rounded-full bg-surface text-cream" aria-label={copy[language].close}>
           <X size={18} />
@@ -4006,7 +4034,7 @@ function ProfilePage({
   const weeklyMinutes = profile?.weeklyPracticeMinutes ?? 0;
   const currentMood = wellness?.mostCommonMoodLabel ? translateMoodLabel(wellness.mostCommonMoodLabel, language) : copy[language].notEnoughData;
   return (
-    <div className="space-y-3 pt-[calc(env(safe-area-inset-top,0px)+56px)] luna-fade">
+    <div className="space-y-3 pt-[calc(env(safe-area-inset-top,0px)+24px)] luna-fade">
       <div>
         <p className="text-xs uppercase tracking-[0.18em] text-gold">LUNA</p>
         <h2 className="font-serif text-3xl font-semibold">{copy[language].profile}</h2>
