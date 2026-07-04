@@ -60,6 +60,7 @@ const moonGardenElements = [
 ];
 
 const moonGardenElementCost = new Map(moonGardenElements.map((element) => [element.id, element.cost]));
+const fullMoonGardenCost = moonGardenElements.reduce((sum, element) => sum + element.cost, 0);
 
 export type DailyCheckinInput = {
   sleep_range: 'less_than_4' | '4_6' | '6_8' | '8_plus';
@@ -672,10 +673,13 @@ async function getMoonGardenState(telegramId: number, input: {
 
   const plantedGardenElements = plantedElementIds(existing?.planted_garden_elements);
   const plantedCost = plantedElementsCost(plantedGardenElements);
-  const storedAvailable = existing ? Math.max(0, Number(existing.moon_seeds_available ?? 0)) : 0;
-  const storedEarnedTotal = Number(existing?.moon_seeds_earned_total ?? 0);
+  const rawStoredAvailable = Number(existing?.moon_seeds_available ?? 0);
+  const storedAvailable = existing && Number.isFinite(rawStoredAvailable) ? Math.max(0, rawStoredAvailable) : 0;
+  const rawStoredEarnedTotal = Number(existing?.moon_seeds_earned_total ?? 0);
+  const storedEarnedTotal = Number.isFinite(rawStoredEarnedTotal) ? Math.max(0, rawStoredEarnedTotal) : 0;
+  const availableFromStoredTotal = Math.max(0, storedEarnedTotal - plantedCost);
   const moonSeedsEarnedTotal = Math.max(storedEarnedTotal, earnedFromPractice, storedAvailable + plantedCost);
-  const moonSeedsAvailable = existing ? storedAvailable : Math.max(0, moonSeedsEarnedTotal - plantedCost);
+  const moonSeedsAvailable = existing ? Math.max(storedAvailable, availableFromStoredTotal) : Math.max(0, moonSeedsEarnedTotal - plantedCost);
   const lastMoonSeedEarnedAt =
     moonSeedsEarnedTotal > Number(existing?.moon_seeds_earned_total ?? 0)
       ? new Date().toISOString()
@@ -883,6 +887,70 @@ export async function plantMoonGardenElement(telegramId: number, elementId: stri
     elementId: element.id,
     moonSeedsAvailable,
     plantedGardenElements: nextPlanted,
+    profile: await getProfileStats(telegramId)
+  };
+}
+
+export async function updateMoonGardenDevState(
+  telegramId: number,
+  input: { action: string; seedBalance?: number }
+) {
+  const profile = await getProfileStats(telegramId);
+  const planted = plantedElementIds(profile.plantedGardenElements);
+  const plantedCost = plantedElementsCost(planted);
+  const rawAvailableSeeds = Number(profile.moonSeedsAvailable ?? 0);
+  const currentAvailable = Number.isFinite(rawAvailableSeeds) ? Math.max(0, rawAvailableSeeds) : 0;
+  const rawEarnedTotal = Number(profile.moonSeedsEarnedTotal ?? 0);
+  const currentEarnedTotal = Math.max(Number.isFinite(rawEarnedTotal) ? rawEarnedTotal : 0, currentAvailable + plantedCost);
+
+  let moonSeedsAvailable = currentAvailable;
+  let moonSeedsEarnedTotal = currentEarnedTotal;
+  let plantedGardenElements = planted;
+
+  if (input.action === 'grant_100') {
+    moonSeedsAvailable = currentAvailable + 100;
+    moonSeedsEarnedTotal = Math.max(currentEarnedTotal + 100, moonSeedsAvailable + plantedCost);
+  } else if (input.action === 'unlock_full') {
+    plantedGardenElements = moonGardenElements.map((element) => element.id);
+    moonSeedsAvailable = Math.max(currentAvailable, 100);
+    moonSeedsEarnedTotal = Math.max(currentEarnedTotal, moonSeedsAvailable + fullMoonGardenCost);
+  } else if (input.action === 'reset') {
+    plantedGardenElements = [];
+    moonSeedsAvailable = 0;
+    moonSeedsEarnedTotal = 0;
+  } else if (input.action === 'set_balance') {
+    const nextBalance = Number(input.seedBalance ?? 0);
+    if (!Number.isFinite(nextBalance) || nextBalance < 0) {
+      return { error: 'Seed balance must be a non-negative number.' as const, status: 400 };
+    }
+    moonSeedsAvailable = Math.round(nextBalance);
+    moonSeedsEarnedTotal = moonSeedsAvailable + plantedCost;
+  } else {
+    return { error: 'Unknown Moon Garden dev action.' as const, status: 400 };
+  }
+
+  const { error } = await supabase
+    .from('moon_gardens')
+    .upsert(
+      {
+        telegram_id: telegramId,
+        moon_seeds_available: moonSeedsAvailable,
+        moon_seeds_earned_total: moonSeedsEarnedTotal,
+        planted_garden_elements: plantedGardenElements,
+        last_moon_seed_earned_at: new Date().toISOString(),
+        garden_level: profile.gardenLevel ?? 1,
+        updated_at: new Date().toISOString()
+      },
+      { onConflict: 'telegram_id' }
+    );
+
+  if (error) throw error;
+
+  return {
+    ok: true,
+    moonSeedsAvailable,
+    moonSeedsEarnedTotal,
+    plantedGardenElements,
     profile: await getProfileStats(telegramId)
   };
 }

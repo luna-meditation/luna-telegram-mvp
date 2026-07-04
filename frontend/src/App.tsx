@@ -43,6 +43,7 @@ import {
   saveHistory,
   setFavorite,
   syncUser,
+  updateMoonGardenDevState,
   updateUserLanguage,
   updateMeditation,
   updateAdminUserAccess,
@@ -56,6 +57,7 @@ import {
   type DailyCheckinPayload,
   type Meditation,
   type MeditationPayload,
+  type MoonGardenDevAction,
   type PlaybackHistory,
   type ProfileStats,
   type WellnessSummary
@@ -99,6 +101,7 @@ const premiumPrices = {
 };
 const libraryCacheKey = 'luna.library.v1';
 const languageStorageKey = 'luna.language.v1';
+const moonGardenVolumeStorageKey = 'luna.moonGarden.volume.v1';
 const playerFixVersion = 'pause-seek-isolation-v5';
 const sceneAudioCache = new Map<string, string>();
 type LibraryCache = {
@@ -537,6 +540,16 @@ const copy = {
     gardenLevel: 'Garden level',
     moonSeeds: 'Moon Seeds',
     moonSeedsInfo: 'Moon Seeds grow when you complete practices.',
+    playGardenAmbience: 'Play ambience',
+    pauseGardenAmbience: 'Pause ambience',
+    gardenAmbience: 'Moon Garden ambience',
+    developerTools: 'Developer tools',
+    grant100Seeds: 'Grant 100 Seeds',
+    unlockFullGarden: 'Unlock Full Garden',
+    resetGarden: 'Reset Garden',
+    seedBalanceQuickSet: 'Seed balance quick set',
+    setSeeds: 'Set to {count}',
+    gardenUpdated: 'Moon Garden updated.',
     calmPoints: 'Calm Points',
     totalPractice: 'Total Practice',
     thisWeek: 'This Week',
@@ -794,6 +807,16 @@ const copy = {
     gardenLevel: 'Уровень сада',
     moonSeeds: 'Лунные семена',
     moonSeedsInfo: 'Лунные семена растут, когда ты завершаешь практики.',
+    playGardenAmbience: 'Включить атмосферу',
+    pauseGardenAmbience: 'Пауза атмосферы',
+    gardenAmbience: 'Атмосфера Лунного сада',
+    developerTools: 'Developer tools',
+    grant100Seeds: 'Добавить 100 семян',
+    unlockFullGarden: 'Открыть весь сад',
+    resetGarden: 'Сбросить сад',
+    seedBalanceQuickSet: 'Быстрый баланс семян',
+    setSeeds: 'Поставить {count}',
+    gardenUpdated: 'Лунный сад обновлён.',
     calmPoints: 'Баллы спокойствия',
     totalPractice: 'Практика',
     thisWeek: 'За неделю',
@@ -918,6 +941,15 @@ function saveStoredLanguage(language: AppLanguage) {
     window.localStorage.setItem(languageStorageKey, language);
   } catch {
     // Language persistence is best-effort in restricted browser storage.
+  }
+}
+
+function readMoonGardenVolume() {
+  try {
+    const saved = Number(window.localStorage.getItem(moonGardenVolumeStorageKey));
+    return Number.isFinite(saved) ? Math.max(0, Math.min(1, saved)) : 0.18;
+  } catch {
+    return 0.18;
   }
 }
 
@@ -1312,6 +1344,7 @@ function App() {
   const user = telegram?.initDataUnsafe.user ?? fallbackUser;
   const initData = telegram?.initData;
   const sceneAudioRef = useRef<HTMLAudioElement | null>(null);
+  const moonGardenAudioRef = useRef<HTMLAudioElement | null>(null);
   const sceneListenSecondsRef = useRef(0);
   const sceneMoonSeedAwardedRef = useRef(false);
   const [initialLibraryCache] = useState(() => readLibraryCache());
@@ -1334,6 +1367,8 @@ function App() {
   const [scenePlaying, setScenePlaying] = useState(false);
   const [sceneVolume, setSceneVolume] = useState(0.35);
   const [sceneAudioUrl, setSceneAudioUrl] = useState('');
+  const [moonGardenAmbiencePlaying, setMoonGardenAmbiencePlaying] = useState(false);
+  const [moonGardenVolume, setMoonGardenVolume] = useState(readMoonGardenVolume);
   const [paymentMessage, setPaymentMessage] = useState('');
   const [openingPlan, setOpeningPlan] = useState<'monthly' | 'lifetime' | null>(null);
   const [adminStatus, setAdminStatus] = useState<'checking' | 'allowed' | 'denied'>('checking');
@@ -1611,6 +1646,45 @@ function App() {
     setPage('library');
   };
 
+  const toggleMoonGardenAmbience = async () => {
+    const audio = moonGardenAudioRef.current;
+    if (!audio) return;
+
+    if (!audio.src) {
+      audio.src = createSceneAudioUrl('mist');
+    }
+    audio.loop = true;
+    audio.volume = moonGardenVolume;
+
+    if (audio.paused) {
+      sceneAudioRef.current?.pause();
+      setScenePlaying(false);
+      await audio.play();
+      setMoonGardenAmbiencePlaying(true);
+      return;
+    }
+
+    audio.pause();
+    setMoonGardenAmbiencePlaying(false);
+  };
+
+  const changeMoonGardenVolume = (nextVolume: number) => {
+    const volume = Math.max(0, Math.min(1, nextVolume));
+    setMoonGardenVolume(volume);
+    try {
+      window.localStorage.setItem(moonGardenVolumeStorageKey, String(volume));
+    } catch {
+      // Moon Garden ambience volume is best-effort local preference.
+    }
+    if (moonGardenAudioRef.current) moonGardenAudioRef.current.volume = volume;
+  };
+
+  const runMoonGardenDevAction = async (action: MoonGardenDevAction, seedBalance?: number) => {
+    const result = await updateMoonGardenDevState({ action, seedBalance }, initData);
+    setProfile(result.profile);
+    return result.profile;
+  };
+
   const openBreathCircle = () => {
     telegram?.HapticFeedback?.impactOccurred('light');
     setPage('breathCircle');
@@ -1740,6 +1814,12 @@ function App() {
   }, [sceneVolume]);
 
   useEffect(() => {
+    const audio = moonGardenAudioRef.current;
+    if (!audio) return;
+    audio.volume = moonGardenVolume;
+  }, [moonGardenVolume]);
+
+  useEffect(() => {
     const audio = sceneAudioRef.current;
     if (!audio || !sceneAudioUrl) return;
     if (audio.src !== sceneAudioUrl) audio.src = sceneAudioUrl;
@@ -1752,6 +1832,19 @@ function App() {
     if (!audio) return;
     const syncPause = () => setScenePlaying(false);
     const syncPlay = () => setScenePlaying(true);
+    audio.addEventListener('pause', syncPause);
+    audio.addEventListener('play', syncPlay);
+    return () => {
+      audio.removeEventListener('pause', syncPause);
+      audio.removeEventListener('play', syncPlay);
+    };
+  }, []);
+
+  useEffect(() => {
+    const audio = moonGardenAudioRef.current;
+    if (!audio) return;
+    const syncPause = () => setMoonGardenAmbiencePlaying(false);
+    const syncPlay = () => setMoonGardenAmbiencePlaying(true);
     audio.addEventListener('pause', syncPause);
     audio.addEventListener('play', syncPlay);
     return () => {
@@ -1863,6 +1956,12 @@ function App() {
               setProfile(result.profile);
               return result.profile;
             }}
+            isAdmin={adminStatus === 'allowed'}
+            ambiencePlaying={moonGardenAmbiencePlaying}
+            ambienceVolume={moonGardenVolume}
+            onToggleAmbience={toggleMoonGardenAmbience}
+            onAmbienceVolume={changeMoonGardenVolume}
+            onDevAction={runMoonGardenDevAction}
             language={language}
           />
         )}
@@ -1929,6 +2028,7 @@ function App() {
         )}
 
         <audio ref={sceneAudioRef} loop preload="none" />
+        <audio ref={moonGardenAudioRef} loop preload="none" />
         {selectedScene && page !== 'scenePlayer' && page !== 'admin' && (
           <SceneMiniPlayer
             scene={selectedScene}
@@ -3270,27 +3370,27 @@ const moonGardenStars = [
 
 function GardenElementVisual({ visual }: { visual: GardenVisual }) {
   if (visual === 'stone') {
-    return <span className="block h-5 w-9 rounded-[50%] bg-gradient-to-br from-cream/60 to-lavender/40 shadow-[0_0_14px_rgba(245,241,233,0.22)]" />;
+    return <span className="garden-visual garden-stone block h-5 w-9 rounded-[50%] bg-gradient-to-br from-cream/60 to-lavender/40 shadow-[0_0_14px_rgba(245,241,233,0.22)]" />;
   }
   if (visual === 'ripple') {
-    return <span className="block h-10 w-10 rounded-full border border-gold/50 bg-lavender/15 shadow-[0_0_18px_rgba(142,95,214,0.25)]"><span className="m-2 block h-6 w-6 rounded-full border border-cream/35" /></span>;
+    return <span className="garden-visual garden-ripple block h-10 w-10 rounded-full border border-gold/50 bg-lavender/15 shadow-[0_0_18px_rgba(142,95,214,0.25)]"><span className="m-2 block h-6 w-6 rounded-full border border-cream/35" /></span>;
   }
   if (visual === 'lantern') {
-    return <span className="relative block h-10 w-7 rounded-b-xl rounded-t-md border border-gold/60 bg-gold/25 shadow-[0_0_24px_rgba(212,175,55,0.5)]"><span className="absolute left-1/2 top-1 h-7 w-3 -translate-x-1/2 rounded-full bg-cream/70" /></span>;
+    return <span className="garden-visual garden-lantern relative block h-10 w-7 rounded-b-xl rounded-t-md border border-gold/60 bg-gold/25 shadow-[0_0_24px_rgba(212,175,55,0.5)]"><span className="absolute left-1/2 top-1 h-7 w-3 -translate-x-1/2 rounded-full bg-cream/70" /></span>;
   }
   if (visual === 'lily') {
-    return <span className="relative block h-9 w-9"><span className="absolute left-3 top-3 h-5 w-3 rotate-45 rounded-full bg-cream/75" /><span className="absolute left-4 top-3 h-5 w-3 -rotate-45 rounded-full bg-gold/70" /><span className="absolute left-2 top-5 h-3 w-6 rounded-full bg-lavender/40" /></span>;
+    return <span className="garden-visual garden-lily relative block h-9 w-9"><span className="absolute left-3 top-3 h-5 w-3 rotate-45 rounded-full bg-cream/75" /><span className="absolute left-4 top-3 h-5 w-3 -rotate-45 rounded-full bg-gold/70" /><span className="absolute left-2 top-5 h-3 w-6 rounded-full bg-lavender/40" /></span>;
   }
   if (visual === 'tree') {
-    return <span className="relative block h-16 w-12"><span className="absolute bottom-0 left-1/2 h-8 w-1.5 -translate-x-1/2 rounded-full bg-gold/50" /><span className="absolute left-2 top-0 h-11 w-11 rounded-full border-l-4 border-gold/75" /></span>;
+    return <span className="garden-visual garden-tree relative block h-16 w-12"><span className="absolute bottom-0 left-1/2 h-8 w-1.5 -translate-x-1/2 rounded-full bg-gold/50" /><span className="absolute left-2 top-0 h-11 w-11 rounded-full border-l-4 border-gold/75" /></span>;
   }
   if (visual === 'path') {
-    return <span className="flex w-20 items-center justify-center gap-1">{[0, 1, 2, 3, 4].map((item) => <span key={item} className="h-1.5 w-1.5 rounded-full bg-gold shadow-[0_0_10px_rgba(212,175,55,0.45)]" />)}</span>;
+    return <span className="garden-visual garden-path flex w-20 items-center justify-center gap-1">{[0, 1, 2, 3, 4].map((item) => <span key={item} className="h-1.5 w-1.5 rounded-full bg-gold shadow-[0_0_10px_rgba(212,175,55,0.45)]" />)}</span>;
   }
   if (visual === 'pond') {
-    return <span className="block h-9 w-16 rounded-[50%] border border-gold/35 bg-gradient-to-br from-lavender/35 to-gold/15 shadow-[0_0_20px_rgba(142,95,214,0.25)]" />;
+    return <span className="garden-visual garden-pond block h-9 w-16 rounded-[50%] border border-gold/35 bg-gradient-to-br from-lavender/35 to-gold/15 shadow-[0_0_20px_rgba(142,95,214,0.25)]" />;
   }
-  return <span className="relative block h-10 w-8"><span className="absolute bottom-0 left-1/2 h-6 w-1 -translate-x-1/2 bg-gold/50" /><span className="absolute left-1 top-0 h-6 w-4 rotate-[-28deg] rounded-full bg-gold/75 shadow-[0_0_18px_rgba(212,175,55,0.35)]" /><span className="absolute right-1 top-1 h-5 w-4 rotate-[28deg] rounded-full bg-cream/70" /></span>;
+  return <span className="garden-visual garden-flower relative block h-10 w-8"><span className="absolute bottom-0 left-1/2 h-6 w-1 -translate-x-1/2 bg-gold/50" /><span className="absolute left-1 top-0 h-6 w-4 rotate-[-28deg] rounded-full bg-gold/75 shadow-[0_0_18px_rgba(212,175,55,0.35)]" /><span className="absolute right-1 top-1 h-5 w-4 rotate-[28deg] rounded-full bg-cream/70" /></span>;
 }
 
 function MoonGardenScene({ profile, language, appearedElementId }: { profile: ProfileStats | null; language: AppLanguage; appearedElementId?: string | null }) {
@@ -3303,15 +3403,19 @@ function MoonGardenScene({ profile, language, appearedElementId }: { profile: Pr
       {moonGardenStars.map((star) => (
         <span
           key={`${star.left}-${star.top}`}
-          className="absolute rounded-full bg-cream shadow-[0_0_8px_rgba(245,241,233,0.45)]"
-          style={{ left: star.left, top: star.top, width: star.size, height: star.size, opacity: star.opacity }}
+          className="moon-garden-star absolute rounded-full bg-cream shadow-[0_0_8px_rgba(245,241,233,0.45)]"
+          style={{ left: star.left, top: star.top, width: star.size, height: star.size, opacity: star.opacity, animationDelay: `${Number.parseFloat(star.left) * 0.13}s` }}
         />
       ))}
-      <div className="absolute right-8 top-7 h-14 w-14 rounded-full bg-cream shadow-[0_0_36px_rgba(245,241,233,0.35)]" />
+      <div className="moon-garden-moon absolute right-8 top-7 h-14 w-14 rounded-full bg-cream shadow-[0_0_36px_rgba(245,241,233,0.35)]" />
       <div className="absolute right-4 top-3 h-14 w-14 rounded-full bg-[#1a102f]" />
       <div className="absolute inset-x-0 bottom-0 h-28 rounded-t-[60%] bg-gradient-to-t from-night via-[#211436] to-transparent" />
-      <div className="absolute inset-x-6 bottom-10 h-8 rounded-[50%] bg-gold/15 blur-xl" />
+      <div className="moon-garden-mist absolute inset-x-[-20%] bottom-14 h-16 rounded-[50%] bg-cream/10 blur-2xl" />
+      <div className="moon-garden-ground-glow absolute inset-x-6 bottom-10 h-8 rounded-[50%] bg-gold/15 blur-xl" />
       <div className="absolute inset-x-10 bottom-8 h-2 rounded-full bg-gold/25 blur-md" />
+      <span className="moon-garden-mote absolute left-[14%] top-[58%] h-1 w-1 rounded-full bg-gold/50" />
+      <span className="moon-garden-mote absolute left-[72%] top-[54%] h-1.5 w-1.5 rounded-full bg-cream/35 [animation-delay:3s]" />
+      <span className="moon-garden-mote absolute left-[46%] top-[65%] h-1 w-1 rounded-full bg-lavender/50 [animation-delay:6s]" />
       <div className="relative h-60">
         <div className="absolute left-0 top-0">
           <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].moonGarden}</p>
@@ -3333,7 +3437,7 @@ function MoonGardenScene({ profile, language, appearedElementId }: { profile: Pr
         {plantedElements.map((element) => (
           <div
             key={element.id}
-            className={`absolute -translate-x-1/2 transition duration-500 ${appearedElementId === element.id ? 'scale-110 opacity-100 drop-shadow-[0_0_16px_rgba(212,175,55,0.55)]' : 'opacity-95'}`}
+            className={`absolute -translate-x-1/2 transition duration-500 ${appearedElementId === element.id ? 'moon-garden-appear scale-110 opacity-100 drop-shadow-[0_0_16px_rgba(212,175,55,0.55)]' : 'opacity-95'}`}
             style={element.position}
             title={element.name[language]}
           >
@@ -3349,14 +3453,27 @@ function MoonGardenPage({
   profile,
   onBack,
   onPlant,
+  isAdmin,
+  ambiencePlaying,
+  ambienceVolume,
+  onToggleAmbience,
+  onAmbienceVolume,
+  onDevAction,
   language
 }: {
   profile: ProfileStats | null;
   onBack: () => void;
   onPlant: (element: GardenElement) => Promise<ProfileStats>;
+  isAdmin: boolean;
+  ambiencePlaying: boolean;
+  ambienceVolume: number;
+  onToggleAmbience: () => Promise<void>;
+  onAmbienceVolume: (volume: number) => void;
+  onDevAction: (action: MoonGardenDevAction, seedBalance?: number) => Promise<ProfileStats>;
   language: AppLanguage;
 }) {
   const [workingId, setWorkingId] = useState<string | null>(null);
+  const [devWorking, setDevWorking] = useState<string | null>(null);
   const [liveProfile, setLiveProfile] = useState<ProfileStats | null>(profile);
   const [message, setMessage] = useState('');
   const [appearedElementId, setAppearedElementId] = useState<string | null>(null);
@@ -3435,6 +3552,22 @@ function MoonGardenPage({
     }
   };
 
+  const runDevAction = async (action: MoonGardenDevAction, seedBalance?: number) => {
+    if (devWorking) return;
+    setDevWorking(seedBalance === undefined ? action : `${action}-${seedBalance}`);
+    setMessage('');
+    try {
+      const nextProfile = await onDevAction(action, seedBalance);
+      setLiveProfile(nextProfile);
+      setAppearedElementId(action === 'unlock_full' ? 'breathing_pond' : null);
+      setMessage(copy[language].gardenUpdated);
+    } catch {
+      setMessage(language === 'en' ? 'Developer action failed.' : 'Не удалось выполнить действие.');
+    } finally {
+      setDevWorking(null);
+    }
+  };
+
   return (
     <div className="space-y-4 pb-[calc(120px+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top,0px)+56px)] luna-fade">
       <div className="flex items-center justify-between gap-3">
@@ -3450,6 +3583,31 @@ function MoonGardenPage({
 
       <MoonGardenScene profile={activeProfile} language={language} appearedElementId={appearedElementId} />
 
+      <section className="rounded-[24px] border border-white/10 bg-ink/90 p-4 shadow-glow">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-[0.16em] text-gold">{copy[language].gardenAmbience}</p>
+            <p className="mt-1 text-sm text-lavender">{language === 'en' ? 'A soft night layer for your garden.' : 'Мягкий ночной слой для твоего сада.'}</p>
+          </div>
+          <button onClick={() => void onToggleAmbience()} className="rounded-2xl bg-gold px-4 py-3 text-sm font-semibold text-night">
+            {ambiencePlaying ? copy[language].pauseGardenAmbience : copy[language].playGardenAmbience}
+          </button>
+        </div>
+        <label className="mt-3 block text-xs text-lavender">
+          <span className="inline-flex items-center gap-2"><Volume2 size={14} />{Math.round(ambienceVolume * 100)}%</span>
+          <input
+            aria-label={copy[language].gardenAmbience}
+            type="range"
+            min={0}
+            max={1}
+            step={0.01}
+            value={ambienceVolume}
+            onChange={(event) => onAmbienceVolume(Number(event.target.value))}
+            className="mt-2 h-6 w-full accent-gold"
+          />
+        </label>
+      </section>
+
       <section className="rounded-[26px] border border-gold/20 bg-ink p-4 shadow-glow">
         <div className="grid grid-cols-3 gap-2 text-xs">
           <Stat label={copy[language].availableMoonSeeds} value={String(seeds)} />
@@ -3462,6 +3620,36 @@ function MoonGardenPage({
         </div>
         {message && <p className="mt-3 rounded-2xl bg-night/70 px-3 py-2 text-sm text-gold">{message}</p>}
       </section>
+
+      {isAdmin && (
+        <section className="rounded-[24px] border border-gold/20 bg-night/80 p-4 shadow-glow">
+          <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].developerTools}</p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button disabled={Boolean(devWorking)} onClick={() => void runDevAction('grant_100')} className="rounded-2xl bg-gold px-3 py-3 text-sm font-semibold text-night disabled:opacity-60">
+              {copy[language].grant100Seeds}
+            </button>
+            <button disabled={Boolean(devWorking)} onClick={() => void runDevAction('unlock_full')} className="rounded-2xl bg-gold/20 px-3 py-3 text-sm font-semibold text-gold disabled:opacity-60">
+              {copy[language].unlockFullGarden}
+            </button>
+            <button disabled={Boolean(devWorking)} onClick={() => void runDevAction('reset')} className="rounded-2xl bg-surface px-3 py-3 text-sm font-semibold text-lavender disabled:opacity-60">
+              {copy[language].resetGarden}
+            </button>
+          </div>
+          <p className="mt-4 text-xs text-lavender">{copy[language].seedBalanceQuickSet}</p>
+          <div className="mt-2 grid grid-cols-4 gap-2">
+            {[0, 10, 25, 100].map((count) => (
+              <button
+                key={count}
+                disabled={Boolean(devWorking)}
+                onClick={() => void runDevAction('set_balance', count)}
+                className="rounded-2xl bg-surface px-2 py-3 text-xs font-semibold text-cream disabled:opacity-60"
+              >
+                {text(language, 'setSeeds', { count })}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="space-y-3">
         <h3 className="font-serif text-2xl">{copy[language].gardenElements}</h3>

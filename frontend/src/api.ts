@@ -304,6 +304,24 @@ export async function plantMoonGardenElement(elementId: string, initData?: strin
   }, initData);
 }
 
+export type MoonGardenDevAction = 'grant_100' | 'unlock_full' | 'reset' | 'set_balance';
+
+export async function updateMoonGardenDevState(input: {
+  action: MoonGardenDevAction;
+  seedBalance?: number;
+}, initData?: string) {
+  return request<{
+    ok: boolean;
+    moonSeedsAvailable: number;
+    moonSeedsEarnedTotal: number;
+    plantedGardenElements: string[];
+    profile: ProfileStats;
+  }>('/api/moon-garden/dev', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  }, initData);
+}
+
 export async function recordSceneMoonSeed(input: {
   scene_id: string;
   duration_seconds: number;

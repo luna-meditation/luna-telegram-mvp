@@ -24,6 +24,7 @@ import {
   recordBreathSession,
   recordSceneMoonSeed,
   supabase,
+  updateMoonGardenDevState,
   updateUserLanguage,
   updateMeditation,
   updateAdminUserAccess,
@@ -365,6 +366,24 @@ app.post('/api/moon-garden/plant', requireTelegramWebApp, async (req, res, next)
   try {
     const authReq = req as AuthenticatedRequest;
     const result = await plantMoonGardenElement(authReq.telegramUser.telegram_id, String(req.body?.elementId ?? ''));
+    if ('error' in result) {
+      res.status(result.status ?? 400).json(result);
+      return;
+    }
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/moon-garden/dev', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    if (!assertAdmin(req, res)) return;
+    const authReq = req as AuthenticatedRequest;
+    const result = await updateMoonGardenDevState(authReq.telegramUser.telegram_id, {
+      action: String(req.body?.action ?? ''),
+      seedBalance: req.body?.seedBalance
+    });
     if ('error' in result) {
       res.status(result.status ?? 400).json(result);
       return;
