@@ -49,14 +49,14 @@ export type HistoryInput = {
 };
 
 const moonGardenElements = [
-  { id: 'moon-flower', cost: 2 },
-  { id: 'calm-stone', cost: 3 },
-  { id: 'water-ripple', cost: 5 },
-  { id: 'golden-lantern', cost: 8 },
-  { id: 'night-lily', cost: 10 },
-  { id: 'crescent-tree', cost: 12 },
-  { id: 'star-path', cost: 20 },
-  { id: 'breathing-pond', cost: 25 }
+  { id: 'moon_flower', cost: 2 },
+  { id: 'calm_stone', cost: 3 },
+  { id: 'water_ripple', cost: 5 },
+  { id: 'golden_lantern', cost: 8 },
+  { id: 'night_lily', cost: 10 },
+  { id: 'crescent_tree', cost: 12 },
+  { id: 'star_path', cost: 20 },
+  { id: 'breathing_pond', cost: 25 }
 ];
 
 const moonGardenElementCost = new Map(moonGardenElements.map((element) => [element.id, element.cost]));
@@ -582,9 +582,11 @@ export async function markPracticeComplete(input: {
 }
 
 function plantedElementIds(value: unknown) {
-  return Array.isArray(value)
-    ? value.filter((item): item is string => typeof item === 'string' && moonGardenElementCost.has(item))
-    : [];
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value
+    .filter((item): item is string => typeof item === 'string')
+    .map((item) => item.replace(/-/g, '_'))
+    .filter((item) => moonGardenElementCost.has(item)))];
 }
 
 function plantedElementsCost(ids: string[]) {
@@ -616,7 +618,10 @@ async function awardMoonSeeds(telegramId: number, amount: number) {
   }
 
   const plantedGardenElements = plantedElementIds(existing?.planted_garden_elements);
-  const moonSeedsEarnedTotal = Number(existing?.moon_seeds_earned_total ?? 0) + amount;
+  const plantedCost = plantedElementsCost(plantedGardenElements);
+  const currentAvailable = Math.max(0, Number(existing?.moon_seeds_available ?? 0));
+  const currentEarnedTotal = Math.max(Number(existing?.moon_seeds_earned_total ?? 0), currentAvailable + plantedCost);
+  const moonSeedsEarnedTotal = currentEarnedTotal + amount;
   const moonSeedsAvailable = Math.max(0, moonSeedsEarnedTotal - plantedElementsCost(plantedGardenElements));
 
   const { error } = await supabase
@@ -666,8 +671,11 @@ async function getMoonGardenState(telegramId: number, input: {
   }
 
   const plantedGardenElements = plantedElementIds(existing?.planted_garden_elements);
-  const moonSeedsEarnedTotal = Math.max(Number(existing?.moon_seeds_earned_total ?? 0), earnedFromPractice);
-  const moonSeedsAvailable = Math.max(0, moonSeedsEarnedTotal - plantedElementsCost(plantedGardenElements));
+  const plantedCost = plantedElementsCost(plantedGardenElements);
+  const storedAvailable = existing ? Math.max(0, Number(existing.moon_seeds_available ?? 0)) : 0;
+  const storedEarnedTotal = Number(existing?.moon_seeds_earned_total ?? 0);
+  const moonSeedsEarnedTotal = Math.max(storedEarnedTotal, earnedFromPractice, storedAvailable + plantedCost);
+  const moonSeedsAvailable = existing ? storedAvailable : Math.max(0, moonSeedsEarnedTotal - plantedCost);
   const lastMoonSeedEarnedAt =
     moonSeedsEarnedTotal > Number(existing?.moon_seeds_earned_total ?? 0)
       ? new Date().toISOString()
@@ -801,8 +809,13 @@ export async function getProfileStats(telegramId: number) {
 }
 
 export async function plantMoonGardenElement(telegramId: number, elementId: string) {
-  const element = moonGardenElements.find((item) => item.id === elementId);
+  const normalizedElementId = elementId.replace(/-/g, '_');
+  const element = moonGardenElements.find((item) => item.id === normalizedElementId);
+  if (process.env.NODE_ENV !== 'production') {
+    console.info('[MOON_GARDEN_PLANT_ATTEMPT]', { telegramId, elementId: normalizedElementId });
+  }
   if (!element) {
+    if (process.env.NODE_ENV !== 'production') console.info('[MOON_GARDEN_PLANT_BLOCKED]', { reason: 'unknown_element', elementId: normalizedElementId });
     return { error: 'Unknown garden element.' as const, status: 400 };
   }
 
@@ -810,11 +823,21 @@ export async function plantMoonGardenElement(telegramId: number, elementId: stri
   const planted = plantedElementIds(profile.plantedGardenElements);
 
   if (planted.includes(element.id)) {
+    if (process.env.NODE_ENV !== 'production') console.info('[MOON_GARDEN_PLANT_BLOCKED]', { reason: 'already_planted', elementId: element.id });
     return { error: 'Garden element already planted.' as const, status: 409, profile };
   }
 
   const availableSeeds = Number(profile.moonSeedsAvailable ?? profile.moonSeeds ?? 0);
+  if (process.env.NODE_ENV !== 'production') {
+    console.info('[MOON_GARDEN_BALANCE]', {
+      elementId: element.id,
+      availableSeeds,
+      cost: element.cost,
+      planted
+    });
+  }
   if (availableSeeds < element.cost) {
+    if (process.env.NODE_ENV !== 'production') console.info('[MOON_GARDEN_PLANT_BLOCKED]', { reason: 'not_enough_seeds', elementId: element.id, availableSeeds, cost: element.cost });
     return {
       error: 'Not enough Moon Seeds.' as const,
       status: 400,
@@ -824,8 +847,11 @@ export async function plantMoonGardenElement(telegramId: number, elementId: stri
   }
 
   const nextPlanted = [...planted, element.id];
-  const moonSeedsEarnedTotal = Number(profile.moonSeedsEarnedTotal ?? 0);
-  const moonSeedsAvailable = Math.max(0, moonSeedsEarnedTotal - plantedElementsCost(nextPlanted));
+  const moonSeedsEarnedTotal = Math.max(
+    Number(profile.moonSeedsEarnedTotal ?? 0),
+    availableSeeds + plantedElementsCost(planted)
+  );
+  const moonSeedsAvailable = Math.max(0, availableSeeds - element.cost);
 
   const { error } = await supabase
     .from('moon_gardens')
@@ -843,6 +869,13 @@ export async function plantMoonGardenElement(telegramId: number, elementId: stri
     );
 
   if (error) throw error;
+  if (process.env.NODE_ENV !== 'production') {
+    console.info('[MOON_GARDEN_PLANT_SUCCESS]', {
+      elementId: element.id,
+      moonSeedsAvailable,
+      plantedGardenElements: nextPlanted
+    });
+  }
 
   return {
     planted: true,

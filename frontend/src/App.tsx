@@ -68,11 +68,15 @@ type LibraryMode = 'meditations' | 'scenes';
 type SceneAccess = 'free' | 'premium';
 type BreathMode = 'calm' | 'box' | 'reset';
 type GardenElementType = 'flower' | 'stone' | 'water' | 'light' | 'tree' | 'path';
+type GardenVisual = 'flower' | 'stone' | 'ripple' | 'lantern' | 'lily' | 'tree' | 'path' | 'pond';
 type GardenElement = {
   id: string;
   name: Record<AppLanguage, string>;
+  description: Record<AppLanguage, string>;
   type: GardenElementType;
   cost: number;
+  position: { left: string; bottom: string };
+  visual: GardenVisual;
 };
 type SceneDefinition = {
   id: string;
@@ -193,14 +197,78 @@ const scenes = ([
 ] satisfies SceneDefinition[]).sort((left, right) => left.sortOrder - right.sortOrder);
 
 const gardenElements: GardenElement[] = [
-  { id: 'moon-flower', name: { en: 'Moon Flower', ru: 'Лунный цветок' }, cost: 2, type: 'flower' },
-  { id: 'calm-stone', name: { en: 'Calm Stone', ru: 'Камень спокойствия' }, cost: 3, type: 'stone' },
-  { id: 'water-ripple', name: { en: 'Water Ripple', ru: 'Водная рябь' }, cost: 5, type: 'water' },
-  { id: 'golden-lantern', name: { en: 'Golden Lantern', ru: 'Золотой фонарь' }, cost: 8, type: 'light' },
-  { id: 'night-lily', name: { en: 'Night Lily', ru: 'Ночная лилия' }, cost: 10, type: 'flower' },
-  { id: 'crescent-tree', name: { en: 'Crescent Tree', ru: 'Лунное дерево' }, cost: 12, type: 'tree' },
-  { id: 'star-path', name: { en: 'Star Path', ru: 'Звёздная тропа' }, cost: 20, type: 'path' },
-  { id: 'breathing-pond', name: { en: 'Breathing Pond', ru: 'Пруд дыхания' }, cost: 25, type: 'water' }
+  {
+    id: 'moon_flower',
+    name: { en: 'Moon Flower', ru: 'Лунный цветок' },
+    description: { en: 'A small bloom of quiet light.', ru: 'Маленький цветок тихого света.' },
+    cost: 2,
+    type: 'flower',
+    position: { left: '18%', bottom: '18%' },
+    visual: 'flower'
+  },
+  {
+    id: 'calm_stone',
+    name: { en: 'Calm Stone', ru: 'Камень спокойствия' },
+    description: { en: 'A grounding stone for your garden.', ru: 'Опорный камень для твоего сада.' },
+    cost: 3,
+    type: 'stone',
+    position: { left: '42%', bottom: '14%' },
+    visual: 'stone'
+  },
+  {
+    id: 'water_ripple',
+    name: { en: 'Water Ripple', ru: 'Водная рябь' },
+    description: { en: 'A soft circle of still water.', ru: 'Мягкий круг тихой воды.' },
+    cost: 5,
+    type: 'water',
+    position: { left: '68%', bottom: '16%' },
+    visual: 'ripple'
+  },
+  {
+    id: 'golden_lantern',
+    name: { en: 'Golden Lantern', ru: 'Золотой фонарь' },
+    description: { en: 'A warm light for evening calm.', ru: 'Тёплый свет для вечернего спокойствия.' },
+    cost: 8,
+    type: 'light',
+    position: { left: '78%', bottom: '30%' },
+    visual: 'lantern'
+  },
+  {
+    id: 'night_lily',
+    name: { en: 'Night Lily', ru: 'Ночная лилия' },
+    description: { en: 'A gentle flower for restful nights.', ru: 'Нежный цветок для спокойных ночей.' },
+    cost: 10,
+    type: 'flower',
+    position: { left: '56%', bottom: '20%' },
+    visual: 'lily'
+  },
+  {
+    id: 'crescent_tree',
+    name: { en: 'Crescent Tree', ru: 'Лунное дерево' },
+    description: { en: 'A quiet tree beneath the moon.', ru: 'Тихое дерево под луной.' },
+    cost: 12,
+    type: 'tree',
+    position: { left: '25%', bottom: '26%' },
+    visual: 'tree'
+  },
+  {
+    id: 'star_path',
+    name: { en: 'Star Path', ru: 'Звёздная тропа' },
+    description: { en: 'A soft path of golden stars.', ru: 'Мягкая тропа золотых звёзд.' },
+    cost: 20,
+    type: 'path',
+    position: { left: '50%', bottom: '8%' },
+    visual: 'path'
+  },
+  {
+    id: 'breathing_pond',
+    name: { en: 'Breathing Pond', ru: 'Пруд дыхания' },
+    description: { en: 'A still pond for slow breaths.', ru: 'Тихий пруд для медленного дыхания.' },
+    cost: 25,
+    type: 'water',
+    position: { left: '62%', bottom: '10%' },
+    visual: 'pond'
+  }
 ];
 
 function createSceneAudioUrl(kind: SceneDefinition['sound']) {
@@ -903,7 +971,9 @@ function moonSeedCount(profile: ProfileStats | null) {
 }
 
 function plantedGardenElements(profile: ProfileStats | null) {
-  return Array.isArray(profile?.plantedGardenElements) ? profile.plantedGardenElements : [];
+  return Array.isArray(profile?.plantedGardenElements)
+    ? [...new Set(profile.plantedGardenElements.map((item) => item.replace(/-/g, '_')))]
+    : [];
 }
 
 function nextGardenElement(profile: ProfileStats | null) {
@@ -3185,6 +3255,69 @@ function MoonGardenCard({ profile, onOpen, language }: { profile: ProfileStats |
   );
 }
 
+function GardenElementVisual({ visual }: { visual: GardenVisual }) {
+  if (visual === 'stone') {
+    return <span className="block h-5 w-9 rounded-[50%] bg-gradient-to-br from-cream/60 to-lavender/40 shadow-[0_0_14px_rgba(245,241,233,0.22)]" />;
+  }
+  if (visual === 'ripple') {
+    return <span className="block h-10 w-10 rounded-full border border-gold/50 bg-lavender/15 shadow-[0_0_18px_rgba(142,95,214,0.25)]"><span className="m-2 block h-6 w-6 rounded-full border border-cream/35" /></span>;
+  }
+  if (visual === 'lantern') {
+    return <span className="relative block h-10 w-7 rounded-b-xl rounded-t-md border border-gold/60 bg-gold/25 shadow-[0_0_24px_rgba(212,175,55,0.5)]"><span className="absolute left-1/2 top-1 h-7 w-3 -translate-x-1/2 rounded-full bg-cream/70" /></span>;
+  }
+  if (visual === 'lily') {
+    return <span className="relative block h-9 w-9"><span className="absolute left-3 top-3 h-5 w-3 rotate-45 rounded-full bg-cream/75" /><span className="absolute left-4 top-3 h-5 w-3 -rotate-45 rounded-full bg-gold/70" /><span className="absolute left-2 top-5 h-3 w-6 rounded-full bg-lavender/40" /></span>;
+  }
+  if (visual === 'tree') {
+    return <span className="relative block h-16 w-12"><span className="absolute bottom-0 left-1/2 h-8 w-1.5 -translate-x-1/2 rounded-full bg-gold/50" /><span className="absolute left-2 top-0 h-11 w-11 rounded-full border-l-4 border-gold/75" /></span>;
+  }
+  if (visual === 'path') {
+    return <span className="flex w-20 items-center justify-center gap-1">{[0, 1, 2, 3, 4].map((item) => <span key={item} className="h-1.5 w-1.5 rounded-full bg-gold shadow-[0_0_10px_rgba(212,175,55,0.45)]" />)}</span>;
+  }
+  if (visual === 'pond') {
+    return <span className="block h-9 w-16 rounded-[50%] border border-gold/35 bg-gradient-to-br from-lavender/35 to-gold/15 shadow-[0_0_20px_rgba(142,95,214,0.25)]" />;
+  }
+  return <span className="relative block h-10 w-8"><span className="absolute bottom-0 left-1/2 h-6 w-1 -translate-x-1/2 bg-gold/50" /><span className="absolute left-1 top-0 h-6 w-4 rotate-[-28deg] rounded-full bg-gold/75 shadow-[0_0_18px_rgba(212,175,55,0.35)]" /><span className="absolute right-1 top-1 h-5 w-4 rotate-[28deg] rounded-full bg-cream/70" /></span>;
+}
+
+function MoonGardenScene({ profile, language, appearedElementId }: { profile: ProfileStats | null; language: AppLanguage; appearedElementId?: string | null }) {
+  const planted = new Set(plantedGardenElements(profile));
+  const plantedElements = gardenElements.filter((element) => planted.has(element.id));
+
+  return (
+    <section className="relative overflow-hidden rounded-[28px] border border-gold/20 bg-[#120c22] p-4 shadow-glow">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(142,95,214,0.32),transparent_28%),radial-gradient(circle_at_78%_18%,rgba(212,175,55,0.16),transparent_22%),linear-gradient(180deg,#1a102f_0%,#100b1c_62%,#0b0914_100%)]" />
+      <div className="absolute inset-0 opacity-60 [background-image:radial-gradient(circle,rgba(245,241,233,0.75)_1px,transparent_1.5px)] [background-size:34px_34px]" />
+      <div className="absolute right-8 top-7 h-14 w-14 rounded-full bg-cream shadow-[0_0_36px_rgba(245,241,233,0.35)]" />
+      <div className="absolute right-4 top-3 h-14 w-14 rounded-full bg-[#1a102f]" />
+      <div className="absolute inset-x-0 bottom-0 h-24 rounded-t-[60%] bg-gradient-to-t from-night via-[#211436] to-transparent" />
+      <div className="absolute inset-x-10 bottom-8 h-2 rounded-full bg-gold/20 blur-md" />
+      <div className="relative h-56">
+        <div className="absolute left-0 top-0">
+          <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].moonGarden}</p>
+          <h3 className="mt-1 font-serif text-2xl">{language === 'en' ? 'Your Moon Garden' : 'Твой Лунный сад'}</h3>
+          <p className="mt-1 max-w-[210px] text-xs leading-5 text-cream/60">{language === 'en' ? 'Plant elements to shape your quiet place.' : 'Сажай элементы, чтобы создать своё тихое место.'}</p>
+        </div>
+        {!plantedElements.length && (
+          <p className="absolute bottom-8 left-1/2 w-52 -translate-x-1/2 rounded-2xl bg-night/60 px-3 py-2 text-center text-xs text-lavender">
+            {language === 'en' ? 'Your garden is waiting for its first seed.' : 'Твой сад ждёт первое семя.'}
+          </p>
+        )}
+        {plantedElements.map((element) => (
+          <div
+            key={element.id}
+            className={`absolute -translate-x-1/2 transition duration-500 ${appearedElementId === element.id ? 'scale-110 opacity-100 drop-shadow-[0_0_16px_rgba(212,175,55,0.55)]' : 'opacity-95'}`}
+            style={element.position}
+            title={element.name[language]}
+          >
+            <GardenElementVisual visual={element.visual} />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function MoonGardenPage({
   profile,
   onBack,
@@ -3199,6 +3332,7 @@ function MoonGardenPage({
   const [workingId, setWorkingId] = useState<string | null>(null);
   const [liveProfile, setLiveProfile] = useState<ProfileStats | null>(profile);
   const [message, setMessage] = useState('');
+  const [appearedElementId, setAppearedElementId] = useState<string | null>(null);
   const activeProfile = liveProfile ?? profile;
   const seeds = moonSeedCount(activeProfile);
   const minutes = activeProfile?.totalPracticeMinutes ?? activeProfile?.minutesListened ?? 0;
@@ -3212,11 +3346,26 @@ function MoonGardenPage({
 
   const plant = async (element: GardenElement) => {
     if (workingId) return;
+    if (import.meta.env.DEV) {
+      console.info('[MOON_GARDEN_PLANT_ATTEMPT]', {
+        elementId: element.id,
+        availableSeeds: seeds,
+        cost: element.cost,
+        planted: [...planted]
+      });
+      console.info('[MOON_GARDEN_BALANCE]', {
+        moonSeedsAvailable: activeProfile?.moonSeedsAvailable,
+        moonSeeds: activeProfile?.moonSeeds,
+        moonSeedsEarnedTotal: activeProfile?.moonSeedsEarnedTotal
+      });
+    }
     if (planted.has(element.id)) {
+      if (import.meta.env.DEV) console.info('[MOON_GARDEN_PLANT_BLOCKED]', { reason: 'already_planted', elementId: element.id });
       setMessage(copy[language].alreadyPlanted);
       return;
     }
     if (seeds < element.cost) {
+      if (import.meta.env.DEV) console.info('[MOON_GARDEN_PLANT_BLOCKED]', { reason: 'not_enough_seeds', elementId: element.id, availableSeeds: seeds, cost: element.cost });
       setMessage(copy[language].notEnoughSeeds);
       return;
     }
@@ -3226,8 +3375,17 @@ function MoonGardenPage({
     try {
       const nextProfile = await onPlant(element);
       setLiveProfile(nextProfile);
+      setAppearedElementId(element.id);
       setMessage(`${text(language, 'elementPlanted', { name: element.name[language] })} ${copy[language].gardenGrew}`);
+      if (import.meta.env.DEV) {
+        console.info('[MOON_GARDEN_PLANT_SUCCESS]', {
+          elementId: element.id,
+          moonSeedsAvailable: nextProfile.moonSeedsAvailable,
+          plantedGardenElements: nextProfile.plantedGardenElements
+        });
+      }
     } catch {
+      if (import.meta.env.DEV) console.info('[MOON_GARDEN_PLANT_BLOCKED]', { reason: 'api_failed', elementId: element.id });
       setMessage(copy[language].notEnoughSeeds);
     } finally {
       setWorkingId(null);
@@ -3246,6 +3404,8 @@ function MoonGardenPage({
           <X size={18} />
         </button>
       </div>
+
+      <MoonGardenScene profile={activeProfile} language={language} appearedElementId={appearedElementId} />
 
       <section className="rounded-[26px] border border-gold/20 bg-ink p-4 shadow-glow">
         <div className="grid grid-cols-3 gap-2 text-xs">
@@ -3268,10 +3428,10 @@ function MoonGardenPage({
           const canPlant = !isPlanted && needed === 0;
           const status = isPlanted ? copy[language].planted : canPlant ? copy[language].availableToPlant : copy[language].locked;
           return (
-            <article key={element.id} className="rounded-[24px] border border-white/10 bg-ink p-4 shadow-glow">
+            <article key={element.id} className="rounded-[24px] border border-white/10 bg-gradient-to-br from-ink via-surface/70 to-night p-4 shadow-glow">
               <div className="flex items-center gap-3">
-                <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl border ${isPlanted ? 'border-gold bg-gold/20' : 'border-white/10 bg-surface'}`}>
-                  <MoonMark className="h-7 w-7" />
+                <span className={`grid h-16 w-16 shrink-0 place-items-center rounded-[22px] border ${isPlanted ? 'border-gold bg-gold/20 shadow-gold' : canPlant ? 'border-gold/30 bg-gold/10' : 'border-white/10 bg-night/70'}`}>
+                  <GardenElementVisual visual={element.visual} />
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
@@ -3279,6 +3439,7 @@ function MoonGardenPage({
                     <span className="rounded-full bg-gold/15 px-2 py-1 text-[11px] text-gold">{element.cost} {copy[language].moonSeeds}</span>
                   </div>
                   <p className="mt-1 text-xs capitalize text-lavender">{element.type} · {status}</p>
+                  <p className="mt-2 text-sm leading-5 text-cream/70">{element.description[language]}</p>
                 </div>
               </div>
               <button
