@@ -382,7 +382,9 @@ app.post('/api/moon-garden/dev', requireTelegramWebApp, async (req, res, next) =
     const authReq = req as AuthenticatedRequest;
     const result = await updateMoonGardenDevState(authReq.telegramUser.telegram_id, {
       action: String(req.body?.action ?? ''),
-      seedBalance: req.body?.seedBalance
+      seedBalance: req.body?.seedBalance,
+      amount: req.body?.amount,
+      stageLevel: req.body?.stageLevel
     });
     if ('error' in result) {
       res.status(result.status ?? 400).json(result);

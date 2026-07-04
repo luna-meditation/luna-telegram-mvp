@@ -227,7 +227,7 @@ bot.on('successful_payment', async (ctx) => {
   });
 
   await ctx.reply(
-    'Payment successful. Your Luna access is unlocked.',
+    'Payment successful. Your Luna access is unlocked. 40 Moon Seeds were added to your garden.',
     Markup.inlineKeyboard([[Markup.button.webApp('Open Premium Library', env.MINI_APP_URL)]])
   );
 });

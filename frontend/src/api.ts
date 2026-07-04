@@ -274,7 +274,12 @@ export async function saveHistory(input: {
   duration: number;
   completed?: boolean;
 }, initData?: string) {
-  return request('/api/history', {
+  return request<{
+    completion_percent: number;
+    completed: boolean;
+    moonSeedsAwarded?: number;
+    completionBonusAwarded?: boolean;
+  }>('/api/history', {
     method: 'POST',
     body: JSON.stringify(input)
   }, initData);
@@ -304,11 +309,13 @@ export async function plantMoonGardenElement(elementId: string, initData?: strin
   }, initData);
 }
 
-export type MoonGardenDevAction = 'grant_100' | 'unlock_full' | 'reset' | 'set_balance';
+export type MoonGardenDevAction = 'grant_100' | 'grant_seeds' | 'unlock_full' | 'reset' | 'reset_all' | 'reset_planted' | 'set_balance' | 'set_stage';
 
 export async function updateMoonGardenDevState(input: {
   action: MoonGardenDevAction;
   seedBalance?: number;
+  amount?: number;
+  stageLevel?: number;
 }, initData?: string) {
   return request<{
     ok: boolean;

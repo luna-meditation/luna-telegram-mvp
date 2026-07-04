@@ -57,6 +57,8 @@ create table if not exists public.history (
   play_count integer not null default 0,
   completion_percent numeric(5,2) not null default 0 check (completion_percent >= 0 and completion_percent <= 100),
   last_position integer not null default 0 check (last_position >= 0),
+  seed_awarded_position integer not null default 0 check (seed_awarded_position >= 0),
+  completion_seed_bonus_awarded boolean not null default false,
   completed boolean not null default false,
   unique (telegram_id, meditation_id)
 );
@@ -90,10 +92,18 @@ create table if not exists public.moon_gardens (
   moon_seeds_earned_total integer not null default 0 check (moon_seeds_earned_total >= 0),
   planted_garden_elements jsonb not null default '[]'::jsonb,
   last_moon_seed_earned_at timestamptz,
+  premium_bonus_granted_at timestamptz,
   garden_level integer not null default 1 check (garden_level >= 1),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.history
+  add column if not exists seed_awarded_position integer not null default 0 check (seed_awarded_position >= 0),
+  add column if not exists completion_seed_bonus_awarded boolean not null default false;
+
+alter table public.moon_gardens
+  add column if not exists premium_bonus_granted_at timestamptz;
 
 create index if not exists idx_meditations_category on public.meditations(category);
 create index if not exists idx_meditations_mood on public.meditations(mood);

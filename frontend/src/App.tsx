@@ -275,14 +275,62 @@ const gardenElements: GardenElement[] = [
 ];
 
 const gardenStages = [
-  { level: 0, path: '/assets/moon-garden/level-0-empty-garden.png' },
-  { level: 1, path: '/assets/moon-garden/level-1-first-bloom.png' },
-  { level: 2, path: '/assets/moon-garden/level-2-lantern-glow.png' },
-  { level: 3, path: '/assets/moon-garden/level-3-stone-path.png' },
-  { level: 4, path: '/assets/moon-garden/level-4-twin-bloom.png' },
-  { level: 5, path: '/assets/moon-garden/level-5-moon-bridge.png' },
-  { level: 6, path: '/assets/moon-garden/level-6-reflection-garden.png' },
-  { level: 7, path: '/assets/moon-garden/level-7-full-moon-garden.png' }
+  {
+    level: 0,
+    minPlantedElements: 0,
+    title: { en: 'Empty Garden', ru: 'Пустой сад' },
+    path: '/assets/moon-garden/level-0-empty-garden.png',
+    subtitle: { en: 'Your quiet place is waiting for its first seed.', ru: 'Твоё тихое место ждёт первое семя.' }
+  },
+  {
+    level: 1,
+    minPlantedElements: 1,
+    title: { en: 'First Bloom', ru: 'Первый цветок' },
+    path: '/assets/moon-garden/level-1-first-bloom.png',
+    subtitle: { en: 'The first bloom has opened.', ru: 'Первый цветок раскрылся.' }
+  },
+  {
+    level: 2,
+    minPlantedElements: 2,
+    title: { en: 'Lantern Glow', ru: 'Свет фонаря' },
+    path: '/assets/moon-garden/level-2-lantern-glow.png',
+    subtitle: { en: 'A warm light now guides the path.', ru: 'Тёплый свет теперь ведёт по тропе.' }
+  },
+  {
+    level: 3,
+    minPlantedElements: 3,
+    title: { en: 'Stone Path', ru: 'Каменная тропа' },
+    path: '/assets/moon-garden/level-3-stone-path.png',
+    subtitle: { en: 'Your path through calm is taking shape.', ru: 'Твой путь к спокойствию обретает форму.' }
+  },
+  {
+    level: 4,
+    minPlantedElements: 4,
+    title: { en: 'Twin Bloom', ru: 'Два цветка' },
+    path: '/assets/moon-garden/level-4-twin-bloom.png',
+    subtitle: { en: 'Your garden begins to bloom.', ru: 'Твой сад начинает расцветать.' }
+  },
+  {
+    level: 5,
+    minPlantedElements: 5,
+    title: { en: 'Moon Bridge', ru: 'Лунный мост' },
+    path: '/assets/moon-garden/level-5-moon-bridge.png',
+    subtitle: { en: 'A bridge appears across the moonlit water.', ru: 'Над лунной водой появляется мост.' }
+  },
+  {
+    level: 6,
+    minPlantedElements: 6,
+    title: { en: 'Reflection Garden', ru: 'Сад отражений' },
+    path: '/assets/moon-garden/level-6-reflection-garden.png',
+    subtitle: { en: 'Reflections deepen in your quiet place.', ru: 'Отражения становятся глубже в твоём тихом месте.' }
+  },
+  {
+    level: 7,
+    minPlantedElements: 7,
+    title: { en: 'Full Moon Garden', ru: 'Сад полной луны' },
+    path: '/assets/moon-garden/level-7-full-moon-garden.png',
+    subtitle: { en: 'Your Moon Garden is flourishing.', ru: 'Твой Лунный сад расцветает.' }
+  }
 ];
 
 function createSceneAudioUrl(kind: SceneDefinition['sound']) {
@@ -1028,6 +1076,12 @@ function plantedGardenElements(profile: ProfileStats | null) {
     : [];
 }
 
+function getCurrentGardenStage(plantedCount: number) {
+  return [...gardenStages]
+    .reverse()
+    .find((stage) => plantedCount >= stage.minPlantedElements) ?? gardenStages[0];
+}
+
 function nextGardenElement(profile: ProfileStats | null) {
   const planted = new Set(plantedGardenElements(profile));
   return gardenElements.find((element) => !planted.has(element.id)) ?? null;
@@ -1700,8 +1754,8 @@ function App() {
     if (moonGardenAudioRef.current) moonGardenAudioRef.current.volume = volume;
   };
 
-  const runMoonGardenDevAction = async (action: MoonGardenDevAction, seedBalance?: number) => {
-    const result = await updateMoonGardenDevState({ action, seedBalance }, initData);
+  const runMoonGardenDevAction = async (input: { action: MoonGardenDevAction; seedBalance?: number; amount?: number; stageLevel?: number }) => {
+    const result = await updateMoonGardenDevState(input, initData);
     setProfile(result.profile);
     return result.profile;
   };
@@ -1994,7 +2048,10 @@ function App() {
             favorite={favoriteIds.has(selectedMeditation.id)}
             onFavorite={() => toggleFavorite(selectedMeditation)}
             onSave={(position, duration, completed) =>
-              saveHistory({ meditation_id: selectedMeditation.id, last_position: position, duration, completed }, initData).then(refreshAccount)
+              saveHistory({ meditation_id: selectedMeditation.id, last_position: position, duration, completed }, initData).then(async (result) => {
+                await refreshAccount();
+                return result;
+              })
             }
             onHome={() => setPage('home')}
             onProgress={() => setPage('profile')}
@@ -2844,6 +2901,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
   const [speed, setSpeed] = useState(1);
   const [completed, setCompleted] = useState(false);
   const [shareMessage, setShareMessage] = useState('');
+  const [moonSeedRewardMessage, setMoonSeedRewardMessage] = useState('');
 
   useEffect(() => {
     onSaveRef.current = onSave;
@@ -2916,6 +2974,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
     setDuration(meditation.duration);
     setLoading(true);
     setCompleted(false);
+    setMoonSeedRewardMessage('');
     savedCompletionRef.current = false;
     setShareMessage('');
     console.log('[PLAYER_ISOLATION_LOAD]', {
@@ -2993,9 +3052,20 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
       livePositionRef.current = nextDuration;
       if (!savedCompletionRef.current) {
         savedCompletionRef.current = true;
-        void onSaveRef.current(nextDuration, nextDuration, true).catch((error) => {
-          console.info('[Luna meditation completion save failed]', error instanceof Error ? error.message : 'Completion save failed.');
-        });
+        void onSaveRef.current(nextDuration, nextDuration, true)
+          .then((result) => {
+            const reward = result as { moonSeedsAwarded?: number; completionBonusAwarded?: boolean } | undefined;
+            if (!reward?.moonSeedsAwarded) return;
+            const base = language === 'en'
+              ? `You earned ${reward.moonSeedsAwarded} Moon Seeds.`
+              : `Ты получил(а) ${reward.moonSeedsAwarded} лунных семян.`;
+            setMoonSeedRewardMessage(reward.completionBonusAwarded
+              ? `${base} ${language === 'en' ? 'Includes a completion bonus.' : 'Включая бонус за завершение.'}`
+              : base);
+          })
+          .catch((error) => {
+            console.info('[Luna meditation completion save failed]', error instanceof Error ? error.message : 'Completion save failed.');
+          });
       }
     };
 
@@ -3079,7 +3149,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
                     <strong className="mt-1 block text-gold">{copy[language].plusCalmPoint}</strong>
                   </span>
                 </div>
-                <p className="mt-3 rounded-full bg-gold/15 px-3 py-2 text-xs font-semibold text-gold">{copy[language].plusMoonSeed}</p>
+                <p className="mt-3 rounded-full bg-gold/15 px-3 py-2 text-xs font-semibold text-gold">{moonSeedRewardMessage || copy[language].plusMoonSeed}</p>
                 <div className="mt-4 grid gap-2">
                   <button onClick={onHome} className="rounded-[16px] bg-gold px-4 py-2.5 text-sm font-semibold text-night">{copy[language].returnHome}</button>
                   <div className="grid grid-cols-2 gap-2">
@@ -3324,126 +3394,58 @@ function MoonGardenCard({ profile, onOpen, language }: { profile: ProfileStats |
   const plantedCount = plantedGardenElements(profile).length;
   const nextElement = nextGardenElement(profile);
   const readyElement = readyGardenElement(profile);
+  const stage = getCurrentGardenStage(plantedCount);
 
   return (
-    <section className="mt-4 overflow-hidden rounded-[28px] border border-gold/25 bg-gradient-to-br from-gold/20 via-lavender/10 to-night p-4 shadow-glow">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].moonGarden}</p>
-          <h3 className="mt-1 font-serif text-3xl leading-tight">{level.title}</h3>
-          <p className="mt-1 text-sm leading-5 text-cream/70">{copy[language].moonGardenBody}</p>
+    <section className="mt-4 overflow-hidden rounded-[30px] border border-gold/25 bg-night shadow-glow">
+      <div className="relative min-h-[300px]">
+        <img src={stage.path} alt={stage.title[language]} className="absolute inset-0 h-full w-full object-cover object-[center_58%]" draggable={false} />
+        <div className="absolute inset-0 bg-gradient-to-b from-night/70 via-night/10 to-night/85" />
+        <div className="relative flex min-h-[300px] flex-col justify-between p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].moonGarden}</p>
+              <h3 className="mt-1 font-serif text-3xl leading-tight">{level.title}</h3>
+              <p className="mt-1 text-sm leading-5 text-cream/75">{copy[language].profileLevel.replace('{level}', `${level.level}`)} · {stage.title[language]}</p>
+            </div>
+            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full border border-gold/30 bg-night/70 shadow-gold">
+              <MoonMark className="h-9 w-9" />
+            </div>
+          </div>
+          <div>
+            <div className="h-2 overflow-hidden rounded-full bg-night/80">
+              <div className="h-full rounded-full bg-gold transition-all duration-500" style={{ width: `${progress}%` }} />
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+              <span className="rounded-2xl bg-night/70 p-3 text-lavender backdrop-blur">
+                {copy[language].moonSeeds}
+                <strong className="mt-1 block text-2xl text-cream">{seeds}</strong>
+              </span>
+              <span className="rounded-2xl bg-night/70 p-3 text-lavender backdrop-blur">
+                {copy[language].plantedElements}
+                <strong className="mt-1 block text-2xl text-cream">{plantedCount}</strong>
+              </span>
+            </div>
+            <div className="mt-3 rounded-2xl bg-night/70 p-3 text-xs text-lavender backdrop-blur">
+              <p className="text-gold">
+                {readyElement
+                  ? text(language, 'readyToPlant', { name: readyElement.name[language] })
+                  : plantedCount >= 7
+                    ? copy[language].gardenFlourishing
+                    : seeds === 0
+                      ? copy[language].completePracticeSeed
+                      : nextElement
+                        ? `${copy[language].nextUnlock}: ${nextElement.name[language]}`
+                        : copy[language].yourRhythm}
+              </p>
+            </div>
+            <button onClick={onOpen} className="mt-3 w-full rounded-[18px] bg-gold px-4 py-3 text-sm font-semibold text-night">
+              {copy[language].openMoonGarden}
+            </button>
+          </div>
         </div>
-        <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full border border-gold/30 bg-night/70 shadow-gold">
-          <MoonMark className="h-9 w-9" />
-        </div>
       </div>
-      <div className="mt-4 h-2 overflow-hidden rounded-full bg-night/80">
-        <div className="h-full rounded-full bg-gold transition-all duration-500" style={{ width: `${progress}%` }} />
-      </div>
-      <div className="mt-2 flex items-center justify-between text-xs text-lavender">
-        <span>{copy[language].profileLevel.replace('{level}', `${level.level}`)} · {level.title}</span>
-        <span>{text(language, 'nextLevel', { level: level.next })}</span>
-      </div>
-      <div className="mt-4 grid grid-cols-2 gap-2 text-xs">
-        <span className="rounded-2xl bg-night/70 p-3 text-lavender">
-          {copy[language].totalMinutesWithLuna}
-          <strong className="mt-1 block text-2xl text-cream">{minutesCountLabel(minutes, language)}</strong>
-        </span>
-        <span className="rounded-2xl bg-night/70 p-3 text-lavender">
-          {copy[language].moonSeeds}
-          <strong className="mt-1 block text-2xl text-cream">{seeds}</strong>
-        </span>
-      </div>
-      <p className="mt-3 text-[11px] leading-5 text-cream/55">{copy[language].moonSeedsInfo}</p>
-      <div className="mt-3 rounded-2xl bg-night/60 p-3 text-xs text-lavender">
-        <p className="text-gold">
-          {readyElement
-            ? text(language, 'readyToPlant', { name: readyElement.name[language] })
-            : seeds === 0
-              ? copy[language].completePracticeSeed
-              : nextElement
-              ? `${copy[language].nextUnlock}: ${nextElement.name[language]}`
-              : copy[language].yourRhythm}
-        </p>
-        <p className="mt-1">{copy[language].plantedElements}: {plantedCount}</p>
-      </div>
-      <button onClick={onOpen} className="mt-3 w-full rounded-[18px] bg-gold px-4 py-3 text-sm font-semibold text-night">
-        {copy[language].openMoonGarden}
-      </button>
     </section>
-  );
-}
-
-function GardenElementVisual({ visual }: { visual: GardenVisual }) {
-  if (visual === 'stone') {
-    return (
-      <span className="garden-visual garden-stone relative block h-8 w-12">
-        <span className="absolute bottom-1 left-1 h-5 w-10 rounded-[50%] bg-gradient-to-br from-lavender/55 via-[#6f6280] to-[#35263f] shadow-[0_7px_14px_rgba(0,0,0,0.25)]" />
-        <span className="absolute bottom-5 left-4 h-1 w-5 rounded-full bg-cream/45 blur-[0.2px]" />
-      </span>
-    );
-  }
-  if (visual === 'ripple') {
-    return (
-      <span className="garden-visual garden-ripple relative block h-14 w-14 rounded-full bg-lavender/10">
-        <span className="absolute inset-1 rounded-full border border-cream/35" />
-        <span className="absolute inset-3 rounded-full border border-gold/40" />
-        <span className="absolute inset-5 rounded-full bg-cream/30" />
-      </span>
-    );
-  }
-  if (visual === 'lantern') {
-    return (
-      <span className="garden-visual garden-lantern relative block h-14 w-10">
-        <span className="absolute left-1/2 top-0 h-5 w-7 -translate-x-1/2 rounded-t-full border border-gold/55 border-b-0" />
-        <span className="absolute bottom-1 left-1/2 h-10 w-7 -translate-x-1/2 rounded-b-xl rounded-t-md border border-gold/70 bg-gold/20 shadow-[0_0_28px_rgba(212,175,55,0.45)]" />
-        <span className="absolute bottom-3 left-1/2 h-6 w-3 -translate-x-1/2 rounded-full bg-cream/80 shadow-[0_0_18px_rgba(245,241,233,0.55)]" />
-      </span>
-    );
-  }
-  if (visual === 'lily') {
-    return (
-      <span className="garden-visual garden-lily relative block h-12 w-12">
-        <span className="absolute bottom-1 left-1 h-4 w-10 rounded-[50%] bg-lavender/25" />
-        <span className="absolute left-5 top-2 h-7 w-3 rounded-full bg-cream/80" />
-        <span className="absolute left-3 top-4 h-6 w-3 -rotate-45 rounded-full bg-gold/65" />
-        <span className="absolute right-3 top-4 h-6 w-3 rotate-45 rounded-full bg-cream/70" />
-        <span className="absolute left-5 top-5 h-2 w-2 rounded-full bg-gold" />
-      </span>
-    );
-  }
-  if (visual === 'tree') {
-    return (
-      <span className="garden-visual garden-tree relative block h-20 w-14">
-        <span className="absolute bottom-0 left-1/2 h-10 w-2 -translate-x-1/2 rounded-full bg-[#6f4f35]" />
-        <span className="absolute left-2 top-1 h-12 w-12 rounded-full border-l-[6px] border-gold/80" />
-        <span className="absolute left-5 top-5 h-7 w-7 rounded-full bg-lavender/20 blur-[0.5px]" />
-      </span>
-    );
-  }
-  if (visual === 'path') {
-    return (
-      <span className="garden-visual garden-path flex w-28 items-end justify-center gap-1.5">
-        {[0, 1, 2, 3, 4, 5, 6].map((item) => <span key={item} className={`${item % 2 ? 'h-2 w-2' : 'h-1.5 w-1.5'} rounded-full bg-gold shadow-[0_0_10px_rgba(212,175,55,0.45)]`} />)}
-      </span>
-    );
-  }
-  if (visual === 'pond') {
-    return (
-      <span className="garden-visual garden-pond relative block h-12 w-24 rounded-[50%] border border-gold/35 bg-gradient-to-br from-lavender/45 via-[#344366]/70 to-gold/15 shadow-[0_0_24px_rgba(142,95,214,0.3)]">
-        <span className="absolute left-4 top-3 h-1 w-12 rounded-full bg-cream/35" />
-        <span className="absolute bottom-3 right-4 h-1 w-8 rounded-full bg-gold/30" />
-      </span>
-    );
-  }
-  return (
-    <span className="garden-visual garden-flower relative block h-14 w-12">
-      <span className="absolute bottom-0 left-1/2 h-8 w-1 -translate-x-1/2 rounded-full bg-gold/55" />
-      <span className="absolute left-3 top-4 h-7 w-3 -rotate-45 rounded-full bg-gold/80 shadow-[0_0_18px_rgba(212,175,55,0.35)]" />
-      <span className="absolute right-3 top-4 h-7 w-3 rotate-45 rounded-full bg-cream/80" />
-      <span className="absolute left-1/2 top-1 h-8 w-3 -translate-x-1/2 rounded-full bg-cream/75" />
-      <span className="absolute left-1/2 top-6 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-gold shadow-[0_0_16px_rgba(212,175,55,0.55)]" />
-    </span>
   );
 }
 
@@ -3460,8 +3462,7 @@ function MoonGardenScene({
   ambiencePlaying?: boolean;
 }) {
   const plantedCount = plantedGardenElements(profile).length;
-  const stageIndex = Math.min(plantedCount, gardenStages.length - 1);
-  const stage = gardenStages[stageIndex];
+  const stage = getCurrentGardenStage(plantedCount);
   const [failedPath, setFailedPath] = useState<string | null>(null);
 
   useEffect(() => {
@@ -3476,25 +3477,25 @@ function MoonGardenScene({
   };
 
   return (
-    <section className={`relative overflow-hidden border border-gold/25 bg-[#120c22] shadow-glow ${ambiencePlaying ? 'moon-garden-listening' : ''} ${expanded ? 'min-h-[76vh] rounded-[34px] p-5' : 'rounded-[30px] p-4'}`}>
+    <section className={`relative overflow-hidden border border-gold/25 bg-[#120c22] shadow-glow ${ambiencePlaying ? 'moon-garden-listening' : ''} ${expanded ? 'min-h-[74vh] rounded-[34px] p-4' : 'rounded-[30px] p-4'}`}>
       {!failedPath ? (
         <img
           key={stage.path}
           src={stage.path}
           alt={`${copy[language].moonGarden} level ${stage.level}`}
           onError={handleImageError}
-          className="moon-garden-stage-image absolute inset-0 h-full w-full object-cover"
+          className="moon-garden-stage-image absolute inset-0 h-full w-full object-cover object-[center_58%]"
           draggable={false}
         />
       ) : (
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(142,95,214,0.32),transparent_34%),radial-gradient(circle_at_70%_70%,rgba(212,175,55,0.16),transparent_28%),linear-gradient(180deg,#1a1026_0%,#100b1c_58%,#07060d_100%)]" />
       )}
-      <div className="absolute inset-0 bg-gradient-to-b from-night/10 via-transparent to-night/35" />
-      <div className={`relative ${expanded ? 'h-[72vh] min-h-[560px]' : 'h-60'}`}>
-        <div className="absolute left-0 top-0 rounded-3xl bg-night/10">
+      <div className="absolute inset-0 bg-gradient-to-b from-night/55 via-transparent to-night/45" />
+      <div className={`relative ${expanded ? 'h-[70vh] min-h-[520px]' : 'h-[280px]'}`}>
+        <div className={`absolute left-0 top-0 rounded-3xl bg-night/35 p-3 backdrop-blur-sm ${expanded ? 'max-w-[300px]' : 'max-w-[240px]'}`}>
           <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].moonGarden}</p>
-          <h3 className={`mt-1 font-serif ${expanded ? 'text-4xl' : 'text-2xl'}`}>{language === 'en' ? 'Your Moon Garden' : 'Твой Лунный сад'}</h3>
-          <p className={`mt-1 leading-5 text-cream/60 ${expanded ? 'max-w-[280px] text-sm' : 'max-w-[210px] text-xs'}`}>{language === 'en' ? 'Plant elements to shape your quiet place.' : 'Сажай элементы, чтобы создать своё тихое место.'}</p>
+          <h3 className={`mt-1 font-serif ${expanded ? 'text-4xl' : 'text-2xl'}`}>{stage.title[language]}</h3>
+          <p className={`mt-1 leading-5 text-cream/70 ${expanded ? 'text-base' : 'text-xs'}`}>{stage.subtitle[language]}</p>
         </div>
         {stage.level === 0 && (
           <p className="absolute bottom-6 left-1/2 w-56 -translate-x-1/2 rounded-2xl border border-white/10 bg-night/70 px-3 py-2 text-center text-xs text-lavender backdrop-blur">
@@ -3526,7 +3527,7 @@ function MoonGardenPage({
   ambienceVolume: number;
   onToggleAmbience: () => Promise<void>;
   onAmbienceVolume: (volume: number) => void;
-  onDevAction: (action: MoonGardenDevAction, seedBalance?: number) => Promise<ProfileStats>;
+  onDevAction: (input: { action: MoonGardenDevAction; seedBalance?: number; amount?: number; stageLevel?: number }) => Promise<ProfileStats>;
   language: AppLanguage;
 }) {
   const [workingId, setWorkingId] = useState<string | null>(null);
@@ -3536,6 +3537,8 @@ function MoonGardenPage({
   const [appearedElementId, setAppearedElementId] = useState<string | null>(null);
   const [expandedGarden, setExpandedGarden] = useState(false);
   const [devOpen, setDevOpen] = useState(false);
+  const [grantAmount, setGrantAmount] = useState(40);
+  const [exactBalance, setExactBalance] = useState(25);
   const activeProfile = liveProfile ?? profile;
   const seeds = availableMoonSeeds(activeProfile);
   const minutes = activeProfile?.totalPracticeMinutes ?? activeProfile?.minutesListened ?? 0;
@@ -3586,6 +3589,7 @@ function MoonGardenPage({
     setWorkingId(element.id);
     setMessage('');
     const previousProfile = activeProfile;
+    const previousStage = getCurrentGardenStage(planted.size);
     const nextPlanted = [...planted, element.id];
     if (activeProfile) {
       setLiveProfile({
@@ -3601,7 +3605,12 @@ function MoonGardenPage({
       const nextProfile = await onPlant(element);
       setLiveProfile(nextProfile);
       setAppearedElementId(element.id);
-      setMessage(`${text(language, 'elementPlanted', { name: element.name[language] })} ${copy[language].gardenGrew}`);
+      const plantedAfterSave = plantedGardenElements(nextProfile).length;
+      const nextStage = getCurrentGardenStage(plantedAfterSave);
+      const stageMessage = nextStage.level > previousStage.level
+        ? ` ${language === 'en' ? 'New garden stage unlocked' : 'Открыт новый уровень сада'}: ${nextStage.title[language]}.`
+        : '';
+      setMessage(`${text(language, 'elementPlanted', { name: element.name[language] })} ${copy[language].gardenGrew}${stageMessage}`);
       if (import.meta.env.DEV) {
         console.info('[MOON_GARDEN_PLANT_SUCCESS]', {
           elementId: element.id,
@@ -3619,14 +3628,14 @@ function MoonGardenPage({
     }
   };
 
-  const runDevAction = async (action: MoonGardenDevAction, seedBalance?: number) => {
+  const runDevAction = async (input: { action: MoonGardenDevAction; seedBalance?: number; amount?: number; stageLevel?: number }) => {
     if (devWorking) return;
-    setDevWorking(seedBalance === undefined ? action : `${action}-${seedBalance}`);
+    setDevWorking(input.seedBalance === undefined && input.stageLevel === undefined ? input.action : `${input.action}-${input.seedBalance ?? input.stageLevel}`);
     setMessage('');
     try {
-      const nextProfile = await onDevAction(action, seedBalance);
+      const nextProfile = await onDevAction(input);
       setLiveProfile(nextProfile);
-      setAppearedElementId(action === 'unlock_full' ? 'breathing_pond' : null);
+      setAppearedElementId(input.action === 'unlock_full' || input.action === 'set_stage' ? 'breathing_pond' : null);
       setMessage(copy[language].gardenUpdated);
     } catch {
       setMessage(language === 'en' ? 'Developer action failed.' : 'Не удалось выполнить действие.');
@@ -3701,27 +3710,84 @@ function MoonGardenPage({
           </button>
           {devOpen && (
             <>
+              <div className="mt-3 rounded-2xl bg-ink/80 p-3">
+                <p className="text-xs text-lavender">Grant Moon Seeds</p>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    value={grantAmount}
+                    onChange={(event) => setGrantAmount(Math.max(1, Number(event.target.value) || 1))}
+                    className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-night px-3 py-2 text-sm text-cream outline-none focus:border-gold/50"
+                  />
+                  <button disabled={Boolean(devWorking)} onClick={() => void runDevAction({ action: 'grant_seeds', amount: grantAmount })} className="rounded-2xl bg-gold px-3 py-2 text-sm font-semibold text-night disabled:opacity-60">
+                    Grant
+                  </button>
+                </div>
+                <div className="mt-2 grid grid-cols-5 gap-2">
+                  {[10, 25, 40, 85, 100].map((amount) => (
+                    <button key={amount} disabled={Boolean(devWorking)} onClick={() => void runDevAction({ action: 'grant_seeds', amount })} className="rounded-2xl bg-surface px-2 py-2 text-xs font-semibold text-cream disabled:opacity-60">
+                      +{amount}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <button disabled={Boolean(devWorking)} onClick={() => void runDevAction('grant_100')} className="rounded-2xl bg-gold px-3 py-3 text-sm font-semibold text-night disabled:opacity-60">
+                <button disabled={Boolean(devWorking)} onClick={() => void runDevAction({ action: 'grant_100' })} className="rounded-2xl bg-gold px-3 py-3 text-sm font-semibold text-night disabled:opacity-60">
                   {copy[language].grant100Seeds}
                 </button>
-                <button disabled={Boolean(devWorking)} onClick={() => void runDevAction('unlock_full')} className="rounded-2xl bg-gold/20 px-3 py-3 text-sm font-semibold text-gold disabled:opacity-60">
+                <button disabled={Boolean(devWorking)} onClick={() => void runDevAction({ action: 'unlock_full' })} className="rounded-2xl bg-gold/20 px-3 py-3 text-sm font-semibold text-gold disabled:opacity-60">
                   {copy[language].unlockFullGarden}
                 </button>
-                <button disabled={Boolean(devWorking)} onClick={() => void runDevAction('reset')} className="rounded-2xl bg-surface px-3 py-3 text-sm font-semibold text-lavender disabled:opacity-60">
+                <button disabled={Boolean(devWorking)} onClick={() => window.confirm('Reset planted elements only?') && void runDevAction({ action: 'reset_planted' })} className="rounded-2xl bg-surface px-3 py-3 text-sm font-semibold text-lavender disabled:opacity-60">
+                  Reset planted
+                </button>
+                <button disabled={Boolean(devWorking)} onClick={() => window.confirm('Reset planted elements and seeds?') && void runDevAction({ action: 'reset_all' })} className="rounded-2xl bg-surface px-3 py-3 text-sm font-semibold text-lavender disabled:opacity-60">
                   {copy[language].resetGarden}
                 </button>
               </div>
+
+              <div className="mt-3 rounded-2xl bg-ink/80 p-3">
+                <p className="text-xs text-lavender">Set exact Moon Seeds balance</p>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    value={exactBalance}
+                    onChange={(event) => setExactBalance(Math.max(0, Number(event.target.value) || 0))}
+                    className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-night px-3 py-2 text-sm text-cream outline-none focus:border-gold/50"
+                  />
+                  <button disabled={Boolean(devWorking)} onClick={() => void runDevAction({ action: 'set_balance', seedBalance: exactBalance })} className="rounded-2xl bg-gold/20 px-3 py-2 text-sm font-semibold text-gold disabled:opacity-60">
+                    Set
+                  </button>
+                </div>
+              </div>
+
               <p className="mt-4 text-xs text-lavender">{copy[language].seedBalanceQuickSet}</p>
               <div className="mt-2 grid grid-cols-4 gap-2">
                 {[0, 10, 25, 100].map((count) => (
                   <button
                     key={count}
                     disabled={Boolean(devWorking)}
-                    onClick={() => void runDevAction('set_balance', count)}
+                    onClick={() => void runDevAction({ action: 'set_balance', seedBalance: count })}
                     className="rounded-2xl bg-surface px-2 py-3 text-xs font-semibold text-cream disabled:opacity-60"
                   >
                     {text(language, 'setSeeds', { count })}
+                  </button>
+                ))}
+              </div>
+
+              <p className="mt-4 text-xs text-lavender">Set Garden Stage</p>
+              <div className="mt-2 grid grid-cols-4 gap-2">
+                {gardenStages.map((stage) => (
+                  <button
+                    key={stage.level}
+                    disabled={Boolean(devWorking)}
+                    onClick={() => void runDevAction({ action: 'set_stage', stageLevel: stage.level })}
+                    className="rounded-2xl bg-surface px-2 py-3 text-xs font-semibold text-cream disabled:opacity-60"
+                  >
+                    L{stage.level}
                   </button>
                 ))}
               </div>
@@ -3731,7 +3797,7 @@ function MoonGardenPage({
       )}
 
       {expandedGarden && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-night/95 px-4 pb-[calc(24px+env(safe-area-inset-bottom))] pt-[calc(18px+env(safe-area-inset-top))] backdrop-blur-xl">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-night/95 px-4 pb-[calc(120px+env(safe-area-inset-bottom))] pt-[calc(18px+env(safe-area-inset-top))] backdrop-blur-xl">
           <div className="mx-auto flex max-w-xl items-center justify-between gap-3 pb-4">
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].moonGarden}</p>
@@ -3779,7 +3845,7 @@ function MoonGardenPage({
             <article key={element.id} className="rounded-[24px] border border-white/10 bg-gradient-to-br from-ink via-surface/70 to-night p-4 shadow-glow">
               <div className="flex items-center gap-3">
                 <span className={`grid h-16 w-16 shrink-0 place-items-center rounded-[22px] border ${isPlanted ? 'border-gold bg-gold/20 shadow-gold' : canPlant ? 'border-gold/30 bg-gold/10' : 'border-white/10 bg-night/70'}`}>
-                  <GardenElementVisual visual={element.visual} />
+                  <MoonMark className="h-9 w-9" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
