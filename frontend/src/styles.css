@@ -140,6 +140,32 @@
   animation: moonGardenAppear 760ms ease-out both;
 }
 
+.moon-garden-sanctuary {
+  transform-origin: 50% 50%;
+  transition: filter 700ms ease, transform 700ms ease;
+}
+
+.moon-garden-listening .moon-garden-sanctuary {
+  filter: saturate(1.08) brightness(1.05);
+}
+
+.moon-garden-svg-object {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+}
+
+.moon-garden-svg-appear {
+  animation: moonGardenSvgAppear 900ms cubic-bezier(0.19, 1, 0.22, 1) both;
+}
+
+.moon-garden-delay-2 {
+  animation-delay: 2.2s;
+}
+
+.moon-garden-delay-3 {
+  animation-delay: 4.4s;
+}
+
 .garden-visual {
   transform-origin: 50% 100%;
 }
@@ -292,6 +318,23 @@
   }
 }
 
+@keyframes moonGardenSvgAppear {
+  from {
+    opacity: 0;
+    filter: blur(4px) drop-shadow(0 0 0 rgba(212, 175, 55, 0));
+  }
+
+  64% {
+    opacity: 1;
+    filter: blur(0) drop-shadow(0 0 22px rgba(212, 175, 55, 0.55));
+  }
+
+  to {
+    opacity: 1;
+    filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.28));
+  }
+}
+
 @keyframes gardenFlowerSway {
   0%,
   100% {
@@ -319,11 +362,13 @@
   100% {
     box-shadow: 0 0 12px rgba(142, 95, 214, 0.22), inset 0 0 0 1px rgba(245, 241, 233, 0.18);
     transform: scale(0.96);
+    stroke-opacity: 0.24;
   }
 
   50% {
     box-shadow: 0 0 28px rgba(142, 95, 214, 0.36), inset 0 0 0 7px rgba(245, 241, 233, 0.04);
     transform: scale(1.12);
+    stroke-opacity: 0.58;
   }
 }
 
@@ -398,6 +443,8 @@
   .moon-garden-ground-glow,
   .moon-garden-mote,
   .moon-garden-appear,
+  .moon-garden-svg-appear,
+  .moon-garden-svg-object,
   .garden-visual {
     animation: none;
   }
