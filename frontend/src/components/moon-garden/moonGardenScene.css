@@ -46,8 +46,8 @@
   z-index: 2;
   pointer-events: none;
   background:
-    linear-gradient(180deg, rgba(10, 8, 18, 0.58), rgba(10, 8, 18, 0.08) 34%, rgba(10, 8, 18, 0.44) 100%),
-    radial-gradient(circle at 50% 84%, rgba(212, 175, 55, calc(0.05 + var(--garden-intensity) * 0.08)), transparent 42%);
+    linear-gradient(180deg, rgba(10, 8, 18, 0.18), rgba(10, 8, 18, 0.04) 34%, rgba(10, 8, 18, 0.34) 100%),
+    radial-gradient(circle at 50% 84%, rgba(212, 175, 55, calc(0.08 + var(--garden-intensity) * 0.1)), transparent 42%);
 }
 
 .moon-garden-stars,
@@ -63,12 +63,17 @@
   pointer-events: none;
 }
 
+.moon-garden-stars,
+.moon-garden-fireflies {
+  inset: 0;
+}
+
 .moon-garden-star {
   position: absolute;
   border-radius: 999px;
-  background: rgba(245, 241, 233, 0.9);
-  box-shadow: 0 0 10px rgba(245, 241, 233, 0.65);
-  opacity: 0.26;
+  background: rgba(245, 241, 233, 0.95);
+  box-shadow: 0 0 12px rgba(245, 241, 233, 0.78), 0 0 22px rgba(212, 175, 55, 0.28);
+  opacity: 0.36;
   animation: moonGardenStarTwinkle 5.8s ease-in-out infinite;
 }
 
@@ -77,11 +82,11 @@
   right: 8%;
   bottom: 12%;
   height: 34%;
-  opacity: calc(0.12 + var(--garden-intensity) * 0.22);
+  opacity: calc(0.24 + var(--garden-intensity) * 0.28);
   mix-blend-mode: screen;
   background:
-    linear-gradient(105deg, transparent 0%, rgba(245, 241, 233, 0.1) 14%, transparent 28%),
-    repeating-linear-gradient(170deg, transparent 0 18px, rgba(142, 95, 214, 0.12) 20px, transparent 26px);
+    linear-gradient(105deg, transparent 0%, rgba(245, 241, 233, 0.2) 14%, transparent 30%),
+    repeating-linear-gradient(170deg, transparent 0 16px, rgba(142, 95, 214, 0.18) 20px, transparent 28px);
   filter: blur(1.5px);
   transform: rotate(-3deg) translateY(2%);
   animation: moonGardenWaterShimmer 12s ease-in-out infinite;
@@ -92,7 +97,7 @@
   bottom: 17%;
   width: 42%;
   height: 26%;
-  opacity: calc(0.08 + var(--garden-intensity) * 0.24);
+  opacity: calc(0.18 + var(--garden-intensity) * 0.28);
 }
 
 .moon-garden-water-ripples span {
@@ -101,7 +106,8 @@
   top: 54%;
   width: 42%;
   aspect-ratio: 1 / 0.38;
-  border: 1px solid rgba(245, 241, 233, 0.3);
+  border: 1px solid rgba(245, 241, 233, 0.42);
+  box-shadow: 0 0 18px rgba(142, 95, 214, 0.2);
   border-radius: 999px;
   transform: translate(-50%, -50%) scale(0.7);
   animation: moonGardenRipple 8.5s ease-out infinite;
@@ -119,7 +125,7 @@
   left: -10%;
   right: -10%;
   height: 26%;
-  opacity: calc(0.13 + var(--garden-intensity) * 0.12);
+  opacity: calc(0.18 + var(--garden-intensity) * 0.16);
   background:
     radial-gradient(ellipse at 18% 50%, rgba(245, 241, 233, 0.18), transparent 44%),
     radial-gradient(ellipse at 52% 44%, rgba(142, 95, 214, 0.16), transparent 42%),
@@ -134,7 +140,7 @@
 
 .moon-garden-mist-b {
   bottom: 6%;
-  opacity: calc(0.1 + var(--garden-intensity) * 0.1);
+  opacity: calc(0.14 + var(--garden-intensity) * 0.12);
   animation: moonGardenMistB 30s ease-in-out infinite alternate;
 }
 
@@ -144,8 +150,8 @@
   width: 34%;
   height: 28%;
   border-radius: 999px;
-  opacity: calc(0.08 + var(--garden-intensity) * 0.16);
-  background: radial-gradient(circle, rgba(245, 241, 233, 0.28), rgba(212, 175, 55, 0.12) 38%, transparent 70%);
+  opacity: calc(0.16 + var(--garden-intensity) * 0.2);
+  background: radial-gradient(circle, rgba(245, 241, 233, 0.34), rgba(212, 175, 55, 0.16) 38%, transparent 70%);
   filter: blur(14px);
   animation: moonGardenSoftPulse 8s ease-in-out infinite;
 }
@@ -156,8 +162,8 @@
   width: 30%;
   height: 34%;
   border-radius: 999px;
-  opacity: calc(0.12 + var(--garden-intensity) * 0.18);
-  background: radial-gradient(circle, rgba(212, 175, 55, 0.34), rgba(212, 175, 55, 0.12) 34%, transparent 70%);
+  opacity: calc(0.2 + var(--garden-intensity) * 0.22);
+  background: radial-gradient(circle, rgba(212, 175, 55, 0.46), rgba(212, 175, 55, 0.16) 34%, transparent 70%);
   filter: blur(16px);
   animation: moonGardenLanternGlow 5.8s ease-in-out infinite;
 }
@@ -167,8 +173,8 @@
   right: 14%;
   bottom: 13%;
   height: 22%;
-  opacity: calc(0.12 + var(--garden-intensity) * 0.16);
-  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.16), rgba(142, 95, 214, 0.12), transparent);
+  opacity: calc(0.18 + var(--garden-intensity) * 0.18);
+  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.22), rgba(142, 95, 214, 0.18), transparent);
   filter: blur(10px);
   transform: skewY(-4deg);
   animation: moonGardenReflection 10s ease-in-out infinite;
@@ -185,61 +191,112 @@
   animation: moonGardenMoteDrift 12s ease-in-out infinite;
 }
 
-.moon-garden-scene-copy {
+.moon-garden-scene-chip {
   position: absolute;
-  left: 16px;
-  top: 16px;
-  z-index: 4;
-  max-width: min(310px, 78%);
-  border-radius: 24px;
-  background: rgba(10, 8, 18, 0.34);
-  padding: 12px;
-  backdrop-filter: blur(10px);
+  left: 14px;
+  bottom: 14px;
+  z-index: 5;
+  max-width: calc(100% - 150px);
+  margin: 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(10, 8, 18, 0.42);
+  padding: 8px 11px;
+  color: rgba(245, 241, 233, 0.82);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
 }
 
-.moon-garden-scene-copy p {
-  margin: 0;
+.moon-garden-sound-control {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.moon-garden-sound-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.moon-garden-sound-pill,
+.moon-garden-sound-settings {
+  border: 1px solid rgba(212, 175, 55, 0.22);
+  background: rgba(10, 8, 18, 0.5);
+  color: rgba(245, 241, 233, 0.92);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+}
+
+.moon-garden-sound-pill {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 7px;
+  border-radius: 999px;
+  padding: 0 13px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.moon-garden-sound-pill-active {
+  border-color: rgba(212, 175, 55, 0.42);
+  background: rgba(212, 175, 55, 0.18);
+  color: #f5f1e9;
+}
+
+.moon-garden-sound-settings {
+  display: grid;
+  min-height: 38px;
+  width: 38px;
+  place-items: center;
+  border-radius: 999px;
+}
+
+.moon-garden-sound-panel {
+  width: min(244px, calc(100vw - 64px));
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 18px;
+  background: rgba(10, 8, 18, 0.64);
+  padding: 11px 12px;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.34);
+}
+
+.moon-garden-sound-panel label,
+.moon-garden-sound-panel span {
+  display: block;
+}
+
+.moon-garden-sound-panel span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: rgba(245, 241, 233, 0.82);
+  font-size: 11px;
+}
+
+.moon-garden-sound-panel input {
+  margin-top: 7px;
+  width: 100%;
+  accent-color: #d4af37;
+}
+
+.moon-garden-sound-panel p {
+  margin: 8px 0 0;
   color: #d4af37;
   font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
-
-.moon-garden-scene-copy h3 {
-  margin: 4px 0 0;
-  font-family: Playfair Display, Georgia, serif;
-  font-size: clamp(26px, 8vw, 40px);
-  line-height: 1.05;
-}
-
-.moon-garden-scene-copy span {
-  display: block;
-  margin-top: 6px;
-  color: rgba(245, 241, 233, 0.76);
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.moon-garden-scene-compact .moon-garden-scene-copy h3 {
-  font-size: 24px;
-}
-
-.moon-garden-empty-message {
-  position: absolute;
-  z-index: 4;
-  left: 50%;
-  bottom: 24px;
-  width: min(240px, 78%);
-  margin: 0;
-  transform: translateX(-50%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 18px;
-  background: rgba(10, 8, 18, 0.7);
-  padding: 10px 12px;
-  color: rgba(214, 198, 239, 0.9);
-  text-align: center;
-  font-size: 12px;
-  backdrop-filter: blur(10px);
+  line-height: 1.4;
 }
 
 .moon-garden-scene-listening .moon-garden-scene-image {
@@ -249,12 +306,12 @@
 @keyframes moonGardenStarTwinkle {
   0%,
   100% {
-    opacity: 0.2;
+    opacity: 0.28;
     transform: scale(0.88);
   }
 
   48% {
-    opacity: 0.72;
+    opacity: 0.88;
     transform: scale(1.2);
   }
 }
@@ -279,7 +336,7 @@
   }
 
   32% {
-    opacity: 0.5;
+    opacity: 0.68;
   }
 
   100% {
@@ -350,7 +407,7 @@
   }
 
   28% {
-    opacity: 0.76;
+    opacity: 0.86;
   }
 
   100% {
