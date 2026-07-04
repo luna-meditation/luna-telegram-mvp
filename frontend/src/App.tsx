@@ -550,6 +550,11 @@ const copy = {
     seedBalanceQuickSet: 'Seed balance quick set',
     setSeeds: 'Set to {count}',
     gardenUpdated: 'Moon Garden updated.',
+    viewFullGarden: 'View Full Garden',
+    closeFullGarden: 'Close Garden',
+    gardenTakingShape: 'Your garden is taking shape.',
+    gardenFlourishing: 'Your moon garden is flourishing.',
+    gardenQuietPlace: 'Your quiet place is growing.',
     calmPoints: 'Calm Points',
     totalPractice: 'Total Practice',
     thisWeek: 'This Week',
@@ -817,6 +822,11 @@ const copy = {
     seedBalanceQuickSet: 'Быстрый баланс семян',
     setSeeds: 'Поставить {count}',
     gardenUpdated: 'Лунный сад обновлён.',
+    viewFullGarden: 'Открыть весь сад',
+    closeFullGarden: 'Закрыть сад',
+    gardenTakingShape: 'Твой сад обретает форму.',
+    gardenFlourishing: 'Твой лунный сад расцветает.',
+    gardenQuietPlace: 'Твоё тихое место растёт.',
     calmPoints: 'Баллы спокойствия',
     totalPractice: 'Практика',
     thisWeek: 'За неделю',
@@ -3370,35 +3380,93 @@ const moonGardenStars = [
 
 function GardenElementVisual({ visual }: { visual: GardenVisual }) {
   if (visual === 'stone') {
-    return <span className="garden-visual garden-stone block h-5 w-9 rounded-[50%] bg-gradient-to-br from-cream/60 to-lavender/40 shadow-[0_0_14px_rgba(245,241,233,0.22)]" />;
+    return (
+      <span className="garden-visual garden-stone relative block h-8 w-12">
+        <span className="absolute bottom-1 left-1 h-5 w-10 rounded-[50%] bg-gradient-to-br from-lavender/55 via-[#6f6280] to-[#35263f] shadow-[0_7px_14px_rgba(0,0,0,0.25)]" />
+        <span className="absolute bottom-5 left-4 h-1 w-5 rounded-full bg-cream/45 blur-[0.2px]" />
+      </span>
+    );
   }
   if (visual === 'ripple') {
-    return <span className="garden-visual garden-ripple block h-10 w-10 rounded-full border border-gold/50 bg-lavender/15 shadow-[0_0_18px_rgba(142,95,214,0.25)]"><span className="m-2 block h-6 w-6 rounded-full border border-cream/35" /></span>;
+    return (
+      <span className="garden-visual garden-ripple relative block h-14 w-14 rounded-full bg-lavender/10">
+        <span className="absolute inset-1 rounded-full border border-cream/35" />
+        <span className="absolute inset-3 rounded-full border border-gold/40" />
+        <span className="absolute inset-5 rounded-full bg-cream/30" />
+      </span>
+    );
   }
   if (visual === 'lantern') {
-    return <span className="garden-visual garden-lantern relative block h-10 w-7 rounded-b-xl rounded-t-md border border-gold/60 bg-gold/25 shadow-[0_0_24px_rgba(212,175,55,0.5)]"><span className="absolute left-1/2 top-1 h-7 w-3 -translate-x-1/2 rounded-full bg-cream/70" /></span>;
+    return (
+      <span className="garden-visual garden-lantern relative block h-14 w-10">
+        <span className="absolute left-1/2 top-0 h-5 w-7 -translate-x-1/2 rounded-t-full border border-gold/55 border-b-0" />
+        <span className="absolute bottom-1 left-1/2 h-10 w-7 -translate-x-1/2 rounded-b-xl rounded-t-md border border-gold/70 bg-gold/20 shadow-[0_0_28px_rgba(212,175,55,0.45)]" />
+        <span className="absolute bottom-3 left-1/2 h-6 w-3 -translate-x-1/2 rounded-full bg-cream/80 shadow-[0_0_18px_rgba(245,241,233,0.55)]" />
+      </span>
+    );
   }
   if (visual === 'lily') {
-    return <span className="garden-visual garden-lily relative block h-9 w-9"><span className="absolute left-3 top-3 h-5 w-3 rotate-45 rounded-full bg-cream/75" /><span className="absolute left-4 top-3 h-5 w-3 -rotate-45 rounded-full bg-gold/70" /><span className="absolute left-2 top-5 h-3 w-6 rounded-full bg-lavender/40" /></span>;
+    return (
+      <span className="garden-visual garden-lily relative block h-12 w-12">
+        <span className="absolute bottom-1 left-1 h-4 w-10 rounded-[50%] bg-lavender/25" />
+        <span className="absolute left-5 top-2 h-7 w-3 rounded-full bg-cream/80" />
+        <span className="absolute left-3 top-4 h-6 w-3 -rotate-45 rounded-full bg-gold/65" />
+        <span className="absolute right-3 top-4 h-6 w-3 rotate-45 rounded-full bg-cream/70" />
+        <span className="absolute left-5 top-5 h-2 w-2 rounded-full bg-gold" />
+      </span>
+    );
   }
   if (visual === 'tree') {
-    return <span className="garden-visual garden-tree relative block h-16 w-12"><span className="absolute bottom-0 left-1/2 h-8 w-1.5 -translate-x-1/2 rounded-full bg-gold/50" /><span className="absolute left-2 top-0 h-11 w-11 rounded-full border-l-4 border-gold/75" /></span>;
+    return (
+      <span className="garden-visual garden-tree relative block h-20 w-14">
+        <span className="absolute bottom-0 left-1/2 h-10 w-2 -translate-x-1/2 rounded-full bg-[#6f4f35]" />
+        <span className="absolute left-2 top-1 h-12 w-12 rounded-full border-l-[6px] border-gold/80" />
+        <span className="absolute left-5 top-5 h-7 w-7 rounded-full bg-lavender/20 blur-[0.5px]" />
+      </span>
+    );
   }
   if (visual === 'path') {
-    return <span className="garden-visual garden-path flex w-20 items-center justify-center gap-1">{[0, 1, 2, 3, 4].map((item) => <span key={item} className="h-1.5 w-1.5 rounded-full bg-gold shadow-[0_0_10px_rgba(212,175,55,0.45)]" />)}</span>;
+    return (
+      <span className="garden-visual garden-path flex w-28 items-end justify-center gap-1.5">
+        {[0, 1, 2, 3, 4, 5, 6].map((item) => <span key={item} className={`${item % 2 ? 'h-2 w-2' : 'h-1.5 w-1.5'} rounded-full bg-gold shadow-[0_0_10px_rgba(212,175,55,0.45)]`} />)}
+      </span>
+    );
   }
   if (visual === 'pond') {
-    return <span className="garden-visual garden-pond block h-9 w-16 rounded-[50%] border border-gold/35 bg-gradient-to-br from-lavender/35 to-gold/15 shadow-[0_0_20px_rgba(142,95,214,0.25)]" />;
+    return (
+      <span className="garden-visual garden-pond relative block h-12 w-24 rounded-[50%] border border-gold/35 bg-gradient-to-br from-lavender/45 via-[#344366]/70 to-gold/15 shadow-[0_0_24px_rgba(142,95,214,0.3)]">
+        <span className="absolute left-4 top-3 h-1 w-12 rounded-full bg-cream/35" />
+        <span className="absolute bottom-3 right-4 h-1 w-8 rounded-full bg-gold/30" />
+      </span>
+    );
   }
-  return <span className="garden-visual garden-flower relative block h-10 w-8"><span className="absolute bottom-0 left-1/2 h-6 w-1 -translate-x-1/2 bg-gold/50" /><span className="absolute left-1 top-0 h-6 w-4 rotate-[-28deg] rounded-full bg-gold/75 shadow-[0_0_18px_rgba(212,175,55,0.35)]" /><span className="absolute right-1 top-1 h-5 w-4 rotate-[28deg] rounded-full bg-cream/70" /></span>;
+  return (
+    <span className="garden-visual garden-flower relative block h-14 w-12">
+      <span className="absolute bottom-0 left-1/2 h-8 w-1 -translate-x-1/2 rounded-full bg-gold/55" />
+      <span className="absolute left-3 top-4 h-7 w-3 -rotate-45 rounded-full bg-gold/80 shadow-[0_0_18px_rgba(212,175,55,0.35)]" />
+      <span className="absolute right-3 top-4 h-7 w-3 rotate-45 rounded-full bg-cream/80" />
+      <span className="absolute left-1/2 top-1 h-8 w-3 -translate-x-1/2 rounded-full bg-cream/75" />
+      <span className="absolute left-1/2 top-6 h-2.5 w-2.5 -translate-x-1/2 rounded-full bg-gold shadow-[0_0_16px_rgba(212,175,55,0.55)]" />
+    </span>
+  );
 }
 
-function MoonGardenScene({ profile, language, appearedElementId }: { profile: ProfileStats | null; language: AppLanguage; appearedElementId?: string | null }) {
+function MoonGardenScene({
+  profile,
+  language,
+  appearedElementId,
+  expanded = false
+}: {
+  profile: ProfileStats | null;
+  language: AppLanguage;
+  appearedElementId?: string | null;
+  expanded?: boolean;
+}) {
   const planted = new Set(plantedGardenElements(profile));
   const plantedElements = gardenElements.filter((element) => planted.has(element.id));
 
   return (
-    <section className="relative overflow-hidden rounded-[30px] border border-gold/25 bg-[#120c22] p-4 shadow-glow">
+    <section className={`relative overflow-hidden border border-gold/25 bg-[#120c22] shadow-glow ${expanded ? 'min-h-[76vh] rounded-[34px] p-5' : 'rounded-[30px] p-4'}`}>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(142,95,214,0.28),transparent_30%),radial-gradient(circle_at_58%_68%,rgba(212,175,55,0.18),transparent_26%),linear-gradient(180deg,#1a102f_0%,#100b1c_58%,#0b0914_100%)]" />
       {moonGardenStars.map((star) => (
         <span
@@ -3407,20 +3475,21 @@ function MoonGardenScene({ profile, language, appearedElementId }: { profile: Pr
           style={{ left: star.left, top: star.top, width: star.size, height: star.size, opacity: star.opacity, animationDelay: `${Number.parseFloat(star.left) * 0.13}s` }}
         />
       ))}
-      <div className="moon-garden-moon absolute right-8 top-7 h-14 w-14 rounded-full bg-cream shadow-[0_0_36px_rgba(245,241,233,0.35)]" />
-      <div className="absolute right-4 top-3 h-14 w-14 rounded-full bg-[#1a102f]" />
-      <div className="absolute inset-x-0 bottom-0 h-28 rounded-t-[60%] bg-gradient-to-t from-night via-[#211436] to-transparent" />
-      <div className="moon-garden-mist absolute inset-x-[-20%] bottom-14 h-16 rounded-[50%] bg-cream/10 blur-2xl" />
-      <div className="moon-garden-ground-glow absolute inset-x-6 bottom-10 h-8 rounded-[50%] bg-gold/15 blur-xl" />
-      <div className="absolute inset-x-10 bottom-8 h-2 rounded-full bg-gold/25 blur-md" />
+      <div className={`moon-garden-moon absolute rounded-full bg-cream shadow-[0_0_36px_rgba(245,241,233,0.35)] ${expanded ? 'right-12 top-14 h-24 w-24' : 'right-8 top-7 h-14 w-14'}`} />
+      <div className={`absolute rounded-full bg-[#1a102f] ${expanded ? 'right-5 top-8 h-24 w-24' : 'right-4 top-3 h-14 w-14'}`} />
+      <div className="absolute inset-x-[-8%] bottom-0 h-[34%] rounded-t-[58%] bg-gradient-to-t from-night via-[#211436] to-transparent" />
+      <div className="absolute inset-x-[-16%] bottom-0 h-[23%] rounded-t-[48%] bg-[#0d0a16]/70" />
+      <div className="moon-garden-mist absolute inset-x-[-20%] bottom-[23%] h-16 rounded-[50%] bg-cream/10 blur-2xl" />
+      <div className="moon-garden-ground-glow absolute inset-x-6 bottom-[15%] h-8 rounded-[50%] bg-gold/15 blur-xl" />
+      <div className="absolute inset-x-10 bottom-[13%] h-2 rounded-full bg-gold/25 blur-md" />
       <span className="moon-garden-mote absolute left-[14%] top-[58%] h-1 w-1 rounded-full bg-gold/50" />
       <span className="moon-garden-mote absolute left-[72%] top-[54%] h-1.5 w-1.5 rounded-full bg-cream/35 [animation-delay:3s]" />
       <span className="moon-garden-mote absolute left-[46%] top-[65%] h-1 w-1 rounded-full bg-lavender/50 [animation-delay:6s]" />
-      <div className="relative h-60">
+      <div className={`relative ${expanded ? 'h-[72vh] min-h-[560px]' : 'h-60'}`}>
         <div className="absolute left-0 top-0">
           <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].moonGarden}</p>
-          <h3 className="mt-1 font-serif text-2xl">{language === 'en' ? 'Your Moon Garden' : 'Твой Лунный сад'}</h3>
-          <p className="mt-1 max-w-[210px] text-xs leading-5 text-cream/60">{language === 'en' ? 'Plant elements to shape your quiet place.' : 'Сажай элементы, чтобы создать своё тихое место.'}</p>
+          <h3 className={`mt-1 font-serif ${expanded ? 'text-4xl' : 'text-2xl'}`}>{language === 'en' ? 'Your Moon Garden' : 'Твой Лунный сад'}</h3>
+          <p className={`mt-1 leading-5 text-cream/60 ${expanded ? 'max-w-[280px] text-sm' : 'max-w-[210px] text-xs'}`}>{language === 'en' ? 'Plant elements to shape your quiet place.' : 'Сажай элементы, чтобы создать своё тихое место.'}</p>
         </div>
         {!plantedElements.length && gardenElements.slice(0, 5).map((element) => (
           <span
@@ -3438,7 +3507,11 @@ function MoonGardenScene({ profile, language, appearedElementId }: { profile: Pr
           <div
             key={element.id}
             className={`absolute -translate-x-1/2 transition duration-500 ${appearedElementId === element.id ? 'moon-garden-appear scale-110 opacity-100 drop-shadow-[0_0_16px_rgba(212,175,55,0.55)]' : 'opacity-95'}`}
-            style={element.position}
+            style={{
+              left: element.position.left,
+              bottom: expanded ? `calc(${element.position.bottom} + 8%)` : element.position.bottom,
+              transform: expanded ? 'translateX(-50%) scale(1.28)' : undefined
+            }}
             title={element.name[language]}
           >
             <GardenElementVisual visual={element.visual} />
@@ -3477,14 +3550,24 @@ function MoonGardenPage({
   const [liveProfile, setLiveProfile] = useState<ProfileStats | null>(profile);
   const [message, setMessage] = useState('');
   const [appearedElementId, setAppearedElementId] = useState<string | null>(null);
+  const [expandedGarden, setExpandedGarden] = useState(false);
+  const [devOpen, setDevOpen] = useState(false);
   const activeProfile = liveProfile ?? profile;
   const seeds = availableMoonSeeds(activeProfile);
   const minutes = activeProfile?.totalPracticeMinutes ?? activeProfile?.minutesListened ?? 0;
   const level = moonGardenLevel(minutes, language);
   const planted = new Set(plantedGardenElements(activeProfile));
+  const plantedCount = planted.size;
   const nextElement = nextGardenElement(activeProfile);
   const readyElement = gardenElements.find((element) => !planted.has(element.id) && element.cost <= seeds) ?? null;
   const nextSuggestedElement = readyElement ?? nextElement;
+  const progressMessage = plantedCount >= gardenElements.length
+    ? copy[language].gardenFlourishing
+    : plantedCount >= 3
+      ? copy[language].gardenTakingShape
+      : plantedCount > 0
+        ? copy[language].gardenQuietPlace
+        : copy[language].completePracticeSeed;
 
   useEffect(() => {
     setLiveProfile(profile);
@@ -3583,6 +3666,10 @@ function MoonGardenPage({
 
       <MoonGardenScene profile={activeProfile} language={language} appearedElementId={appearedElementId} />
 
+      <button onClick={() => setExpandedGarden(true)} className="w-full rounded-[22px] border border-gold/30 bg-gold/15 px-5 py-4 text-sm font-semibold text-gold shadow-glow">
+        {copy[language].viewFullGarden}
+      </button>
+
       <section className="rounded-[24px] border border-white/10 bg-ink/90 p-4 shadow-glow">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -3612,8 +3699,9 @@ function MoonGardenPage({
         <div className="grid grid-cols-3 gap-2 text-xs">
           <Stat label={copy[language].availableMoonSeeds} value={String(seeds)} />
           <Stat label={copy[language].gardenLevel} value={String(level.level)} />
-          <Stat label={copy[language].plantedElements} value={String(planted.size)} />
+          <Stat label={copy[language].plantedElements} value={String(plantedCount)} />
         </div>
+        <p className="mt-4 rounded-2xl bg-night/60 p-3 text-sm text-cream/75">{progressMessage}</p>
         <div className="mt-4 rounded-2xl bg-gold/10 p-3 text-sm text-cream/80">
           <span className="text-gold">{readyElement ? copy[language].availableToPlant : copy[language].nextSuggestedElement}: </span>
           {nextSuggestedElement ? nextSuggestedElement.name[language] : copy[language].yourRhythm}
@@ -3623,32 +3711,77 @@ function MoonGardenPage({
 
       {isAdmin && (
         <section className="rounded-[24px] border border-gold/20 bg-night/80 p-4 shadow-glow">
-          <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].developerTools}</p>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button disabled={Boolean(devWorking)} onClick={() => void runDevAction('grant_100')} className="rounded-2xl bg-gold px-3 py-3 text-sm font-semibold text-night disabled:opacity-60">
-              {copy[language].grant100Seeds}
-            </button>
-            <button disabled={Boolean(devWorking)} onClick={() => void runDevAction('unlock_full')} className="rounded-2xl bg-gold/20 px-3 py-3 text-sm font-semibold text-gold disabled:opacity-60">
-              {copy[language].unlockFullGarden}
-            </button>
-            <button disabled={Boolean(devWorking)} onClick={() => void runDevAction('reset')} className="rounded-2xl bg-surface px-3 py-3 text-sm font-semibold text-lavender disabled:opacity-60">
-              {copy[language].resetGarden}
-            </button>
-          </div>
-          <p className="mt-4 text-xs text-lavender">{copy[language].seedBalanceQuickSet}</p>
-          <div className="mt-2 grid grid-cols-4 gap-2">
-            {[0, 10, 25, 100].map((count) => (
-              <button
-                key={count}
-                disabled={Boolean(devWorking)}
-                onClick={() => void runDevAction('set_balance', count)}
-                className="rounded-2xl bg-surface px-2 py-3 text-xs font-semibold text-cream disabled:opacity-60"
-              >
-                {text(language, 'setSeeds', { count })}
-              </button>
-            ))}
-          </div>
+          <button onClick={() => setDevOpen((value) => !value)} className="flex w-full items-center justify-between text-left">
+            <span className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].developerTools}</span>
+            <span className="text-xs text-lavender">{devOpen ? 'Hide' : 'Show'}</span>
+          </button>
+          {devOpen && (
+            <>
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button disabled={Boolean(devWorking)} onClick={() => void runDevAction('grant_100')} className="rounded-2xl bg-gold px-3 py-3 text-sm font-semibold text-night disabled:opacity-60">
+                  {copy[language].grant100Seeds}
+                </button>
+                <button disabled={Boolean(devWorking)} onClick={() => void runDevAction('unlock_full')} className="rounded-2xl bg-gold/20 px-3 py-3 text-sm font-semibold text-gold disabled:opacity-60">
+                  {copy[language].unlockFullGarden}
+                </button>
+                <button disabled={Boolean(devWorking)} onClick={() => void runDevAction('reset')} className="rounded-2xl bg-surface px-3 py-3 text-sm font-semibold text-lavender disabled:opacity-60">
+                  {copy[language].resetGarden}
+                </button>
+              </div>
+              <p className="mt-4 text-xs text-lavender">{copy[language].seedBalanceQuickSet}</p>
+              <div className="mt-2 grid grid-cols-4 gap-2">
+                {[0, 10, 25, 100].map((count) => (
+                  <button
+                    key={count}
+                    disabled={Boolean(devWorking)}
+                    onClick={() => void runDevAction('set_balance', count)}
+                    className="rounded-2xl bg-surface px-2 py-3 text-xs font-semibold text-cream disabled:opacity-60"
+                  >
+                    {text(language, 'setSeeds', { count })}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </section>
+      )}
+
+      {expandedGarden && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-night/95 px-4 pb-[calc(24px+env(safe-area-inset-bottom))] pt-[calc(18px+env(safe-area-inset-top))] backdrop-blur-xl">
+          <div className="mx-auto flex max-w-xl items-center justify-between gap-3 pb-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].moonGarden}</p>
+              <p className="mt-1 text-sm text-lavender">{progressMessage}</p>
+            </div>
+            <button onClick={() => setExpandedGarden(false)} className="grid h-11 w-11 place-items-center rounded-full bg-surface text-cream" aria-label={copy[language].closeFullGarden}>
+              <X size={18} />
+            </button>
+          </div>
+          <div className="mx-auto max-w-xl space-y-4">
+            <MoonGardenScene profile={activeProfile} language={language} appearedElementId={appearedElementId} expanded />
+            <section className="rounded-[24px] border border-white/10 bg-ink/90 p-4 shadow-glow">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.16em] text-gold">{copy[language].gardenAmbience}</p>
+                  <p className="mt-1 text-sm text-lavender">{plantedCount} {copy[language].plantedElements.toLowerCase()}</p>
+                </div>
+                <button onClick={() => void onToggleAmbience()} className="rounded-2xl bg-gold px-4 py-3 text-sm font-semibold text-night">
+                  {ambiencePlaying ? copy[language].pauseGardenAmbience : copy[language].playGardenAmbience}
+                </button>
+              </div>
+              <input
+                aria-label={copy[language].gardenAmbience}
+                type="range"
+                min={0}
+                max={1}
+                step={0.01}
+                value={ambienceVolume}
+                onChange={(event) => onAmbienceVolume(Number(event.target.value))}
+                className="mt-3 h-6 w-full accent-gold"
+              />
+            </section>
+          </div>
+        </div>
       )}
 
       <section className="space-y-3">
