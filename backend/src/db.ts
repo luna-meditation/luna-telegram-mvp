@@ -49,18 +49,27 @@ export type HistoryInput = {
 };
 
 const moonGardenElements = [
-  { id: 'moon_flower', cost: 2 },
-  { id: 'calm_stone', cost: 3 },
-  { id: 'water_ripple', cost: 5 },
-  { id: 'golden_lantern', cost: 8 },
-  { id: 'night_lily', cost: 10 },
-  { id: 'crescent_tree', cost: 12 },
-  { id: 'star_path', cost: 20 },
-  { id: 'breathing_pond', cost: 25 }
+  { id: 'first_bloom', cost: 10 },
+  { id: 'lantern_glow', cost: 10 },
+  { id: 'stone_path', cost: 10 },
+  { id: 'twin_bloom', cost: 10 },
+  { id: 'moon_bridge', cost: 10 },
+  { id: 'reflection_garden', cost: 10 },
+  { id: 'full_moon_garden', cost: 10 }
 ];
 
 const moonGardenElementCost = new Map(moonGardenElements.map((element) => [element.id, element.cost]));
 const fullMoonGardenCost = moonGardenElements.reduce((sum, element) => sum + element.cost, 0);
+const legacyMoonGardenElementOrder = [
+  'moon_flower',
+  'calm_stone',
+  'water_ripple',
+  'golden_lantern',
+  'night_lily',
+  'crescent_tree',
+  'star_path',
+  'breathing_pond'
+];
 
 export type DailyCheckinInput = {
   sleep_range: 'less_than_4' | '4_6' | '6_8' | '8_plus';
@@ -603,14 +612,22 @@ export async function markPracticeComplete(input: {
 
 function plantedElementIds(value: unknown) {
   if (!Array.isArray(value)) return [];
-  return [...new Set(value
+  const normalized = [...new Set(value
     .filter((item): item is string => typeof item === 'string')
-    .map((item) => item.replace(/-/g, '_'))
-    .filter((item) => moonGardenElementCost.has(item)))];
+    .map((item) => item.replace(/-/g, '_')))];
+  const upgradedIds = normalized.filter((item) => moonGardenElementCost.has(item));
+  if (upgradedIds.length > 0) return upgradedIds.slice(0, moonGardenElements.length);
+
+  const legacyCount = legacyMoonGardenElementOrder.filter((item) => normalized.includes(item)).length;
+  return moonGardenElements.slice(0, legacyCount).map((item) => item.id);
 }
 
 function plantedElementsCost(ids: string[]) {
   return ids.reduce((sum, id) => sum + (moonGardenElementCost.get(id) ?? 0), 0);
+}
+
+function gardenStageLevel(ids: string[]) {
+  return Math.max(0, Math.min(moonGardenElements.length, ids.length));
 }
 
 function earnedMoonSeeds(input: {
@@ -653,7 +670,7 @@ async function awardMoonSeeds(telegramId: number, amount: number) {
         moon_seeds_earned_total: moonSeedsEarnedTotal,
         planted_garden_elements: plantedGardenElements,
         last_moon_seed_earned_at: new Date().toISOString(),
-        garden_level: existing?.garden_level ?? 1,
+        garden_level: gardenStageLevel(plantedGardenElements),
         updated_at: new Date().toISOString()
       },
       { onConflict: 'telegram_id' }
@@ -695,7 +712,7 @@ async function grantPremiumMoonSeedsBonus(telegramId: number) {
         planted_garden_elements: plantedGardenElements,
         last_moon_seed_earned_at: new Date().toISOString(),
         premium_bonus_granted_at: new Date().toISOString(),
-        garden_level: existing?.garden_level ?? 1,
+        garden_level: gardenStageLevel(plantedGardenElements),
         updated_at: new Date().toISOString()
       },
       { onConflict: 'telegram_id' }
@@ -727,7 +744,7 @@ async function getMoonGardenState(telegramId: number, input: {
       plantedGardenElements: [] as string[],
       plantedElementsCount: 0,
       lastMoonSeedEarnedAt: null as string | null,
-      gardenLevel: input.gardenLevel
+      gardenLevel: 0
     };
   }
 
@@ -751,7 +768,7 @@ async function getMoonGardenState(telegramId: number, input: {
     moon_seeds_earned_total: moonSeedsEarnedTotal,
     planted_garden_elements: plantedGardenElements,
     last_moon_seed_earned_at: lastMoonSeedEarnedAt,
-    garden_level: input.gardenLevel,
+    garden_level: gardenStageLevel(plantedGardenElements),
     updated_at: new Date().toISOString()
   };
 
@@ -769,7 +786,7 @@ async function getMoonGardenState(telegramId: number, input: {
     plantedGardenElements,
     plantedElementsCount: plantedGardenElements.length,
     lastMoonSeedEarnedAt,
-    gardenLevel: input.gardenLevel
+    gardenLevel: gardenStageLevel(plantedGardenElements)
   };
 }
 
@@ -927,7 +944,7 @@ export async function plantMoonGardenElement(telegramId: number, elementId: stri
         moon_seeds_earned_total: moonSeedsEarnedTotal,
         planted_garden_elements: nextPlanted,
         last_moon_seed_earned_at: profile.lastMoonSeedEarnedAt ?? null,
-        garden_level: profile.gardenLevel ?? 1,
+        garden_level: gardenStageLevel(nextPlanted),
         updated_at: new Date().toISOString()
       },
       { onConflict: 'telegram_id' }
@@ -1014,7 +1031,7 @@ export async function updateMoonGardenDevState(
         moon_seeds_earned_total: moonSeedsEarnedTotal,
         planted_garden_elements: plantedGardenElements,
         last_moon_seed_earned_at: new Date().toISOString(),
-        garden_level: profile.gardenLevel ?? 1,
+        garden_level: gardenStageLevel(plantedGardenElements),
         updated_at: new Date().toISOString()
       },
       { onConflict: 'telegram_id' }

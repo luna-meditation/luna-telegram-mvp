@@ -151,7 +151,7 @@ create table if not exists public.moon_gardens (
   planted_garden_elements jsonb not null default '[]'::jsonb,
   last_moon_seed_earned_at timestamptz,
   premium_bonus_granted_at timestamptz,
-  garden_level integer not null default 1 check (garden_level >= 1),
+  garden_level integer not null default 0 check (garden_level >= 0),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -162,6 +162,24 @@ alter table public.history
 
 alter table public.moon_gardens
   add column if not exists premium_bonus_granted_at timestamptz;
+
+alter table public.moon_gardens
+  alter column garden_level set default 0;
+
+do $$
+begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.moon_gardens'::regclass
+      and conname = 'moon_gardens_garden_level_check'
+  ) then
+    alter table public.moon_gardens drop constraint moon_gardens_garden_level_check;
+  end if;
+end $$;
+
+alter table public.moon_gardens
+  add constraint moon_gardens_garden_level_check check (garden_level >= 0);
 
 create index if not exists idx_users_telegram_id on public.users(telegram_id);
 create index if not exists idx_payments_telegram_id on public.payments(telegram_id);
