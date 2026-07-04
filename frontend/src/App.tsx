@@ -964,10 +964,9 @@ function moonGardenLevel(minutes: number, language: AppLanguage) {
   return { level: 1, title: copy[language].levelFirstLight, next: copy[language].levelGentleRhythm, ceiling: 10, progress: (minutes / 10) * 100 };
 }
 
-function moonSeedCount(profile: ProfileStats | null) {
-  const minutes = profile?.totalPracticeMinutes ?? profile?.minutesListened ?? 0;
-  const completedPractices = profile?.moonSeedsAvailable ?? profile?.moonSeeds ?? profile?.completed ?? 0;
-  return completedPractices > 0 ? completedPractices : Math.floor(minutes / 5);
+function availableMoonSeeds(profile: ProfileStats | null) {
+  const value = Number(profile?.moonSeedsAvailable ?? 0);
+  return Number.isFinite(value) ? Math.max(0, value) : 0;
 }
 
 function plantedGardenElements(profile: ProfileStats | null) {
@@ -982,7 +981,7 @@ function nextGardenElement(profile: ProfileStats | null) {
 }
 
 function readyGardenElement(profile: ProfileStats | null) {
-  const seeds = moonSeedCount(profile);
+  const seeds = availableMoonSeeds(profile);
   const planted = new Set(plantedGardenElements(profile));
   return gardenElements.find((element) => !planted.has(element.id) && element.cost <= seeds) ?? null;
 }
@@ -1862,7 +1861,6 @@ function App() {
             onPlant={async (element) => {
               const result = await plantMoonGardenElement(element.id, initData);
               setProfile(result.profile);
-              await refreshAccount();
               return result.profile;
             }}
             language={language}
@@ -3201,7 +3199,7 @@ function MoonGardenCard({ profile, onOpen, language }: { profile: ProfileStats |
   const minutes = profile?.totalPracticeMinutes ?? profile?.minutesListened ?? 0;
   const level = moonGardenLevel(minutes, language);
   const progress = Math.max(0, Math.min(100, level.progress));
-  const seeds = moonSeedCount(profile);
+  const seeds = availableMoonSeeds(profile);
   const plantedCount = plantedGardenElements(profile).length;
   const nextElement = nextGardenElement(profile);
   const readyElement = readyGardenElement(profile);
@@ -3255,6 +3253,21 @@ function MoonGardenCard({ profile, onOpen, language }: { profile: ProfileStats |
   );
 }
 
+const moonGardenStars = [
+  { left: '9%', top: '18%', size: 1.5, opacity: 0.42 },
+  { left: '17%', top: '31%', size: 1, opacity: 0.3 },
+  { left: '28%', top: '13%', size: 2, opacity: 0.5 },
+  { left: '39%', top: '24%', size: 1.2, opacity: 0.28 },
+  { left: '48%', top: '10%', size: 1.5, opacity: 0.36 },
+  { left: '57%', top: '34%', size: 1, opacity: 0.25 },
+  { left: '66%', top: '17%', size: 2.2, opacity: 0.48 },
+  { left: '76%', top: '38%', size: 1.2, opacity: 0.3 },
+  { left: '86%', top: '22%', size: 1.6, opacity: 0.4 },
+  { left: '93%', top: '47%', size: 1, opacity: 0.24 },
+  { left: '23%', top: '47%', size: 1.4, opacity: 0.28 },
+  { left: '51%', top: '51%', size: 1.1, opacity: 0.24 }
+];
+
 function GardenElementVisual({ visual }: { visual: GardenVisual }) {
   if (visual === 'stone') {
     return <span className="block h-5 w-9 rounded-[50%] bg-gradient-to-br from-cream/60 to-lavender/40 shadow-[0_0_14px_rgba(245,241,233,0.22)]" />;
@@ -3285,19 +3298,33 @@ function MoonGardenScene({ profile, language, appearedElementId }: { profile: Pr
   const plantedElements = gardenElements.filter((element) => planted.has(element.id));
 
   return (
-    <section className="relative overflow-hidden rounded-[28px] border border-gold/20 bg-[#120c22] p-4 shadow-glow">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(142,95,214,0.32),transparent_28%),radial-gradient(circle_at_78%_18%,rgba(212,175,55,0.16),transparent_22%),linear-gradient(180deg,#1a102f_0%,#100b1c_62%,#0b0914_100%)]" />
-      <div className="absolute inset-0 opacity-60 [background-image:radial-gradient(circle,rgba(245,241,233,0.75)_1px,transparent_1.5px)] [background-size:34px_34px]" />
+    <section className="relative overflow-hidden rounded-[30px] border border-gold/25 bg-[#120c22] p-4 shadow-glow">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(142,95,214,0.28),transparent_30%),radial-gradient(circle_at_58%_68%,rgba(212,175,55,0.18),transparent_26%),linear-gradient(180deg,#1a102f_0%,#100b1c_58%,#0b0914_100%)]" />
+      {moonGardenStars.map((star) => (
+        <span
+          key={`${star.left}-${star.top}`}
+          className="absolute rounded-full bg-cream shadow-[0_0_8px_rgba(245,241,233,0.45)]"
+          style={{ left: star.left, top: star.top, width: star.size, height: star.size, opacity: star.opacity }}
+        />
+      ))}
       <div className="absolute right-8 top-7 h-14 w-14 rounded-full bg-cream shadow-[0_0_36px_rgba(245,241,233,0.35)]" />
       <div className="absolute right-4 top-3 h-14 w-14 rounded-full bg-[#1a102f]" />
-      <div className="absolute inset-x-0 bottom-0 h-24 rounded-t-[60%] bg-gradient-to-t from-night via-[#211436] to-transparent" />
-      <div className="absolute inset-x-10 bottom-8 h-2 rounded-full bg-gold/20 blur-md" />
-      <div className="relative h-56">
+      <div className="absolute inset-x-0 bottom-0 h-28 rounded-t-[60%] bg-gradient-to-t from-night via-[#211436] to-transparent" />
+      <div className="absolute inset-x-6 bottom-10 h-8 rounded-[50%] bg-gold/15 blur-xl" />
+      <div className="absolute inset-x-10 bottom-8 h-2 rounded-full bg-gold/25 blur-md" />
+      <div className="relative h-60">
         <div className="absolute left-0 top-0">
           <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].moonGarden}</p>
           <h3 className="mt-1 font-serif text-2xl">{language === 'en' ? 'Your Moon Garden' : 'Твой Лунный сад'}</h3>
           <p className="mt-1 max-w-[210px] text-xs leading-5 text-cream/60">{language === 'en' ? 'Plant elements to shape your quiet place.' : 'Сажай элементы, чтобы создать своё тихое место.'}</p>
         </div>
+        {!plantedElements.length && gardenElements.slice(0, 5).map((element) => (
+          <span
+            key={element.id}
+            className="absolute h-3 w-8 -translate-x-1/2 rounded-[50%] border border-gold/10 bg-gold/10 blur-[0.2px]"
+            style={element.position}
+          />
+        ))}
         {!plantedElements.length && (
           <p className="absolute bottom-8 left-1/2 w-52 -translate-x-1/2 rounded-2xl bg-night/60 px-3 py-2 text-center text-xs text-lavender">
             {language === 'en' ? 'Your garden is waiting for its first seed.' : 'Твой сад ждёт первое семя.'}
@@ -3334,11 +3361,13 @@ function MoonGardenPage({
   const [message, setMessage] = useState('');
   const [appearedElementId, setAppearedElementId] = useState<string | null>(null);
   const activeProfile = liveProfile ?? profile;
-  const seeds = moonSeedCount(activeProfile);
+  const seeds = availableMoonSeeds(activeProfile);
   const minutes = activeProfile?.totalPracticeMinutes ?? activeProfile?.minutesListened ?? 0;
   const level = moonGardenLevel(minutes, language);
   const planted = new Set(plantedGardenElements(activeProfile));
   const nextElement = nextGardenElement(activeProfile);
+  const readyElement = gardenElements.find((element) => !planted.has(element.id) && element.cost <= seeds) ?? null;
+  const nextSuggestedElement = readyElement ?? nextElement;
 
   useEffect(() => {
     setLiveProfile(profile);
@@ -3366,12 +3395,24 @@ function MoonGardenPage({
     }
     if (seeds < element.cost) {
       if (import.meta.env.DEV) console.info('[MOON_GARDEN_PLANT_BLOCKED]', { reason: 'not_enough_seeds', elementId: element.id, availableSeeds: seeds, cost: element.cost });
-      setMessage(copy[language].notEnoughSeeds);
+      setMessage(readyElement ? text(language, 'readyToPlant', { name: readyElement.name[language] }) : copy[language].notEnoughSeeds);
       return;
     }
 
     setWorkingId(element.id);
     setMessage('');
+    const previousProfile = activeProfile;
+    const nextPlanted = [...planted, element.id];
+    if (activeProfile) {
+      setLiveProfile({
+        ...activeProfile,
+        moonSeeds: seeds - element.cost,
+        moonSeedsAvailable: seeds - element.cost,
+        plantedGardenElements: nextPlanted,
+        plantedElementsCount: nextPlanted.length
+      });
+      setAppearedElementId(element.id);
+    }
     try {
       const nextProfile = await onPlant(element);
       setLiveProfile(nextProfile);
@@ -3386,14 +3427,16 @@ function MoonGardenPage({
       }
     } catch {
       if (import.meta.env.DEV) console.info('[MOON_GARDEN_PLANT_BLOCKED]', { reason: 'api_failed', elementId: element.id });
-      setMessage(copy[language].notEnoughSeeds);
+      setLiveProfile(previousProfile);
+      setAppearedElementId(null);
+      setMessage(readyElement ? text(language, 'readyToPlant', { name: readyElement.name[language] }) : copy[language].notEnoughSeeds);
     } finally {
       setWorkingId(null);
     }
   };
 
   return (
-    <div className="space-y-4 pt-[calc(env(safe-area-inset-top,0px)+56px)] luna-fade">
+    <div className="space-y-4 pb-[calc(120px+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top,0px)+56px)] luna-fade">
       <div className="flex items-center justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].moonGarden}</p>
@@ -3414,8 +3457,8 @@ function MoonGardenPage({
           <Stat label={copy[language].plantedElements} value={String(planted.size)} />
         </div>
         <div className="mt-4 rounded-2xl bg-gold/10 p-3 text-sm text-cream/80">
-          <span className="text-gold">{copy[language].nextSuggestedElement}: </span>
-          {nextElement ? nextElement.name[language] : copy[language].yourRhythm}
+          <span className="text-gold">{readyElement ? copy[language].availableToPlant : copy[language].nextSuggestedElement}: </span>
+          {nextSuggestedElement ? nextSuggestedElement.name[language] : copy[language].yourRhythm}
         </div>
         {message && <p className="mt-3 rounded-2xl bg-night/70 px-3 py-2 text-sm text-gold">{message}</p>}
       </section>
@@ -3444,10 +3487,10 @@ function MoonGardenPage({
               </div>
               <button
                 onClick={() => void plant(element)}
-                disabled={isPlanted || Boolean(workingId)}
+                disabled={isPlanted || Boolean(workingId) || !canPlant}
                 className={`mt-3 w-full rounded-[18px] px-4 py-3 text-sm font-semibold ${
                   canPlant ? 'bg-gold text-night' : isPlanted ? 'bg-gold/15 text-gold' : 'bg-surface text-lavender'
-                }`}
+                } disabled:cursor-not-allowed disabled:opacity-80`}
               >
                 {isPlanted
                   ? copy[language].planted

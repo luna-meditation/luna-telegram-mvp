@@ -827,7 +827,8 @@ export async function plantMoonGardenElement(telegramId: number, elementId: stri
     return { error: 'Garden element already planted.' as const, status: 409, profile };
   }
 
-  const availableSeeds = Number(profile.moonSeedsAvailable ?? profile.moonSeeds ?? 0);
+  const rawAvailableSeeds = Number(profile.moonSeedsAvailable ?? 0);
+  const availableSeeds = Number.isFinite(rawAvailableSeeds) ? Math.max(0, rawAvailableSeeds) : 0;
   if (process.env.NODE_ENV !== 'production') {
     console.info('[MOON_GARDEN_BALANCE]', {
       elementId: element.id,
