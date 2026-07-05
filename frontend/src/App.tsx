@@ -2359,21 +2359,8 @@ function HomePage(props: {
         <EmptyState title={t.firstPracticeTitle} body={t.firstPracticeBody} />
       )}
 
-      {props.explore.length >= 3 ? (
-        <Rail title={t.moreToExplore} meditations={props.explore} onOpen={props.onOpen} language={props.language} />
-      ) : props.explore.length > 0 ? (
-        <section className="rounded-[24px] border border-gold/20 bg-gold/10 p-4 shadow-glow">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-gold">{t.moreToExplore}</p>
-              <h2 className="mt-1 font-serif text-2xl">{t.exploreLibrary}</h2>
-            </div>
-            <button onClick={props.onLibrary} className="rounded-full bg-gold px-4 py-2 text-sm font-semibold text-night">
-              {t.openLibrary}
-            </button>
-          </div>
-        </section>
-      ) : null}
+      <Rail title={t.moreToExplore} meditations={props.explore} onOpen={props.onOpen} language={props.language} />
+      <ContinueListeningSection title={t.continueListening} meditations={props.continueListening} onOpen={props.onOpen} language={props.language} />
       <button onClick={props.onScenes} className="relative w-full overflow-hidden rounded-[24px] border border-gold/20 bg-gradient-to-br from-lavender/25 via-gold/10 to-white/5 p-4 text-left shadow-glow">
         <div className="absolute right-4 top-4 grid h-12 w-12 place-items-center rounded-full bg-gold/15 text-gold">
           <Waves size={24} />
@@ -2396,7 +2383,6 @@ function HomePage(props: {
       <button onClick={props.onLibrary} className="w-full rounded-[20px] bg-gold px-5 py-4 font-semibold text-night shadow-glow hover:brightness-110">
         {t.openLibrary}
       </button>
-      <ContinueListeningSection title={t.continueListening} meditations={props.continueListening} onOpen={props.onOpen} language={props.language} />
       <Rail title={t.recentlyPlayed} meditations={props.recentlyPlayed} onOpen={props.onOpen} language={props.language} />
     </div>
   );
