@@ -204,7 +204,7 @@ bot.on('pre_checkout_query', async (ctx) => {
   const payload = ctx.preCheckoutQuery.invoice_payload;
   try {
     const parsed = JSON.parse(payload) as { plan?: unknown; telegramId?: unknown };
-    if (!isPlanId(parsed.plan) || typeof parsed.telegramId !== 'number') {
+    if (!isPlanId(parsed.plan) || typeof parsed.telegramId !== 'number' || !ctx.from || parsed.telegramId !== ctx.from.id) {
       await ctx.answerPreCheckoutQuery(false, 'Invalid Luna payment payload.');
       return;
     }
@@ -217,17 +217,32 @@ bot.on('pre_checkout_query', async (ctx) => {
 bot.on('successful_payment', async (ctx) => {
   if (!ctx.from) return;
   const payment = ctx.message.successful_payment;
-  const payload = JSON.parse(payment.invoice_payload) as { plan: PlanId; telegramId: number };
 
-  await recordSuccessfulPayment({
-    telegram_id: ctx.from.id,
-    plan: payload.plan,
-    telegram_payment_charge_id: payment.telegram_payment_charge_id,
-    provider_payment_charge_id: payment.provider_payment_charge_id
-  });
+  try {
+    const payload = JSON.parse(payment.invoice_payload) as { plan?: unknown; telegramId?: unknown };
 
-  await ctx.reply(
-    'Payment successful. Your Luna access is unlocked. 40 Moon Seeds were added to your garden.',
-    Markup.inlineKeyboard([[Markup.button.webApp('Open Premium Library', env.MINI_APP_URL)]])
-  );
+    if (!isPlanId(payload.plan) || typeof payload.telegramId !== 'number' || payload.telegramId !== ctx.from.id) {
+      console.warn('[Luna payment rejected]', { telegramId: ctx.from.id, reason: 'invalid_payload' });
+      return;
+    }
+
+    const isNewPayment = await recordSuccessfulPayment({
+      telegram_id: ctx.from.id,
+      plan: payload.plan,
+      telegram_payment_charge_id: payment.telegram_payment_charge_id,
+      provider_payment_charge_id: payment.provider_payment_charge_id
+    });
+
+    await ctx.reply(
+      isNewPayment
+        ? 'Payment successful. Your Luna access is unlocked. 40 Moon Seeds were added to your garden.'
+        : 'Payment already confirmed. Your Luna access is active.',
+      Markup.inlineKeyboard([[Markup.button.webApp('Open Premium Library', env.MINI_APP_URL)]])
+    );
+  } catch (error) {
+    console.error('[Luna payment processing failed]', {
+      telegramId: ctx.from.id,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 });

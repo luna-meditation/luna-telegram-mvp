@@ -6,7 +6,7 @@ const envSchema = z.object({
   BOT_USERNAME: z.string().min(1),
   MINI_APP_URL: z.string().url(),
   WEBHOOK_URL: z.string().url().optional(),
-  FRONTEND_ORIGIN: z.string().url().optional(),
+  FRONTEND_ORIGIN: z.string().min(1).optional(),
   DATABASE_URL: z.string().min(1).optional(),
   SUPABASE_URL: z.string().url(),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),

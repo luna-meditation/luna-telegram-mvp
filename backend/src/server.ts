@@ -40,17 +40,21 @@ import { runMigrations } from './migrations.js';
 import { isPlanId } from './plans.js';
 
 const app = express();
+app.disable('x-powered-by');
 
 const configuredFrontendOrigins = env.FRONTEND_ORIGIN
   ? env.FRONTEND_ORIGIN.split(',').map((origin) => origin.trim()).filter(Boolean)
   : [];
+const isProduction = process.env.NODE_ENV === 'production';
+const miniAppOrigin = new URL(env.MINI_APP_URL).origin;
 
 function isAllowedFrontendOrigin(origin: string) {
-  if (configuredFrontendOrigins.includes(origin)) return true;
+  if (origin === miniAppOrigin || configuredFrontendOrigins.includes(origin)) return true;
 
   try {
     const { hostname, protocol } = new URL(origin);
     return (
+      !isProduction &&
       protocol === 'https:' &&
       (hostname.endsWith('.netlify.app') || hostname.endsWith('.vercel.app'))
     );
@@ -61,7 +65,12 @@ function isAllowedFrontendOrigin(origin: string) {
 
 app.use(cors({
   origin(origin, callback) {
-    if (!origin || !configuredFrontendOrigins.length || isAllowedFrontendOrigin(origin)) {
+    if (!origin || isAllowedFrontendOrigin(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    if (!isProduction && !configuredFrontendOrigins.length) {
       callback(null, true);
       return;
     }
@@ -69,6 +78,37 @@ app.use(cors({
     callback(null, false);
   }
 }));
+
+app.use((_req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  next();
+});
+
+const rateLimitBuckets = new Map<string, { count: number; resetAt: number }>();
+
+function rateLimit(options: { windowMs: number; max: number }) {
+  return (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    const now = Date.now();
+    const key = `${req.ip}:${req.method}:${req.path}`;
+    const current = rateLimitBuckets.get(key);
+
+    if (!current || current.resetAt <= now) {
+      rateLimitBuckets.set(key, { count: 1, resetAt: now + options.windowMs });
+      next();
+      return;
+    }
+
+    if (current.count >= options.max) {
+      res.status(429).json({ error: 'Too many requests. Please try again shortly.' });
+      return;
+    }
+
+    current.count += 1;
+    next();
+  };
+}
 
 function assertAdmin(req: express.Request, res: express.Response) {
   const authReq = req as AuthenticatedRequest;
@@ -88,6 +128,9 @@ function isMp3Upload(contentType: string, fileName: string) {
 function isCoverUpload(contentType: string, fileName: string) {
   return ['image/jpeg', 'image/png', 'image/webp'].includes(contentType) && /\.(jpe?g|png|webp)$/i.test(fileName);
 }
+
+app.use('/api/admin', rateLimit({ windowMs: 60_000, max: 120 }));
+app.use('/api/payments', rateLimit({ windowMs: 60_000, max: 30 }));
 
 app.post(
   '/api/admin/storage/:kind',
@@ -132,7 +175,7 @@ app.post(
   }
 );
 
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true, service: 'luna-backend' });
@@ -239,7 +282,10 @@ app.post('/api/breath-sessions', requireTelegramWebApp, async (req, res, next) =
     const authReq = req as AuthenticatedRequest;
     res.json(await recordBreathSession(authReq.telegramUser.telegram_id, req.body));
   } catch (error) {
-    console.error('Could not save breath session.', error);
+    console.error('[Luna breath session save failed]', {
+      telegramId: (req as Partial<AuthenticatedRequest>).telegramUser?.telegram_id ?? null,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
     next(error);
   }
 });
@@ -324,10 +370,7 @@ app.post('/api/checkins', requireTelegramWebApp, async (req, res, next) => {
       !['calm', 'stressed', 'tired', 'anxious', 'focused', 'low_energy'].includes(input.mood) ||
       !['3', '5', '10', '15_plus'].includes(input.available_minutes)
     ) {
-      console.warn('[Luna check-in validation failed]', {
-        telegramId: authReq.telegramUser.telegram_id,
-        body: req.body
-      });
+      console.warn('[Luna check-in validation failed]', { telegramId: authReq.telegramUser.telegram_id });
       res.status(400).json({ error: 'Please complete the daily check-in.' });
       return;
     }
@@ -337,8 +380,7 @@ app.post('/api/checkins', requireTelegramWebApp, async (req, res, next) => {
   } catch (error) {
     console.error('[Luna check-in save failed]', {
       telegramId: (req as Partial<AuthenticatedRequest>).telegramUser?.telegram_id ?? null,
-      body: req.body,
-      error: error instanceof Error ? error.message : error
+      error: error instanceof Error ? error.message : 'Unknown error'
     });
     next(error);
   }
@@ -512,9 +554,13 @@ app.delete('/api/admin/categories/:slug', requireTelegramWebApp, async (req, res
 
 app.use(bot.webhookCallback('/telegram/webhook'));
 
-app.use((error: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((error: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
   void next;
-  console.error(error);
+  console.error('[Luna API error]', {
+    method: req.method,
+    path: req.path,
+    error: error instanceof Error ? error.message : 'Unknown error'
+  });
   res.status(500).json({ error: 'Something went wrong.' });
 });
 

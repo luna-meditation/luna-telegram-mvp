@@ -3053,17 +3053,19 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
   const setLiveTime = (source: string, next: number, audio = audioRef.current) => {
     const safeDuration = Math.max(1, duration || meditation.duration || 1);
     const safeNext = Math.max(0, Math.min(next, safeDuration));
-    console.log('[PLAYER_TIME_SET]', {
-      source,
-      newTime: safeNext,
-      oldCurrentTime: position,
-      audioTime: audio?.currentTime ?? null,
-      savedProgress,
-      livePosition: livePositionRef.current,
-      meditationId: meditation.id,
-      version: playerFixVersion,
-      stack: new Error().stack
-    });
+    if (import.meta.env.DEV) {
+      console.log('[PLAYER_TIME_SET]', {
+        source,
+        newTime: safeNext,
+        oldCurrentTime: position,
+        audioTime: audio?.currentTime ?? null,
+        savedProgress,
+        livePosition: livePositionRef.current,
+        meditationId: meditation.id,
+        version: playerFixVersion,
+        stack: new Error().stack
+      });
+    }
     livePositionRef.current = safeNext;
     setPosition(safeNext);
     setAudioTime(audio?.currentTime ?? safeNext);
@@ -3083,28 +3085,32 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
     if (!audio) return;
 
     const t = audio.currentTime;
-    console.log('[PLAYER_PAUSE_CLICK]', {
-      beforeAudioTime: t,
-      beforeStateTime: position,
-      savedProgress,
-      livePosition: livePositionRef.current,
-      meditationId: meditation.id,
-      version: playerFixVersion
-    });
+    if (import.meta.env.DEV) {
+      console.log('[PLAYER_PAUSE_CLICK]', {
+        beforeAudioTime: t,
+        beforeStateTime: position,
+        savedProgress,
+        livePosition: livePositionRef.current,
+        meditationId: meditation.id,
+        version: playerFixVersion
+      });
+    }
 
     audio.pause();
     setPlaying(false);
     setLiveTime('pausePlayback:isolation-no-save', t, audio);
     setAudioTime(audio.currentTime);
 
-    console.log('[PLAYER_AFTER_PAUSE]', {
-      afterAudioTime: audio.currentTime,
-      afterStateTime: t,
-      savedProgress,
-      livePosition: livePositionRef.current,
-      meditationId: meditation.id,
-      version: playerFixVersion
-    });
+    if (import.meta.env.DEV) {
+      console.log('[PLAYER_AFTER_PAUSE]', {
+        afterAudioTime: audio.currentTime,
+        afterStateTime: t,
+        savedProgress,
+        livePosition: livePositionRef.current,
+        meditationId: meditation.id,
+        version: playerFixVersion
+      });
+    }
   };
 
   useEffect(() => {
@@ -3120,12 +3126,14 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
     setMoonSeedRewardMessage('');
     savedCompletionRef.current = false;
     setShareMessage('');
-    console.log('[PLAYER_ISOLATION_LOAD]', {
-      initialPosition,
-      savedProgress,
-      meditationId: meditation.id,
-      version: playerFixVersion
-    });
+    if (import.meta.env.DEV) {
+      console.log('[PLAYER_ISOLATION_LOAD]', {
+        initialPosition,
+        savedProgress,
+        meditationId: meditation.id,
+        version: playerFixVersion
+      });
+    }
   }, [language, localized.audioUrl, meditation.duration, meditation.id]);
 
   useEffect(() => {
@@ -3160,12 +3168,14 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
         setPosition(initialPosition);
         setAudioTime(audio.currentTime);
         hasInitializedPlaybackRef.current = true;
-        console.log('[PLAYER_METADATA_INIT]', {
-          initialPosition,
-          savedProgress,
-          meditationId: meditation.id,
-          version: playerFixVersion
-        });
+        if (import.meta.env.DEV) {
+          console.log('[PLAYER_METADATA_INIT]', {
+            initialPosition,
+            savedProgress,
+            meditationId: meditation.id,
+            version: playerFixVersion
+          });
+        }
       }
       setLoading(false);
       syncProgress();
@@ -3177,14 +3187,16 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
     };
     const paused = () => {
       setPlaying(false);
-      console.log('[PLAYER_NATIVE_PAUSE_ISOLATED]', {
-        audioTime: audio.currentTime,
-        stateTime: position,
-        livePosition: livePositionRef.current,
-        savedProgress,
-        meditationId: meditation.id,
-        version: playerFixVersion
-      });
+      if (import.meta.env.DEV) {
+        console.log('[PLAYER_NATIVE_PAUSE_ISOLATED]', {
+          audioTime: audio.currentTime,
+          stateTime: position,
+          livePosition: livePositionRef.current,
+          savedProgress,
+          meditationId: meditation.id,
+          version: playerFixVersion
+        });
+      }
     };
     const ended = () => {
       const nextDuration = audioDuration();

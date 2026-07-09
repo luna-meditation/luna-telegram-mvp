@@ -73,7 +73,7 @@ export function requireTelegramWebApp(req: Request, res: Response, next: NextFun
       return;
     }
 
-    if (env.ALLOW_UNVERIFIED_TELEGRAM_WEBAPP) {
+    if (env.ALLOW_UNVERIFIED_TELEGRAM_WEBAPP && process.env.NODE_ENV !== 'production') {
       const telegramId = Number(req.body?.telegram_id ?? req.params.telegramId);
       if (!telegramId) {
         res.status(401).json({ error: 'Telegram WebApp initData is required.' });

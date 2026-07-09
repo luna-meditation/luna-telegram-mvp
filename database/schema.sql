@@ -183,6 +183,12 @@ alter table public.moon_gardens
 
 create index if not exists idx_users_telegram_id on public.users(telegram_id);
 create index if not exists idx_payments_telegram_id on public.payments(telegram_id);
+create unique index if not exists idx_payments_telegram_charge_unique
+  on public.payments(telegram_payment_charge_id)
+  where telegram_payment_charge_id is not null;
+create unique index if not exists idx_payments_provider_charge_unique
+  on public.payments(provider_payment_charge_id)
+  where provider_payment_charge_id is not null;
 create index if not exists idx_progress_telegram_id on public.progress(telegram_id);
 create index if not exists idx_meditations_category on public.meditations(category);
 create index if not exists idx_meditations_mood on public.meditations(mood);

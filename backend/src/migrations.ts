@@ -136,6 +136,14 @@ create index if not exists idx_daily_checkins_telegram_date on public.daily_chec
 create index if not exists idx_breath_sessions_telegram_completed on public.breath_sessions(telegram_id, completed_at desc);
 create index if not exists idx_moon_gardens_telegram_id on public.moon_gardens(telegram_id);
 
+do $$
+begin
+  if to_regclass('public.payments') is not null then
+    execute 'create unique index if not exists idx_payments_telegram_charge_unique on public.payments(telegram_payment_charge_id) where telegram_payment_charge_id is not null';
+    execute 'create unique index if not exists idx_payments_provider_charge_unique on public.payments(provider_payment_charge_id) where provider_payment_charge_id is not null';
+  end if;
+end $$;
+
 create or replace function public.increment_meditation_play_count(meditation_uuid uuid)
 returns void
 language sql

@@ -1053,13 +1053,24 @@ export async function recordSuccessfulPayment(input: {
   plan: PlanId;
   telegram_payment_charge_id?: string;
   provider_payment_charge_id?: string;
-}) {
+}): Promise<boolean> {
   const plan = plans[input.plan];
   const now = new Date();
   const activeUntil =
     input.plan === 'monthly'
       ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
       : null;
+
+  if (input.telegram_payment_charge_id) {
+    const { data: existingPayment, error: existingPaymentError } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('telegram_payment_charge_id', input.telegram_payment_charge_id)
+      .maybeSingle();
+
+    if (existingPaymentError) throw existingPaymentError;
+    if (existingPayment) return false;
+  }
 
   const { error: paymentError } = await supabase.from('payments').insert({
     telegram_id: input.telegram_id,
@@ -1071,7 +1082,10 @@ export async function recordSuccessfulPayment(input: {
     status: 'paid'
   });
 
-  if (paymentError) throw paymentError;
+  if (paymentError) {
+    if ('code' in paymentError && paymentError.code === '23505') return false;
+    throw paymentError;
+  }
 
   const updates =
     input.plan === 'lifetime'
@@ -1086,6 +1100,7 @@ export async function recordSuccessfulPayment(input: {
   if (userError) throw userError;
 
   await grantPremiumMoonSeedsBonus(input.telegram_id);
+  return true;
 }
 
 export async function getAdminStats() {
