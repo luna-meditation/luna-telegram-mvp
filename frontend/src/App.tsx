@@ -64,12 +64,13 @@ import {
 } from './api';
 import { MoonGardenScene as AnimatedMoonGardenScene } from './components/moon-garden/MoonGardenScene';
 
-type Page = 'home' | 'library' | 'favorites' | 'profile' | 'pricing' | 'player' | 'scenePlayer' | 'breathCircle' | 'moonGarden' | 'admin';
+type Page = 'home' | 'library' | 'favorites' | 'profile' | 'pricing' | 'player' | 'scenePlayer' | 'mantraPlayer' | 'breathCircle' | 'moonGarden' | 'admin';
 type Mood = 'Calm' | 'Stressed' | 'Tired' | 'Anxious' | 'Focused';
 type MoodChip = 'Sleep' | 'Calm' | 'Focus' | 'Anxiety' | 'Breath' | 'Energy';
-type LibraryMode = 'meditations' | 'scenes';
+type LibraryMode = 'meditations' | 'breathing' | 'mantras';
 type SceneAccess = 'free' | 'premium';
 type BreathMode = 'calm' | 'box' | 'reset';
+type ContentAccess = 'free' | 'premium';
 type GardenElementType = 'bloom' | 'light' | 'path' | 'bridge' | 'water' | 'sanctuary';
 type GardenVisual = 'bloom' | 'lantern' | 'path' | 'twinBloom' | 'bridge' | 'reflection' | 'garden';
 type GardenElement = {
@@ -93,6 +94,17 @@ type SceneDefinition = {
   cover: string;
   sound: 'water' | 'ocean' | 'mist' | 'forest' | 'rain';
 };
+type MantraDefinition = {
+  id: string;
+  title: Record<AppLanguage, string>;
+  subtitle: Record<AppLanguage, string>;
+  description: Record<AppLanguage, string>;
+  category: string;
+  tags: string[];
+  access: ContentAccess;
+  duration: number;
+  cover: string;
+};
 
 const moods: MoodChip[] = ['Sleep', 'Calm', 'Focus', 'Anxiety', 'Breath', 'Energy'];
 const meditationMoods: Mood[] = ['Calm', 'Stressed', 'Tired', 'Anxious', 'Focused'];
@@ -106,6 +118,7 @@ const moonGardenVolumeStorageKey = 'luna.moonGarden.volume.v1';
 const moonGardenAmbienceUrl = '/assets/audio/moon-garden/moon-garden-ambience.wav';
 const playerFixVersion = 'pause-seek-isolation-v5';
 const sceneAudioCache = new Map<string, string>();
+const mantraAudioCache = new Map<string, string>();
 type LibraryCache = {
   categories: Category[];
   meditations: Meditation[];
@@ -201,6 +214,46 @@ const scenes = ([
   }
 ] satisfies SceneDefinition[]).sort((left, right) => left.sortOrder - right.sortOrder);
 
+function mantraCover(seed: string) {
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+      <defs>
+        <radialGradient id="bg" cx="50%" cy="36%" r="72%">
+          <stop offset="0%" stop-color="#8e5fd6"/>
+          <stop offset="48%" stop-color="#4b2d68"/>
+          <stop offset="100%" stop-color="#141026"/>
+        </radialGradient>
+        <linearGradient id="gold" x1="0" x2="1">
+          <stop stop-color="#f5f1e9"/>
+          <stop offset="1" stop-color="#d4af37"/>
+        </linearGradient>
+      </defs>
+      <rect width="512" height="512" rx="64" fill="url(#bg)"/>
+      <circle cx="256" cy="188" r="96" fill="none" stroke="url(#gold)" stroke-width="4" opacity=".82"/>
+      <path d="M287 116a72 72 0 1 0 0 144a88 88 0 1 1 0-144Z" fill="url(#gold)" opacity=".94"/>
+      <path d="M107 358c50-28 100-26 149 0s98 28 149 0" fill="none" stroke="#d4af37" stroke-width="5" opacity=".55"/>
+      <text x="50%" y="424" text-anchor="middle" fill="#f5f1e9" font-family="Georgia, serif" font-size="38" letter-spacing="5">${seed}</text>
+    </svg>`;
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
+
+const mantras = ([
+  {
+    id: 'moon-mantra',
+    title: { en: 'Moon Mantra', ru: 'Лунная мантра' },
+    subtitle: { en: 'Soft voice rhythm · Calm', ru: 'Мягкий ритм голоса · Спокойствие' },
+    description: {
+      en: 'A gentle mantra bed for returning to your breath and softening the mind.',
+      ru: 'Мягкая мантра, чтобы вернуться к дыханию и успокоить мысли.'
+    },
+    category: 'mantra',
+    tags: ['calm', 'moon', 'evening'],
+    access: 'free',
+    duration: 180,
+    cover: mantraCover('MOON MANTRA')
+  }
+] satisfies MantraDefinition[]);
+
 const gardenElements: GardenElement[] = [
   {
     id: 'first_bloom',
@@ -273,6 +326,7 @@ const gardenStages = [
     minPlantedUpgrades: 0,
     title: { en: 'Empty Garden', ru: 'Пустой сад' },
     path: '/assets/moon-garden/level-0-empty-garden.png',
+    videoPath: '/assets/moon-garden/videos/level-0-empty-garden.mp4',
     subtitle: { en: 'Your quiet place is waiting for its first seed.', ru: 'Твоё тихое место ждёт первое семя.' }
   },
   {
@@ -280,6 +334,7 @@ const gardenStages = [
     minPlantedUpgrades: 1,
     title: { en: 'First Bloom', ru: 'Первый цветок' },
     path: '/assets/moon-garden/level-1-first-bloom.png',
+    videoPath: '/assets/moon-garden/videos/level-1-first-bloom.mp4',
     subtitle: { en: 'The first bloom has opened.', ru: 'Первый цветок раскрылся.' }
   },
   {
@@ -287,6 +342,7 @@ const gardenStages = [
     minPlantedUpgrades: 2,
     title: { en: 'Lantern Glow', ru: 'Свет фонаря' },
     path: '/assets/moon-garden/level-2-lantern-glow.png',
+    videoPath: '/assets/moon-garden/videos/level-2-lantern-glow.mp4',
     subtitle: { en: 'A warm light now guides the path.', ru: 'Тёплый свет теперь ведёт по тропе.' }
   },
   {
@@ -294,6 +350,7 @@ const gardenStages = [
     minPlantedUpgrades: 3,
     title: { en: 'Stone Path', ru: 'Каменная тропа' },
     path: '/assets/moon-garden/level-3-stone-path.png',
+    videoPath: '/assets/moon-garden/videos/level-3-stone-path.mp4',
     subtitle: { en: 'Your path through calm is taking shape.', ru: 'Твой путь к спокойствию обретает форму.' }
   },
   {
@@ -301,6 +358,7 @@ const gardenStages = [
     minPlantedUpgrades: 4,
     title: { en: 'Twin Bloom', ru: 'Два цветка' },
     path: '/assets/moon-garden/level-4-twin-bloom.png',
+    videoPath: '/assets/moon-garden/videos/level-4-twin-bloom.mp4',
     subtitle: { en: 'Your garden begins to bloom.', ru: 'Твой сад начинает расцветать.' }
   },
   {
@@ -308,6 +366,7 @@ const gardenStages = [
     minPlantedUpgrades: 5,
     title: { en: 'Moon Bridge', ru: 'Лунный мост' },
     path: '/assets/moon-garden/level-5-moon-bridge.png',
+    videoPath: '/assets/moon-garden/videos/level-5-moon-bridge.mp4',
     subtitle: { en: 'A bridge appears across the moonlit water.', ru: 'Над лунной водой появляется мост.' }
   },
   {
@@ -315,6 +374,7 @@ const gardenStages = [
     minPlantedUpgrades: 6,
     title: { en: 'Reflection Garden', ru: 'Сад отражений' },
     path: '/assets/moon-garden/level-6-reflection-garden.png',
+    videoPath: '/assets/moon-garden/videos/level-6-reflection-garden.mp4',
     subtitle: { en: 'Reflections deepen in your quiet place.', ru: 'Отражения становятся глубже в твоём тихом месте.' }
   },
   {
@@ -322,7 +382,29 @@ const gardenStages = [
     minPlantedUpgrades: 7,
     title: { en: 'Full Moon Garden', ru: 'Сад полной луны' },
     path: '/assets/moon-garden/level-7-full-moon-garden.png',
+    videoPath: '/assets/moon-garden/videos/level-7-full-moon-garden.mp4',
     subtitle: { en: 'Your Moon Garden is flourishing.', ru: 'Твой Лунный сад расцветает.' }
+  }
+];
+
+const gardenCollections = [
+  {
+    id: 'classic-moon',
+    title: { en: 'Classic Moon Garden', ru: 'Классический Лунный сад' },
+    body: { en: 'Your current moonlit sanctuary.', ru: 'Твоё текущее лунное пространство.' },
+    status: { en: 'Active', ru: 'Активно' }
+  },
+  {
+    id: 'winter-stillness',
+    title: { en: 'Winter Stillness', ru: 'Зимняя тишина' },
+    body: { en: 'A soft seasonal garden theme for later.', ru: 'Мягкая сезонная тема сада на будущее.' },
+    status: { en: 'Phase 1 preview', ru: 'Превью Phase 1' }
+  },
+  {
+    id: 'spring-bloom',
+    title: { en: 'Spring Bloom', ru: 'Весенний цвет' },
+    body: { en: 'A brighter collection concept for future upgrades.', ru: 'Более светлая коллекция для будущих улучшений.' },
+    status: { en: 'Phase 1 preview', ru: 'Превью Phase 1' }
   }
 ];
 
@@ -386,6 +468,59 @@ function createSceneAudioUrl(kind: SceneDefinition['sound']) {
   return url;
 }
 
+function createMantraAudioUrl(id: string) {
+  const cached = mantraAudioCache.get(id);
+  if (cached) return cached;
+
+  const sampleRate = 22050;
+  const seconds = 8;
+  const totalSamples = sampleRate * seconds;
+  const samples = new Float32Array(totalSamples);
+  const notes = [196, 246.94, 293.66, 392];
+
+  for (let index = 0; index < totalSamples; index += 1) {
+    const t = index / sampleRate;
+    const fade = Math.min(1, index / 1800, (totalSamples - index) / 1800);
+    const note = notes[Math.floor((t / 2) % notes.length)];
+    const breath = 0.55 + Math.sin(Math.PI * 2 * 0.125 * t) * 0.35;
+    const tone =
+      Math.sin(Math.PI * 2 * note * t) * 0.055 +
+      Math.sin(Math.PI * 2 * note * 0.5 * t) * 0.045 +
+      Math.sin(Math.PI * 2 * note * 1.5 * t) * 0.018;
+    samples[index] = Math.max(-0.7, Math.min(0.7, tone * breath * fade));
+  }
+
+  const dataSize = totalSamples * 2;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+  const writeString = (offset: number, value: string) => {
+    for (let index = 0; index < value.length; index += 1) view.setUint8(offset + index, value.charCodeAt(index));
+  };
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, dataSize, true);
+
+  let offset = 44;
+  samples.forEach((sample) => {
+    view.setInt16(offset, sample * 32767, true);
+    offset += 2;
+  });
+
+  const url = URL.createObjectURL(new Blob([view], { type: 'audio/wav' }));
+  mantraAudioCache.set(id, url);
+  return url;
+}
+
 const copy = {
   en: {
     tagline: 'AI Guided Calm Inside Telegram',
@@ -415,11 +550,14 @@ const copy = {
     openLibrary: 'Open Library',
     libraryTitle: 'Luna Library',
     meditationsTab: 'Meditations',
-    scenesTab: 'Scenes',
+    breathingTab: 'Breathing',
+    mantrasTab: 'Mantras',
     scenesTitle: 'Soundscapes',
-    scenesHomeTitle: 'Scenes',
-    scenesHomeBody: 'Play calming soundscapes while Luna is open.',
+    scenesHomeTitle: 'Sound',
+    scenesHomeBody: 'Soft ambience while Luna is open.',
     scenesLibraryBody: 'Loopable ambience for sleep, breath, and focus.',
+    soundscapeSelect: 'Choose sound',
+    soundscapeActive: 'Sound on',
     sceneLoop: 'Loop enabled',
     sceneVolume: 'Scene volume',
     scenePremiumLocked: 'Premium soundscape',
@@ -432,6 +570,13 @@ const copy = {
     short: 'Short',
     noMeditations: 'No meditations found.',
     noMeditationsBody: 'Try another mood, category, or search phrase.',
+    moonMantraBody: 'A gentle mantra for returning to yourself.',
+    mantrasEmpty: 'More Luna mantras are coming soon.',
+    addHomeTitle: 'Add Luna to Home Screen',
+    addHomeBody: 'Open your calm in one tap from Telegram.',
+    addHomeAction: 'Add',
+    addHomeDone: 'Luna is ready for your Home Screen.',
+    addHomeUnsupported: 'Use Telegram’s menu to add Luna when this device supports it.',
     firstPracticeTitle: 'Your first calm practice is coming soon.',
     firstPracticeBody: 'Luna’s library will appear here as soon as new meditations are published.',
     unlockPremium: 'Unlock Premium',
@@ -503,22 +648,22 @@ const copy = {
     savedEmptyTitle: 'Your saved calm will live here.',
     savedEmptyBody: 'Tap the heart on any meditation to build a small refuge you can return to anytime.',
     premiumTitle: 'Luna Premium',
-    premiumHeadline: 'Unlock your calm.',
-    premiumBody: 'Full library, premium breathwork, daily streaks and new practices every week.',
+    premiumHeadline: 'A deeper Luna, whenever you need calm.',
+    premiumBody: 'Unlock the full meditation library, premium breathwork, soundscapes, mantras, and gentle Moon Garden growth.',
     premiumLibrary: 'Premium Library',
     weeklyContent: 'Weekly Content',
     dailyStreak: 'Daily Streak',
     lockedPremium: '{title} is part of Luna Premium.',
     monthlyPremium: 'Monthly Premium',
     lifetimePremium: 'Lifetime Premium',
-    unlimitedMeditations: 'Unlimited meditations',
-    premiumBreathing: 'Premium breathing',
-    sleepAnxietyFocus: 'Sleep, anxiety and focus',
-    dailyStreaks: 'Daily streaks',
-    premiumForever: 'Premium library forever',
-    allFuturePractices: 'All future practices',
-    bestValue: 'Best value',
-    instantTelegramUnlock: 'Instant Telegram unlock',
+    unlimitedMeditations: 'Full meditation library',
+    premiumBreathing: 'Longer breath practices',
+    sleepAnxietyFocus: 'Sleep, anxiety, focus, and calm',
+    dailyStreaks: 'Gentle progress and Moon Seeds',
+    premiumForever: 'Lifetime Luna access',
+    allFuturePractices: 'Future meditations and mantras',
+    bestValue: 'Best long-term value',
+    instantTelegramUnlock: 'Instant unlock with Telegram Stars',
     unlockMonthly: 'Unlock Monthly',
     getLifetime: 'Get Lifetime',
     sleepDeeper: 'Sleep deeper',
@@ -691,11 +836,14 @@ const copy = {
     openLibrary: 'Открыть библиотеку',
     libraryTitle: 'Библиотека Luna',
     meditationsTab: 'Медитации',
-    scenesTab: 'Сцены',
+    breathingTab: 'Дыхание',
+    mantrasTab: 'Мантры',
     scenesTitle: 'Саундскейпы',
-    scenesHomeTitle: 'Сцены',
-    scenesHomeBody: 'Включи спокойный фон, пока Luna открыта.',
+    scenesHomeTitle: 'Звук',
+    scenesHomeBody: 'Мягкий фон, пока Luna открыта.',
     scenesLibraryBody: 'Зацикленные звуки для сна, дыхания и фокуса.',
+    soundscapeSelect: 'Выбрать звук',
+    soundscapeActive: 'Звук включён',
     sceneLoop: 'Повтор включён',
     sceneVolume: 'Громкость сцены',
     scenePremiumLocked: 'Премиум-сцена',
@@ -708,6 +856,13 @@ const copy = {
     short: 'Короткие',
     noMeditations: 'Медитации не найдены.',
     noMeditationsBody: 'Попробуй другое настроение, категорию или запрос.',
+    moonMantraBody: 'Мягкая мантра, чтобы вернуться к себе.',
+    mantrasEmpty: 'Скоро появятся новые мантры Luna.',
+    addHomeTitle: 'Добавить Luna на экран',
+    addHomeBody: 'Открывай спокойствие в один тап из Telegram.',
+    addHomeAction: 'Добавить',
+    addHomeDone: 'Luna готова к добавлению на экран.',
+    addHomeUnsupported: 'Используй меню Telegram, когда устройство поддерживает добавление.',
     firstPracticeTitle: 'Первая практика скоро появится.',
     firstPracticeBody: 'Библиотека Luna появится здесь, когда медитации будут опубликованы.',
     unlockPremium: 'Открыть Premium',
@@ -779,22 +934,22 @@ const copy = {
     savedEmptyTitle: 'Здесь будет твоё сохранённое спокойствие.',
     savedEmptyBody: 'Нажми сердечко на любой медитации, чтобы собрать практики для возвращения.',
     premiumTitle: 'Luna Premium',
-    premiumHeadline: 'Открой своё спокойствие.',
-    premiumBody: 'Полная библиотека, премиальные дыхательные практики, ежедневные серии и новые медитации каждую неделю.',
+    premiumHeadline: 'Больше Luna, когда тебе нужно спокойствие.',
+    premiumBody: 'Открой полную библиотеку медитаций, премиальное дыхание, саундскейпы, мантры и мягкий рост Лунного сада.',
     premiumLibrary: 'Премиум-библиотека',
     weeklyContent: 'Новый контент каждую неделю',
     dailyStreak: 'Ежедневная серия',
     lockedPremium: '{title} входит в Luna Premium.',
     monthlyPremium: 'Месячный Premium',
     lifetimePremium: 'Lifetime Premium',
-    unlimitedMeditations: 'Безлимитные медитации',
-    premiumBreathing: 'Премиальное дыхание',
-    sleepAnxietyFocus: 'Сон, тревога и фокус',
-    dailyStreaks: 'Ежедневные серии',
-    premiumForever: 'Премиум-библиотека навсегда',
-    allFuturePractices: 'Все будущие практики',
-    bestValue: 'Лучшая ценность',
-    instantTelegramUnlock: 'Мгновенный доступ в Telegram',
+    unlimitedMeditations: 'Полная библиотека медитаций',
+    premiumBreathing: 'Длинные дыхательные практики',
+    sleepAnxietyFocus: 'Сон, тревога, фокус и спокойствие',
+    dailyStreaks: 'Мягкий прогресс и лунные семена',
+    premiumForever: 'Доступ Luna навсегда',
+    allFuturePractices: 'Будущие медитации и мантры',
+    bestValue: 'Лучшая долгосрочная ценность',
+    instantTelegramUnlock: 'Мгновенно через Telegram Stars',
     unlockMonthly: 'Открыть на месяц',
     getLifetime: 'Получить навсегда',
     sleepDeeper: 'Глубже засыпать',
@@ -1540,9 +1695,11 @@ function App() {
   const [profile, setProfile] = useState<ProfileStats | null>(null);
   const [selectedMeditation, setSelectedMeditation] = useState<Meditation | null>(null);
   const [selectedScene, setSelectedScene] = useState<SceneDefinition | null>(null);
+  const [selectedMantra, setSelectedMantra] = useState<MantraDefinition | null>(null);
   const [scenePlaying, setScenePlaying] = useState(false);
   const [sceneVolume, setSceneVolume] = useState(0.35);
   const [sceneAudioUrl, setSceneAudioUrl] = useState('');
+  const [homeScreenMessage, setHomeScreenMessage] = useState('');
   const [moonGardenAmbiencePlaying, setMoonGardenAmbiencePlaying] = useState(false);
   const [moonGardenVolume, setMoonGardenVolume] = useState(readMoonGardenVolume);
   const [moonGardenAmbienceError, setMoonGardenAmbienceError] = useState(false);
@@ -1796,12 +1953,42 @@ function App() {
     setPage('scenePlayer');
   };
 
+  const selectHomeSoundscape = (scene: SceneDefinition) => {
+    telegram?.HapticFeedback?.impactOccurred('light');
+    if (scene.access === 'premium' && !access.hasPremium) {
+      setPaymentMessage(copy[language].scenePremiumLocked);
+      setPage('pricing');
+      return;
+    }
+
+    const nextUrl = createSceneAudioUrl(scene.sound);
+    const audio = sceneAudioRef.current;
+    if (selectedScene?.id !== scene.id) {
+      audio?.pause();
+      setScenePlaying(false);
+      sceneListenSecondsRef.current = 0;
+      sceneMoonSeedAwardedRef.current = false;
+      setSceneAudioUrl(nextUrl);
+      if (audio) {
+        audio.src = nextUrl;
+        audio.loop = true;
+        audio.volume = sceneVolume;
+      }
+    }
+    setSelectedScene(scene);
+  };
+
   const toggleScenePlayback = async () => {
     const audio = sceneAudioRef.current;
-    if (!audio || !selectedScene) return;
+    const activeScene = selectedScene ?? scenes[0];
+    if (!audio || !activeScene) return;
+
+    if (!selectedScene) {
+      setSelectedScene(activeScene);
+    }
 
     if (!sceneAudioUrl) {
-      const nextUrl = createSceneAudioUrl(selectedScene.sound);
+      const nextUrl = createSceneAudioUrl(activeScene.sound);
       setSceneAudioUrl(nextUrl);
       audio.src = nextUrl;
     }
@@ -1822,7 +2009,33 @@ function App() {
   const closeScenePlayer = () => {
     sceneAudioRef.current?.pause();
     setScenePlaying(false);
-    setPage('library');
+    setPage('home');
+  };
+
+  const openMantra = (mantra: MantraDefinition) => {
+    telegram?.HapticFeedback?.impactOccurred('light');
+    if (mantra.access === 'premium' && !access.hasPremium) {
+      setPaymentMessage(copy[language].lockedPremium.replace('{title}', mantra.title[language]));
+      setPage('pricing');
+      return;
+    }
+    sceneAudioRef.current?.pause();
+    setScenePlaying(false);
+    moonGardenAudioRef.current?.pause();
+    setMoonGardenAmbiencePlaying(false);
+    setSelectedMantra(mantra);
+    setPage('mantraPlayer');
+  };
+
+  const addLunaToHomeScreen = () => {
+    const storageKey = 'luna.addHome.prompted.v1';
+    window.localStorage.setItem(storageKey, new Date().toISOString());
+    if (telegram?.addToHomeScreen) {
+      telegram.addToHomeScreen();
+      setHomeScreenMessage(copy[language].addHomeDone);
+      return;
+    }
+    setHomeScreenMessage(copy[language].addHomeUnsupported);
   };
 
   const toggleMoonGardenAmbience = async () => {
@@ -2095,11 +2308,17 @@ function App() {
             loading={libraryLoading}
             onOpen={openMeditation}
             onLibrary={() => setPage('library')}
-            onScenes={() => {
-              setLibraryMode('scenes');
-              setPage('library');
-            }}
+            scenes={scenes}
+            selectedScene={selectedScene}
+            scenePlaying={scenePlaying}
+            sceneVolume={sceneVolume}
+            hasPremium={access.hasPremium}
+            onSoundToggle={() => void toggleScenePlayback()}
+            onSoundSelect={selectHomeSoundscape}
+            onSoundOpen={() => selectedScene ? setPage('scenePlayer') : selectHomeSoundscape(scenes[0])}
             onBreath={openBreathCircle}
+            onAddHome={addLunaToHomeScreen}
+            homeScreenMessage={homeScreenMessage}
             language={language}
           />
         )}
@@ -2114,11 +2333,12 @@ function App() {
             mode={libraryMode}
             setMode={setLibraryMode}
             meditations={filteredMeditations}
-            scenes={scenes}
+            mantras={mantras}
             hasPremium={access.hasPremium}
             loading={libraryLoading}
             onOpen={openMeditation}
-            onOpenScene={openScene}
+            onBreath={openBreathCircle}
+            onOpenMantra={openMantra}
             onFavorite={toggleFavorite}
             onUnlock={() => setPage('pricing')}
             language={language}
@@ -2147,6 +2367,8 @@ function App() {
               setPage('admin');
             }}
             onRestore={refreshAccount}
+            onAddHome={addLunaToHomeScreen}
+            homeScreenMessage={homeScreenMessage}
             language={language}
           />
         )}
@@ -2190,6 +2412,14 @@ function App() {
               if (nextMeditation && nextMeditation.id !== selectedMeditation.id) openMeditation(nextMeditation);
               else setPage('library');
             }}
+            language={language}
+          />
+        )}
+
+        {page === 'mantraPlayer' && selectedMantra && (
+          <MantraPlayerPage
+            mantra={selectedMantra}
+            onClose={() => setPage('library')}
             language={language}
           />
         )}
@@ -2238,7 +2468,7 @@ function App() {
 
         <audio ref={sceneAudioRef} loop preload="none" />
         <audio ref={moonGardenAudioRef} src={moonGardenAmbienceUrl} loop preload="none" />
-        {selectedScene && page !== 'scenePlayer' && page !== 'admin' && (
+        {selectedScene && page !== 'home' && page !== 'scenePlayer' && page !== 'admin' && (
           <SceneMiniPlayer
             scene={selectedScene}
             playing={scenePlaying}
@@ -2312,11 +2542,22 @@ function HomePage(props: {
   loading: boolean;
   onOpen: (meditation: Meditation) => void;
   onLibrary: () => void;
-  onScenes: () => void;
+  scenes: SceneDefinition[];
+  selectedScene: SceneDefinition | null;
+  scenePlaying: boolean;
+  sceneVolume: number;
+  hasPremium: boolean;
+  onSoundToggle: () => void;
+  onSoundSelect: (scene: SceneDefinition) => void;
+  onSoundOpen: () => void;
   onBreath: () => void;
+  onAddHome: () => void;
+  homeScreenMessage: string;
   language: AppLanguage;
 }) {
   const t = copy[props.language];
+  const [soundExpanded, setSoundExpanded] = useState(false);
+  const activeScene = props.selectedScene ?? props.scenes[0];
   return (
     <div className="space-y-4">
       <section className="luna-fade overflow-hidden rounded-[24px] border border-white/10 bg-ink p-4 shadow-glow">
@@ -2361,14 +2602,44 @@ function HomePage(props: {
 
       <Rail title={t.moreToExplore} meditations={props.explore} onOpen={props.onOpen} language={props.language} />
       <ContinueListeningSection title={t.continueListening} meditations={props.continueListening} onOpen={props.onOpen} language={props.language} />
-      <button onClick={props.onScenes} className="relative w-full overflow-hidden rounded-[24px] border border-gold/20 bg-gradient-to-br from-lavender/25 via-gold/10 to-white/5 p-4 text-left shadow-glow">
-        <div className="absolute right-4 top-4 grid h-12 w-12 place-items-center rounded-full bg-gold/15 text-gold">
-          <Waves size={24} />
+      <section className={`rounded-[22px] border p-3 shadow-glow backdrop-blur-xl ${props.scenePlaying ? 'border-gold/45 bg-gold/15' : 'border-gold/20 bg-white/10'}`}>
+        <div className="flex items-center gap-3">
+          <button onClick={props.onSoundOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+            <div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-night/60 text-gold">
+              <Waves size={22} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] uppercase tracking-[0.18em] text-gold">{props.scenePlaying ? t.soundscapeActive : t.scenesHomeTitle}</p>
+              <h3 className="truncate font-serif text-xl">{activeScene?.title[props.language] ?? t.scenesTitle}</h3>
+              <p className="truncate text-xs text-lavender">{activeScene?.subtitle[props.language] ?? t.scenesHomeBody}</p>
+            </div>
+          </button>
+          <button onClick={props.onSoundToggle} className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-gold text-night">
+            {props.scenePlaying ? <Pause size={18} /> : <Play size={18} />}
+          </button>
+          <button onClick={() => setSoundExpanded((value) => !value)} className="rounded-full bg-cream/10 px-3 py-2 text-xs font-semibold text-cream">
+            {t.soundscapeSelect}
+          </button>
         </div>
-        <p className="text-xs uppercase tracking-[0.18em] text-gold">{t.scenesHomeTitle}</p>
-        <h3 className="mt-1 font-serif text-2xl">{t.scenesTitle}</h3>
-        <p className="mt-2 max-w-[250px] text-sm leading-5 text-cream/75">{t.scenesHomeBody}</p>
-      </button>
+        {soundExpanded && (
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+            {props.scenes.map((scene) => {
+              const locked = scene.access === 'premium' && !props.hasPremium;
+              return (
+                <button
+                  key={scene.id}
+                  onClick={() => props.onSoundSelect(scene)}
+                  className={`shrink-0 rounded-full border px-3 py-2 text-xs font-semibold ${
+                    props.selectedScene?.id === scene.id ? 'border-gold bg-gold text-night' : 'border-cream/15 bg-night/50 text-cream'
+                  }`}
+                >
+                  {scene.title[props.language]} {locked ? '⭐' : ''}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </section>
       <button onClick={props.onBreath} className="relative w-full overflow-hidden rounded-[24px] border border-white/10 bg-ink p-4 text-left shadow-glow">
         <div className="absolute right-4 top-4 grid h-12 w-12 place-items-center rounded-full border border-gold/30 bg-gold/10 text-gold">
           <Sparkles size={22} />
@@ -2382,6 +2653,10 @@ function HomePage(props: {
 
       <button onClick={props.onLibrary} className="w-full rounded-[20px] bg-gold px-5 py-4 font-semibold text-night shadow-glow hover:brightness-110">
         {t.openLibrary}
+      </button>
+      <button onClick={props.onAddHome} className="w-full rounded-[20px] border border-gold/20 bg-cream/5 px-4 py-3 text-left">
+        <span className="block text-sm font-semibold text-cream">{t.addHomeTitle}</span>
+        <span className="mt-1 block text-xs leading-5 text-lavender">{props.homeScreenMessage || t.addHomeBody}</span>
       </button>
       <Rail title={t.recentlyPlayed} meditations={props.recentlyPlayed} onOpen={props.onOpen} language={props.language} />
     </div>
@@ -2506,28 +2781,32 @@ function LibraryPage(props: {
   mode: LibraryMode;
   setMode: (mode: LibraryMode) => void;
   meditations: Meditation[];
-  scenes: SceneDefinition[];
+  mantras: MantraDefinition[];
   hasPremium: boolean;
   loading: boolean;
   onOpen: (meditation: Meditation) => void;
-  onOpenScene: (scene: SceneDefinition) => void;
+  onBreath: () => void;
+  onOpenMantra: (mantra: MantraDefinition) => void;
   onFavorite: (meditation: Meditation) => void;
   onUnlock: () => void;
   language: AppLanguage;
 }) {
   const t = copy[props.language];
-  const filteredScenes = props.scenes.filter((scene) =>
-    [scene.title[props.language], scene.subtitle[props.language], scene.mood, scene.category].join(' ').toLowerCase().includes(props.query.toLowerCase())
+  const filteredMantras = props.mantras.filter((mantra) =>
+    [mantra.title[props.language], mantra.subtitle[props.language], mantra.category, ...mantra.tags].join(' ').toLowerCase().includes(props.query.toLowerCase())
   );
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-semibold">{t.libraryTitle}</h2>
-      <div className="grid grid-cols-2 gap-2 rounded-[18px] bg-cream/10 p-1">
+      <div className="grid grid-cols-3 gap-2 rounded-[18px] bg-cream/10 p-1">
         <button onClick={() => props.setMode('meditations')} className={`rounded-[14px] px-3 py-2 text-sm font-semibold ${props.mode === 'meditations' ? 'bg-gold text-night' : 'text-lavender'}`}>
           {t.meditationsTab}
         </button>
-        <button onClick={() => props.setMode('scenes')} className={`rounded-[14px] px-3 py-2 text-sm font-semibold ${props.mode === 'scenes' ? 'bg-gold text-night' : 'text-lavender'}`}>
-          {t.scenesTab}
+        <button onClick={() => props.setMode('breathing')} className={`rounded-[14px] px-3 py-2 text-sm font-semibold ${props.mode === 'breathing' ? 'bg-gold text-night' : 'text-lavender'}`}>
+          {t.breathingTab}
+        </button>
+        <button onClick={() => props.setMode('mantras')} className={`rounded-[14px] px-3 py-2 text-sm font-semibold ${props.mode === 'mantras' ? 'bg-gold text-night' : 'text-lavender'}`}>
+          {t.mantrasTab}
         </button>
       </div>
       <div className="flex items-center gap-2 rounded-2xl border border-cream/15 bg-white/10 px-4 py-3 backdrop-blur-xl">
@@ -2555,15 +2834,26 @@ function LibraryPage(props: {
             <EmptyState title={t.noMeditations} body={t.noMeditationsBody} />
           )}
         </>
-      ) : filteredScenes.length ? (
+      ) : props.mode === 'breathing' ? (
         <section className="space-y-3">
-          <p className="text-sm leading-6 text-lavender">{t.scenesLibraryBody}</p>
-          {filteredScenes.map((scene) => (
-            <SceneCard key={scene.id} scene={scene} locked={scene.access === 'premium' && !props.hasPremium} onOpen={props.onOpenScene} language={props.language} />
+          <button onClick={props.onBreath} className="relative w-full overflow-hidden rounded-[24px] border border-gold/20 bg-gradient-to-br from-lavender/20 via-white/10 to-gold/10 p-4 text-left shadow-glow">
+            <div className="absolute right-4 top-4 grid h-12 w-12 place-items-center rounded-full border border-gold/30 bg-gold/10 text-gold">
+              <Sparkles size={22} />
+            </div>
+            <p className="text-xs uppercase tracking-[0.18em] text-gold">{t.breathingTab}</p>
+            <h3 className="mt-1 font-serif text-2xl">{t.breathCircle}</h3>
+            <p className="mt-2 max-w-[250px] text-sm leading-5 text-cream/75">{t.breathCircleSubtitle}</p>
+            <p className="mt-3 text-xs text-lavender">1 / 3 / 5 min</p>
+          </button>
+        </section>
+      ) : filteredMantras.length ? (
+        <section className="space-y-3">
+          {filteredMantras.map((mantra) => (
+            <MantraCard key={mantra.id} mantra={mantra} locked={mantra.access === 'premium' && !props.hasPremium} onOpen={props.onOpenMantra} language={props.language} />
           ))}
         </section>
       ) : (
-        <EmptyState title={t.noMeditations} body={t.noMeditationsBody} />
+        <EmptyState title={t.mantrasEmpty} body={t.moonMantraBody} />
       )}
     </div>
   );
@@ -2636,35 +2926,104 @@ function MeditationCard({ meditation, locked, onOpen, onFavorite, onUnlock, lang
   );
 }
 
-function SceneCard({ scene, locked, onOpen, language }: {
-  scene: SceneDefinition;
+function MantraCard({ mantra, locked, onOpen, language }: {
+  mantra: MantraDefinition;
   locked: boolean;
-  onOpen: (scene: SceneDefinition) => void;
+  onOpen: (mantra: MantraDefinition) => void;
   language: AppLanguage;
 }) {
   return (
-    <button onClick={() => onOpen(scene)} className="group w-full rounded-3xl border border-cream/15 bg-white/10 p-3 text-left backdrop-blur-xl transition hover:border-gold/35">
+    <button onClick={() => onOpen(mantra)} className="group w-full rounded-3xl border border-cream/15 bg-white/10 p-3 text-left backdrop-blur-xl transition hover:border-gold/35">
       <div className="flex gap-3">
-        <div className="relative">
-          <img src={scene.cover} alt="" className={`h-24 w-24 rounded-2xl object-cover shadow-glow ${locked ? 'blur-[2px]' : ''}`} loading="lazy" />
+        <div className="relative shrink-0">
+          <img src={mantra.cover} alt="" className={`h-24 w-24 rounded-2xl object-cover shadow-glow ${locked ? 'blur-[2px]' : ''}`} loading="lazy" />
           {locked && <Lock className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gold" />}
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 py-1">
           <div className="flex items-center gap-2">
-            <h3 className="truncate font-semibold">{scene.title[language]}</h3>
-            {scene.access === 'premium' && <Crown size={15} className="text-gold" />}
+            <h3 className="truncate font-semibold">{mantra.title[language]}</h3>
+            {mantra.access === 'premium' && <Crown size={15} className="text-gold" />}
           </div>
-          <p className="mt-1 text-xs text-lavender">{scene.subtitle[language]}</p>
-          <p className="mt-2 line-clamp-2 text-sm text-cream/70">{scene.description[language]}</p>
+          <p className="mt-1 text-xs text-lavender">{mantra.subtitle[language]}</p>
+          <p className="mt-2 line-clamp-2 text-sm text-cream/70">{mantra.description[language]}</p>
           <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
-            <span className="rounded-full bg-gold/15 px-2 py-1 text-gold">{scene.access === 'premium' ? copy[language].premium : copy[language].free}</span>
-            <span className="rounded-full bg-cream/10 px-2 py-1 text-cream/70">{scene.mood}</span>
-            <span className="rounded-full bg-lavender/15 px-2 py-1 text-lavender">{copy[language].sceneLoop}</span>
+            <span className="rounded-full bg-gold/15 px-2 py-1 text-gold">{mantra.access === 'premium' ? copy[language].premium : copy[language].free}</span>
+            <span className="rounded-full bg-cream/10 px-2 py-1 text-cream/70">{formatTime(mantra.duration)}</span>
+            <span className="rounded-full bg-lavender/15 px-2 py-1 text-lavender">{copy[language].mantrasTab}</span>
           </div>
         </div>
-        <Waves className="mt-1 text-gold" size={20} />
       </div>
     </button>
+  );
+}
+
+function MantraPlayerPage({ mantra, onClose, language }: { mantra: MantraDefinition; onClose: () => void; language: AppLanguage }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [volume, setVolume] = useState(0.55);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.src = createMantraAudioUrl(mantra.id);
+    audio.loop = true;
+    audio.volume = volume;
+    const syncPause = () => setPlaying(false);
+    const syncPlay = () => setPlaying(true);
+    audio.addEventListener('pause', syncPause);
+    audio.addEventListener('play', syncPlay);
+    return () => {
+      audio.pause();
+      audio.removeEventListener('pause', syncPause);
+      audio.removeEventListener('play', syncPlay);
+    };
+  }, [mantra.id]);
+
+  useEffect(() => {
+    if (audioRef.current) audioRef.current.volume = volume;
+  }, [volume]);
+
+  const toggle = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) {
+      await audio.play();
+      setPlaying(true);
+      return;
+    }
+    audio.pause();
+    setPlaying(false);
+  };
+
+  return (
+    <div className="relative space-y-4 luna-fade">
+      <img src={mantra.cover} alt="" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[520px] w-full scale-110 rounded-[34px] object-cover opacity-25 blur-3xl" />
+      <section className="rounded-[28px] border border-white/10 bg-ink p-4 shadow-glow">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].mantrasTab}</p>
+            <h2 className="mt-1 font-serif text-3xl">{mantra.title[language]}</h2>
+          </div>
+          <button onClick={onClose} aria-label={copy[language].close} className="grid h-10 w-10 place-items-center rounded-full bg-cream/10 text-cream">
+            <X size={18} />
+          </button>
+        </div>
+        <img src={mantra.cover} alt="" className="mt-4 aspect-square w-full rounded-[26px] object-cover shadow-glow" />
+        <p className="mt-4 text-center text-sm text-lavender">{mantra.subtitle[language]}</p>
+        <p className="mx-auto mt-2 max-w-xs text-center text-sm leading-6 text-cream/75">{mantra.description[language]}</p>
+        <button onClick={toggle} className="mx-auto mt-5 grid h-16 w-16 place-items-center rounded-full bg-gold text-night shadow-glow">
+          {playing ? <Pause /> : <Play />}
+        </button>
+        <div className="mt-5 rounded-[20px] bg-surface p-4">
+          <div className="mb-2 flex items-center justify-between text-sm text-lavender">
+            <span className="inline-flex items-center gap-2"><Volume2 size={16} />{copy[language].sceneVolume}</span>
+            <span>{Math.round(volume * 100)}%</span>
+          </div>
+          <input type="range" min={0} max={1} step={0.01} value={volume} onChange={(event) => setVolume(Number(event.target.value))} className="h-8 w-full accent-gold" />
+        </div>
+      </section>
+      <audio ref={audioRef} preload="none" loop />
+    </div>
   );
 }
 
@@ -2915,11 +3274,10 @@ function PricingPage({
   locked: Meditation | null;
   language: AppLanguage;
 }) {
-  const [comingSoon, setComingSoon] = useState('');
   const t = copy[language];
 
   return (
-    <div className="space-y-2.5 luna-fade">
+    <div className="space-y-3 luna-fade">
       <section className="overflow-hidden rounded-[24px] border border-white/10 bg-ink p-4 shadow-glow">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -2946,24 +3304,9 @@ function PricingPage({
         <PremiumValue title={t.buildRhythm} body={t.buildRhythmBody} />
         <PremiumValue title={t.growGently} body={t.growGentlyBody} />
       </div>
-      <PlanCard title={t.free} price="0" features={[t.freePlanFeature]} language={language} />
-      <div className="grid grid-cols-2 gap-3">
-        <button onClick={() => setComingSoon('Card')} className="rounded-[20px] border border-white/10 bg-surface px-4 py-3 text-sm font-semibold">Card</button>
-        <button onClick={() => setComingSoon('Crypto')} className="rounded-[20px] border border-white/10 bg-surface px-4 py-3 text-sm font-semibold">Crypto</button>
-      </div>
       {message && <p className="rounded-2xl bg-lavender/15 p-4 text-sm text-cream/80">{message}</p>}
       {openingPlan && <div className="h-1 overflow-hidden rounded-full bg-cream/10"><div className="h-full w-1/2 animate-pulse rounded-full bg-gold" /></div>}
       {message === t.paymentSuccessful && <button onClick={onLibrary} className="w-full rounded-2xl bg-cream px-5 py-4 font-semibold text-night">{t.openPremiumLibrary}</button>}
-      {comingSoon && (
-        <div className="fixed inset-0 z-30 grid place-items-center bg-night/80 px-5 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-[28px] border border-white/10 bg-ink p-5 text-center shadow-glow">
-            <p className="text-xs uppercase tracking-[0.18em] text-gold">{comingSoon}</p>
-            <h3 className="mt-2 font-serif text-2xl">{t.comingSoon}</h3>
-            <p className="mt-2 text-sm text-lavender">{t.starsAvailable}</p>
-            <button onClick={() => setComingSoon('')} className="mt-5 w-full rounded-[20px] bg-gold px-4 py-3 font-semibold text-night">{t.close}</button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -2974,12 +3317,12 @@ function PremiumBadge({ label }: { label: string }) {
 
 function PremiumValue({ title, body }: { title: string; body: string }) {
   return (
-    <article className="rounded-[18px] border border-gold/20 bg-gold/10 p-2.5">
+    <article className="min-h-[118px] rounded-[18px] border border-gold/20 bg-gold/10 p-3">
       <div className="flex items-center gap-2">
         <Sparkles size={15} className="shrink-0 text-gold" />
         <h3 className="text-sm font-semibold">{title}</h3>
       </div>
-      <p className="mt-1 line-clamp-1 text-[11px] leading-4 text-cream/70">{body}</p>
+      <p className="mt-2 text-[11px] leading-4 text-cream/70">{body}</p>
     </article>
   );
 }
@@ -3637,6 +3980,7 @@ function MoonGardenScene({
       stage={{
         level: stage.level,
         path: stage.path,
+        videoPath: stage.videoPath,
         title: stage.title[language],
         subtitle: stage.subtitle[language]
       }}
@@ -3866,6 +4210,33 @@ function MoonGardenPage({
       </section>
 
       <section className="space-y-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.18em] text-gold">
+            {language === 'en' ? 'Garden Collection' : 'Коллекция сада'}
+          </p>
+          <h3 className="font-serif text-2xl">
+            {language === 'en' ? 'Seasons · Phase 1' : 'Сезоны · Phase 1'}
+          </h3>
+        </div>
+        <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+          {gardenCollections.map((collection, index) => (
+            <article key={collection.id} className="w-48 shrink-0 rounded-[24px] border border-white/10 bg-gradient-to-br from-ink via-surface/70 to-night p-4 shadow-glow">
+              <div className={`h-24 rounded-[20px] border border-gold/20 ${
+                index === 0
+                  ? 'bg-[radial-gradient(circle_at_50%_20%,rgba(212,175,55,.32),transparent_32%),linear-gradient(180deg,#2b1746,#0c0814)]'
+                  : index === 1
+                    ? 'bg-[radial-gradient(circle_at_50%_25%,rgba(245,241,233,.24),transparent_30%),linear-gradient(180deg,#263050,#0c0814)]'
+                    : 'bg-[radial-gradient(circle_at_50%_25%,rgba(142,95,214,.3),transparent_30%),linear-gradient(180deg,#2e1f45,#101624)]'
+              }`} />
+              <p className="mt-3 text-xs uppercase tracking-[0.14em] text-gold">{collection.status[language]}</p>
+              <h4 className="mt-1 font-serif text-lg">{collection.title[language]}</h4>
+              <p className="mt-1 text-xs leading-5 text-lavender">{collection.body[language]}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-3">
         <h3 className="font-serif text-2xl">{copy[language].gardenElements}</h3>
         {gardenElements.map((element) => {
           const isPlanted = planted.has(element.id);
@@ -4016,6 +4387,8 @@ function ProfilePage({
   onMoonGarden,
   onAdmin,
   onRestore,
+  onAddHome,
+  homeScreenMessage,
   language
 }: {
   profile: ProfileStats | null;
@@ -4027,6 +4400,8 @@ function ProfilePage({
   onMoonGarden: () => void;
   onAdmin: () => void;
   onRestore: () => void;
+  onAddHome: () => void;
+  homeScreenMessage: string;
   language: AppLanguage;
 }) {
   const weeklyMinutes = profile?.weeklyPracticeMinutes ?? 0;
@@ -4068,6 +4443,10 @@ function ProfilePage({
           </div>
         )}
         <button onClick={onRestore} className="mt-4 w-full rounded-[20px] bg-gold px-5 py-3.5 font-semibold text-night">{copy[language].restore}</button>
+        <button onClick={onAddHome} className="mt-2.5 w-full rounded-[20px] border border-gold/20 bg-cream/5 px-5 py-3.5 text-left text-sm text-cream">
+          <span className="block font-semibold">{copy[language].addHomeTitle}</span>
+          <span className="mt-1 block text-xs text-lavender">{homeScreenMessage || copy[language].addHomeBody}</span>
+        </button>
         <button className="mt-2.5 w-full rounded-[20px] bg-surface px-5 py-3.5 text-sm text-lavender">{copy[language].logout}</button>
       </div>
     </div>

@@ -18,6 +18,8 @@ interface TelegramWebApp {
   ready: () => void;
   expand: () => void;
   openTelegramLink: (url: string) => void;
+  addToHomeScreen?: () => void;
+  checkHomeScreenStatus?: (callback: (status: 'unsupported' | 'unknown' | 'added' | 'missed') => void) => void;
   openInvoice?: (url: string, callback?: (status: 'paid' | 'cancelled' | 'failed' | 'pending') => void) => void;
   HapticFeedback?: {
     impactOccurred: (style: 'light' | 'medium' | 'heavy') => void;

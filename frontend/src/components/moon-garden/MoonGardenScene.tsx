@@ -7,6 +7,7 @@ import './moonGardenScene.css';
 type MoonGardenStage = {
   level: number;
   path: string;
+  videoPath?: string;
   title: string;
   subtitle: string;
 };
@@ -39,13 +40,17 @@ export function MoonGardenScene({
   onSoundVolumeChange
 }: MoonGardenSceneProps) {
   const [failedPath, setFailedPath] = useState<string | null>(null);
+  const [failedVideoPath, setFailedVideoPath] = useState<string | null>(null);
+  const [videoReady, setVideoReady] = useState(false);
   const [soundPanelOpen, setSoundPanelOpen] = useState(false);
   const level = Math.max(0, Math.min(7, stage.level));
   const intensity = useMemo(() => (level / 7).toFixed(2), [level]);
 
   useEffect(() => {
     setFailedPath(null);
-  }, [stage.path]);
+    setFailedVideoPath(null);
+    setVideoReady(false);
+  }, [stage.path, stage.videoPath]);
 
   const handleImageError = () => {
     setFailedPath(stage.path);
@@ -54,11 +59,35 @@ export function MoonGardenScene({
     }
   };
 
+  const handleVideoError = () => {
+    if (!stage.videoPath) return;
+    setFailedVideoPath(stage.videoPath);
+    if (import.meta.env.DEV) {
+      console.warn('[MOON_GARDEN_STAGE_VIDEO_MISSING]', stage.videoPath);
+    }
+  };
+
+  const showVideo = Boolean(stage.videoPath && failedVideoPath !== stage.videoPath && !failedPath);
+
   return (
     <section
       className={`moon-garden-scene ${compact ? 'moon-garden-scene-compact' : 'moon-garden-scene-immersive'} ${soundPlaying ? 'moon-garden-scene-listening' : ''}`}
       style={{ '--garden-level': String(level), '--garden-intensity': intensity } as CSSProperties}
     >
+      {showVideo && (
+        <video
+          key={stage.videoPath}
+          src={stage.videoPath}
+          aria-label={statusLabel}
+          onCanPlay={() => setVideoReady(true)}
+          onError={handleVideoError}
+          className={`moon-garden-scene-image moon-garden-scene-video ${videoReady ? 'moon-garden-scene-video-ready' : ''}`}
+          autoPlay
+          muted
+          loop
+          playsInline
+        />
+      )}
       {!failedPath ? (
         <img
           key={stage.path}
