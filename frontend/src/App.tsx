@@ -2012,6 +2012,19 @@ function App() {
     setPage('home');
   };
 
+  const stopSoundscape = () => {
+    sceneAudioRef.current?.pause();
+    if (sceneAudioRef.current) {
+      sceneAudioRef.current.removeAttribute('src');
+      sceneAudioRef.current.load();
+    }
+    setScenePlaying(false);
+    setSelectedScene(null);
+    setSceneAudioUrl('');
+    sceneListenSecondsRef.current = 0;
+    sceneMoonSeedAwardedRef.current = false;
+  };
+
   const openMantra = (mantra: MantraDefinition) => {
     telegram?.HapticFeedback?.impactOccurred('light');
     if (mantra.access === 'premium' && !access.hasPremium) {
@@ -2475,6 +2488,7 @@ function App() {
             volume={sceneVolume}
             onToggle={() => void toggleScenePlayback()}
             onOpen={() => setPage('scenePlayer')}
+            onClose={stopSoundscape}
             onVolume={setSceneVolume}
             language={language}
           />
@@ -3103,30 +3117,46 @@ function ScenePlayerPage({
   );
 }
 
-function SceneMiniPlayer({ scene, playing, volume, onToggle, onOpen, onVolume, language }: {
+function SceneMiniPlayer({ scene, playing, volume, onToggle, onOpen, onClose, onVolume, language }: {
   scene: SceneDefinition;
   playing: boolean;
   volume: number;
   onToggle: () => void;
   onOpen: () => void;
+  onClose: () => void;
   onVolume: (volume: number) => void;
   language: AppLanguage;
 }) {
+  const [expanded, setExpanded] = useState(false);
   return (
-    <div className="fixed inset-x-4 bottom-[86px] z-20 mx-auto max-w-md rounded-[22px] border border-gold/20 bg-night/90 p-3 shadow-glow backdrop-blur-xl">
-      <div className="flex items-center gap-3">
+    <div className="fixed inset-x-3 bottom-[calc(78px+env(safe-area-inset-bottom))] z-20 mx-auto max-w-md overflow-hidden rounded-[20px] border border-gold/20 bg-night/78 shadow-glow backdrop-blur-2xl">
+      <div className="flex min-h-[60px] items-center gap-2 px-3 py-2">
         <button onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-          <img src={scene.cover} alt="" className="h-12 w-12 rounded-2xl object-cover" />
+          <img src={scene.cover} alt="" className="h-10 w-10 shrink-0 rounded-[14px] object-cover" />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{scene.title[language]}</p>
-            <p className="truncate text-xs text-lavender">{scene.subtitle[language]}</p>
+            <p className="truncate text-[11px] text-lavender">{playing ? copy[language].soundscapeActive : scene.subtitle[language]}</p>
           </div>
         </button>
-        <button onClick={onToggle} className="grid h-11 w-11 place-items-center rounded-full bg-gold text-night">
+        <button onClick={() => setExpanded((value) => !value)} aria-label={copy[language].sceneVolume} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-cream/10 text-gold">
+          <Volume2 size={16} />
+        </button>
+        <button onClick={onToggle} className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gold text-night">
           {playing ? <Pause size={18} /> : <Play size={18} />}
         </button>
+        <button onClick={onClose} aria-label={copy[language].closeScene} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-cream/10 text-cream">
+          <X size={16} />
+        </button>
       </div>
-      <input aria-label={copy[language].sceneVolume} type="range" min={0} max={1} step={0.01} value={volume} onChange={(event) => onVolume(Number(event.target.value))} className="mt-2 h-6 w-full accent-gold" />
+      {expanded && (
+        <div className="border-t border-white/10 px-3 pb-3 pt-2">
+          <div className="mb-1 flex items-center justify-between text-[11px] text-lavender">
+            <span>{copy[language].sceneVolume}</span>
+            <span>{Math.round(volume * 100)}%</span>
+          </div>
+          <input aria-label={copy[language].sceneVolume} type="range" min={0} max={1} step={0.01} value={volume} onChange={(event) => onVolume(Number(event.target.value))} className="h-6 w-full accent-gold" />
+        </div>
+      )}
     </div>
   );
 }
