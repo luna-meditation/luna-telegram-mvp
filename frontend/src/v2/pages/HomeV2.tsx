@@ -202,7 +202,8 @@ export function HomeV2(props: HomeV2Props) {
       </button>
 
       <button type="button" onClick={props.onLibrary} className="home-v2-library-cta">
-        {props.labels.openLibrary}
+        <span>{props.labels.openLibrary}</span>
+        <span aria-hidden="true">→</span>
       </button>
     </div>
   );

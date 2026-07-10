@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 type MoodChip = 'Sleep' | 'Calm' | 'Focus' | 'Anxiety' | 'Breath' | 'Energy';
 
@@ -31,10 +31,7 @@ export function V2Hero({
     Breath: '〰',
     Energy: '⚡'
   };
-  const heroImage = useMemo(() => {
-    const hour = new Date().getHours();
-    return hour >= 6 && hour < 18 ? '/images/home/hero-day.png' : '/images/home/hero-night.png';
-  }, []);
+  const heroImage = '/images/home/hero-night.png';
   const [imageFailed, setImageFailed] = useState(false);
 
   return (
