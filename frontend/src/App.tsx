@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  BookOpen,
+  BarChart3,
+  Bot,
   CheckCircle,
   Crown,
   Edit3,
   Heart,
-  Home,
   Image as ImageIcon,
   Lock,
   Pause,
@@ -19,7 +19,6 @@ import {
   Upload,
   Volume2,
   X,
-  User
 } from 'lucide-react';
 import {
   createInvoiceLink,
@@ -65,7 +64,7 @@ import { MoonGardenScene as AnimatedMoonGardenScene } from './components/moon-ga
 import { V2BottomNav } from './v2/components/V2BottomNav';
 import { HomeV2 } from './v2/pages/HomeV2';
 
-type Page = 'home' | 'library' | 'favorites' | 'profile' | 'pricing' | 'player' | 'scenePlayer' | 'mantraPlayer' | 'breathCircle' | 'moonGarden' | 'admin';
+type Page = 'home' | 'luna' | 'library' | 'progress' | 'weeklyReflection' | 'favorites' | 'profile' | 'pricing' | 'player' | 'scenePlayer' | 'mantraPlayer' | 'breathCircle' | 'moonGarden' | 'admin';
 type Mood = 'Calm' | 'Stressed' | 'Tired' | 'Anxious' | 'Focused';
 type MoodChip = 'Sleep' | 'Calm' | 'Focus' | 'Anxiety' | 'Breath' | 'Energy';
 type LibraryMode = 'meditations' | 'breathing' | 'mantras';
@@ -539,6 +538,7 @@ const copy = {
     sharingFreeOnly: 'Sharing is available for free meditations.',
     linkCopied: 'Link copied.',
     copyFailed: 'Copy failed. Please try again.',
+    back: 'Back',
     goodMorning: 'Good morning',
     goodAfternoon: 'Good afternoon',
     goodEvening: 'Good evening',
@@ -623,10 +623,27 @@ const copy = {
     minutes10: '10 min',
     minutes15Plus: '15+ min',
     navHome: 'Home',
+    navLuna: 'Luna',
     navLibrary: 'Library',
     navSaved: 'Saved',
     navPremium: 'Premium',
+    navProgress: 'Progress',
     navProfile: 'Profile',
+    lunaPageTitle: 'Luna',
+    lunaPageSubtitle: 'A quiet space to talk.',
+    lunaPageBody: "Tell Luna how you're feeling, ask for a meditation recommendation, or simply write what's on your mind.",
+    lunaPageStatus: 'Companion preparation state',
+    lunaPageSoon: 'Luna will meet you here soon.',
+    progressTitle: 'Your Progress',
+    progressSubtitle: 'A calm view of what you have actually practiced.',
+    progressStreak: 'Current streak',
+    progressSessions: 'Meditation sessions',
+    progressMinutes: 'Listening minutes',
+    progressMoonGarden: 'Moon Garden',
+    weeklyReflection: 'Weekly Reflection',
+    viewWeeklyReflection: 'View weekly reflection',
+    weeklyReflectionTitle: 'Weekly Reflection',
+    weeklyReflectionBody: 'Your reflection will grow from real check-ins and practice data.',
     categorySleep: 'Sleep',
     categoryCalm: 'Calm',
     categoryFocus: 'Focus',
@@ -841,6 +858,7 @@ const copy = {
     sharingFreeOnly: 'Поделиться можно только бесплатными медитациями.',
     linkCopied: 'Ссылка скопирована.',
     copyFailed: 'Не удалось скопировать. Попробуй еще раз.',
+    back: 'Назад',
     goodMorning: 'Доброе утро',
     goodAfternoon: 'Добрый день',
     goodEvening: 'Добрый вечер',
@@ -925,10 +943,27 @@ const copy = {
     minutes10: '10 мин',
     minutes15Plus: '15+ мин',
     navHome: 'Главная',
+    navLuna: 'Luna',
     navLibrary: 'Библиотека',
     navSaved: 'Сохранённое',
     navPremium: 'Премиум',
+    navProgress: 'Прогресс',
     navProfile: 'Профиль',
+    lunaPageTitle: 'Luna',
+    lunaPageSubtitle: 'Тихое место для разговора.',
+    lunaPageBody: 'Расскажи Luna, как ты себя чувствуешь, попроси рекомендацию или просто напиши, что на душе.',
+    lunaPageStatus: 'Компаньон готовится',
+    lunaPageSoon: 'Luna скоро встретит тебя здесь.',
+    progressTitle: 'Твой прогресс',
+    progressSubtitle: 'Спокойный взгляд на реальные практики.',
+    progressStreak: 'Текущая серия',
+    progressSessions: 'Медитации',
+    progressMinutes: 'Минуты слушания',
+    progressMoonGarden: 'Лунный сад',
+    weeklyReflection: 'Недельная рефлексия',
+    viewWeeklyReflection: 'Открыть рефлексию',
+    weeklyReflectionTitle: 'Недельная рефлексия',
+    weeklyReflectionBody: 'Рефлексия будет расти из реальных чек-инов и практик.',
     categorySleep: 'Сон',
     categoryCalm: 'Спокойствие',
     categoryFocus: 'Фокус',
@@ -1662,7 +1697,10 @@ function miniAppStartParam() {
 
 function pageFromStartParam(startParam: string): Page {
   const normalized = startParam.trim().toLowerCase();
+  if (normalized === 'luna') return 'luna';
   if (normalized === 'library') return 'library';
+  if (normalized === 'saved') return 'library';
+  if (normalized === 'progress') return 'progress';
   if (normalized === 'premium') return 'pricing';
   if (normalized === 'profile') return 'profile';
   if (normalized === 'moon-garden') return 'moonGarden';
@@ -1886,7 +1924,8 @@ function App() {
       const matchesQuery = [localized.title, localized.subtitle, localized.description].some((value) =>
         value.toLowerCase().includes(query.toLowerCase())
       );
-      const matchesCategory = category === 'all' || (category === 'short' ? meditation.duration <= 600 : meditation.category === category);
+      const matchesCategory = category === 'all' ||
+        (category === 'saved' ? Boolean(meditation.favorite) : category === 'short' ? meditation.duration <= 600 : meditation.category === category);
       return matchesQuery && matchesCategory;
     });
   }, [category, decoratedMeditations, language, query]);
@@ -2140,12 +2179,8 @@ function App() {
   };
 
   const openLunaAssistant = () => {
-    const botUsername = import.meta.env.VITE_BOT_USERNAME;
-    if (botUsername) {
-      telegram?.openTelegramLink(`https://t.me/${botUsername}?start=luna`);
-      return;
-    }
-    setAssistantMessage(copy[language].askLunaSoon);
+    setAssistantMessage('');
+    setPage('luna');
   };
 
   const toggleMoonGardenAmbience = async () => {
@@ -2479,6 +2514,13 @@ function App() {
           />
         )}
 
+        {page === 'luna' && (
+          <LunaPage
+            firstName={user.first_name ?? 'friend'}
+            language={language}
+          />
+        )}
+
         {page === 'library' && (
           <LibraryPage
             categories={categories}
@@ -2507,6 +2549,25 @@ function App() {
 
         {page === 'pricing' && (
           <PricingPage onBuy={buyPlan} message={paymentMessage} openingPlan={openingPlan} onLibrary={() => setPage('library')} locked={selectedMeditation} language={language} />
+        )}
+
+        {page === 'progress' && (
+          <ProgressPage
+            profile={profile}
+            wellness={wellness}
+            language={language}
+            onWeeklyReflection={() => setPage('weeklyReflection')}
+            onMoonGarden={() => setPage('moonGarden')}
+          />
+        )}
+
+        {page === 'weeklyReflection' && (
+          <WeeklyReflectionPage
+            profile={profile}
+            wellness={wellness}
+            language={language}
+            onBack={() => setPage('progress')}
+          />
         )}
 
         {page === 'profile' && (
@@ -2562,7 +2623,7 @@ function App() {
               })
             }
             onHome={() => setPage('home')}
-            onProgress={() => setPage('profile')}
+            onProgress={() => setPage('progress')}
             onPlaybackStart={pauseMoonGardenAmbience}
             onContinue={() => {
               if (nextMeditation && nextMeditation.id !== selectedMeditation.id) openMeditation(nextMeditation);
@@ -2636,19 +2697,19 @@ function App() {
             language={language}
           />
         )}
-        {page !== 'admin' && (page === 'home' ? (
+        {page !== 'admin' && (
           <V2BottomNav
             active={page}
             onChange={setPage}
             labels={{
               home: copy[language].navHome,
+              luna: copy[language].navLuna,
               library: copy[language].navLibrary,
-              saved: copy[language].navSaved,
-              premium: copy[language].navPremium,
+              progress: copy[language].navProgress,
               profile: copy[language].navProfile
             }}
           />
-        ) : <Nav active={page} onChange={setPage} language={language} />)}
+        )}
         {showCheckin && page !== 'admin' && (
           <DailyCheckinSheet onClose={dismissCheckin} onSave={saveCheckin} initialMood={moodChipToCheckinMood(mood)} language={language} />
         )}
@@ -2783,6 +2844,7 @@ function LibraryPage(props: {
         <>
           <div className="-mx-4 flex gap-2 overflow-x-auto px-4 luna-scrollbar-none">
             <FilterPill active={props.category === 'all'} onClick={() => props.setCategory('all')} label={t.all} />
+            <FilterPill active={props.category === 'saved'} onClick={() => props.setCategory('saved')} label={t.navSaved} />
             <FilterPill active={props.category === 'short'} onClick={() => props.setCategory('short')} label={t.short} />
             {props.categories.map((item) => (
               <FilterPill key={item.slug} active={props.category === item.slug} onClick={() => props.setCategory(item.slug)} label={translateCategory(item.slug || item.name, props.language)} />
@@ -2849,6 +2911,116 @@ function FilterPill({ active, label, onClick }: { active: boolean; label: string
     <button onClick={onClick} className={`luna-chip shrink-0 ${active ? 'luna-chip-active' : ''}`}>
       {label}
     </button>
+  );
+}
+
+function LunaPage({ firstName, language }: { firstName: string; language: AppLanguage }) {
+  return (
+    <div className="luna-page space-y-5">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="luna-section-kicker">LUNA</p>
+          <h2 className="luna-editorial-title text-[34px] leading-none">{copy[language].lunaPageTitle}</h2>
+        </div>
+        <MoonMark className="h-12 w-12 shrink-0" />
+      </div>
+      <section className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_82%_18%,rgba(142,103,233,.22),transparent_32%),linear-gradient(145deg,rgba(22,28,68,.72),rgba(5,8,20,.88))] p-5 shadow-glow">
+        <div className="grid h-14 w-14 place-items-center rounded-full border border-white/10 bg-white/10 text-gold backdrop-blur">
+          <Bot size={25} />
+        </div>
+        <h3 className="mt-5 font-serif text-3xl leading-tight">{copy[language].lunaPageSubtitle}</h3>
+        <p className="mt-3 max-w-[290px] text-sm leading-6 text-cream/75">{copy[language].lunaPageBody}</p>
+        <div className="mt-5 rounded-3xl border border-white/10 bg-night/40 p-4">
+          <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].lunaPageStatus}</p>
+          <p className="mt-2 text-sm text-lavender">{firstName ? `${firstName}, ${copy[language].lunaPageSoon}` : copy[language].lunaPageSoon}</p>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ProgressPage({ profile, wellness, language, onWeeklyReflection, onMoonGarden }: {
+  profile: ProfileStats | null;
+  wellness: WellnessSummary | null;
+  language: AppLanguage;
+  onWeeklyReflection: () => void;
+  onMoonGarden: () => void;
+}) {
+  const currentMood = wellness?.mostCommonMoodLabel ? translateMoodLabel(wellness.mostCommonMoodLabel, language) : copy[language].notEnoughData;
+  const garden = moonGardenLevel(profile?.totalPracticeMinutes ?? profile?.minutesListened ?? 0, language);
+  const stats = [
+    { label: copy[language].progressSessions, value: String(profile?.completedMeditations ?? 0) },
+    { label: copy[language].progressMinutes, value: String(profile?.totalPracticeMinutes ?? profile?.minutesListened ?? 0) },
+    { label: copy[language].weeklyCheckins, value: `${wellness?.weeklyCheckinCount ?? 0}/7` },
+    { label: copy[language].statMood, value: currentMood }
+  ];
+
+  return (
+    <div className="luna-page space-y-5">
+      <div>
+        <p className="luna-section-kicker">LUNA</p>
+        <h2 className="luna-editorial-title text-[34px] leading-none">{copy[language].progressTitle}</h2>
+        <p className="mt-2 text-sm leading-5 text-lavender">{copy[language].progressSubtitle}</p>
+      </div>
+      <section className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_82%_18%,rgba(212,175,55,.18),transparent_30%),linear-gradient(145deg,rgba(35,35,84,.72),rgba(7,9,24,.86))] p-5 shadow-glow">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].progressStreak}</p>
+            <h3 className="mt-3 text-5xl font-semibold tracking-[-0.06em]">{profile?.currentStreak ?? 0}</h3>
+            <p className="mt-1 text-sm text-lavender">{(profile?.currentStreak ?? 0) === 1 ? copy[language].statDay : copy[language].statDays}</p>
+          </div>
+          <div className="grid h-14 w-14 place-items-center rounded-full bg-gold/15 text-gold">
+            <BarChart3 size={26} />
+          </div>
+        </div>
+      </section>
+      <section className="grid grid-cols-2 gap-3">
+        {stats.map((item) => (
+          <article key={item.label} className="rounded-[22px] border border-white/10 bg-white/[0.06] p-4 shadow-glow backdrop-blur">
+            <p className="text-[11px] text-lavender">{item.label}</p>
+            <p className="mt-2 text-2xl font-semibold tracking-[-0.04em]">{item.value}</p>
+          </article>
+        ))}
+      </section>
+      <button onClick={onMoonGarden} className="w-full rounded-[24px] border border-white/10 bg-night/45 p-4 text-left shadow-glow">
+        <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].progressMoonGarden}</p>
+        <p className="mt-2 font-serif text-2xl">{copy[language].profileLevel.replace('{level}', `${garden.level}`)} · {garden.title}</p>
+      </button>
+      <button onClick={onWeeklyReflection} className="flex w-full items-center justify-between rounded-[24px] border border-white/10 bg-white/[0.06] p-4 text-left text-cream shadow-glow">
+        <span>{copy[language].viewWeeklyReflection}</span>
+        <span className="text-gold">→</span>
+      </button>
+    </div>
+  );
+}
+
+function WeeklyReflectionPage({ profile, wellness, language, onBack }: {
+  profile: ProfileStats | null;
+  wellness: WellnessSummary | null;
+  language: AppLanguage;
+  onBack: () => void;
+}) {
+  return (
+    <div className="luna-page space-y-5">
+      <button onClick={onBack} className="luna-icon-button" aria-label={copy[language].back}>
+        ←
+      </button>
+      <div>
+        <p className="luna-section-kicker">LUNA</p>
+        <h2 className="luna-editorial-title text-[32px] leading-none">{copy[language].weeklyReflectionTitle}</h2>
+        <p className="mt-2 text-sm leading-5 text-lavender">{copy[language].weeklyReflectionBody}</p>
+      </div>
+      <section className="grid grid-cols-2 gap-3">
+        <article className="rounded-[22px] border border-white/10 bg-white/[0.06] p-4">
+          <p className="text-[11px] text-lavender">{copy[language].progressMinutes}</p>
+          <p className="mt-2 text-2xl font-semibold">{profile?.weeklyPracticeMinutes ?? 0}</p>
+        </article>
+        <article className="rounded-[22px] border border-white/10 bg-white/[0.06] p-4">
+          <p className="text-[11px] text-lavender">{copy[language].weeklyCheckins}</p>
+          <p className="mt-2 text-2xl font-semibold">{wellness?.weeklyCheckinCount ?? 0}/7</p>
+        </article>
+      </section>
+    </div>
   );
 }
 
@@ -5301,34 +5473,6 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 function EmptyState({ title, body }: { title: string; body: string }) {
   return <div className="rounded-[24px] border border-white/10 bg-ink p-4 text-center shadow-glow"><Sparkles className="mx-auto text-gold" /><h3 className="mt-3 font-serif text-xl font-semibold">{title}</h3><p className="mt-1 text-sm text-lavender">{body}</p></div>;
-}
-
-function Nav({ active, onChange, language }: { active: Page; onChange: (page: Page) => void; language: AppLanguage }) {
-  const items: Array<{ page: Page; label: string; icon: typeof Home }> = [
-    { page: 'home', label: copy[language].navHome, icon: Home },
-    { page: 'library', label: copy[language].navLibrary, icon: BookOpen },
-    { page: 'favorites', label: copy[language].navSaved, icon: Heart },
-    { page: 'pricing', label: copy[language].navPremium, icon: Crown },
-    { page: 'profile', label: copy[language].navProfile, icon: User }
-  ];
-
-  return (
-    <nav className="fixed inset-x-5 bottom-[calc(12px+env(safe-area-inset-bottom))] z-10 mx-auto max-w-[390px] rounded-full border border-white/10 bg-night/70 px-2 py-1.5 shadow-glow backdrop-blur-2xl">
-      <div className="grid grid-cols-5 gap-0">
-        {items.map((item) => {
-          const Icon = item.icon;
-          const selected = active === item.page;
-          return (
-            <button key={item.page} onClick={() => onChange(item.page)} className={`relative flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-full px-1.5 py-1 text-[9px] ${selected ? 'text-gold' : 'text-cream/55'}`}>
-              {selected && <span className="absolute top-1 h-1 w-1 rounded-full bg-gold shadow-gold" />}
-              <Icon size={18} />
-              {item.label}
-            </button>
-          );
-        })}
-      </div>
-    </nav>
-  );
 }
 
 export default App;
