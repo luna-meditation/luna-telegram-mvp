@@ -2791,7 +2791,7 @@ function LibraryPage(props: {
     [mantra.title[props.language], mantra.subtitle[props.language], mantra.category, ...mantra.tags].join(' ').toLowerCase().includes(props.query.toLowerCase())
   );
   return (
-    <div className="luna-page space-y-4">
+    <div className="luna-page space-y-3 pb-6">
       <div className="flex items-end justify-between gap-4">
         <PageTitle title={t.libraryTitle} />
         <span className="rounded-full border border-white/10 bg-white/[0.045] px-2.5 py-1 text-[10px] text-lavender">{props.meditations.length}</span>
@@ -2813,7 +2813,7 @@ function LibraryPage(props: {
       </div>
       {props.mode === 'meditations' ? (
         <>
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 luna-scrollbar-none">
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 luna-scrollbar-none">
             <FilterPill active={props.category === 'all'} onClick={() => props.setCategory('all')} label={t.all} />
             <FilterPill active={props.category === 'saved'} onClick={() => props.setCategory('saved')} label={t.navSaved} />
             <FilterPill active={props.category === 'short'} onClick={() => props.setCategory('short')} label={t.short} />
@@ -2827,8 +2827,17 @@ function LibraryPage(props: {
             </div>
           ) : props.meditations.length ? (
             <section className="space-y-0.5">
-              {props.meditations.map((meditation) => (
-                <MeditationCard key={meditation.id} meditation={meditation} locked={meditation.premium && !props.hasPremium} onOpen={props.onOpen} onFavorite={props.onFavorite} onUnlock={props.onUnlock} language={props.language} />
+              {props.meditations.map((meditation, index) => (
+                <MeditationCard
+                  key={meditation.id}
+                  meditation={meditation}
+                  locked={meditation.premium && !props.hasPremium}
+                  showPopular={index < 2 && meditation.play_count >= 20}
+                  onOpen={props.onOpen}
+                  onFavorite={props.onFavorite}
+                  onUnlock={props.onUnlock}
+                  language={props.language}
+                />
               ))}
             </section>
           ) : (
@@ -2862,14 +2871,15 @@ function LibraryPage(props: {
 
 function MeditationCardSkeleton() {
   return (
-    <article className="animate-pulse border-b border-white/10 py-2.5">
-      <div className="flex items-center gap-3">
-        <div className="h-14 w-14 rounded-[15px] bg-cream/10" />
+    <article className="animate-pulse border-b border-white/10 py-2">
+      <div className="grid grid-cols-[88px_minmax(0,1fr)_42px] items-center gap-3">
+        <div className="h-[88px] w-[88px] rounded-[18px] bg-cream/10" />
         <div className="min-w-0 flex-1">
           <div className="h-4 w-36 rounded-full bg-cream/15" />
           <div className="mt-2 h-3 w-24 rounded-full bg-cream/10" />
           <div className="mt-2 h-3 w-full rounded-full bg-cream/10" />
         </div>
+        <div className="h-10 w-10 rounded-full bg-cream/10" />
       </div>
     </article>
   );
@@ -3016,40 +3026,45 @@ function WeeklyReflectionPage({ profile, wellness, language, onBack }: {
   );
 }
 
-function MeditationCard({ meditation, locked, onOpen, onFavorite, onUnlock, language }: {
+function MeditationCard({ meditation, locked, showPopular, onOpen, onFavorite, onUnlock, language }: {
   meditation: Meditation;
   locked: boolean;
+  showPopular?: boolean;
   onOpen: (meditation: Meditation) => void;
   onFavorite: (meditation: Meditation) => void;
   onUnlock: () => void;
   language: AppLanguage;
 }) {
   const localized = getLocalizedMeditation(meditation, language);
-  const showPopularBadge = meditation.play_count >= 20;
+  const hasProgress = (meditation.history?.last_position ?? 0) > 0;
+  const hasDescription = localized.description.trim().length > 0;
+  const hasBadges = meditation.premium || showPopular || hasProgress;
   return (
     <article className="luna-editorial-row">
-      <div className="flex items-center gap-3">
+      <div className="grid grid-cols-[88px_minmax(0,1fr)_42px] items-center gap-3">
         <button onClick={() => (locked ? onUnlock() : onOpen(meditation))} className="relative shrink-0 text-left">
-          <img src={meditation.cover_image} alt="" className={`h-[58px] w-[58px] rounded-[15px] object-cover shadow-glow ${locked ? 'blur-sm' : ''}`} loading="lazy" />
+          <img src={meditation.cover_image} alt="" className={`h-[88px] w-[88px] rounded-[18px] object-cover shadow-glow ${locked ? 'blur-sm' : ''}`} loading="lazy" />
           {locked && <Lock className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gold" />}
         </button>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 self-center">
           <button onClick={() => (locked ? onUnlock() : onOpen(meditation))} className="w-full text-left">
             <div className="flex items-center gap-2">
               <h3 className="truncate text-[15px] font-semibold leading-tight text-cream">{localized.title}</h3>
               {meditation.premium && <Crown size={13} className="text-gold" />}
             </div>
             <p className="mt-0.5 text-[11px] capitalize text-lavender">{translateCategory(meditation.category, language)} · {formatTime(meditation.duration)}</p>
-            <p className="mt-0.5 line-clamp-1 text-[11px] leading-4 text-cream/55">{localized.description}</p>
+            {hasDescription && <p className="mt-0.5 line-clamp-2 text-[11px] leading-[15px] text-cream/55">{localized.description}</p>}
           </button>
           {!localized.hasSelectedLanguageAudio && <p className="mt-1 text-[11px] text-gold">{copy[language].availableInEnglish}</p>}
-          <div className="mt-1.5 flex flex-wrap gap-1.5 text-[9px]">
-            {meditation.premium && <span className="rounded-full border border-gold/20 bg-gold/10 px-2 py-0.5 text-gold">{copy[language].premium}</span>}
-            {showPopularBadge && <span className="rounded-full border border-lavender/15 bg-lavender/10 px-2 py-0.5 text-lavender">{copy[language].popularToday}</span>}
-            {meditation.history?.last_position ? <span className="rounded-full border border-white/10 bg-white/[0.045] px-2 py-0.5 text-cream/70">{copy[language].resume}</span> : null}
-          </div>
+          {hasBadges && (
+            <div className="mt-1 flex flex-wrap gap-1 text-[9px] leading-none">
+              {meditation.premium && <span className="rounded-full border border-gold/20 bg-gold/10 px-2 py-0.5 text-gold">{copy[language].premium}</span>}
+              {showPopular && <span className="rounded-full border border-lavender/15 bg-lavender/10 px-2 py-0.5 text-lavender">{copy[language].popularToday}</span>}
+              {hasProgress ? <span className="rounded-full border border-white/10 bg-white/[0.045] px-2 py-0.5 text-cream/70">{copy[language].resume}</span> : null}
+            </div>
+          )}
         </div>
-        <button onClick={() => onFavorite(meditation)} className="grid min-h-10 min-w-10 place-items-center rounded-full border border-white/10 bg-white/[0.045] text-cream transition hover:bg-white/[0.075]" aria-label="Favorite meditation">
+        <button onClick={() => onFavorite(meditation)} className="grid min-h-10 min-w-10 place-items-center self-center rounded-full border border-white/10 bg-white/[0.045] text-cream transition hover:bg-white/[0.075]" aria-label="Favorite meditation">
           <Heart size={16} className={meditation.favorite ? 'fill-gold text-gold' : 'text-cream/72'} />
         </button>
       </div>
@@ -3063,21 +3078,22 @@ function MantraCard({ mantra, locked, onOpen, language }: {
   onOpen: (mantra: MantraDefinition) => void;
   language: AppLanguage;
 }) {
+  const hasDescription = mantra.description[language].trim().length > 0;
   return (
     <button onClick={() => onOpen(mantra)} className="luna-editorial-row group w-full text-left transition">
-      <div className="flex items-center gap-3">
+      <div className="grid grid-cols-[88px_minmax(0,1fr)] items-center gap-3">
         <div className="relative shrink-0">
-          <img src={mantra.cover} alt="" className={`h-[58px] w-[58px] rounded-[15px] object-cover shadow-glow ${locked ? 'blur-[2px]' : ''}`} loading="lazy" />
+          <img src={mantra.cover} alt="" className={`h-[88px] w-[88px] rounded-[18px] object-cover shadow-glow ${locked ? 'blur-[2px]' : ''}`} loading="lazy" />
           {locked && <Lock className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gold" />}
         </div>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 self-center">
           <div className="flex items-center gap-2">
             <h3 className="truncate text-[15px] font-semibold leading-tight text-cream">{mantra.title[language]}</h3>
             {mantra.access === 'premium' && <Crown size={13} className="text-gold" />}
           </div>
           <p className="mt-0.5 text-[11px] text-lavender">{mantra.subtitle[language]} · {formatTime(mantra.duration)}</p>
-          <p className="mt-0.5 line-clamp-1 text-[11px] leading-4 text-cream/55">{mantra.description[language]}</p>
-          <div className="mt-1.5 flex flex-wrap gap-1.5 text-[9px]">
+          {hasDescription && <p className="mt-0.5 line-clamp-2 text-[11px] leading-[15px] text-cream/55">{mantra.description[language]}</p>}
+          <div className="mt-1 flex flex-wrap gap-1 text-[9px] leading-none">
             {mantra.access === 'premium' && <span className="rounded-full border border-gold/20 bg-gold/10 px-2 py-0.5 text-gold">{copy[language].premium}</span>}
             <span className="rounded-full border border-lavender/15 bg-lavender/10 px-2 py-0.5 text-lavender">{copy[language].mantrasTab}</span>
           </div>
