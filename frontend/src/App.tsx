@@ -62,6 +62,7 @@ import {
   type WellnessSummary
 } from './api';
 import { MoonGardenScene as AnimatedMoonGardenScene } from './components/moon-garden/MoonGardenScene';
+import { V2BottomNav } from './v2/components/V2BottomNav';
 import { HomeV2 } from './v2/pages/HomeV2';
 
 type Page = 'home' | 'library' | 'favorites' | 'profile' | 'pricing' | 'player' | 'scenePlayer' | 'mantraPlayer' | 'breathCircle' | 'moonGarden' | 'admin';
@@ -2528,7 +2529,19 @@ function App() {
             language={language}
           />
         )}
-        {page !== 'admin' && <Nav active={page} onChange={setPage} language={language} />}
+        {page !== 'admin' && (page === 'home' ? (
+          <V2BottomNav
+            active={page}
+            onChange={setPage}
+            labels={{
+              home: copy[language].navHome,
+              library: copy[language].navLibrary,
+              saved: copy[language].navSaved,
+              premium: copy[language].navPremium,
+              profile: copy[language].navProfile
+            }}
+          />
+        ) : <Nav active={page} onChange={setPage} language={language} />)}
         {showCheckin && page !== 'admin' && (
           <DailyCheckinSheet onClose={dismissCheckin} onSave={saveCheckin} initialMood={moodChipToCheckinMood(mood)} language={language} />
         )}
