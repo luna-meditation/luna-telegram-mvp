@@ -544,6 +544,7 @@ const copy = {
     goodEvening: 'Good evening',
     feeling: 'How are you feeling today?',
     todayMeditation: "Today's Meditation",
+    todayRecommendation: "Today's recommendation",
     recommendedForYou: 'Recommended for You',
     forYourMood: 'For Your Mood',
     moreToExplore: 'More to Explore',
@@ -830,6 +831,7 @@ const copy = {
     goodEvening: 'Добрый вечер',
     feeling: 'Как ты себя чувствуешь сегодня?',
     todayMeditation: 'Медитация дня',
+    todayRecommendation: 'Рекомендация на сегодня',
     recommendedForYou: 'Рекомендация для тебя',
     forYourMood: 'Под твоё настроение',
     moreToExplore: 'Ещё для практики',
@@ -2335,9 +2337,16 @@ function App() {
             onBreath={openBreathCircle}
             onAddHome={addLunaToHomeScreen}
             homeScreenMessage={homeScreenMessage}
+            stats={[
+              { label: copy[language].quietRhythm, value: quietDayCountLabel(profile?.currentStreak ?? 0, language) },
+              { label: copy[language].thisWeek, value: minutesCountLabel(profile?.weeklyPracticeMinutes ?? 0, language) },
+              { label: copy[language].weeklyCheckins, value: `${wellness?.weeklyCheckinCount ?? 0}/7` },
+              { label: copy[language].currentMood, value: wellness?.mostCommonMoodLabel ? translateMoodLabel(wellness.mostCommonMoodLabel, language) : copy[language].notEnoughData }
+            ]}
             labels={{
               brandMeta: copy[language].tagline,
               feeling: copy[language].feeling,
+              todayRecommendation: copy[language].todayRecommendation,
               checkinSaved: copy[language].checkinSaved,
               checkins: copy[language].checkins,
               moreToExplore: copy[language].moreToExplore,

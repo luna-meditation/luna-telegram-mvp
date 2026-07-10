@@ -3,7 +3,9 @@ import type { AppLanguage, Meditation } from '../../api';
 import { V2Continue } from '../components/V2Continue';
 import { V2Discovery, V2PracticeTiles } from '../components/V2Discovery';
 import { V2Hero, V2HeroFallback } from '../components/V2Hero';
+import { V2Recommendation } from '../components/V2Recommendation';
 import { V2Sound } from '../components/V2Sound';
+import { V2Stats, type V2Stat } from '../components/V2Stats';
 import '../design-system/homeV2.css';
 
 type MoodChip = 'Sleep' | 'Calm' | 'Focus' | 'Anxiety' | 'Breath' | 'Energy';
@@ -30,6 +32,7 @@ type MeditationView = {
 type HomeV2Labels = {
   brandMeta: string;
   feeling: string;
+  todayRecommendation: string;
   checkinSaved: string;
   checkins: string;
   moreToExplore: string;
@@ -72,6 +75,7 @@ type HomeV2Props = {
   scenePlaying: boolean;
   hasPremium: boolean;
   homeScreenMessage: string;
+  stats: V2Stat[];
   labels: HomeV2Labels;
   language: AppLanguage;
   onOpen: (meditation: Meditation) => void;
@@ -100,23 +104,14 @@ export function HomeV2(props: HomeV2Props) {
     <div className="home-v2">
       {props.daily ? (
         <V2Hero
-          meditation={props.daily}
-          label={props.heroLabel}
           greeting={props.greeting}
           firstName={props.firstName}
           headline={props.labels.feeling}
-          view={props.meditationView(props.daily)}
-          categoryLabel={props.categoryLabel(props.daily.category)}
-          durationLabel={props.durationLabel(props.daily.duration)}
-          premiumLabel={props.labels.premium}
-          freeLabel={props.labels.free}
           moods={props.moods}
           activeMood={props.mood}
           moodLabel={props.moodLabel}
           checkinLine={props.checkinLine}
-          checkinMeta={props.checkinMeta}
           onMood={props.setMood}
-          onOpen={() => props.onOpen(props.daily!)}
         />
       ) : props.loading ? (
         <V2HeroFallback title={props.labels.preparingCalm} body={props.labels.brandMeta} />
@@ -124,41 +119,23 @@ export function HomeV2(props: HomeV2Props) {
         <V2HeroFallback title={props.labels.firstPracticeTitle} body={props.labels.firstPracticeBody} />
       )}
 
-      <section className="home-v2-plan-row">
-        {activeScene ? (
-          <V2Sound
-            scene={activeScene}
-            playing={props.scenePlaying}
-            language={props.language}
-            activeLabel={props.labels.soundActive}
-            selectLabel={props.labels.soundSelect}
-            onOpen={props.onSoundOpen}
-            onToggle={props.onSoundToggle}
-            onExpand={() => setSoundExpanded((value) => !value)}
-          />
-        ) : null}
-        <button type="button" onClick={props.onLibrary} className="home-v2-library-link">
-          {props.labels.openLibrary}
-        </button>
-      </section>
-
-      {soundExpanded ? (
-        <div className="home-v2-sound-chooser">
-          {props.scenes.map((scene) => {
-            const locked = scene.access === 'premium' && !props.hasPremium;
-            return (
-              <button
-                key={scene.id}
-                type="button"
-                onClick={() => props.onSoundSelect(scene)}
-                className={props.selectedScene?.id === scene.id ? 'home-v2-choice home-v2-choice-active' : 'home-v2-choice'}
-              >
-                {scene.title[props.language]} {locked ? '⭐' : ''}
-              </button>
-            );
-          })}
-        </div>
+      {props.daily ? (
+        <V2Recommendation
+          title={props.labels.todayRecommendation}
+          meditation={props.daily}
+          label={props.heroLabel}
+          view={props.meditationView(props.daily)}
+          categoryLabel={props.categoryLabel(props.daily.category)}
+          durationLabel={props.durationLabel(props.daily.duration)}
+          premiumLabel={props.labels.premium}
+          freeLabel={props.labels.free}
+          checkinLine={props.checkinLine}
+          checkinMeta={props.checkinMeta}
+          onOpen={() => props.onOpen(props.daily!)}
+        />
       ) : null}
+
+      <V2Stats stats={props.stats} />
 
       <V2Discovery
         title={props.labels.moreToExplore}
@@ -186,9 +163,46 @@ export function HomeV2(props: HomeV2Props) {
         onBreath={props.onBreath}
       />
 
+      <section className="home-v2-sound-section">
+        {activeScene ? (
+          <V2Sound
+            scene={activeScene}
+            playing={props.scenePlaying}
+            language={props.language}
+            activeLabel={props.labels.soundActive}
+            selectLabel={props.labels.soundSelect}
+            onOpen={props.onSoundOpen}
+            onToggle={props.onSoundToggle}
+            onExpand={() => setSoundExpanded((value) => !value)}
+          />
+        ) : null}
+      </section>
+
+      {soundExpanded ? (
+        <div className="home-v2-sound-chooser">
+          {props.scenes.map((scene) => {
+            const locked = scene.access === 'premium' && !props.hasPremium;
+            return (
+              <button
+                key={scene.id}
+                type="button"
+                onClick={() => props.onSoundSelect(scene)}
+                className={props.selectedScene?.id === scene.id ? 'home-v2-choice home-v2-choice-active' : 'home-v2-choice'}
+              >
+                {scene.title[props.language]} {locked ? '⭐' : ''}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+
       <button type="button" onClick={props.onAddHome} className="home-v2-home-action">
         <strong>{props.labels.addHomeTitle}</strong>
         <span>{props.homeScreenMessage || props.labels.addHomeBody}</span>
+      </button>
+
+      <button type="button" onClick={props.onLibrary} className="home-v2-library-cta">
+        {props.labels.openLibrary}
       </button>
     </div>
   );
