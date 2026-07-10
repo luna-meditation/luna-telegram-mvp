@@ -2,7 +2,6 @@ import { useState } from 'react';
 import type { AppLanguage, Meditation } from '../../api';
 import { V2Continue } from '../components/V2Continue';
 import { V2Discovery, V2PracticeTiles } from '../components/V2Discovery';
-import { V2Header } from '../components/V2Header';
 import { V2Hero, V2HeroFallback } from '../components/V2Hero';
 import { V2Sound } from '../components/V2Sound';
 import '../design-system/homeV2.css';
@@ -99,12 +98,13 @@ export function HomeV2(props: HomeV2Props) {
 
   return (
     <div className="home-v2">
-      <V2Header greeting={props.greeting} firstName={props.firstName} quietLabel={props.heroLabel} />
-
       {props.daily ? (
         <V2Hero
           meditation={props.daily}
           label={props.heroLabel}
+          greeting={props.greeting}
+          firstName={props.firstName}
+          headline={props.labels.feeling}
           view={props.meditationView(props.daily)}
           categoryLabel={props.categoryLabel(props.daily.category)}
           durationLabel={props.durationLabel(props.daily.duration)}
