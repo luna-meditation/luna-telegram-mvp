@@ -2794,21 +2794,21 @@ function LibraryPage(props: {
     <div className="luna-page space-y-4">
       <div className="flex items-end justify-between gap-4">
         <PageTitle title={t.libraryTitle} />
-        <span className="rounded-full border border-white/10 bg-white/[0.055] px-3 py-1 text-[11px] text-lavender">{props.meditations.length}</span>
+        <span className="rounded-full border border-white/10 bg-white/[0.045] px-2.5 py-1 text-[10px] text-lavender">{props.meditations.length}</span>
       </div>
-      <div className="grid grid-cols-3 gap-1 rounded-[18px] border border-white/10 bg-white/[0.055] p-1 backdrop-blur">
-        <button onClick={() => props.setMode('meditations')} className={`rounded-[14px] px-3 py-2 text-sm font-semibold ${props.mode === 'meditations' ? 'luna-chip-active' : 'text-lavender'}`}>
+      <div className="grid grid-cols-3 gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1 backdrop-blur-md">
+        <button onClick={() => props.setMode('meditations')} className={`rounded-full px-2.5 py-2 text-xs font-semibold transition ${props.mode === 'meditations' ? 'border border-gold/25 bg-cream/12 text-cream shadow-glow' : 'text-lavender/80'}`}>
           {t.meditationsTab}
         </button>
-        <button onClick={() => props.setMode('breathing')} className={`rounded-[14px] px-3 py-2 text-sm font-semibold ${props.mode === 'breathing' ? 'luna-chip-active' : 'text-lavender'}`}>
+        <button onClick={() => props.setMode('breathing')} className={`rounded-full px-2.5 py-2 text-xs font-semibold transition ${props.mode === 'breathing' ? 'border border-gold/25 bg-cream/12 text-cream shadow-glow' : 'text-lavender/80'}`}>
           {t.breathingTab}
         </button>
-        <button onClick={() => props.setMode('mantras')} className={`rounded-[14px] px-3 py-2 text-sm font-semibold ${props.mode === 'mantras' ? 'luna-chip-active' : 'text-lavender'}`}>
+        <button onClick={() => props.setMode('mantras')} className={`rounded-full px-2.5 py-2 text-xs font-semibold transition ${props.mode === 'mantras' ? 'border border-gold/25 bg-cream/12 text-cream shadow-glow' : 'text-lavender/80'}`}>
           {t.mantrasTab}
         </button>
       </div>
-      <div className="flex items-center gap-2 rounded-[18px] border border-white/10 bg-white/[0.055] px-3 py-3 backdrop-blur">
-        <Search size={18} className="text-lavender" />
+      <div className="flex items-center gap-2 rounded-[18px] border border-white/10 bg-white/[0.04] px-3.5 py-2.5 backdrop-blur-md">
+        <Search size={16} className="text-lavender/80" />
         <input value={props.query} onChange={(event) => props.setQuery(event.target.value)} placeholder={t.searchByTitle} className="w-full bg-transparent text-sm outline-none placeholder:text-cream/45" />
       </div>
       {props.mode === 'meditations' ? (
@@ -2822,11 +2822,11 @@ function LibraryPage(props: {
             ))}
           </div>
           {props.loading && !props.meditations.length ? (
-            <div className="space-y-3">
+            <div className="space-y-1">
               {[0, 1, 2].map((item) => <MeditationCardSkeleton key={item} />)}
             </div>
           ) : props.meditations.length ? (
-            <section className="rounded-[26px] border border-white/10 bg-white/[0.035] px-3 py-1 shadow-glow backdrop-blur">
+            <section className="space-y-0.5">
               {props.meditations.map((meditation) => (
                 <MeditationCard key={meditation.id} meditation={meditation} locked={meditation.premium && !props.hasPremium} onOpen={props.onOpen} onFavorite={props.onFavorite} onUnlock={props.onUnlock} language={props.language} />
               ))}
@@ -2837,18 +2837,18 @@ function LibraryPage(props: {
         </>
       ) : props.mode === 'breathing' ? (
         <section className="space-y-3">
-          <button onClick={props.onBreath} className="relative w-full overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_82%_16%,rgba(212,175,55,.18),transparent_30%),linear-gradient(145deg,rgba(45,28,62,.62),rgba(12,8,20,.78))] p-5 text-left shadow-glow">
-            <div className="absolute right-4 top-4 grid h-12 w-12 place-items-center rounded-full border border-gold/30 bg-gold/10 text-gold">
-              <Sparkles size={22} />
+          <button onClick={props.onBreath} className="relative w-full overflow-hidden rounded-[24px] border border-white/10 bg-[radial-gradient(circle_at_88%_12%,rgba(212,175,55,.16),transparent_32%),linear-gradient(145deg,rgba(26,36,78,.44),rgba(7,12,30,.62))] p-4 text-left shadow-glow">
+            <div className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full border border-gold/25 bg-gold/10 text-gold">
+              <Sparkles size={19} />
             </div>
             <p className="text-xs uppercase tracking-[0.18em] text-gold">{t.breathingTab}</p>
-            <h3 className="mt-1 font-serif text-2xl">{t.breathCircle}</h3>
+            <h3 className="mt-1 font-serif text-[24px] leading-tight">{t.breathCircle}</h3>
             <p className="mt-2 max-w-[250px] text-sm leading-5 text-cream/75">{t.breathCircleSubtitle}</p>
-            <p className="mt-3 text-xs text-lavender">1 / 3 / 5 min</p>
+            <p className="mt-3 text-[11px] text-lavender">1 / 3 / 5 min</p>
           </button>
         </section>
       ) : filteredMantras.length ? (
-        <section className="rounded-[26px] border border-white/10 bg-white/[0.035] px-3 py-1 shadow-glow backdrop-blur">
+        <section className="space-y-0.5">
           {filteredMantras.map((mantra) => (
             <MantraCard key={mantra.id} mantra={mantra} locked={mantra.access === 'premium' && !props.hasPremium} onOpen={props.onOpenMantra} language={props.language} />
           ))}
@@ -2862,24 +2862,22 @@ function LibraryPage(props: {
 
 function MeditationCardSkeleton() {
   return (
-    <article className="animate-pulse border-b border-white/10 py-3">
-      <div className="flex gap-3">
-        <div className="h-24 w-24 rounded-2xl bg-cream/10" />
+    <article className="animate-pulse border-b border-white/10 py-2.5">
+      <div className="flex items-center gap-3">
+        <div className="h-14 w-14 rounded-[15px] bg-cream/10" />
         <div className="min-w-0 flex-1">
-          <div className="h-5 w-36 rounded-full bg-cream/15" />
-          <div className="mt-3 h-3 w-20 rounded-full bg-cream/10" />
-          <div className="mt-4 h-3 w-full rounded-full bg-cream/10" />
-          <div className="mt-2 h-3 w-2/3 rounded-full bg-cream/10" />
+          <div className="h-4 w-36 rounded-full bg-cream/15" />
+          <div className="mt-2 h-3 w-24 rounded-full bg-cream/10" />
+          <div className="mt-2 h-3 w-full rounded-full bg-cream/10" />
         </div>
       </div>
-      <div className="mt-3 h-11 w-full rounded-2xl bg-cream/10" />
     </article>
   );
 }
 
 function FilterPill({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
   return (
-    <button onClick={onClick} className={`luna-chip shrink-0 ${active ? 'luna-chip-active' : ''}`}>
+    <button onClick={onClick} className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${active ? 'border-gold/30 bg-gold/12 text-cream shadow-glow' : 'border-white/10 bg-white/[0.035] text-lavender/82'}`}>
       {label}
     </button>
   );
@@ -3027,31 +3025,32 @@ function MeditationCard({ meditation, locked, onOpen, onFavorite, onUnlock, lang
   language: AppLanguage;
 }) {
   const localized = getLocalizedMeditation(meditation, language);
+  const showPopularBadge = meditation.play_count >= 20;
   return (
     <article className="luna-editorial-row">
       <div className="flex items-center gap-3">
         <button onClick={() => (locked ? onUnlock() : onOpen(meditation))} className="relative shrink-0 text-left">
-          <img src={meditation.cover_image} alt="" className={`h-[68px] w-[68px] rounded-[16px] object-cover shadow-glow ${locked ? 'blur-sm' : ''}`} loading="lazy" />
+          <img src={meditation.cover_image} alt="" className={`h-[58px] w-[58px] rounded-[15px] object-cover shadow-glow ${locked ? 'blur-sm' : ''}`} loading="lazy" />
           {locked && <Lock className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gold" />}
         </button>
         <div className="min-w-0 flex-1">
           <button onClick={() => (locked ? onUnlock() : onOpen(meditation))} className="w-full text-left">
             <div className="flex items-center gap-2">
-            <h3 className="truncate font-serif text-lg leading-tight">{localized.title}</h3>
-            {meditation.premium && <Crown size={15} className="text-gold" />}
+              <h3 className="truncate text-[15px] font-semibold leading-tight text-cream">{localized.title}</h3>
+              {meditation.premium && <Crown size={13} className="text-gold" />}
             </div>
-            <p className="mt-1 text-xs capitalize text-lavender">{translateCategory(meditation.category, language)} · {formatTime(meditation.duration)}</p>
-            <p className="mt-1 line-clamp-1 text-xs text-cream/58">{localized.description}</p>
+            <p className="mt-0.5 text-[11px] capitalize text-lavender">{translateCategory(meditation.category, language)} · {formatTime(meditation.duration)}</p>
+            <p className="mt-0.5 line-clamp-1 text-[11px] leading-4 text-cream/55">{localized.description}</p>
           </button>
           {!localized.hasSelectedLanguageAudio && <p className="mt-1 text-[11px] text-gold">{copy[language].availableInEnglish}</p>}
-          <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
-            <span className="rounded-full bg-gold/15 px-2 py-1 text-gold">{meditation.premium ? copy[language].premium : copy[language].free}</span>
-            {meditation.play_count > 0 && <span className="rounded-full bg-lavender/15 px-2 py-1 text-lavender">{copy[language].popularToday}</span>}
-            {meditation.history?.last_position ? <span className="rounded-full bg-cream/10 px-2 py-1 text-cream/70">{copy[language].resume}</span> : null}
+          <div className="mt-1.5 flex flex-wrap gap-1.5 text-[9px]">
+            {meditation.premium && <span className="rounded-full border border-gold/20 bg-gold/10 px-2 py-0.5 text-gold">{copy[language].premium}</span>}
+            {showPopularBadge && <span className="rounded-full border border-lavender/15 bg-lavender/10 px-2 py-0.5 text-lavender">{copy[language].popularToday}</span>}
+            {meditation.history?.last_position ? <span className="rounded-full border border-white/10 bg-white/[0.045] px-2 py-0.5 text-cream/70">{copy[language].resume}</span> : null}
           </div>
         </div>
-        <button onClick={() => onFavorite(meditation)} className="luna-icon-button min-h-10 min-w-10 self-center" aria-label="Favorite meditation">
-          <Heart size={17} className={meditation.favorite ? 'fill-gold text-gold' : 'text-cream'} />
+        <button onClick={() => onFavorite(meditation)} className="grid min-h-10 min-w-10 place-items-center rounded-full border border-white/10 bg-white/[0.045] text-cream transition hover:bg-white/[0.075]" aria-label="Favorite meditation">
+          <Heart size={16} className={meditation.favorite ? 'fill-gold text-gold' : 'text-cream/72'} />
         </button>
       </div>
     </article>
@@ -3066,22 +3065,21 @@ function MantraCard({ mantra, locked, onOpen, language }: {
 }) {
   return (
     <button onClick={() => onOpen(mantra)} className="luna-editorial-row group w-full text-left transition">
-      <div className="flex gap-3">
+      <div className="flex items-center gap-3">
         <div className="relative shrink-0">
-          <img src={mantra.cover} alt="" className={`h-[68px] w-[68px] rounded-[16px] object-cover shadow-glow ${locked ? 'blur-[2px]' : ''}`} loading="lazy" />
+          <img src={mantra.cover} alt="" className={`h-[58px] w-[58px] rounded-[15px] object-cover shadow-glow ${locked ? 'blur-[2px]' : ''}`} loading="lazy" />
           {locked && <Lock className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gold" />}
         </div>
-        <div className="min-w-0 flex-1 py-1">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="truncate font-semibold">{mantra.title[language]}</h3>
-            {mantra.access === 'premium' && <Crown size={15} className="text-gold" />}
+            <h3 className="truncate text-[15px] font-semibold leading-tight text-cream">{mantra.title[language]}</h3>
+            {mantra.access === 'premium' && <Crown size={13} className="text-gold" />}
           </div>
-          <p className="mt-1 text-xs text-lavender">{mantra.subtitle[language]}</p>
-          <p className="mt-1 line-clamp-1 text-xs text-cream/65">{mantra.description[language]}</p>
-          <div className="mt-2 flex flex-wrap gap-1.5 text-[10px]">
-            <span className="rounded-full bg-gold/15 px-2 py-1 text-gold">{mantra.access === 'premium' ? copy[language].premium : copy[language].free}</span>
-            <span className="rounded-full bg-cream/10 px-2 py-1 text-cream/70">{formatTime(mantra.duration)}</span>
-            <span className="rounded-full bg-lavender/15 px-2 py-1 text-lavender">{copy[language].mantrasTab}</span>
+          <p className="mt-0.5 text-[11px] text-lavender">{mantra.subtitle[language]} · {formatTime(mantra.duration)}</p>
+          <p className="mt-0.5 line-clamp-1 text-[11px] leading-4 text-cream/55">{mantra.description[language]}</p>
+          <div className="mt-1.5 flex flex-wrap gap-1.5 text-[9px]">
+            {mantra.access === 'premium' && <span className="rounded-full border border-gold/20 bg-gold/10 px-2 py-0.5 text-gold">{copy[language].premium}</span>}
+            <span className="rounded-full border border-lavender/15 bg-lavender/10 px-2 py-0.5 text-lavender">{copy[language].mantrasTab}</span>
           </div>
         </div>
       </div>

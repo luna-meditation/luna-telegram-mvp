@@ -222,8 +222,13 @@ input[type="range"] {
 }
 
 .luna-editorial-row {
-  border-bottom: 1px solid rgba(230, 236, 255, 0.08);
-  padding: 10px 0;
+  border-bottom: 1px solid rgba(230, 236, 255, 0.075);
+  padding: 9px 0;
+  transition: background 180ms ease, border-color 180ms ease;
+}
+
+.luna-editorial-row:hover {
+  border-color: rgba(230, 236, 255, 0.11);
 }
 
 .luna-editorial-row:last-child {
