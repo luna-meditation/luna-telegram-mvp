@@ -9,22 +9,25 @@ type MeditationView = {
 
 type V2DiscoveryProps = {
   title: string;
+  viewAllLabel: string;
   meditations: Meditation[];
+  onViewAll: () => void;
   onOpen: (meditation: Meditation) => void;
   meditationView: (meditation: Meditation) => MeditationView;
   categoryLabel: (category: string) => string;
   durationLabel: (seconds: number) => string;
 };
 
-export function V2Discovery({ title, meditations, onOpen, meditationView, categoryLabel, durationLabel }: V2DiscoveryProps) {
+export function V2Discovery({ title, viewAllLabel, meditations, onViewAll, onOpen, meditationView, categoryLabel, durationLabel }: V2DiscoveryProps) {
   if (!meditations.length) return null;
   const [featured, ...rest] = meditations;
   const featuredView = meditationView(featured);
 
   return (
     <section className="home-v2-discovery-grid">
-      <div className="home-v2-section-heading">
+      <div className="home-v2-section-heading home-v2-section-heading-row">
         <h2>{title}</h2>
+        <button type="button" onClick={onViewAll} className="home-v2-view-all">{viewAllLabel} →</button>
       </div>
       <div className="home-v2-editorial-rail">
         <button type="button" onClick={() => onOpen(featured)} className="home-v2-feature-tile">

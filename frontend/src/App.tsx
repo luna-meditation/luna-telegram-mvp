@@ -553,6 +553,7 @@ const copy = {
     recommendedForYou: 'Recommended for You',
     forYourMood: 'For Your Mood',
     moreToExplore: 'More to Explore',
+    viewAll: 'View all',
     exploreLibrary: 'Explore Library',
     openLibrary: 'Open Library',
     libraryTitle: 'Luna Library',
@@ -582,8 +583,8 @@ const copy = {
     addHomeTitle: 'Add Luna to Home Screen',
     addHomeBody: 'Open your calm in one tap from Telegram.',
     addHomeAction: 'Add',
-    addHomeDone: 'Luna is ready for your Home Screen.',
-    addHomeUnsupported: 'Use Telegram’s menu to add Luna when this device supports it.',
+    addHomeDone: 'Luna is on your Home Screen.',
+    addHomeUnsupported: 'Home Screen shortcut is not available on this device yet.',
     firstPracticeTitle: 'Your first calm practice is coming soon.',
     firstPracticeBody: 'Luna’s library will appear here as soon as new meditations are published.',
     unlockPremium: 'Unlock Premium',
@@ -845,6 +846,7 @@ const copy = {
     recommendedForYou: 'Рекомендация для тебя',
     forYourMood: 'Под твоё настроение',
     moreToExplore: 'Ещё для практики',
+    viewAll: 'Смотреть все',
     exploreLibrary: 'Открыть библиотеку',
     openLibrary: 'Открыть библиотеку',
     libraryTitle: 'Библиотека Luna',
@@ -874,8 +876,8 @@ const copy = {
     addHomeTitle: 'Добавить Luna на экран',
     addHomeBody: 'Открывай спокойствие в один тап из Telegram.',
     addHomeAction: 'Добавить',
-    addHomeDone: 'Luna готова к добавлению на экран.',
-    addHomeUnsupported: 'Используй меню Telegram, когда устройство поддерживает добавление.',
+    addHomeDone: 'Luna уже на твоём экране.',
+    addHomeUnsupported: 'Добавление на экран пока недоступно на этом устройстве.',
     firstPracticeTitle: 'Первая практика скоро появится.',
     firstPracticeBody: 'Библиотека Luna появится здесь, когда медитации будут опубликованы.',
     unlockPremium: 'Открыть Premium',
@@ -1713,6 +1715,7 @@ function App() {
   const [sceneVolume, setSceneVolume] = useState(0.35);
   const [sceneAudioUrl, setSceneAudioUrl] = useState('');
   const [homeScreenMessage, setHomeScreenMessage] = useState('');
+  const [homeScreenStatus, setHomeScreenStatus] = useState<'idle' | 'added' | 'unsupported'>('idle');
   const [moonGardenAmbiencePlaying, setMoonGardenAmbiencePlaying] = useState(false);
   const [moonGardenVolume, setMoonGardenVolume] = useState(readMoonGardenVolume);
   const [moonGardenAmbienceError, setMoonGardenAmbienceError] = useState(false);
@@ -1771,6 +1774,14 @@ function App() {
   useEffect(() => {
     telegram?.ready();
     telegram?.expand();
+    telegram?.checkHomeScreenStatus?.((status) => {
+      if (status === 'added') {
+        setHomeScreenStatus('added');
+        setHomeScreenMessage(copy[language].addHomeDone);
+      } else if (status === 'unsupported') {
+        setHomeScreenStatus('unsupported');
+      }
+    });
     if (initialLibraryCache?.meditations.length) {
       preloadCoverImages(initialLibraryCache.meditations);
     }
@@ -2056,11 +2067,39 @@ function App() {
   const addLunaToHomeScreen = () => {
     const storageKey = 'luna.addHome.prompted.v1';
     window.localStorage.setItem(storageKey, new Date().toISOString());
-    if (telegram?.addToHomeScreen) {
-      telegram.addToHomeScreen();
+
+    if (homeScreenStatus === 'added') {
       setHomeScreenMessage(copy[language].addHomeDone);
       return;
     }
+
+    if (telegram?.checkHomeScreenStatus) {
+      telegram.checkHomeScreenStatus((status) => {
+        if (status === 'added') {
+          setHomeScreenStatus('added');
+          setHomeScreenMessage(copy[language].addHomeDone);
+          return;
+        }
+        if (status === 'unsupported' || !telegram.addToHomeScreen) {
+          setHomeScreenStatus('unsupported');
+          setHomeScreenMessage(copy[language].addHomeUnsupported);
+          return;
+        }
+        telegram.addToHomeScreen();
+        setHomeScreenStatus('added');
+        setHomeScreenMessage(copy[language].addHomeDone);
+      });
+      return;
+    }
+
+    if (telegram?.addToHomeScreen) {
+      telegram.addToHomeScreen();
+      setHomeScreenStatus('added');
+      setHomeScreenMessage(copy[language].addHomeDone);
+      return;
+    }
+
+    setHomeScreenStatus('unsupported');
     setHomeScreenMessage(copy[language].addHomeUnsupported);
   };
 
@@ -2347,6 +2386,7 @@ function App() {
             onBreath={openBreathCircle}
             onAddHome={addLunaToHomeScreen}
             homeScreenMessage={homeScreenMessage}
+            homeScreenStatus={homeScreenStatus}
             stats={[
               { label: copy[language].quietRhythm, value: String(profile?.currentStreak ?? 0), secondary: (profile?.currentStreak ?? 0) === 1 ? copy[language].statDay : copy[language].statDays },
               { label: copy[language].thisWeek, value: String(profile?.weeklyPracticeMinutes ?? 0), secondary: copy[language].statMin },
@@ -2360,6 +2400,7 @@ function App() {
               checkinSaved: copy[language].checkinSaved,
               checkins: copy[language].checkins,
               moreToExplore: copy[language].moreToExplore,
+              viewAll: copy[language].viewAll,
               continueListening: copy[language].continueListening,
               openLibrary: copy[language].openLibrary,
               soundTitle: copy[language].scenesHomeTitle,
@@ -2371,6 +2412,7 @@ function App() {
               weeklyTitle: copy[language].weeklyTitle,
               addHomeTitle: copy[language].addHomeTitle,
               addHomeBody: copy[language].addHomeBody,
+              addHomeAction: copy[language].addHomeAction,
               preparingCalm: copy[language].preparingCalm,
               firstPracticeTitle: copy[language].firstPracticeTitle,
               firstPracticeBody: copy[language].firstPracticeBody,

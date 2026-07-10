@@ -38,6 +38,7 @@ type HomeV2Labels = {
   moreToExplore: string;
   continueListening: string;
   openLibrary: string;
+  viewAll: string;
   soundTitle: string;
   soundActive: string;
   soundSelect: string;
@@ -47,6 +48,7 @@ type HomeV2Labels = {
   weeklyTitle: string;
   addHomeTitle: string;
   addHomeBody: string;
+  addHomeAction: string;
   preparingCalm: string;
   firstPracticeTitle: string;
   firstPracticeBody: string;
@@ -75,6 +77,7 @@ type HomeV2Props = {
   scenePlaying: boolean;
   hasPremium: boolean;
   homeScreenMessage: string;
+  homeScreenStatus: 'idle' | 'added' | 'unsupported';
   stats: V2Stat[];
   labels: HomeV2Labels;
   language: AppLanguage;
@@ -138,7 +141,9 @@ export function HomeV2(props: HomeV2Props) {
 
       <V2Discovery
         title={props.labels.moreToExplore}
+        viewAllLabel={props.labels.viewAll}
         meditations={discoveryItems}
+        onViewAll={props.onLibrary}
         onOpen={props.onOpen}
         meditationView={props.meditationView}
         categoryLabel={props.categoryLabel}
@@ -196,13 +201,12 @@ export function HomeV2(props: HomeV2Props) {
       ) : null}
 
       <button type="button" onClick={props.onAddHome} className="home-v2-home-action">
-        <strong>{props.labels.addHomeTitle}</strong>
-        <span>{props.homeScreenMessage || props.labels.addHomeBody}</span>
-      </button>
-
-      <button type="button" onClick={props.onLibrary} className="home-v2-library-cta">
-        <span>{props.labels.openLibrary}</span>
-        <span aria-hidden="true">→</span>
+        <img src="/assets/icons/luna-icon-192.png" alt="" loading="lazy" />
+        <span>
+          <strong>{props.labels.addHomeTitle}</strong>
+          <small>{props.homeScreenMessage || props.labels.addHomeBody}</small>
+        </span>
+        {props.homeScreenStatus === 'idle' ? <em>{props.labels.addHomeAction} →</em> : null}
       </button>
     </div>
   );
