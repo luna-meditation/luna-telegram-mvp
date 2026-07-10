@@ -1,3 +1,5 @@
+import { useMemo, useState } from 'react';
+
 type MoodChip = 'Sleep' | 'Calm' | 'Focus' | 'Anxiety' | 'Breath' | 'Energy';
 
 type V2HeroProps = {
@@ -29,14 +31,26 @@ export function V2Hero({
     Breath: '〰',
     Energy: '⚡'
   };
+  const heroImage = useMemo(() => {
+    const hour = new Date().getHours();
+    return hour >= 6 && hour < 18 ? '/images/home/hero-day.png' : '/images/home/hero-night.png';
+  }, []);
+  const [imageFailed, setImageFailed] = useState(false);
 
   return (
     <section className="home-v2-atmosphere">
       <div className="home-v2-atmosphere-art" aria-hidden="true">
-        <span className="home-v2-moon" />
-        <span className="home-v2-mountain home-v2-mountain-left" />
-        <span className="home-v2-mountain home-v2-mountain-right" />
-        <span className="home-v2-lake" />
+        {!imageFailed ? (
+          <img
+            src={heroImage}
+            alt=""
+            loading="eager"
+            onError={() => {
+              if (import.meta.env.DEV) console.info('[Luna Home V2 hero image missing]', heroImage);
+              setImageFailed(true);
+            }}
+          />
+        ) : null}
       </div>
 
       <div className="home-v2-atmosphere-copy">
