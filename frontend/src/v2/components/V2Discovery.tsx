@@ -60,6 +60,7 @@ export function V2PracticeTiles({
   askTitle,
   askBody,
   askAction,
+  askMessage,
   onBreath,
   onAsk
 }: {
@@ -68,6 +69,7 @@ export function V2PracticeTiles({
   askTitle: string;
   askBody: string;
   askAction: string;
+  askMessage?: string;
   onBreath: () => void;
   onAsk: () => void;
 }) {
@@ -83,6 +85,7 @@ export function V2PracticeTiles({
         <strong>{askTitle}</strong>
         <span>{askBody}</span>
         <small>{askAction} <ArrowRight size={11} /></small>
+        {askMessage ? <em>{askMessage}</em> : null}
       </button>
     </section>
   );

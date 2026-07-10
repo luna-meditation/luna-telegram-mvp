@@ -653,6 +653,7 @@ const copy = {
     askLunaTitle: 'Ask Luna',
     askLunaBody: 'Ask for a recommendation, a calming thought, or support.',
     askLunaAction: 'Talk to Luna',
+    askLunaSoon: 'Luna companion is coming soon.',
     recommendedFocus: 'Recommended focus: {focus}',
     focusBreathAnxiety: 'Breath and anxiety relief',
     focusSleepRecovery: 'Sleep recovery',
@@ -954,6 +955,7 @@ const copy = {
     askLunaTitle: 'Спросить Luna',
     askLunaBody: 'Попроси рекомендацию, спокойную мысль или поддержку.',
     askLunaAction: 'Написать Luna',
+    askLunaSoon: 'Luna companion скоро появится.',
     recommendedFocus: 'Рекомендация: {focus}',
     focusBreathAnxiety: 'Дыхание и снижение тревоги',
     focusSleepRecovery: 'Восстановление сна',
@@ -1458,6 +1460,31 @@ function moodMessage(mood: MoodChip, wellness: WellnessSummary | null, language:
   return 'Beautiful. Luna will keep today soft and steady.';
 }
 
+function homeMoodLabel(mood: MoodChip, language: AppLanguage) {
+  const labels: Record<MoodChip, Record<AppLanguage, string>> = {
+    Focus: { en: 'Great', ru: 'Отлично' },
+    Energy: { en: 'Great', ru: 'Отлично' },
+    Calm: { en: 'Good', ru: 'Хорошо' },
+    Breath: { en: 'Meh', ru: 'Норм' },
+    Anxiety: { en: 'Anxious', ru: 'Тревожно' },
+    Sleep: { en: 'Tired', ru: 'Устал' }
+  };
+  return labels[mood][language];
+}
+
+function homeEnergyTone(mood: MoodChip): 'high' | 'medium' | 'low' {
+  if (mood === 'Focus' || mood === 'Energy' || mood === 'Calm') return 'high';
+  if (mood === 'Breath') return 'medium';
+  return 'low';
+}
+
+function homeEnergyLabel(mood: MoodChip, language: AppLanguage) {
+  const tone = homeEnergyTone(mood);
+  if (tone === 'high') return copy[language].energyHigh;
+  if (tone === 'medium') return copy[language].energyMedium;
+  return copy[language].energyLow;
+}
+
 function displayMeditationTitle(meditation: Meditation, fallbackIndex = 0) {
   const clean = meditation.title?.trim();
   if (clean) return clean;
@@ -1724,6 +1751,7 @@ function App() {
   const [sceneAudioUrl, setSceneAudioUrl] = useState('');
   const [homeScreenMessage, setHomeScreenMessage] = useState('');
   const [homeScreenStatus, setHomeScreenStatus] = useState<'idle' | 'added' | 'unsupported'>('idle');
+  const [assistantMessage, setAssistantMessage] = useState('');
   const [moonGardenAmbiencePlaying, setMoonGardenAmbiencePlaying] = useState(false);
   const [moonGardenVolume, setMoonGardenVolume] = useState(readMoonGardenVolume);
   const [moonGardenAmbienceError, setMoonGardenAmbienceError] = useState(false);
@@ -2117,7 +2145,7 @@ function App() {
       telegram?.openTelegramLink(`https://t.me/${botUsername}?start=luna`);
       return;
     }
-    setPage('profile');
+    setAssistantMessage(copy[language].askLunaSoon);
   };
 
   const toggleMoonGardenAmbience = async () => {
@@ -2249,6 +2277,7 @@ function App() {
     setShowCheckin(false);
     const nextSummary = await getWellnessSummary(initData);
     setWellness({ ...nextSummary, todayCheckin: checkin });
+    await refreshAccount();
   };
 
   const dismissCheckin = () => {
@@ -2405,11 +2434,12 @@ function App() {
             onAddHome={addLunaToHomeScreen}
             homeScreenMessage={homeScreenMessage}
             homeScreenStatus={homeScreenStatus}
+            assistantMessage={assistantMessage}
             stats={[
-              { label: copy[language].statStreak, value: String(profile?.currentStreak ?? 0), secondary: (profile?.currentStreak ?? 0) === 1 ? copy[language].statDay : copy[language].statDays, kind: 'streak' },
-              { label: copy[language].statCheckins, value: `${wellness?.weeklyCheckinCount ?? 0}/7`, kind: 'checkins' },
-              { label: copy[language].statMood, value: wellness?.mostCommonMoodLabel ? translateMoodLabel(wellness.mostCommonMoodLabel, language) : translateCategory(mood, language), kind: 'mood' },
-              { label: copy[language].statEnergy, value: mood === 'Energy' || mood === 'Focus' ? copy[language].energyHigh : mood === 'Sleep' || mood === 'Anxiety' ? copy[language].energyLow : copy[language].energyMedium, kind: 'energy' }
+              { label: copy[language].statStreak, value: profile ? String(profile.currentStreak ?? 0) : '—', secondary: profile ? ((profile.currentStreak ?? 0) === 1 ? copy[language].statDay : copy[language].statDays) : undefined, kind: 'streak' },
+              { label: copy[language].statCheckins, value: wellness ? `${wellness.weeklyCheckinCount ?? 0}/7` : '—/7', kind: 'checkins' },
+              { label: copy[language].statMood, value: homeMoodLabel(mood, language), kind: 'mood' },
+              { label: copy[language].statEnergy, value: homeEnergyLabel(mood, language), kind: 'energy', tone: homeEnergyTone(mood) }
             ]}
             labels={{
               brandMeta: copy[language].tagline,

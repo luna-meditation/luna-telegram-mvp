@@ -339,6 +339,38 @@
   color: #8ff0ac;
 }
 
+.home-v2-stat-energy.home-v2-stat-tone-medium {
+  border-color: rgba(202, 213, 127, 0.16);
+  background:
+    radial-gradient(circle at 88% 17%, rgba(202, 213, 127, 0.16), transparent 38%),
+    rgba(24, 29, 33, 0.42);
+}
+
+.home-v2-stat-energy.home-v2-stat-tone-medium i {
+  background: rgba(202, 213, 127, 0.16);
+  box-shadow: 0 0 18px rgba(202, 213, 127, 0.13), inset 0 0 0 1px rgba(202, 213, 127, 0.28);
+}
+
+.home-v2-stat-energy.home-v2-stat-tone-medium strong {
+  color: #cbd780;
+}
+
+.home-v2-stat-energy.home-v2-stat-tone-low {
+  border-color: rgba(230, 156, 122, 0.16);
+  background:
+    radial-gradient(circle at 88% 17%, rgba(230, 156, 122, 0.15), transparent 38%),
+    rgba(33, 20, 27, 0.4);
+}
+
+.home-v2-stat-energy.home-v2-stat-tone-low i {
+  background: rgba(230, 156, 122, 0.14);
+  box-shadow: 0 0 18px rgba(230, 156, 122, 0.11), inset 0 0 0 1px rgba(230, 156, 122, 0.28);
+}
+
+.home-v2-stat-energy.home-v2-stat-tone-low strong {
+  color: #e8ad86;
+}
+
 .home-v2-stat-card span,
 .home-v2-stat-card strong,
 .home-v2-stat-card small {
@@ -708,6 +740,11 @@
   color: var(--v2-gold);
 }
 
+.home-v2-ask-tile svg {
+  color: #d7cbff;
+  filter: drop-shadow(0 0 10px rgba(158, 143, 255, 0.28));
+}
+
 .home-v2-practice-tile strong {
   display: block;
   margin-top: 9px;
@@ -730,6 +767,15 @@
   gap: 4px;
   color: rgba(240, 207, 116, 0.74);
   font-weight: 760;
+}
+
+.home-v2-ask-tile em {
+  display: block;
+  margin-top: 6px;
+  color: rgba(251, 247, 239, 0.58);
+  font-size: 9.5px;
+  font-style: normal;
+  line-height: 1.35;
 }
 
 .home-v2-home-action {

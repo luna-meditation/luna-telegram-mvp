@@ -80,6 +80,7 @@ type HomeV2Props = {
   hasPremium: boolean;
   homeScreenMessage: string;
   homeScreenStatus: 'idle' | 'added' | 'unsupported';
+  assistantMessage: string;
   stats: V2Stat[];
   labels: HomeV2Labels;
   language: AppLanguage;
@@ -164,6 +165,7 @@ export function HomeV2(props: HomeV2Props) {
         askTitle={props.labels.askLunaTitle}
         askBody={props.labels.askLunaBody}
         askAction={props.labels.askLunaAction}
+        askMessage={props.assistantMessage}
         onBreath={props.onBreath}
         onAsk={props.onAskLuna}
       />
@@ -202,7 +204,7 @@ export function HomeV2(props: HomeV2Props) {
       ) : null}
 
       <button type="button" onClick={props.onAddHome} className="home-v2-home-action">
-        <img src="/assets/icons/luna-icon-192.png" alt="" loading="lazy" />
+        <img src="/assets/icons/luna-crescent-icon.svg" alt="" loading="lazy" />
         <span>
           <strong>{props.labels.addHomeTitle}</strong>
           <small>{props.homeScreenMessage || props.labels.addHomeBody}</small>

@@ -3,13 +3,14 @@ export type V2Stat = {
   value: string;
   secondary?: string;
   kind?: 'streak' | 'checkins' | 'mood' | 'energy';
+  tone?: 'high' | 'medium' | 'low';
 };
 
 export function V2Stats({ stats }: { stats: V2Stat[] }) {
   return (
     <section className="home-v2-stats" aria-label="Home stats">
       {stats.slice(0, 4).map((stat) => (
-        <article key={stat.label} className={`home-v2-stat-card ${stat.kind ? `home-v2-stat-${stat.kind}` : ''}`}>
+        <article key={stat.label} className={`home-v2-stat-card ${stat.kind ? `home-v2-stat-${stat.kind}` : ''} ${stat.tone ? `home-v2-stat-tone-${stat.tone}` : ''}`}>
           <i aria-hidden="true" />
           <span>{stat.label}</span>
           <strong>{stat.value}</strong>
