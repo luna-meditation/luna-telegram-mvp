@@ -5,18 +5,18 @@
 @tailwind utilities;
 
 :root {
-  --luna-bg-deep: #070b1a;
-  --luna-bg-night: #0d1026;
-  --luna-bg-surface: rgba(34, 39, 86, 0.68);
-  --luna-bg-elevated: rgba(46, 49, 105, 0.72);
-  --luna-purple: #8e5fd6;
-  --luna-purple-soft: #b798ff;
+  --luna-bg-deep: #090611;
+  --luna-bg-night: #120b1e;
+  --luna-bg-surface: rgba(34, 22, 48, 0.48);
+  --luna-bg-elevated: rgba(48, 31, 68, 0.58);
+  --luna-purple: #7c55c8;
+  --luna-purple-soft: #a88af1;
   --luna-gold: #d4af37;
   --luna-gold-soft: #f4d67a;
   --luna-text-primary: #f7f2ea;
-  --luna-text-secondary: #c7c0df;
-  --luna-text-muted: #8d87ad;
-  --luna-border: rgba(214, 205, 255, 0.12);
+  --luna-text-secondary: #cfc3d9;
+  --luna-text-muted: #8f809e;
+  --luna-border: rgba(245, 232, 214, 0.1);
   --luna-border-strong: rgba(212, 175, 55, 0.28);
   --luna-glass: rgba(21, 25, 58, 0.58);
   --luna-danger: #ff7575;
@@ -62,10 +62,10 @@
 
 .luna-bg {
   background:
-    radial-gradient(circle at 18% 4%, rgba(142, 95, 214, 0.2), transparent 17rem),
-    radial-gradient(circle at 80% -10%, rgba(101, 97, 202, 0.22), transparent 22rem),
-    radial-gradient(circle at 90% 12%, rgba(212, 175, 55, 0.1), transparent 14rem),
-    linear-gradient(180deg, #050917 0%, #111634 44%, #090b18 100%);
+    radial-gradient(circle at 18% 0%, rgba(124, 85, 200, 0.22), transparent 17rem),
+    radial-gradient(circle at 86% 6%, rgba(212, 175, 55, 0.08), transparent 15rem),
+    radial-gradient(ellipse at 50% 110%, rgba(55, 25, 76, 0.62), transparent 28rem),
+    linear-gradient(180deg, #07050e 0%, #140c22 42%, #090611 100%);
   overflow: hidden;
 }
 
@@ -104,17 +104,17 @@
 .luna-surface {
   border: 1px solid var(--luna-border);
   background:
-    linear-gradient(145deg, rgba(49, 54, 112, 0.72), rgba(18, 22, 52, 0.7)),
+    linear-gradient(145deg, rgba(45, 28, 62, 0.5), rgba(14, 9, 24, 0.62)),
     var(--luna-glass);
-  box-shadow: var(--luna-shadow-soft);
+  box-shadow: 0 16px 46px rgba(0, 0, 0, 0.22);
   backdrop-filter: blur(18px);
 }
 
 .luna-surface-strong {
-  border: 1px solid rgba(212, 175, 55, 0.18);
+  border: 1px solid rgba(245, 232, 214, 0.1);
   background:
-    radial-gradient(circle at 78% 10%, rgba(142, 95, 214, 0.18), transparent 46%),
-    linear-gradient(145deg, rgba(37, 42, 93, 0.84), rgba(12, 15, 36, 0.8));
+    radial-gradient(circle at 82% 0%, rgba(212, 175, 55, 0.12), transparent 34%),
+    linear-gradient(145deg, rgba(43, 26, 58, 0.72), rgba(13, 8, 22, 0.78));
   box-shadow: var(--luna-shadow-glass);
   backdrop-filter: blur(20px);
 }
@@ -123,7 +123,7 @@
   border-radius: var(--luna-radius-lg);
   border: 1px solid var(--luna-border);
   background: var(--luna-bg-surface);
-  box-shadow: var(--luna-shadow-soft);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(16px);
 }
 
@@ -137,8 +137,9 @@
 
 .luna-section-title {
   color: var(--luna-text-primary);
-  font-size: 18px;
-  font-weight: 650;
+  font-family: "Playfair Display", Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
   letter-spacing: -0.01em;
 }
 
@@ -158,17 +159,17 @@
 }
 
 .luna-chip-active {
-  border-color: rgba(142, 95, 214, 0.45);
-  background: linear-gradient(135deg, rgba(142, 95, 214, 0.95), rgba(103, 91, 210, 0.92));
+  border-color: rgba(212, 175, 55, 0.28);
+  background: rgba(212, 175, 55, 0.14);
   color: white;
-  box-shadow: 0 12px 30px rgba(142, 95, 214, 0.22);
+  box-shadow: 0 10px 26px rgba(212, 175, 55, 0.1);
 }
 
 .luna-button-primary {
   border-radius: 18px;
-  background: linear-gradient(135deg, #9c77f2 0%, #7357dc 100%);
-  color: white;
-  box-shadow: 0 16px 42px rgba(112, 84, 220, 0.28);
+  background: linear-gradient(135deg, #f4d67a 0%, #d4af37 100%);
+  color: #120b1e;
+  box-shadow: var(--luna-shadow-gold);
 }
 
 .luna-button-gold {
@@ -199,6 +200,26 @@
 
 input[type="range"] {
   accent-color: var(--luna-gold);
+}
+
+.luna-editorial-title {
+  font-family: "Playfair Display", Georgia, serif;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+}
+
+.luna-separator {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(245, 232, 214, 0.11), transparent);
+}
+
+.luna-editorial-row {
+  border-bottom: 1px solid rgba(245, 232, 214, 0.08);
+  padding: 12px 0;
+}
+
+.luna-editorial-row:last-child {
+  border-bottom: 0;
 }
 
 .luna-artwork {

@@ -2572,17 +2572,18 @@ function HomePage(props: {
   const [soundExpanded, setSoundExpanded] = useState(false);
   const activeScene = props.selectedScene ?? props.scenes[0];
   return (
-    <div className="luna-page space-y-4">
-      <section className="luna-surface-strong overflow-hidden rounded-[28px] p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-sm text-lavender">{dayGreeting(props.language)},</p>
-            <h2 className="mt-0.5 text-3xl font-semibold leading-tight tracking-[-0.03em] text-cream">{props.firstName}</h2>
+    <div className="luna-page space-y-5">
+      <section className="pt-1">
+        <div className="flex items-end justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-sm text-lavender">{dayGreeting(props.language)}, {props.firstName}</p>
+            <h2 className="luna-editorial-title mt-1 max-w-[300px] text-[34px] leading-[0.98] text-cream">
+              {t.feeling}
+            </h2>
           </div>
-          <MoonMark className="h-12 w-12 shrink-0" />
+          <MoonMark className="mb-1 h-11 w-11 shrink-0" />
         </div>
-        <p className="mt-3 text-sm text-lavender">{t.feeling}</p>
-        <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1 luna-scrollbar-none">
+        <div className="-mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-1 luna-scrollbar-none">
           {moods.map((item) => (
             <button
               key={item}
@@ -2593,7 +2594,7 @@ function HomePage(props: {
             </button>
           ))}
         </div>
-        <div className="mt-3 rounded-2xl border border-white/10 bg-white/10 px-3 py-2 backdrop-blur">
+        <div className="mt-3 max-w-[330px]">
           <p className="line-clamp-1 text-xs font-medium text-cream/85">{props.wellness?.todayCheckin ? t.checkinSaved : moodMessage(props.mood, props.wellness, props.language)}</p>
           {props.wellness?.weeklyCheckinCount ? (
             <p className="mt-1 text-[11px] capitalize text-gold">
@@ -2613,7 +2614,7 @@ function HomePage(props: {
 
       <Rail title={t.moreToExplore} meditations={props.explore} onOpen={props.onOpen} language={props.language} />
       <ContinueListeningSection title={t.continueListening} meditations={props.continueListening} onOpen={props.onOpen} language={props.language} />
-      <section className={`luna-card p-3 ${props.scenePlaying ? 'border-gold/40 bg-gold/15' : ''}`}>
+      <section className={`rounded-[18px] border px-3 py-2.5 backdrop-blur-xl ${props.scenePlaying ? 'border-gold/30 bg-gold/10' : 'border-white/10 bg-white/10'}`}>
         <div className="flex items-center gap-3">
           <button onClick={props.onSoundOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left">
             <div className="grid h-11 w-11 shrink-0 place-items-center rounded-[16px] bg-night/60 text-gold">
@@ -2651,7 +2652,7 @@ function HomePage(props: {
           </div>
         )}
       </section>
-      <button onClick={props.onBreath} className="luna-surface relative w-full overflow-hidden rounded-[24px] p-4 text-left">
+      <button onClick={props.onBreath} className="relative w-full overflow-hidden rounded-[22px] border border-white/10 bg-white/10 p-4 text-left backdrop-blur">
         <div className="absolute right-4 top-4 grid h-12 w-12 place-items-center rounded-full border border-gold/30 bg-gold/10 text-gold">
           <Sparkles size={22} />
         </div>
@@ -2662,10 +2663,10 @@ function HomePage(props: {
       {props.wellness && <InsightCard title={t.weeklyTitle} body={localizeWeeklyInsight(props.wellness, props.language)} meta={text(props.language, 'recommendedFocus', { focus: translateFocus(props.wellness.recommendedFocus, props.language) })} />}
       {props.loading && !props.daily && <RailSkeleton title={t.preparingCalm} />}
 
-      <button onClick={props.onLibrary} className="luna-button-primary w-full px-5 py-4 font-semibold hover:brightness-110">
+      <button onClick={props.onLibrary} className="rounded-full border border-gold/25 px-5 py-3 text-sm font-semibold text-gold hover:bg-gold/10">
         {t.openLibrary}
       </button>
-      <button onClick={props.onAddHome} className="luna-card w-full px-4 py-3 text-left">
+      <button onClick={props.onAddHome} className="w-full border-t border-white/10 px-1 py-3 text-left">
         <span className="block text-sm font-semibold text-cream">{t.addHomeTitle}</span>
         <span className="mt-1 block text-xs leading-5 text-lavender">{props.homeScreenMessage || t.addHomeBody}</span>
       </button>
@@ -2678,21 +2679,21 @@ function PracticeHero({ meditation, label, onOpen, language }: { meditation: Med
   const localized = getLocalizedMeditation(meditation, language);
   const cta = isInProgress(meditation) ? copy[language].resume : copy[language].begin;
   return (
-    <button onClick={onOpen} className="group relative h-[286px] w-full overflow-hidden rounded-[30px] border border-white/10 text-left shadow-glow transition duration-300 ease-in-out hover:brightness-110">
-      <img src={meditation.cover_image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-[.82] transition duration-700 group-hover:scale-[1.035]" loading="eager" />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#070b1a] via-[#070b1a]/42 to-transparent" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_12%,rgba(212,175,55,.18),transparent_28%),linear-gradient(180deg,rgba(5,8,20,.16),transparent_44%)]" />
+    <button onClick={onOpen} className="group relative h-[318px] w-full overflow-hidden rounded-[32px] border border-white/10 text-left shadow-glow transition duration-300 ease-in-out hover:brightness-110">
+      <img src={meditation.cover_image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-90 transition duration-700 group-hover:scale-[1.035]" loading="eager" />
+      <div className="absolute inset-0 bg-gradient-to-t from-[#090611] via-[#090611]/35 to-transparent" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_12%,rgba(212,175,55,.14),transparent_28%),linear-gradient(180deg,rgba(5,3,10,.04),transparent_44%)]" />
       <span className="absolute right-4 top-4 rounded-full border border-white/15 bg-night/50 px-3 py-1 text-xs font-semibold text-cream backdrop-blur">
         {meditation.premium ? copy[language].premium : copy[language].free}
       </span>
       <div className="absolute bottom-0 p-4">
         <p className="mb-2 inline-flex rounded-full border border-white/15 bg-night/50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-gold backdrop-blur">{label}</p>
-        <h3 className="text-[26px] font-semibold leading-tight tracking-[-0.03em]">{localized.title}</h3>
+        <h3 className="luna-editorial-title max-w-[290px] text-[32px] leading-[0.98]">{localized.title}</h3>
         <p className="mt-1 text-sm capitalize text-cream/75">
           {translateCategory(meditation.category, language)} · {formatTime(meditation.duration)}
         </p>
         {!localized.hasSelectedLanguageAudio && <p className="mt-2 text-xs text-gold">{copy[language].availableInEnglish}</p>}
-        <span className="luna-button-primary mt-3 inline-flex px-5 py-2.5 text-sm font-semibold">
+        <span className="mt-4 inline-flex rounded-full border border-gold/35 bg-night/50 px-5 py-2.5 text-sm font-semibold text-gold backdrop-blur">
           {cta}
         </span>
       </div>
@@ -2760,7 +2761,7 @@ function ContinueListeningSection({ title, meditations, onOpen, language }: { ti
   return (
     <section>
       <h2 className="luna-section-title mb-3">{title}</h2>
-      <button onClick={() => onOpen(meditation)} className="luna-card flex w-full items-center gap-3 p-3 text-left">
+      <button onClick={() => onOpen(meditation)} className="flex w-full items-center gap-3 border-y border-white/10 py-3 text-left">
         <img src={meditation.cover_image} alt="" className="h-20 w-20 shrink-0 rounded-[20px] object-cover shadow-glow" loading="lazy" />
         <div className="min-w-0 flex-1">
           <p className="line-clamp-1 font-serif text-xl">{localized.title}</p>
@@ -2808,12 +2809,12 @@ function LibraryPage(props: {
     [mantra.title[props.language], mantra.subtitle[props.language], mantra.category, ...mantra.tags].join(' ').toLowerCase().includes(props.query.toLowerCase())
   );
   return (
-    <div className="luna-page space-y-4">
+    <div className="luna-page space-y-5">
       <div>
         <p className="luna-section-kicker">LUNA</p>
-        <h2 className="text-3xl font-semibold tracking-[-0.03em]">{t.libraryTitle}</h2>
+        <h2 className="luna-editorial-title text-[34px] leading-none">{t.libraryTitle}</h2>
       </div>
-      <div className="grid grid-cols-3 gap-1 rounded-[18px] border border-white/10 bg-white/10 p-1 backdrop-blur">
+      <div className="grid grid-cols-3 gap-1 rounded-full border border-white/10 bg-white/10 p-1 backdrop-blur">
         <button onClick={() => props.setMode('meditations')} className={`rounded-[14px] px-3 py-2 text-sm font-semibold ${props.mode === 'meditations' ? 'luna-chip-active' : 'text-lavender'}`}>
           {t.meditationsTab}
         </button>
@@ -2824,7 +2825,7 @@ function LibraryPage(props: {
           {t.mantrasTab}
         </button>
       </div>
-      <div className="luna-card flex items-center gap-2 px-4 py-3">
+      <div className="flex items-center gap-2 border-b border-white/10 px-1 py-3">
         <Search size={18} className="text-lavender" />
         <input value={props.query} onChange={(event) => props.setQuery(event.target.value)} placeholder={t.searchByTitle} className="w-full bg-transparent text-sm outline-none placeholder:text-cream/45" />
       </div>
@@ -2842,16 +2843,18 @@ function LibraryPage(props: {
               {[0, 1, 2].map((item) => <MeditationCardSkeleton key={item} />)}
             </div>
           ) : props.meditations.length ? (
-            props.meditations.map((meditation) => (
-              <MeditationCard key={meditation.id} meditation={meditation} locked={meditation.premium && !props.hasPremium} onOpen={props.onOpen} onFavorite={props.onFavorite} onUnlock={props.onUnlock} language={props.language} />
-            ))
+            <section className="space-y-1">
+              {props.meditations.map((meditation) => (
+                <MeditationCard key={meditation.id} meditation={meditation} locked={meditation.premium && !props.hasPremium} onOpen={props.onOpen} onFavorite={props.onFavorite} onUnlock={props.onUnlock} language={props.language} />
+              ))}
+            </section>
           ) : (
             <EmptyState title={t.noMeditations} body={t.noMeditationsBody} />
           )}
         </>
       ) : props.mode === 'breathing' ? (
         <section className="space-y-3">
-          <button onClick={props.onBreath} className="luna-surface-strong relative w-full overflow-hidden rounded-[26px] p-4 text-left">
+          <button onClick={props.onBreath} className="relative w-full overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_82%_16%,rgba(212,175,55,.18),transparent_30%),linear-gradient(145deg,rgba(45,28,62,.62),rgba(12,8,20,.78))] p-5 text-left shadow-glow">
             <div className="absolute right-4 top-4 grid h-12 w-12 place-items-center rounded-full border border-gold/30 bg-gold/10 text-gold">
               <Sparkles size={22} />
             </div>
@@ -2862,7 +2865,7 @@ function LibraryPage(props: {
           </button>
         </section>
       ) : filteredMantras.length ? (
-        <section className="space-y-3">
+        <section className="space-y-1">
           {filteredMantras.map((mantra) => (
             <MantraCard key={mantra.id} mantra={mantra} locked={mantra.access === 'premium' && !props.hasPremium} onOpen={props.onOpenMantra} language={props.language} />
           ))}
@@ -2876,7 +2879,7 @@ function LibraryPage(props: {
 
 function MeditationCardSkeleton() {
   return (
-    <article className="luna-card animate-pulse p-3">
+    <article className="animate-pulse border-b border-white/10 py-3">
       <div className="flex gap-3">
         <div className="h-24 w-24 rounded-2xl bg-cream/10" />
         <div className="min-w-0 flex-1">
@@ -2909,34 +2912,32 @@ function MeditationCard({ meditation, locked, onOpen, onFavorite, onUnlock, lang
 }) {
   const localized = getLocalizedMeditation(meditation, language);
   return (
-    <article className="luna-card p-3">
-      <div className="flex gap-3">
-        <div className="relative">
-          <img src={meditation.cover_image} alt="" className={`h-24 w-24 rounded-[20px] object-cover shadow-glow ${locked ? 'blur-sm' : ''}`} loading="lazy" />
+    <article className="luna-editorial-row">
+      <div className="flex items-center gap-3">
+        <button onClick={() => (locked ? onUnlock() : onOpen(meditation))} className="relative shrink-0 text-left">
+          <img src={meditation.cover_image} alt="" className={`h-[86px] w-[86px] rounded-[20px] object-cover shadow-glow ${locked ? 'blur-sm' : ''}`} loading="lazy" />
           {locked && <Lock className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gold" />}
-        </div>
+        </button>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="truncate font-semibold">{localized.title}</h3>
+          <button onClick={() => (locked ? onUnlock() : onOpen(meditation))} className="w-full text-left">
+            <div className="flex items-center gap-2">
+            <h3 className="truncate font-serif text-xl leading-tight">{localized.title}</h3>
             {meditation.premium && <Crown size={15} className="text-gold" />}
-          </div>
-          <p className="mt-1 text-xs capitalize text-lavender">{translateCategory(meditation.category, language)}</p>
-          <p className="mt-2 line-clamp-2 text-sm text-cream/70">{localized.description}</p>
+            </div>
+            <p className="mt-1 text-xs capitalize text-lavender">{translateCategory(meditation.category, language)} · {formatTime(meditation.duration)}</p>
+            <p className="mt-2 line-clamp-1 text-sm text-cream/60">{localized.description}</p>
+          </button>
           {!localized.hasSelectedLanguageAudio && <p className="mt-1 text-[11px] text-gold">{copy[language].availableInEnglish}</p>}
-          <div className="mt-3 flex flex-wrap gap-2 text-[11px]">
+          <div className="mt-2 flex flex-wrap gap-2 text-[11px]">
             <span className="rounded-full bg-gold/15 px-2 py-1 text-gold">{meditation.premium ? copy[language].premium : copy[language].free}</span>
-            <span className="rounded-full bg-cream/10 px-2 py-1 text-cream/70">{formatTime(meditation.duration)}</span>
             {meditation.play_count > 0 && <span className="rounded-full bg-lavender/15 px-2 py-1 text-lavender">{copy[language].popularToday}</span>}
             {meditation.history?.last_position ? <span className="rounded-full bg-cream/10 px-2 py-1 text-cream/70">{copy[language].resume}</span> : null}
           </div>
         </div>
-        <button onClick={() => onFavorite(meditation)} className="self-start rounded-full bg-cream/10 p-2" aria-label="Favorite meditation">
+        <button onClick={() => onFavorite(meditation)} className="luna-icon-button min-h-10 min-w-10 self-center" aria-label="Favorite meditation">
           <Heart size={17} className={meditation.favorite ? 'fill-gold text-gold' : 'text-cream'} />
         </button>
       </div>
-      <button onClick={() => (locked ? onUnlock() : onOpen(meditation))} className={`mt-3 w-full rounded-2xl px-4 py-3 text-sm font-semibold ${locked ? 'luna-button-gold' : 'bg-cream/15 text-cream'}`}>
-        {locked ? copy[language].unlockPremium : meditation.history?.last_position ? `${copy[language].resume} ${formatTime(meditation.history.last_position)}` : copy[language].play}
-      </button>
     </article>
   );
 }
@@ -2948,7 +2949,7 @@ function MantraCard({ mantra, locked, onOpen, language }: {
   language: AppLanguage;
 }) {
   return (
-    <button onClick={() => onOpen(mantra)} className="luna-card group w-full p-3 text-left transition hover:border-gold/30">
+    <button onClick={() => onOpen(mantra)} className="luna-editorial-row group w-full text-left transition">
       <div className="flex gap-3">
         <div className="relative shrink-0">
           <img src={mantra.cover} alt="" className={`h-24 w-24 rounded-2xl object-cover shadow-glow ${locked ? 'blur-[2px]' : ''}`} loading="lazy" />
@@ -3309,19 +3310,17 @@ function PricingPage({
   const t = copy[language];
 
   return (
-    <div className="luna-page space-y-3">
-      <section className="luna-surface-strong overflow-hidden rounded-[28px] p-4">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="luna-section-kicker">{t.premiumTitle}</p>
-            <h2 className="mt-1 text-3xl font-semibold leading-tight tracking-[-0.04em]">{t.premiumHeadline}</h2>
-          </div>
+    <div className="luna-page space-y-5">
+      <section className="relative overflow-hidden rounded-[34px] border border-gold/20 bg-[radial-gradient(circle_at_76%_18%,rgba(212,175,55,.2),transparent_26%),linear-gradient(160deg,rgba(43,26,58,.72),rgba(10,6,16,.9))] p-5 shadow-glow">
+        <div className="absolute right-5 top-5 opacity-80">
           <MoonMark className="h-12 w-12 shrink-0" />
         </div>
-        <p className="mt-2 text-sm leading-5 text-beige">
+        <p className="luna-section-kicker">{t.premiumTitle}</p>
+        <h2 className="luna-editorial-title mt-8 max-w-[260px] text-[38px] leading-[0.96]">{t.premiumHeadline}</h2>
+        <p className="mt-4 max-w-[300px] text-sm leading-6 text-beige">
           {t.premiumBody}
         </p>
-        <div className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-5 flex flex-wrap gap-2">
           <PremiumBadge label={t.premiumLibrary} />
           <PremiumBadge label={t.weeklyContent} />
           <PremiumBadge label={t.dailyStreak} />
@@ -3349,7 +3348,7 @@ function PremiumBadge({ label }: { label: string }) {
 
 function PremiumValue({ title, body }: { title: string; body: string }) {
   return (
-    <article className="min-h-[118px] rounded-[18px] border border-white/10 bg-white/10 p-3 backdrop-blur">
+    <article className="min-h-[104px] border-t border-white/10 py-3">
       <div className="flex items-center gap-2">
         <Sparkles size={15} className="shrink-0 text-gold" />
         <h3 className="text-sm font-semibold">{title}</h3>
@@ -3361,7 +3360,7 @@ function PremiumValue({ title, body }: { title: string; body: string }) {
 
 function PlanCard(props: { title: string; price: string; features: string[]; action?: string; loading?: boolean; disabled?: boolean; featured?: boolean; onClick?: () => void; language: AppLanguage }) {
   return (
-    <article className={`rounded-[24px] border p-3.5 shadow-glow backdrop-blur ${props.featured ? 'border-gold/30 bg-gradient-to-br from-gold/15 via-lavender/10 to-white/10' : 'border-white/10 bg-white/10'}`}>
+    <article className={`rounded-[26px] border p-4 backdrop-blur ${props.featured ? 'border-gold/35 bg-gold/10 shadow-gold' : 'border-white/10 bg-white/5'}`}>
       <div className="flex items-start justify-between gap-4">
         <div>
           <h3 className="text-xl font-semibold">{props.title}</h3>
@@ -3369,14 +3368,14 @@ function PlanCard(props: { title: string; price: string; features: string[]; act
         </div>
         <Crown className="text-gold" />
       </div>
-      <ul className="mt-2 grid grid-cols-2 gap-1.5 text-xs text-cream/75">
+      <ul className="mt-3 grid gap-1.5 text-xs text-cream/75">
         {props.features.map((feature) => <li key={feature}>• {feature}</li>)}
       </ul>
       {props.action && (
         <button
           onClick={props.onClick}
           disabled={props.disabled}
-          className="luna-button-primary mt-3 flex w-full items-center justify-center gap-2 px-4 py-2.5 font-semibold transition disabled:cursor-not-allowed disabled:opacity-70"
+          className={`${props.featured ? 'luna-button-primary' : 'rounded-full border border-gold/25 text-gold'} mt-4 flex w-full items-center justify-center gap-2 px-4 py-3 font-semibold transition disabled:cursor-not-allowed disabled:opacity-70`}
         >
           {props.loading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-night/30 border-t-night" />}
           {props.loading ? copy[props.language].openingPayment : props.action}
@@ -3657,10 +3656,17 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
   };
 
   return (
-    <div className="luna-page relative space-y-4">
-      <img src={meditation.cover_image} alt="" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[440px] w-full scale-110 rounded-[34px] object-cover opacity-25 blur-3xl" />
-      <div className="luna-surface-strong rounded-[30px] p-4">
-        <div className="relative mx-auto aspect-square w-full max-w-[312px] overflow-hidden rounded-[26px] border border-white/10 bg-night/80 shadow-glow">
+    <div className="luna-page relative space-y-5 pt-1">
+      <img src={meditation.cover_image} alt="" className="pointer-events-none absolute inset-x-[-20px] top-[-20px] -z-10 h-[520px] w-[calc(100%+40px)] scale-105 rounded-[38px] object-cover opacity-20 blur-3xl" />
+      <div className="flex items-center justify-between">
+        <button onClick={onHome} className="rounded-full border border-white/10 bg-night/45 px-4 py-2 text-sm text-cream backdrop-blur">
+          ←
+        </button>
+        <p className="luna-section-kicker">{translateCategory(meditation.category, language)}</p>
+        <span className="h-9 w-9" />
+      </div>
+      <div>
+        <div className="relative mx-auto aspect-square w-full max-w-[336px] overflow-hidden rounded-[34px] border border-white/10 bg-night/80 shadow-glow">
           <img src={meditation.cover_image} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-20 blur-xl" />
           <img src={meditation.cover_image} alt="" className="relative h-full w-full object-contain p-3" />
           {loading && <div className="absolute left-4 top-4 rounded-full bg-night/70 px-4 py-2 text-xs text-cream backdrop-blur">{copy[language].loadingAudio}</div>}
@@ -3694,15 +3700,14 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
           )}
         </div>
 
-        <div className="mt-4 text-center">
-          <p className="luna-section-kicker">{translateCategory(meditation.category, language)}</p>
-          <h2 className="mt-1 text-[28px] font-semibold leading-tight tracking-[-0.04em]">{localized.title}</h2>
+        <div className="mt-5 text-center">
+          <h2 className="luna-editorial-title mt-1 text-[36px] leading-[0.98]">{localized.title}</h2>
           <p className="mt-1 text-sm text-cream/70">{localized.subtitle}</p>
           {!localized.hasSelectedLanguageAudio && <p className="mt-2 text-xs text-gold">{copy[language].availableInEnglish}</p>}
           <p className="mt-2 text-sm text-lavender">{text(language, 'elapsedRemaining', { elapsed: formatTime(position), remaining: formatTime(Math.max(0, duration - position)) })}</p>
         </div>
 
-        <input className="mt-5 h-8 w-full accent-gold" type="range" min={0} max={duration || 1} value={position} onChange={(event) => {
+        <input className="mt-4 h-8 w-full accent-gold" type="range" min={0} max={duration || 1} value={position} onChange={(event) => {
           const next = Number(event.target.value);
           seekTo(next);
         }} />
@@ -3711,7 +3716,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
           <span>{formatTime(duration)}</span>
         </div>
 
-        <div className="mt-4 flex items-center justify-center gap-5">
+        <div className="mt-4 flex items-center justify-center gap-6">
           <IconButton label={copy[language].rewind15} onClick={() => {
             seekTo((audioRef.current?.currentTime ?? position) - 15);
           }}><SkipBack /></IconButton>
@@ -3738,14 +3743,14 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
           </div>
         )}
 
-        <div className="mt-4 grid grid-cols-3 gap-2">
-          <button onClick={onFavorite} className="min-h-[72px] rounded-[18px] border border-white/10 bg-white/10 px-2 py-3 text-xs backdrop-blur"><Heart className={favorite ? 'mx-auto fill-gold text-gold' : 'mx-auto'} size={18} /><span className="mt-1.5 block">{copy[language].favorite}</span></button>
-          <button onClick={() => void shareMeditation()} disabled={meditation.premium} className="min-h-[72px] rounded-[18px] border border-white/10 bg-white/10 px-2 py-3 text-xs text-lavender backdrop-blur disabled:cursor-not-allowed disabled:opacity-50"><Share2 className="mx-auto" size={18} /><span className="mt-1.5 block">{copy[language].share}</span></button>
-          <div className="min-h-[72px] rounded-[18px] border border-white/10 bg-white/10 px-2 py-3 text-center text-xs text-lavender backdrop-blur"><Timer className="mx-auto" size={18} /><span className="mt-1.5 block">{formatTime(Math.max(0, duration - position))}</span></div>
+        <div className="mt-5 flex items-center justify-center gap-3">
+          <button onClick={onFavorite} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 text-xs backdrop-blur"><Heart className={favorite ? 'fill-gold text-gold' : ''} size={16} />{copy[language].favorite}</button>
+          <button onClick={() => void shareMeditation()} disabled={meditation.premium} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 text-xs text-lavender backdrop-blur disabled:cursor-not-allowed disabled:opacity-50"><Share2 size={16} />{copy[language].share}</button>
+          <div className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 text-xs text-lavender backdrop-blur"><Timer size={16} />{formatTime(Math.max(0, duration - position))}</div>
         </div>
         {shareMessage && <p className="mt-2 rounded-2xl bg-gold/10 px-3 py-2 text-center text-xs text-cream/80">{shareMessage}</p>}
 
-        <div className="mt-3 flex items-center justify-between rounded-[18px] border border-white/10 bg-white/10 px-4 py-2.5 backdrop-blur">
+        <div className="mt-3 flex items-center justify-between border-t border-white/10 px-1 py-3">
           <span className="text-sm text-lavender">{copy[language].playbackSpeed}</span>
           <select value={speed} onChange={(event) => {
             const next = Number(event.target.value);
@@ -3931,7 +3936,7 @@ function MoonGardenCard({ profile, onOpen, language }: { profile: ProfileStats |
   const progress = Math.max(0, Math.min(100, (stage.level / 7) * 100));
 
   return (
-    <section className="mt-4 overflow-hidden rounded-[30px] border border-gold/20 bg-night shadow-glow">
+    <section className="overflow-hidden rounded-[34px] border border-gold/20 bg-night shadow-glow">
       <div className="relative min-h-[300px]">
         <img src={stage.path} alt={stage.title[language]} className="absolute inset-0 h-full w-full object-cover object-[center_58%]" draggable={false} />
         <div className="absolute inset-0 bg-gradient-to-b from-night/70 via-night/10 to-night/85" />
@@ -3950,17 +3955,17 @@ function MoonGardenCard({ profile, onOpen, language }: { profile: ProfileStats |
             <div className="h-2 overflow-hidden rounded-full bg-night/80">
               <div className="h-full rounded-full bg-gold transition-all duration-500" style={{ width: `${progress}%` }} />
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-              <span className="rounded-2xl bg-night/70 p-3 text-lavender backdrop-blur">
+            <div className="mt-3 flex gap-4 text-xs">
+              <span className="text-lavender">
                 {copy[language].moonSeeds}
                 <strong className="mt-1 block text-2xl text-cream">{seeds}</strong>
               </span>
-              <span className="rounded-2xl bg-night/70 p-3 text-lavender backdrop-blur">
+              <span className="text-lavender">
                 {copy[language].plantedElements}
                 <strong className="mt-1 block text-2xl text-cream">{plantedCount}</strong>
               </span>
             </div>
-            <div className="mt-3 rounded-2xl bg-night/70 p-3 text-xs text-lavender backdrop-blur">
+            <div className="mt-3 max-w-[280px] text-xs text-lavender">
               <p className="text-gold">
                 {readyElement
                   ? text(language, 'readyToPlant', { name: readyElement.name[language] })
@@ -3973,7 +3978,7 @@ function MoonGardenCard({ profile, onOpen, language }: { profile: ProfileStats |
                         : copy[language].yourRhythm}
               </p>
             </div>
-            <button onClick={onOpen} className="luna-button-primary mt-3 w-full px-4 py-3 text-sm font-semibold">
+            <button onClick={onOpen} className="mt-4 rounded-full border border-gold/35 bg-night/55 px-5 py-3 text-sm font-semibold text-gold backdrop-blur">
               {copy[language].openMoonGarden}
             </button>
           </div>
@@ -4171,10 +4176,10 @@ function MoonGardenPage({
   };
 
   return (
-    <div className="luna-page space-y-4 pb-[calc(120px+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top,0px)+24px)]">
+    <div className="luna-page space-y-5 pb-[calc(120px+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top,0px)+24px)]">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-3xl font-semibold tracking-[-0.03em]">{copy[language].moonGarden}</h2>
+          <h2 className="luna-editorial-title text-[34px] leading-none">{copy[language].moonGarden}</h2>
           <p className="mt-1 text-sm text-lavender">{copy[language].moonGardenBody}</p>
         </div>
         <button onClick={onBack} className="luna-icon-button" aria-label={copy[language].close}>
@@ -4194,7 +4199,7 @@ function MoonGardenPage({
         onAmbienceVolume={onAmbienceVolume}
       />
 
-      <section className="luna-card p-4">
+      <section className="border-y border-white/10 py-4">
         <div className="grid grid-cols-3 gap-2 text-xs">
           <Stat label={copy[language].availableMoonSeeds} value={String(seeds)} />
           <Stat label={copy[language].gardenLevel} value={`${stage.level} · ${stage.title[language]}`} />
@@ -4203,7 +4208,7 @@ function MoonGardenPage({
         {message && <p className="mt-3 rounded-2xl bg-night/70 px-3 py-2 text-sm text-gold">{message}</p>}
       </section>
 
-      <section className="luna-surface rounded-[26px] p-4">
+      <section className="rounded-[26px] border border-gold/20 bg-gold/10 p-4">
         {isGardenComplete ? (
           <>
             <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].gardenComplete}</p>
@@ -4227,8 +4232,8 @@ function MoonGardenPage({
             <button
               onClick={() => void plant(nextSuggestedElement)}
               disabled={!canPlantNextUpgrade}
-              className={`mt-4 w-full rounded-[18px] px-4 py-3 text-sm font-semibold ${
-                canPlantNextUpgrade ? 'bg-gold text-night' : 'bg-surface text-lavender'
+              className={`mt-4 w-full rounded-full px-4 py-3 text-sm font-semibold ${
+                canPlantNextUpgrade ? 'luna-button-primary' : 'border border-white/10 bg-white/10 text-lavender'
               } disabled:cursor-not-allowed disabled:opacity-80`}
             >
               {canPlantNextUpgrade
@@ -4250,9 +4255,9 @@ function MoonGardenPage({
             {language === 'en' ? 'Seasons · Phase 1' : 'Сезоны · Phase 1'}
           </h3>
         </div>
-        <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+        <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 luna-scrollbar-none">
           {gardenCollections.map((collection, index) => (
-            <article key={collection.id} className="w-48 shrink-0 rounded-[24px] border border-white/10 bg-gradient-to-br from-ink via-surface/70 to-night p-4 shadow-glow">
+            <article key={collection.id} className="w-48 shrink-0 overflow-hidden rounded-[24px] border border-white/10 bg-white/5 p-3 backdrop-blur">
               <div className={`h-24 rounded-[20px] border border-gold/20 ${
                 index === 0
                   ? 'bg-[radial-gradient(circle_at_50%_20%,rgba(212,175,55,.32),transparent_32%),linear-gradient(180deg,#2b1746,#0c0814)]'
@@ -4276,7 +4281,7 @@ function MoonGardenPage({
           const canPlant = !isPlanted && needed === 0;
           const status = isPlanted ? copy[language].planted : canPlant ? copy[language].availableToPlant : copy[language].locked;
           return (
-            <article key={element.id} className="rounded-[24px] border border-white/10 bg-gradient-to-br from-ink via-surface/70 to-night p-4 shadow-glow">
+            <article key={element.id} className="luna-editorial-row">
               <div className="flex items-center gap-3">
                 <span className={`grid h-16 w-16 shrink-0 place-items-center rounded-[22px] border ${isPlanted ? 'border-gold bg-gold/20 shadow-gold' : canPlant ? 'border-gold/30 bg-gold/10' : 'border-white/10 bg-night/70'}`}>
                   <GardenUpgradeIcon visual={element.visual} active={isPlanted || canPlant} />
@@ -4298,8 +4303,8 @@ function MoonGardenPage({
                 <button
                   onClick={() => void plant(element)}
                   disabled={Boolean(workingId) || !canPlant}
-                  className={`mt-3 w-full rounded-[18px] px-4 py-3 text-sm font-semibold ${
-                    canPlant ? 'bg-gold text-night' : 'bg-surface text-lavender'
+                  className={`mt-3 w-full rounded-full px-4 py-3 text-sm font-semibold ${
+                    canPlant ? 'luna-button-primary' : 'border border-white/10 bg-white/10 text-lavender'
                   } disabled:cursor-not-allowed disabled:opacity-80`}
                 >
                   {canPlant
@@ -4439,48 +4444,49 @@ function ProfilePage({
   const weeklyMinutes = profile?.weeklyPracticeMinutes ?? 0;
   const currentMood = wellness?.mostCommonMoodLabel ? translateMoodLabel(wellness.mostCommonMoodLabel, language) : copy[language].notEnoughData;
   return (
-    <div className="luna-page space-y-3 pt-[calc(env(safe-area-inset-top,0px)+32px)]">
-      <div>
+    <div className="luna-page space-y-5 pt-[calc(env(safe-area-inset-top,0px)+32px)]">
+      <div className="flex items-center justify-between gap-4">
+        <div>
         <p className="luna-section-kicker">LUNA</p>
-        <h2 className="text-3xl font-semibold tracking-[-0.03em]">{copy[language].profile}</h2>
+          <h2 className="luna-editorial-title text-[34px] leading-none">{copy[language].profile}</h2>
+        </div>
+        <MoonMark className="h-12 w-12 shrink-0" />
       </div>
-      <div className="luna-surface-strong rounded-[28px] p-4">
-        <div className="flex items-center gap-4">
-          <MoonMark className="h-16 w-16 shrink-0" />
-          <div className="min-w-0 flex-1">
+      <section className="flex items-center gap-4">
+        <MoonMark className="h-16 w-16 shrink-0" />
+        <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-2xl font-semibold tracking-[-0.03em]">{firstName}</h3>
+            <h3 className="luna-editorial-title text-3xl leading-none">{firstName}</h3>
               <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${access.hasPremium ? 'bg-gold text-night' : 'bg-cream/10 text-lavender'}`}>
                 {access.hasPremium ? copy[language].premiumActive : copy[language].premiumFree}
               </span>
             </div>
             <p className="text-sm text-lavender">{username ? `@${username}` : copy[language].member}</p>
           </div>
-        </div>
-        <MoonGardenCard profile={profile} onOpen={onMoonGarden} language={language} />
-        <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+      </section>
+      <MoonGardenCard profile={profile} onOpen={onMoonGarden} language={language} />
+      <section className="grid grid-cols-2 gap-x-5 gap-y-4 border-y border-white/10 py-4 text-sm">
           <Stat label={copy[language].thisWeek} value={minutesCountLabel(weeklyMinutes, language)} />
           <Stat label={copy[language].quietRhythm} value={quietDayCountLabel(profile?.currentStreak ?? 0, language)} />
           <Stat label={copy[language].weeklyCheckins} value={`${wellness?.weeklyCheckinCount ?? 0}/7`} />
           <Stat label={copy[language].currentMood} value={currentMood} />
-        </div>
-        <div className="mt-6">
-          <InsightCard title={copy[language].weeklyInsightTitle} body={profileWeeklyInsight(profile, language)} />
-        </div>
+      </section>
+      <InsightCard title={copy[language].weeklyInsightTitle} body={profileWeeklyInsight(profile, language)} />
         {showAdminButton && (
-          <div className="mt-6 border-t border-white/10 pt-3">
+        <div className="border-t border-white/10 pt-3">
             <button onClick={onAdmin} className="rounded-full border border-gold/25 bg-gold/10 px-4 py-2 text-xs font-semibold text-gold">
               Admin
             </button>
           </div>
         )}
-        <button onClick={onRestore} className="luna-button-primary mt-4 w-full px-5 py-3.5 font-semibold">{copy[language].restore}</button>
-        <button onClick={onAddHome} className="luna-card mt-2.5 w-full px-5 py-3.5 text-left text-sm text-cream">
+      <section className="space-y-2">
+        <button onClick={onRestore} className="w-full rounded-full border border-gold/25 px-5 py-3.5 font-semibold text-gold">{copy[language].restore}</button>
+        <button onClick={onAddHome} className="w-full border-t border-white/10 px-1 py-3.5 text-left text-sm text-cream">
           <span className="block font-semibold">{copy[language].addHomeTitle}</span>
           <span className="mt-1 block text-xs text-lavender">{homeScreenMessage || copy[language].addHomeBody}</span>
         </button>
-        <button className="mt-2.5 w-full rounded-[20px] border border-white/10 bg-white/10 px-5 py-3.5 text-sm text-lavender backdrop-blur">{copy[language].logout}</button>
-      </div>
+        <button className="w-full border-t border-white/10 px-1 py-3.5 text-left text-sm text-lavender">{copy[language].logout}</button>
+      </section>
     </div>
   );
 }
@@ -5357,15 +5363,15 @@ function Nav({ active, onChange, language }: { active: Page; onChange: (page: Pa
   ];
 
   return (
-    <nav className="fixed inset-x-3 bottom-[calc(10px+env(safe-area-inset-bottom))] z-10 mx-auto max-w-md rounded-[24px] border border-white/10 bg-night/80 px-2.5 py-2 shadow-glow backdrop-blur-2xl">
-      <div className="grid grid-cols-5 gap-0.5">
+    <nav className="fixed inset-x-5 bottom-[calc(12px+env(safe-area-inset-bottom))] z-10 mx-auto max-w-[390px] rounded-full border border-white/10 bg-night/70 px-2 py-1.5 shadow-glow backdrop-blur-2xl">
+      <div className="grid grid-cols-5 gap-0">
         {items.map((item) => {
           const Icon = item.icon;
           const selected = active === item.page;
           return (
-            <button key={item.page} onClick={() => onChange(item.page)} className={`relative flex min-h-[54px] flex-col items-center justify-center gap-1 rounded-[18px] px-1.5 py-1.5 text-[10px] ${selected ? 'bg-white/10 text-cream shadow-[0_0_18px_rgba(142,95,214,0.16)]' : 'text-cream/55'}`}>
-              {selected && <span className="absolute top-1.5 h-1 w-1 rounded-full bg-gold shadow-gold" />}
-              <Icon size={19} />
+            <button key={item.page} onClick={() => onChange(item.page)} className={`relative flex min-h-[48px] flex-col items-center justify-center gap-0.5 rounded-full px-1.5 py-1 text-[9px] ${selected ? 'text-gold' : 'text-cream/55'}`}>
+              {selected && <span className="absolute top-1 h-1 w-1 rounded-full bg-gold shadow-gold" />}
+              <Icon size={18} />
               {item.label}
             </button>
           );
