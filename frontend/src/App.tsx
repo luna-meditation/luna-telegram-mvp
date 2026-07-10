@@ -18,7 +18,6 @@ import {
   Timer,
   Upload,
   Volume2,
-  Waves,
   X,
   User
 } from 'lucide-react';
@@ -63,6 +62,7 @@ import {
   type WellnessSummary
 } from './api';
 import { MoonGardenScene as AnimatedMoonGardenScene } from './components/moon-garden/MoonGardenScene';
+import { HomeV2 } from './v2/pages/HomeV2';
 
 type Page = 'home' | 'library' | 'favorites' | 'profile' | 'pricing' | 'player' | 'scenePlayer' | 'mantraPlayer' | 'breathCircle' | 'moonGarden' | 'admin';
 type Mood = 'Calm' | 'Stressed' | 'Tired' | 'Anxious' | 'Focused';
@@ -2308,11 +2308,14 @@ function App() {
         <Header plan={access.plan} streak={profile?.currentStreak ?? 0} language={language} onLanguageChange={changeLanguage} />
 
         {page === 'home' && (
-          <HomePage
+          <HomeV2
             firstName={user.first_name ?? 'friend'}
+            greeting={dayGreeting(language)}
             mood={mood}
+            moods={moods}
             setMood={selectMood}
-            wellness={wellness}
+            checkinLine={wellness?.todayCheckin ? copy[language].checkinSaved : moodMessage(mood, wellness, language)}
+            checkinMeta={wellness?.weeklyCheckinCount ? `${translateMoodLabel(wellness.mostCommonMoodLabel, language)} · ${wellness.weeklyCheckinCount}/7 ${copy[language].checkins}` : undefined}
             daily={dailyMeditation}
             heroLabel={copy[language][heroLabelKey]}
             continueListening={homeSections.continueListening}
@@ -2324,7 +2327,6 @@ function App() {
             scenes={scenes}
             selectedScene={selectedScene}
             scenePlaying={scenePlaying}
-            sceneVolume={sceneVolume}
             hasPremium={access.hasPremium}
             onSoundToggle={() => void toggleScenePlayback()}
             onSoundSelect={selectHomeSoundscape}
@@ -2332,7 +2334,40 @@ function App() {
             onBreath={openBreathCircle}
             onAddHome={addLunaToHomeScreen}
             homeScreenMessage={homeScreenMessage}
+            labels={{
+              brandMeta: copy[language].tagline,
+              feeling: copy[language].feeling,
+              checkinSaved: copy[language].checkinSaved,
+              checkins: copy[language].checkins,
+              moreToExplore: copy[language].moreToExplore,
+              continueListening: copy[language].continueListening,
+              openLibrary: copy[language].openLibrary,
+              soundTitle: copy[language].scenesHomeTitle,
+              soundActive: copy[language].soundscapeActive,
+              soundSelect: copy[language].soundscapeSelect,
+              breathKicker: copy[language].categoryBreath,
+              breathTitle: copy[language].breathCircle,
+              breathBody: copy[language].breathCircleSubtitle,
+              weeklyTitle: copy[language].weeklyTitle,
+              addHomeTitle: copy[language].addHomeTitle,
+              addHomeBody: copy[language].addHomeBody,
+              preparingCalm: copy[language].preparingCalm,
+              firstPracticeTitle: copy[language].firstPracticeTitle,
+              firstPracticeBody: copy[language].firstPracticeBody,
+              premium: copy[language].premium,
+              free: copy[language].free,
+              begin: copy[language].begin,
+              resume: copy[language].resume
+            }}
             language={language}
+            meditationView={(meditation) => getLocalizedMeditation(meditation, language)}
+            categoryLabel={(value) => translateCategory(value, language)}
+            moodLabel={(value) => translateCategory(value, language)}
+            durationLabel={formatTime}
+            weeklyInsight={wellness ? {
+              body: localizeWeeklyInsight(wellness, language),
+              meta: text(language, 'recommendedFocus', { focus: translateFocus(wellness.recommendedFocus, language) })
+            } : undefined}
           />
         )}
 
@@ -2541,240 +2576,6 @@ function Header({
     </div>
   );
 }
-
-function HomePage(props: {
-  firstName: string;
-  mood: MoodChip;
-  setMood: (mood: MoodChip) => void;
-  wellness: WellnessSummary | null;
-  daily?: Meditation;
-  heroLabel: string;
-  continueListening: Meditation[];
-  recentlyPlayed: Meditation[];
-  explore: Meditation[];
-  loading: boolean;
-  onOpen: (meditation: Meditation) => void;
-  onLibrary: () => void;
-  scenes: SceneDefinition[];
-  selectedScene: SceneDefinition | null;
-  scenePlaying: boolean;
-  sceneVolume: number;
-  hasPremium: boolean;
-  onSoundToggle: () => void;
-  onSoundSelect: (scene: SceneDefinition) => void;
-  onSoundOpen: () => void;
-  onBreath: () => void;
-  onAddHome: () => void;
-  homeScreenMessage: string;
-  language: AppLanguage;
-}) {
-  const t = copy[props.language];
-  const [soundExpanded, setSoundExpanded] = useState(false);
-  const activeScene = props.selectedScene ?? props.scenes[0];
-  return (
-    <div className="luna-page space-y-5">
-      <section className="pt-1">
-        <div className="flex items-end justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-sm text-lavender">{dayGreeting(props.language)}, {props.firstName}</p>
-            <h2 className="luna-editorial-title mt-1 max-w-[300px] text-[34px] leading-[0.98] text-cream">
-              {t.feeling}
-            </h2>
-          </div>
-          <MoonMark className="mb-1 h-11 w-11 shrink-0" />
-        </div>
-        <div className="-mx-1 mt-4 flex gap-2 overflow-x-auto px-1 pb-1 luna-scrollbar-none">
-          {moods.map((item) => (
-            <button
-              key={item}
-              onClick={() => props.setMood(item)}
-              className={`luna-chip shrink-0 transition ${props.mood === item ? 'luna-chip-active' : ''}`}
-            >
-              {translateCategory(item, props.language)}
-            </button>
-          ))}
-        </div>
-        <div className="mt-3 max-w-[330px]">
-          <p className="line-clamp-1 text-xs font-medium text-cream/85">{props.wellness?.todayCheckin ? t.checkinSaved : moodMessage(props.mood, props.wellness, props.language)}</p>
-          {props.wellness?.weeklyCheckinCount ? (
-            <p className="mt-1 text-[11px] capitalize text-gold">
-              {translateMoodLabel(props.wellness.mostCommonMoodLabel, props.language)} · {props.wellness.weeklyCheckinCount}/7 {t.checkins}
-            </p>
-          ) : null}
-        </div>
-      </section>
-
-      {props.daily ? (
-        <PracticeHero label={props.heroLabel} meditation={props.daily} onOpen={() => props.onOpen(props.daily!)} language={props.language} />
-      ) : props.loading ? (
-        <PracticeHeroSkeleton />
-      ) : (
-        <EmptyState title={t.firstPracticeTitle} body={t.firstPracticeBody} />
-      )}
-
-      <Rail title={t.moreToExplore} meditations={props.explore} onOpen={props.onOpen} language={props.language} />
-      <ContinueListeningSection title={t.continueListening} meditations={props.continueListening} onOpen={props.onOpen} language={props.language} />
-      <section className={`rounded-[18px] border px-3 py-2.5 backdrop-blur-xl ${props.scenePlaying ? 'border-gold/30 bg-gold/10' : 'border-white/10 bg-white/10'}`}>
-        <div className="flex items-center gap-3">
-          <button onClick={props.onSoundOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-[16px] bg-night/60 text-gold">
-              <Waves size={22} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[11px] uppercase tracking-[0.18em] text-gold">{props.scenePlaying ? t.soundscapeActive : t.scenesHomeTitle}</p>
-              <h3 className="truncate text-base font-semibold">{activeScene?.title[props.language] ?? t.scenesTitle}</h3>
-              <p className="truncate text-xs text-lavender">{activeScene?.subtitle[props.language] ?? t.scenesHomeBody}</p>
-            </div>
-          </button>
-          <button onClick={props.onSoundToggle} className="luna-icon-button shrink-0 border-gold/30 bg-gold/15 text-gold">
-            {props.scenePlaying ? <Pause size={18} /> : <Play size={18} />}
-          </button>
-          <button onClick={() => setSoundExpanded((value) => !value)} className="rounded-full bg-cream/10 px-3 py-2 text-xs font-semibold text-cream">
-            {t.soundscapeSelect}
-          </button>
-        </div>
-        {soundExpanded && (
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-            {props.scenes.map((scene) => {
-              const locked = scene.access === 'premium' && !props.hasPremium;
-              return (
-                <button
-                  key={scene.id}
-                  onClick={() => props.onSoundSelect(scene)}
-                  className={`shrink-0 rounded-full border px-3 py-2 text-xs font-semibold ${
-                    props.selectedScene?.id === scene.id ? 'border-gold bg-gold text-night' : 'border-cream/15 bg-night/50 text-cream'
-                  }`}
-                >
-                  {scene.title[props.language]} {locked ? '⭐' : ''}
-                </button>
-              );
-            })}
-          </div>
-        )}
-      </section>
-      <button onClick={props.onBreath} className="relative w-full overflow-hidden rounded-[22px] border border-white/10 bg-white/10 p-4 text-left backdrop-blur">
-        <div className="absolute right-4 top-4 grid h-12 w-12 place-items-center rounded-full border border-gold/30 bg-gold/10 text-gold">
-          <Sparkles size={22} />
-        </div>
-        <p className="text-xs uppercase tracking-[0.18em] text-gold">{t.categoryBreath}</p>
-        <h3 className="mt-1 font-serif text-2xl">{t.breathCircle}</h3>
-        <p className="mt-2 max-w-[250px] text-sm leading-5 text-cream/75">{t.breathCircleSubtitle}</p>
-      </button>
-      {props.wellness && <InsightCard title={t.weeklyTitle} body={localizeWeeklyInsight(props.wellness, props.language)} meta={text(props.language, 'recommendedFocus', { focus: translateFocus(props.wellness.recommendedFocus, props.language) })} />}
-      {props.loading && !props.daily && <RailSkeleton title={t.preparingCalm} />}
-
-      <button onClick={props.onLibrary} className="rounded-full border border-gold/25 px-5 py-3 text-sm font-semibold text-gold hover:bg-gold/10">
-        {t.openLibrary}
-      </button>
-      <button onClick={props.onAddHome} className="w-full border-t border-white/10 px-1 py-3 text-left">
-        <span className="block text-sm font-semibold text-cream">{t.addHomeTitle}</span>
-        <span className="mt-1 block text-xs leading-5 text-lavender">{props.homeScreenMessage || t.addHomeBody}</span>
-      </button>
-      <Rail title={t.recentlyPlayed} meditations={props.recentlyPlayed} onOpen={props.onOpen} language={props.language} />
-    </div>
-  );
-}
-
-function PracticeHero({ meditation, label, onOpen, language }: { meditation: Meditation; label: string; onOpen: () => void; language: AppLanguage }) {
-  const localized = getLocalizedMeditation(meditation, language);
-  const cta = isInProgress(meditation) ? copy[language].resume : copy[language].begin;
-  return (
-    <button onClick={onOpen} className="group relative h-[318px] w-full overflow-hidden rounded-[32px] border border-white/10 text-left shadow-glow transition duration-300 ease-in-out hover:brightness-110">
-      <img src={meditation.cover_image} alt="" className="absolute inset-0 h-full w-full object-cover opacity-90 transition duration-700 group-hover:scale-[1.035]" loading="eager" />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#090611] via-[#090611]/35 to-transparent" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_12%,rgba(212,175,55,.14),transparent_28%),linear-gradient(180deg,rgba(5,3,10,.04),transparent_44%)]" />
-      <span className="absolute right-4 top-4 rounded-full border border-white/15 bg-night/50 px-3 py-1 text-xs font-semibold text-cream backdrop-blur">
-        {meditation.premium ? copy[language].premium : copy[language].free}
-      </span>
-      <div className="absolute bottom-0 p-4">
-        <p className="mb-2 inline-flex rounded-full border border-white/15 bg-night/50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-gold backdrop-blur">{label}</p>
-        <h3 className="luna-editorial-title max-w-[290px] text-[32px] leading-[0.98]">{localized.title}</h3>
-        <p className="mt-1 text-sm capitalize text-cream/75">
-          {translateCategory(meditation.category, language)} · {formatTime(meditation.duration)}
-        </p>
-        {!localized.hasSelectedLanguageAudio && <p className="mt-2 text-xs text-gold">{copy[language].availableInEnglish}</p>}
-        <span className="mt-4 inline-flex rounded-full border border-gold/35 bg-night/50 px-5 py-2.5 text-sm font-semibold text-gold backdrop-blur">
-          {cta}
-        </span>
-      </div>
-    </button>
-  );
-}
-
-function PracticeHeroSkeleton() {
-  return (
-    <div className="relative h-72 w-full overflow-hidden rounded-[30px] border border-cream/15 bg-white/10 shadow-glow">
-      <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-lavender/20 via-cream/10 to-gold/10" />
-      <div className="absolute bottom-0 w-full p-5">
-        <div className="h-7 w-28 rounded-full bg-cream/15" />
-        <div className="mt-4 h-8 w-2/3 rounded-full bg-cream/15" />
-        <div className="mt-3 h-4 w-40 rounded-full bg-cream/10" />
-      </div>
-    </div>
-  );
-}
-
-function RailSkeleton({ title }: { title: string }) {
-  return (
-    <section>
-      <h2 className="luna-section-title mb-3">{title}</h2>
-      <div className="-mx-4 flex gap-3 overflow-hidden px-4 pb-1">
-        {[0, 1, 2].map((item) => (
-          <div key={item} className="w-40 shrink-0 animate-pulse">
-            <div className="h-40 w-40 rounded-3xl bg-cream/10 shadow-glow" />
-            <div className="mt-3 h-4 w-32 rounded-full bg-cream/10" />
-            <div className="mt-2 h-3 w-20 rounded-full bg-cream/10" />
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function Rail({ title, meditations, onOpen, language }: { title: string; meditations: Meditation[]; onOpen: (meditation: Meditation) => void; language: AppLanguage }) {
-  if (!meditations.length) return null;
-
-  return (
-    <section>
-      <h2 className="luna-section-title mb-3">{title}</h2>
-      <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 luna-scrollbar-none">
-        {meditations.map((meditation) => (
-          <button key={meditation.id} onClick={() => onOpen(meditation)} className="w-40 shrink-0 text-left">
-            <img src={meditation.cover_image} alt="" className="h-40 w-40 rounded-[24px] object-cover shadow-glow" loading="lazy" />
-            <p className="mt-2 line-clamp-1 font-semibold">{getLocalizedMeditation(meditation, language).title}</p>
-            <p className="text-xs capitalize text-lavender">{translateCategory(meditation.category, language)} · {formatTime(meditation.duration)}</p>
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function ContinueListeningSection({ title, meditations, onOpen, language }: { title: string; meditations: Meditation[]; onOpen: (meditation: Meditation) => void; language: AppLanguage }) {
-  if (!meditations.length) return null;
-  if (meditations.length > 1) return <Rail title={title} meditations={meditations} onOpen={onOpen} language={language} />;
-
-  const meditation = meditations[0];
-  const localized = getLocalizedMeditation(meditation, language);
-  const progress = Math.max(0, Math.min(100, Number(meditation.history?.completion_percent ?? 0)));
-
-  return (
-    <section>
-      <h2 className="luna-section-title mb-3">{title}</h2>
-      <button onClick={() => onOpen(meditation)} className="flex w-full items-center gap-3 border-y border-white/10 py-3 text-left">
-        <img src={meditation.cover_image} alt="" className="h-20 w-20 shrink-0 rounded-[20px] object-cover shadow-glow" loading="lazy" />
-        <div className="min-w-0 flex-1">
-          <p className="line-clamp-1 font-serif text-xl">{localized.title}</p>
-          <p className="mt-1 text-xs capitalize text-lavender">{translateCategory(meditation.category, language)} · {formatTime(meditation.duration)}</p>
-          <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-night">
-            <div className="h-full rounded-full bg-gold" style={{ width: `${progress}%` }} />
-          </div>
-        </div>
-      </button>
-    </section>
-  );
-}
-
 function InsightCard({ title, body, meta }: { title: string; body: string; meta?: string }) {
   return (
     <section className="luna-surface rounded-[24px] p-4">
