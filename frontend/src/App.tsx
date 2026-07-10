@@ -2306,7 +2306,7 @@ function App() {
     <main className="min-h-screen overflow-hidden bg-night text-cream">
       <div className="fixed inset-0 luna-bg" />
       <section className="relative mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-[calc(112px+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top,0px)+14px)]">
-        <Header plan={access.plan} streak={profile?.currentStreak ?? 0} language={language} onLanguageChange={changeLanguage} />
+        <Header plan={access.plan} streak={profile?.currentStreak ?? 0} language={language} onLanguageChange={changeLanguage} compact={page === 'home'} />
 
         {page === 'home' && (
           <HomeV2
@@ -2554,13 +2554,39 @@ function Header({
   plan,
   streak,
   language,
-  onLanguageChange
+  onLanguageChange,
+  compact = false
 }: {
   plan: string;
   streak: number;
   language: AppLanguage;
   onLanguageChange: (language: AppLanguage) => void;
+  compact?: boolean;
 }) {
+  if (compact) {
+    return (
+      <div className="mb-2 flex items-center justify-between px-1 pt-0.5">
+        <MoonMark className="h-6 w-6 shrink-0 opacity-70" />
+        <div className="flex items-center gap-2">
+          <div className="max-w-[112px] truncate rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[10px] text-cream/70 backdrop-blur-md">
+            {streak > 0 ? streakLabel(streak, language) : planLabel(plan, language)}
+          </div>
+          <div className="flex rounded-full border border-white/10 bg-white/[0.06] p-0.5 text-[9px] font-semibold text-lavender backdrop-blur-md" aria-label={copy[language].language}>
+            {(['en', 'ru'] as const).map((item) => (
+              <button
+                key={item}
+                onClick={() => onLanguageChange(item)}
+                className={`rounded-full px-1.5 py-0.5 transition ${language === item ? 'luna-chip-active' : 'text-lavender/75'}`}
+              >
+                {item.toUpperCase()}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mb-4 flex items-center justify-between rounded-[22px] border border-white/10 bg-night/30 px-2 py-2 backdrop-blur-md">
       <div className="flex items-center gap-2.5">

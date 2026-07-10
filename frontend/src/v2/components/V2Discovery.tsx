@@ -26,14 +26,14 @@ export function V2Discovery({ title, meditations, onOpen, meditationView, catego
       <div className="home-v2-section-heading">
         <h2>{title}</h2>
       </div>
-      <button type="button" onClick={() => onOpen(featured)} className="home-v2-feature-tile">
-        <img src={featured.cover_image} alt="" loading="lazy" />
-        <span>
-          <strong>{featuredView.title}</strong>
-          <small>{categoryLabel(featured.category)} · {durationLabel(featured.duration)}</small>
-        </span>
-      </button>
-      <div className="home-v2-mini-list">
+      <div className="home-v2-editorial-rail">
+        <button type="button" onClick={() => onOpen(featured)} className="home-v2-feature-tile">
+          <img src={featured.cover_image} alt="" loading="lazy" />
+          <span>
+            <strong>{featuredView.title}</strong>
+            <small>{categoryLabel(featured.category)} · {durationLabel(featured.duration)}</small>
+          </span>
+        </button>
         {rest.slice(0, 3).map((meditation) => {
           const view = meditationView(meditation);
           return (
