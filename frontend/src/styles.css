@@ -146,6 +146,11 @@
   letter-spacing: -0.01em;
 }
 
+.luna-page-title {
+  display: grid;
+  gap: 4px;
+}
+
 .luna-muted {
   color: var(--luna-text-secondary);
 }
