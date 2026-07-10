@@ -3039,22 +3039,21 @@ function MeditationCard({ meditation, locked, showPopular, onOpen, onFavorite, o
   const hasProgress = (meditation.history?.last_position ?? 0) > 0;
   const hasDescription = localized.description.trim().length > 0;
   const hasBadges = meditation.premium || showPopular || hasProgress;
-  const compactDescription = hasBadges || !localized.hasSelectedLanguageAudio;
   return (
     <article className="luna-editorial-row">
-      <div className="grid grid-cols-[88px_minmax(0,1fr)_42px] items-start gap-3">
+      <div className="grid grid-cols-[88px_minmax(0,1fr)_42px] items-center gap-3">
         <button onClick={() => (locked ? onUnlock() : onOpen(meditation))} className="relative shrink-0 text-left">
           <img src={meditation.cover_image} alt="" className={`h-[88px] w-[88px] rounded-[18px] object-cover shadow-glow ${locked ? 'blur-sm' : ''}`} loading="lazy" />
           {locked && <Lock className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gold" />}
         </button>
-        <div className="min-w-0 pt-0.5">
+        <div className="grid min-h-[88px] min-w-0 content-center">
           <button onClick={() => (locked ? onUnlock() : onOpen(meditation))} className="w-full text-left">
             <div className="flex items-center gap-2">
               <h3 className="truncate text-[15px] font-semibold leading-tight text-cream">{localized.title}</h3>
               {meditation.premium && <Crown size={13} className="text-gold" />}
             </div>
             <p className="mt-0.5 text-[11px] capitalize text-lavender">{translateCategory(meditation.category, language)} · {formatTime(meditation.duration)}</p>
-            {hasDescription && <p className={`mt-0.5 text-[11px] leading-[15px] text-cream/55 ${compactDescription ? 'line-clamp-1' : 'line-clamp-2'}`}>{localized.description}</p>}
+            {hasDescription && <p className="mt-0.5 line-clamp-1 text-[11px] leading-[15px] text-cream/55">{localized.description}</p>}
           </button>
           {!localized.hasSelectedLanguageAudio && <p className="mt-1 text-[11px] text-gold">{copy[language].availableInEnglish}</p>}
           {hasBadges && (
@@ -3065,7 +3064,7 @@ function MeditationCard({ meditation, locked, showPopular, onOpen, onFavorite, o
             </div>
           )}
         </div>
-        <button onClick={() => onFavorite(meditation)} className="mt-6 grid min-h-10 min-w-10 place-items-center rounded-full border border-white/10 bg-white/[0.045] text-cream transition hover:bg-white/[0.075]" aria-label="Favorite meditation">
+        <button onClick={() => onFavorite(meditation)} className="grid min-h-10 min-w-10 place-items-center rounded-full border border-white/10 bg-white/[0.045] text-cream transition hover:bg-white/[0.075]" aria-label="Favorite meditation">
           <Heart size={16} className={meditation.favorite ? 'fill-gold text-gold' : 'text-cream/72'} />
         </button>
       </div>
