@@ -1,4 +1,4 @@
-import { Sparkles } from 'lucide-react';
+import { ArrowRight, MessageCircle, Sparkles } from 'lucide-react';
 import type { Meditation } from '../../api';
 
 type MeditationView = {
@@ -57,17 +57,19 @@ export function V2Discovery({ title, viewAllLabel, meditations, onViewAll, onOpe
 export function V2PracticeTiles({
   breathTitle,
   breathBody,
-  insightTitle,
-  insightBody,
-  insightMeta,
-  onBreath
+  askTitle,
+  askBody,
+  askAction,
+  onBreath,
+  onAsk
 }: {
   breathTitle: string;
   breathBody: string;
-  insightTitle: string;
-  insightBody?: string;
-  insightMeta?: string;
+  askTitle: string;
+  askBody: string;
+  askAction: string;
   onBreath: () => void;
+  onAsk: () => void;
 }) {
   return (
     <section className="home-v2-practice-tiles">
@@ -76,13 +78,12 @@ export function V2PracticeTiles({
         <strong>{breathTitle}</strong>
         <span>{breathBody}</span>
       </button>
-      {insightBody ? (
-        <article className="home-v2-practice-tile home-v2-insight-tile">
-          <small>{insightTitle}</small>
-          <p>{insightBody}</p>
-          {insightMeta ? <span>{insightMeta}</span> : null}
-        </article>
-      ) : null}
+      <button type="button" onClick={onAsk} className="home-v2-practice-tile home-v2-ask-tile">
+        <MessageCircle size={18} />
+        <strong>{askTitle}</strong>
+        <span>{askBody}</span>
+        <small>{askAction} <ArrowRight size={11} /></small>
+      </button>
     </section>
   );
 }

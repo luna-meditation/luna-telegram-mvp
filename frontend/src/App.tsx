@@ -550,6 +550,11 @@ const copy = {
     statMin: 'min',
     statMood: 'Mood',
     statCheckins: 'Check-ins',
+    statStreak: 'Streak',
+    statEnergy: 'Energy',
+    energyHigh: 'High',
+    energyMedium: 'Medium',
+    energyLow: 'Low',
     recommendedForYou: 'Recommended for You',
     forYourMood: 'For Your Mood',
     moreToExplore: 'More to Explore',
@@ -645,6 +650,9 @@ const copy = {
     weeklyInsightMinutes: 'You created {minutes} minutes of calm. A small repeat tomorrow matters more than a perfect session.',
     weeklyInsightStart: 'A short check-in is enough to begin. Luna will personalize your next practice from there.',
     weeklyInsightShort: 'Start with one short practice today. Luna will build your weekly insight as you check in and listen.',
+    askLunaTitle: 'Ask Luna',
+    askLunaBody: 'Ask for a recommendation, a calming thought, or support.',
+    askLunaAction: 'Talk to Luna',
     recommendedFocus: 'Recommended focus: {focus}',
     focusBreathAnxiety: 'Breath and anxiety relief',
     focusSleepRecovery: 'Sleep recovery',
@@ -843,6 +851,11 @@ const copy = {
     statMin: 'мин',
     statMood: 'Настроение',
     statCheckins: 'Чек-ины',
+    statStreak: 'Серия',
+    statEnergy: 'Энергия',
+    energyHigh: 'Высокая',
+    energyMedium: 'Средняя',
+    energyLow: 'Низкая',
     recommendedForYou: 'Рекомендация для тебя',
     forYourMood: 'Под твоё настроение',
     moreToExplore: 'Ещё для практики',
@@ -938,6 +951,9 @@ const copy = {
     weeklyInsightMinutes: 'Ты создал(а) {minutes} минут спокойствия. Небольшая практика завтра важнее идеальной сессии.',
     weeklyInsightStart: 'Короткого чек-ина достаточно, чтобы начать. Luna подберёт следующую практику по твоему состоянию.',
     weeklyInsightShort: 'Начни с одной короткой практики сегодня. Luna соберёт недельный инсайт по чек-инам и прослушиваниям.',
+    askLunaTitle: 'Спросить Luna',
+    askLunaBody: 'Попроси рекомендацию, спокойную мысль или поддержку.',
+    askLunaAction: 'Написать Luna',
     recommendedFocus: 'Рекомендация: {focus}',
     focusBreathAnxiety: 'Дыхание и снижение тревоги',
     focusSleepRecovery: 'Восстановление сна',
@@ -1393,14 +1409,6 @@ function translateFocus(focus: string | null | undefined, language: AppLanguage)
   };
   const key = keyByFocus[(focus ?? '').trim().toLowerCase()];
   return key ? copy[language][key] : (focus ?? '');
-}
-
-function localizeWeeklyInsight(wellness: WellnessSummary, language: AppLanguage) {
-  if (language === 'en') return wellness.weeklyInsight;
-  const minutesMatch = wellness.weeklyInsight.match(/You created (\d+) minutes/);
-  if (minutesMatch) return text(language, 'weeklyInsightMinutes', { minutes: minutesMatch[1] });
-  if (wellness.weeklyCheckinCount > 0) return copy[language].weeklyInsightStart;
-  return copy[language].weeklyInsightShort;
 }
 
 function planLabel(plan: string, language: AppLanguage) {
@@ -2103,6 +2111,15 @@ function App() {
     setHomeScreenMessage(copy[language].addHomeUnsupported);
   };
 
+  const openLunaAssistant = () => {
+    const botUsername = import.meta.env.VITE_BOT_USERNAME;
+    if (botUsername) {
+      telegram?.openTelegramLink(`https://t.me/${botUsername}?start=luna`);
+      return;
+    }
+    setPage('profile');
+  };
+
   const toggleMoonGardenAmbience = async () => {
     const audio = moonGardenAudioRef.current;
     if (!audio) return;
@@ -2354,7 +2371,7 @@ function App() {
   }, [initData, scenePlaying, selectedScene]);
 
   return (
-    <main className="min-h-screen overflow-hidden bg-night text-cream">
+    <main className={`min-h-screen overflow-hidden bg-night text-cream ${page === 'home' ? 'home-v2-shell' : ''}`}>
       <div className="fixed inset-0 luna-bg" />
       <section className="relative mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-[calc(112px+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top,0px)+14px)]">
         <Header plan={access.plan} streak={profile?.currentStreak ?? 0} language={language} onLanguageChange={changeLanguage} compact={page === 'home'} />
@@ -2384,14 +2401,15 @@ function App() {
             onSoundSelect={selectHomeSoundscape}
             onSoundOpen={() => selectedScene ? setPage('scenePlayer') : selectHomeSoundscape(scenes[0])}
             onBreath={openBreathCircle}
+            onAskLuna={openLunaAssistant}
             onAddHome={addLunaToHomeScreen}
             homeScreenMessage={homeScreenMessage}
             homeScreenStatus={homeScreenStatus}
             stats={[
-              { label: copy[language].quietRhythm, value: String(profile?.currentStreak ?? 0), secondary: (profile?.currentStreak ?? 0) === 1 ? copy[language].statDay : copy[language].statDays },
-              { label: copy[language].thisWeek, value: String(profile?.weeklyPracticeMinutes ?? 0), secondary: copy[language].statMin },
-              { label: copy[language].statCheckins, value: `${wellness?.weeklyCheckinCount ?? 0}/7` },
-              { label: copy[language].statMood, value: wellness?.mostCommonMoodLabel ? translateMoodLabel(wellness.mostCommonMoodLabel, language) : copy[language].notEnoughData }
+              { label: copy[language].statStreak, value: String(profile?.currentStreak ?? 0), secondary: (profile?.currentStreak ?? 0) === 1 ? copy[language].statDay : copy[language].statDays, kind: 'streak' },
+              { label: copy[language].statCheckins, value: `${wellness?.weeklyCheckinCount ?? 0}/7`, kind: 'checkins' },
+              { label: copy[language].statMood, value: wellness?.mostCommonMoodLabel ? translateMoodLabel(wellness.mostCommonMoodLabel, language) : translateCategory(mood, language), kind: 'mood' },
+              { label: copy[language].statEnergy, value: mood === 'Energy' || mood === 'Focus' ? copy[language].energyHigh : mood === 'Sleep' || mood === 'Anxiety' ? copy[language].energyLow : copy[language].energyMedium, kind: 'energy' }
             ]}
             labels={{
               brandMeta: copy[language].tagline,
@@ -2409,7 +2427,9 @@ function App() {
               breathKicker: copy[language].categoryBreath,
               breathTitle: copy[language].breathCircle,
               breathBody: copy[language].breathCircleSubtitle,
-              weeklyTitle: copy[language].weeklyTitle,
+              askLunaTitle: copy[language].askLunaTitle,
+              askLunaBody: copy[language].askLunaBody,
+              askLunaAction: copy[language].askLunaAction,
               addHomeTitle: copy[language].addHomeTitle,
               addHomeBody: copy[language].addHomeBody,
               addHomeAction: copy[language].addHomeAction,
@@ -2426,10 +2446,6 @@ function App() {
             categoryLabel={(value) => translateCategory(value, language)}
             moodLabel={(value) => translateCategory(value, language)}
             durationLabel={formatTime}
-            weeklyInsight={wellness ? {
-              body: localizeWeeklyInsight(wellness, language),
-              meta: text(language, 'recommendedFocus', { focus: translateFocus(wellness.recommendedFocus, language) })
-            } : undefined}
           />
         )}
 
@@ -2627,7 +2643,10 @@ function Header({
   if (compact) {
     return (
       <div className="mb-2 flex items-center justify-between px-1 pt-0.5">
-        <MoonMark className="h-6 w-6 shrink-0 opacity-70" />
+        <div className="flex items-center gap-2">
+          <MoonMark className="h-6 w-6 shrink-0 opacity-70" />
+          <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-cream/48">Luna Meditation</span>
+        </div>
         <div className="flex items-center gap-2">
           <div className="max-w-[112px] truncate rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[10px] text-cream/70 backdrop-blur-md">
             {streak > 0 ? streakLabel(streak, language) : planLabel(plan, language)}

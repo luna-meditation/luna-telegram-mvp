@@ -45,7 +45,9 @@ type HomeV2Labels = {
   breathKicker: string;
   breathTitle: string;
   breathBody: string;
-  weeklyTitle: string;
+  askLunaTitle: string;
+  askLunaBody: string;
+  askLunaAction: string;
   addHomeTitle: string;
   addHomeBody: string;
   addHomeAction: string;
@@ -87,15 +89,12 @@ type HomeV2Props = {
   onSoundSelect: (scene: SceneDefinition) => void;
   onSoundOpen: () => void;
   onBreath: () => void;
+  onAskLuna: () => void;
   onAddHome: () => void;
   meditationView: (meditation: Meditation) => MeditationView;
   categoryLabel: (category: string) => string;
   moodLabel: (mood: MoodChip) => string;
   durationLabel: (seconds: number) => string;
-  weeklyInsight?: {
-    body: string;
-    meta: string;
-  };
 };
 
 export function HomeV2(props: HomeV2Props) {
@@ -113,6 +112,7 @@ export function HomeV2(props: HomeV2Props) {
           moods={props.moods}
           activeMood={props.mood}
           moodLabel={props.moodLabel}
+          language={props.language}
           checkinLine={props.checkinLine}
           onMood={props.setMood}
         />
@@ -161,10 +161,11 @@ export function HomeV2(props: HomeV2Props) {
       <V2PracticeTiles
         breathTitle={props.labels.breathTitle}
         breathBody={props.labels.breathBody}
-        insightTitle={props.labels.weeklyTitle}
-        insightBody={props.weeklyInsight?.body}
-        insightMeta={props.weeklyInsight?.meta}
+        askTitle={props.labels.askLunaTitle}
+        askBody={props.labels.askLunaBody}
+        askAction={props.labels.askLunaAction}
         onBreath={props.onBreath}
+        onAsk={props.onAskLuna}
       />
 
       <section className="home-v2-sound-section">

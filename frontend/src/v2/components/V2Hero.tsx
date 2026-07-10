@@ -9,6 +9,7 @@ type V2HeroProps = {
   moods: MoodChip[];
   activeMood: MoodChip;
   moodLabel: (mood: MoodChip) => string;
+  language: 'en' | 'ru';
   checkinLine: string;
   onMood: (mood: MoodChip) => void;
 };
@@ -17,20 +18,19 @@ export function V2Hero({
   greeting,
   firstName,
   headline,
-  moods,
   activeMood,
   moodLabel,
+  language,
   checkinLine,
   onMood
 }: V2HeroProps) {
-  const moodSymbols: Record<MoodChip, string> = {
-    Sleep: '☾',
-    Calm: '☺',
-    Focus: '✦',
-    Anxiety: '○',
-    Breath: '〰',
-    Energy: '⚡'
-  };
+  const visualMoods: Array<{ mood: MoodChip; active: MoodChip[]; symbol: string; label: Record<'en' | 'ru', string> }> = [
+    { mood: 'Focus', active: ['Focus', 'Energy'], symbol: '😊', label: { en: 'Great', ru: 'Отлично' } },
+    { mood: 'Calm', active: ['Calm'], symbol: '🙂', label: { en: 'Good', ru: 'Хорошо' } },
+    { mood: 'Breath', active: ['Breath'], symbol: '😐', label: { en: 'Meh', ru: 'Норм' } },
+    { mood: 'Anxiety', active: ['Anxiety'], symbol: '😟', label: { en: 'Anxious', ru: 'Тревожно' } },
+    { mood: 'Sleep', active: ['Sleep'], symbol: '😴', label: { en: 'Tired', ru: 'Устал' } }
+  ];
   const heroImage = '/images/home/hero-night.png';
   const [imageFailed, setImageFailed] = useState(false);
 
@@ -56,15 +56,16 @@ export function V2Hero({
       </div>
 
       <div className="home-v2-mood-row" aria-label={checkinLine}>
-        {moods.map((mood) => (
+        {visualMoods.map(({ mood, active, symbol, label }) => (
           <button
             key={mood}
             type="button"
             onClick={() => onMood(mood)}
-            className={`home-v2-mood-pill ${activeMood === mood ? 'home-v2-mood-pill-active' : ''}`}
+            className={`home-v2-mood-pill ${active.includes(activeMood) ? 'home-v2-mood-pill-active' : ''}`}
+            title={moodLabel(mood)}
           >
-            <span>{moodSymbols[mood]}</span>
-            <small>{moodLabel(mood)}</small>
+            <span>{symbol}</span>
+            <small>{label[language]}</small>
           </button>
         ))}
       </div>
