@@ -223,7 +223,7 @@ input[type="range"] {
 
 .luna-editorial-row {
   border-bottom: 1px solid rgba(230, 236, 255, 0.075);
-  padding: 9px 0;
+  padding: 8px 0;
   transition: background 180ms ease, border-color 180ms ease;
 }
 
