@@ -5,20 +5,20 @@
 @tailwind utilities;
 
 :root {
-  --luna-bg-deep: #090611;
-  --luna-bg-night: #120b1e;
-  --luna-bg-surface: rgba(34, 22, 48, 0.48);
-  --luna-bg-elevated: rgba(48, 31, 68, 0.58);
-  --luna-purple: #7c55c8;
-  --luna-purple-soft: #a88af1;
+  --luna-bg-deep: #030612;
+  --luna-bg-night: #071024;
+  --luna-bg-surface: rgba(14, 22, 52, 0.58);
+  --luna-bg-elevated: rgba(22, 31, 70, 0.62);
+  --luna-purple: #7562d6;
+  --luna-purple-soft: #9d8cff;
   --luna-gold: #d4af37;
   --luna-gold-soft: #f4d67a;
   --luna-text-primary: #f7f2ea;
-  --luna-text-secondary: #cfc3d9;
-  --luna-text-muted: #8f809e;
-  --luna-border: rgba(245, 232, 214, 0.1);
+  --luna-text-secondary: #c9d0e9;
+  --luna-text-muted: #8b92b2;
+  --luna-border: rgba(230, 236, 255, 0.105);
   --luna-border-strong: rgba(212, 175, 55, 0.28);
-  --luna-glass: rgba(21, 25, 58, 0.58);
+  --luna-glass: rgba(10, 18, 42, 0.62);
   --luna-danger: #ff7575;
   --luna-success: #79d99e;
   --luna-radius-sm: 12px;
@@ -62,10 +62,10 @@
 
 .luna-bg {
   background:
-    radial-gradient(circle at 18% 0%, rgba(124, 85, 200, 0.22), transparent 17rem),
-    radial-gradient(circle at 86% 6%, rgba(212, 175, 55, 0.08), transparent 15rem),
-    radial-gradient(ellipse at 50% 110%, rgba(55, 25, 76, 0.62), transparent 28rem),
-    linear-gradient(180deg, #07050e 0%, #140c22 42%, #090611 100%);
+    radial-gradient(circle at 18% 0%, rgba(84, 102, 184, 0.2), transparent 17rem),
+    radial-gradient(circle at 86% 6%, rgba(212, 175, 55, 0.065), transparent 15rem),
+    radial-gradient(ellipse at 50% 112%, rgba(18, 30, 70, 0.72), transparent 28rem),
+    linear-gradient(180deg, #030612 0%, #071024 46%, #040712 100%);
   overflow: hidden;
 }
 
@@ -90,8 +90,8 @@
 
 .luna-bg::after {
   background:
-    radial-gradient(ellipse at 12% 18%, rgba(142, 95, 214, 0.16), transparent 26rem),
-    radial-gradient(ellipse at 88% 4%, rgba(212, 175, 55, 0.08), transparent 22rem),
+    radial-gradient(ellipse at 12% 18%, rgba(98, 112, 203, 0.13), transparent 26rem),
+    radial-gradient(ellipse at 88% 4%, rgba(212, 175, 55, 0.06), transparent 22rem),
     linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 38%, rgba(0, 0, 0, 0.22));
   animation: lunaAurora 26s ease-in-out infinite alternate;
   opacity: 0.82;
@@ -99,22 +99,23 @@
 
 .luna-page {
   animation: lunaFade 420ms ease-in-out both;
+  padding-top: 2px;
 }
 
 .luna-surface {
   border: 1px solid var(--luna-border);
   background:
-    linear-gradient(145deg, rgba(45, 28, 62, 0.5), rgba(14, 9, 24, 0.62)),
+    linear-gradient(145deg, rgba(26, 36, 78, 0.48), rgba(7, 12, 30, 0.68)),
     var(--luna-glass);
   box-shadow: 0 16px 46px rgba(0, 0, 0, 0.22);
   backdrop-filter: blur(18px);
 }
 
 .luna-surface-strong {
-  border: 1px solid rgba(245, 232, 214, 0.1);
+  border: 1px solid rgba(230, 236, 255, 0.11);
   background:
-    radial-gradient(circle at 82% 0%, rgba(212, 175, 55, 0.12), transparent 34%),
-    linear-gradient(145deg, rgba(43, 26, 58, 0.72), rgba(13, 8, 22, 0.78));
+    radial-gradient(circle at 82% 0%, rgba(212, 175, 55, 0.1), transparent 34%),
+    linear-gradient(145deg, rgba(26, 36, 78, 0.72), rgba(5, 9, 24, 0.82));
   box-shadow: var(--luna-shadow-glass);
   backdrop-filter: blur(20px);
 }
@@ -122,7 +123,9 @@
 .luna-card {
   border-radius: var(--luna-radius-lg);
   border: 1px solid var(--luna-border);
-  background: var(--luna-bg-surface);
+  background:
+    linear-gradient(145deg, rgba(25, 34, 74, 0.42), rgba(7, 12, 30, 0.5)),
+    var(--luna-bg-surface);
   box-shadow: 0 14px 38px rgba(0, 0, 0, 0.2);
   backdrop-filter: blur(16px);
 }
@@ -148,9 +151,9 @@
 }
 
 .luna-chip {
-  border: 1px solid rgba(214, 205, 255, 0.12);
+  border: 1px solid rgba(230, 236, 255, 0.11);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.055);
   color: var(--luna-text-secondary);
   font-size: 12px;
   font-weight: 600;
@@ -159,10 +162,10 @@
 }
 
 .luna-chip-active {
-  border-color: rgba(212, 175, 55, 0.28);
-  background: rgba(212, 175, 55, 0.14);
+  border-color: rgba(157, 140, 255, 0.38);
+  background: rgba(117, 98, 214, 0.18);
   color: white;
-  box-shadow: 0 10px 26px rgba(212, 175, 55, 0.1);
+  box-shadow: 0 10px 26px rgba(117, 98, 214, 0.12);
 }
 
 .luna-button-primary {
@@ -214,8 +217,8 @@ input[type="range"] {
 }
 
 .luna-editorial-row {
-  border-bottom: 1px solid rgba(245, 232, 214, 0.08);
-  padding: 12px 0;
+  border-bottom: 1px solid rgba(230, 236, 255, 0.08);
+  padding: 10px 0;
 }
 
 .luna-editorial-row:last-child {
