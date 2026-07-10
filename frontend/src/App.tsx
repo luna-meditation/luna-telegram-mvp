@@ -545,6 +545,11 @@ const copy = {
     feeling: 'How are you feeling today?',
     todayMeditation: "Today's Meditation",
     todayRecommendation: "Today's recommendation",
+    statDay: 'day',
+    statDays: 'days',
+    statMin: 'min',
+    statMood: 'Mood',
+    statCheckins: 'Check-ins',
     recommendedForYou: 'Recommended for You',
     forYourMood: 'For Your Mood',
     moreToExplore: 'More to Explore',
@@ -832,6 +837,11 @@ const copy = {
     feeling: 'Как ты себя чувствуешь сегодня?',
     todayMeditation: 'Медитация дня',
     todayRecommendation: 'Рекомендация на сегодня',
+    statDay: 'день',
+    statDays: 'дней',
+    statMin: 'мин',
+    statMood: 'Настроение',
+    statCheckins: 'Чек-ины',
     recommendedForYou: 'Рекомендация для тебя',
     forYourMood: 'Под твоё настроение',
     moreToExplore: 'Ещё для практики',
@@ -2338,10 +2348,10 @@ function App() {
             onAddHome={addLunaToHomeScreen}
             homeScreenMessage={homeScreenMessage}
             stats={[
-              { label: copy[language].quietRhythm, value: quietDayCountLabel(profile?.currentStreak ?? 0, language) },
-              { label: copy[language].thisWeek, value: minutesCountLabel(profile?.weeklyPracticeMinutes ?? 0, language) },
-              { label: copy[language].weeklyCheckins, value: `${wellness?.weeklyCheckinCount ?? 0}/7` },
-              { label: copy[language].currentMood, value: wellness?.mostCommonMoodLabel ? translateMoodLabel(wellness.mostCommonMoodLabel, language) : copy[language].notEnoughData }
+              { label: copy[language].quietRhythm, value: String(profile?.currentStreak ?? 0), secondary: (profile?.currentStreak ?? 0) === 1 ? copy[language].statDay : copy[language].statDays },
+              { label: copy[language].thisWeek, value: String(profile?.weeklyPracticeMinutes ?? 0), secondary: copy[language].statMin },
+              { label: copy[language].statCheckins, value: `${wellness?.weeklyCheckinCount ?? 0}/7` },
+              { label: copy[language].statMood, value: wellness?.mostCommonMoodLabel ? translateMoodLabel(wellness.mostCommonMoodLabel, language) : copy[language].notEnoughData }
             ]}
             labels={{
               brandMeta: copy[language].tagline,

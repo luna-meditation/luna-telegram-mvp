@@ -74,7 +74,7 @@ export function V2PracticeTiles({
         <span>{breathBody}</span>
       </button>
       {insightBody ? (
-        <article className="home-v2-practice-tile">
+        <article className="home-v2-practice-tile home-v2-insight-tile">
           <small>{insightTitle}</small>
           <p>{insightBody}</p>
           {insightMeta ? <span>{insightMeta}</span> : null}

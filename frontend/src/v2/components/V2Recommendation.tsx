@@ -10,7 +10,6 @@ type MeditationView = {
 export function V2Recommendation({
   title,
   meditation,
-  label,
   view,
   categoryLabel,
   durationLabel,
@@ -22,7 +21,6 @@ export function V2Recommendation({
 }: {
   title: string;
   meditation: Meditation;
-  label: string;
   view: MeditationView;
   categoryLabel: string;
   durationLabel: string;
@@ -41,7 +39,7 @@ export function V2Recommendation({
       <button type="button" onClick={onOpen} className="home-v2-recommendation">
         <img src={meditation.cover_image} alt="" loading="lazy" />
         <span className="home-v2-recommendation-copy">
-          <small>{label} · {categoryLabel} · {durationLabel}</small>
+          <small>{categoryLabel} · {durationLabel}</small>
           <strong>{view.title}</strong>
           <em>{view.subtitle || view.description}</em>
         </span>
@@ -53,4 +51,3 @@ export function V2Recommendation({
     </section>
   );
 }
-

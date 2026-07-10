@@ -24,7 +24,7 @@ export function V2Continue({
   return (
     <section className="home-v2-continue-strip">
       <h2>{title}</h2>
-      <div className="home-v2-continue-items">
+      <div className={meditations.length === 1 ? 'home-v2-continue-items home-v2-continue-items-single' : 'home-v2-continue-items'}>
         {meditations.slice(0, 2).map((meditation) => {
           const view = meditationView(meditation);
           const progress = Math.max(0, Math.min(100, Number(meditation.history?.completion_percent ?? 0)));

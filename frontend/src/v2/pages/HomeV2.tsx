@@ -123,7 +123,6 @@ export function HomeV2(props: HomeV2Props) {
         <V2Recommendation
           title={props.labels.todayRecommendation}
           meditation={props.daily}
-          label={props.heroLabel}
           view={props.meditationView(props.daily)}
           categoryLabel={props.categoryLabel(props.daily.category)}
           durationLabel={props.durationLabel(props.daily.duration)}

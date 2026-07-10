@@ -1,6 +1,7 @@
 export type V2Stat = {
   label: string;
   value: string;
+  secondary?: string;
 };
 
 export function V2Stats({ stats }: { stats: V2Stat[] }) {
@@ -10,6 +11,7 @@ export function V2Stats({ stats }: { stats: V2Stat[] }) {
         <article key={stat.label} className="home-v2-stat-card">
           <span>{stat.label}</span>
           <strong>{stat.value}</strong>
+          {stat.secondary ? <small>{stat.secondary}</small> : null}
         </article>
       ))}
     </section>
