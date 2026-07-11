@@ -647,10 +647,10 @@ const copy = {
     navProgress: 'Progress',
     navProfile: 'Profile',
     lunaPageTitle: 'Luna',
-    lunaPageSubtitle: 'A quiet space to talk.',
+    lunaPageSubtitle: 'Your quiet companion',
     lunaPageBody: "Tell Luna how you're feeling, ask for a meditation recommendation, or simply write what's on your mind.",
-    lunaPageStatus: 'Quiet Space',
-    lunaPageSoon: 'Luna will meet you here soon.',
+    lunaPageStatus: 'Your quiet companion',
+    lunaPageSoon: 'Open Luna whenever you need a quiet moment.',
     progressTitle: 'Your Progress',
     progressSubtitle: 'A calm view of what you have actually practiced.',
     progressStreak: 'Current streak',
@@ -687,7 +687,7 @@ const copy = {
     askLunaTitle: 'Ask Luna',
     askLunaBody: 'Ask for a recommendation, a calming thought, or support.',
     askLunaAction: 'Talk to Luna',
-    askLunaSoon: 'Luna companion is coming soon.',
+    askLunaSoon: 'Open Luna whenever you need a quiet moment.',
     recommendedFocus: 'Recommended focus: {focus}',
     focusBreathAnxiety: 'Breath and anxiety relief',
     focusSleepRecovery: 'Sleep recovery',
@@ -971,10 +971,10 @@ const copy = {
     navProgress: 'Прогресс',
     navProfile: 'Профиль',
     lunaPageTitle: 'Luna',
-    lunaPageSubtitle: 'Тихое место для разговора.',
+    lunaPageSubtitle: 'Твой тихий компаньон',
     lunaPageBody: 'Расскажи Luna, как ты себя чувствуешь, попроси рекомендацию или просто напиши, что на душе.',
-    lunaPageStatus: 'Тихое пространство',
-    lunaPageSoon: 'Luna скоро встретит тебя здесь.',
+    lunaPageStatus: 'Твой тихий компаньон',
+    lunaPageSoon: 'Открывай Luna, когда нужен тихий момент.',
     progressTitle: 'Твой прогресс',
     progressSubtitle: 'Спокойный взгляд на реальные практики.',
     progressStreak: 'Текущая серия',
@@ -1011,7 +1011,7 @@ const copy = {
     askLunaTitle: 'Спросить Luna',
     askLunaBody: 'Попроси рекомендацию, спокойную мысль или поддержку.',
     askLunaAction: 'Написать Luna',
-    askLunaSoon: 'Luna companion скоро появится.',
+    askLunaSoon: 'Открывай Luna, когда нужен тихий момент.',
     recommendedFocus: 'Рекомендация: {focus}',
     focusBreathAnxiety: 'Дыхание и снижение тревоги',
     focusSleepRecovery: 'Восстановление сна',
@@ -2606,6 +2606,9 @@ function App() {
           <LunaPage
             firstName={user.first_name ?? 'friend'}
             language={language}
+            meditations={decoratedMeditations}
+            hasPremium={access.hasPremium}
+            onOpenMeditation={openMeditation}
           />
         )}
 
@@ -2973,17 +2976,124 @@ function PageTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   );
 }
 
-type LunaConversationSummary = {
-  id: string;
-  when: string;
-  title: string;
-};
-
 type LunaHelpTopic = {
   icon: string;
   title: string;
   body: string;
   prompt: string;
+};
+
+type LunaOrbState = 'idle' | 'listening' | 'thinking' | 'responding';
+type LunaMessageRole = 'user' | 'assistant';
+type LunaMessageStatus = 'sent' | 'thinking' | 'retry' | 'error';
+type LunaSafetyState = 'none' | 'crisis' | 'medical_disclaimer' | 'blocked' | 'unavailable';
+
+type LunaChatMessage = {
+  id: string;
+  role: LunaMessageRole;
+  text: string;
+  createdAt: string;
+  status?: LunaMessageStatus;
+  safetyState?: LunaSafetyState;
+  recommendedMeditationId?: string;
+};
+
+type LunaConversation = {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+  messages: LunaChatMessage[];
+};
+
+const lunaConversationsStorageKey = 'luna.companion.conversations.v1';
+const lunaActiveConversationStorageKey = 'luna.companion.activeConversation.v1';
+
+function lunaId(prefix: string) {
+  return `${prefix}-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`}`;
+}
+
+function readLunaConversations(): LunaConversation[] {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(lunaConversationsStorageKey) ?? '[]') as LunaConversation[];
+    return Array.isArray(parsed) ? parsed.filter((conversation) => Array.isArray(conversation.messages)) : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeLunaConversations(conversations: LunaConversation[]) {
+  window.localStorage.setItem(lunaConversationsStorageKey, JSON.stringify(conversations.slice(0, 12)));
+}
+
+function createLunaConversation(seedText: string, language: AppLanguage): LunaConversation {
+  const now = new Date().toISOString();
+  const clean = seedText.trim();
+  return {
+    id: lunaId('conversation'),
+    title: clean ? clean.slice(0, 42) : (language === 'ru' ? 'Новый разговор' : 'New conversation'),
+    createdAt: now,
+    updatedAt: now,
+    messages: []
+  };
+}
+
+function updateLunaConversation(conversation: LunaConversation, messages: LunaChatMessage[]): LunaConversation {
+  return {
+    ...conversation,
+    title: conversation.title || messages.find((message) => message.role === 'user')?.text.slice(0, 42) || conversation.title,
+    updatedAt: new Date().toISOString(),
+    messages
+  };
+}
+
+function lunaDateLabel(value: string, language: AppLanguage) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US', { month: 'short', day: 'numeric' });
+}
+
+function chooseLunaRecommendation(input: string, meditations: Meditation[]) {
+  const lower = input.toLowerCase();
+  const official = meditations.filter((meditation) => !isDemoMeditation(meditation));
+  return official.find((meditation) => lower.includes('sleep') || lower.includes('сон') ? meditation.category === 'sleep' : false) ??
+    official.find((meditation) => lower.includes('anxious') || lower.includes('трев') ? meditation.category === 'anxiety' : false) ??
+    official.find((meditation) => lower.includes('focus') || lower.includes('фокус') ? meditation.category === 'focus' : false) ??
+    official[0];
+}
+
+const localLunaChatService = {
+  async respond(input: string, language: AppLanguage, meditations: Meditation[]): Promise<LunaChatMessage> {
+    await new Promise((resolve) => window.setTimeout(resolve, 620));
+    const lower = input.toLowerCase();
+    const wantsRecommendation = /recommend|meditation|practice|подбери|медитац|практик|sleep|сон|anxious|трев/.test(lower);
+    const recommended = wantsRecommendation ? chooseLunaRecommendation(input, meditations) : undefined;
+    const text = language === 'ru'
+      ? lower.includes('сон') || lower.includes('уснуть')
+        ? 'Давай начнём мягко. Положи внимание на выдох и не пытайся заставить себя уснуть — просто дай телу понять, что сейчас можно отпускать.'
+        : lower.includes('трев') || lower.includes('мысли')
+          ? 'Я рядом. Попробуй назвать одно чувство и одно место в теле, где оно ощущается. Не нужно решать всё сразу — сначала просто заметить.'
+          : recommended
+            ? 'Я подобрала спокойную практику, с которой можно начать прямо сейчас.'
+            : 'Спасибо, что сказал(а). Давай сделаем это маленьким и бережным: один вдох, один выдох, один следующий шаг.'
+      : lower.includes('sleep') || lower.includes("can't sleep")
+        ? "Let's begin softly. Place your attention on the exhale and don't try to force sleep — just let your body know it is allowed to let go."
+        : lower.includes('anxious') || lower.includes('thoughts')
+          ? "I'm here. Try naming one feeling and one place in your body where it lives. We don't have to solve everything at once."
+          : recommended
+            ? 'I found a gentle practice you can begin with right now.'
+            : 'Thank you for saying that. Let’s keep this small and kind: one inhale, one exhale, one next step.';
+
+    return {
+      id: lunaId('message'),
+      role: 'assistant',
+      text,
+      createdAt: new Date().toISOString(),
+      status: 'sent',
+      safetyState: 'none',
+      recommendedMeditationId: recommended?.id
+    };
+  }
 };
 
 function dailyLunaThought(language: AppLanguage) {
@@ -3004,10 +3114,25 @@ function dailyLunaThought(language: AppLanguage) {
   return thoughts[dayIndex];
 }
 
-function LunaPage({ firstName, language }: { firstName: string; language: AppLanguage }) {
+function LunaPage({
+  firstName,
+  language,
+  meditations,
+  hasPremium,
+  onOpenMeditation
+}: {
+  firstName: string;
+  language: AppLanguage;
+  meditations: Meditation[];
+  hasPremium: boolean;
+  onOpenMeditation: (meditation: Meditation) => void;
+}) {
   const [draft, setDraft] = useState('');
   const [firstOpen, setFirstOpen] = useState(() => window.localStorage.getItem('luna.companion.opened.v1') !== 'true');
-  const recentConversations: LunaConversationSummary[] = [];
+  const [conversations, setConversations] = useState<LunaConversation[]>(readLunaConversations);
+  const [activeConversationId, setActiveConversationId] = useState(() => window.localStorage.getItem(lunaActiveConversationStorageKey) ?? '');
+  const [thinking, setThinking] = useState(false);
+  const endRef = useRef<HTMLDivElement | null>(null);
   const quickActions = language === 'ru'
     ? ['🌙 Не могу уснуть', '🧠 Мысли не останавливаются', '💼 Я перегружен(а)', '❤️ Хочу с кем-то поговорить', '✨ Подбери медитацию на сегодня']
     : ["🌙 I can't sleep", "🧠 My thoughts won't stop", "💼 I'm overwhelmed", '❤️ I need someone to talk to', "✨ Recommend today's meditation"];
@@ -3034,101 +3159,353 @@ function LunaPage({ firstName, language }: { firstName: string; language: AppLan
     if (firstOpen) window.setTimeout(() => setFirstOpen(false), 900);
   }, [firstOpen]);
 
+  useEffect(() => {
+    writeLunaConversations(conversations);
+  }, [conversations]);
+
+  useEffect(() => {
+    if (activeConversationId) window.localStorage.setItem(lunaActiveConversationStorageKey, activeConversationId);
+  }, [activeConversationId]);
+
+  const activeConversation = conversations.find((conversation) => conversation.id === activeConversationId) ?? conversations[0] ?? null;
+  const messages = activeConversation?.messages ?? [];
+  const lastMessage = messages[messages.length - 1];
+  const orbState: LunaOrbState = thinking ? 'thinking' : draft.trim() ? 'listening' : lastMessage?.role === 'assistant' ? 'responding' : 'idle';
+  const showWelcome = messages.length === 0;
+  const sortedConversations = [...conversations].sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime());
+
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [messages.length, thinking]);
+
+  const startNewConversation = () => {
+    const next = createLunaConversation('', language);
+    setConversations((current) => [next, ...current]);
+    setActiveConversationId(next.id);
+    setDraft('');
+  };
+
+  const sendMessage = async (text: string) => {
+    const clean = text.trim();
+    if (!clean || thinking) return;
+    const baseConversation = activeConversation ?? createLunaConversation(clean, language);
+    const userMessage: LunaChatMessage = {
+      id: lunaId('message'),
+      role: 'user',
+      text: clean,
+      createdAt: new Date().toISOString(),
+      status: 'sent',
+      safetyState: 'none'
+    };
+    const nextConversation = updateLunaConversation(baseConversation, [...baseConversation.messages, userMessage]);
+
+    setDraft('');
+    setActiveConversationId(nextConversation.id);
+    setConversations((current) => {
+      const exists = current.some((conversation) => conversation.id === nextConversation.id);
+      return exists
+        ? current.map((conversation) => conversation.id === nextConversation.id ? nextConversation : conversation)
+        : [nextConversation, ...current];
+    });
+
+    setThinking(true);
+    try {
+      const response = await localLunaChatService.respond(clean, language, meditations);
+      setConversations((current) => current.map((conversation) => {
+        if (conversation.id !== nextConversation.id) return conversation;
+        return updateLunaConversation(conversation, [...conversation.messages, response]);
+      }));
+    } finally {
+      setThinking(false);
+    }
+  };
+
   return (
-    <div className="luna-page luna-conversation-screen flex min-h-[calc(100vh-170px)] flex-col pb-5">
-      <div className="flex items-center justify-between">
-        <div className="h-11 w-11" />
-        <div className="text-center">
-          <p className="text-sm font-semibold text-cream">Luna</p>
-          <p className="text-[11px] text-lavender">{copy[language].lunaPageStatus}</p>
-        </div>
-        <div className="h-11 w-11" />
-      </div>
+    <div className="luna-page luna-conversation-screen flex min-h-[calc(100vh-170px)] flex-col pb-[calc(92px+env(safe-area-inset-bottom))]">
+      <LunaChatHeader language={language} onNewConversation={startNewConversation} />
 
-      <div className="flex flex-1 flex-col py-5">
-        <div className="mx-auto mb-4">
-          <div className="luna-breathing-orb" />
-        </div>
+      <div className="flex flex-1 flex-col py-4">
+        <div className="mx-auto mb-4"><LunaOrb state={orbState} /></div>
 
-        <div className="luna-conversation-intro">
-          <p className="text-[21px] font-semibold leading-tight tracking-[-0.035em] text-cream">
-            {language === 'ru'
-              ? `Привет, ${firstName || 'друг'}.`
-              : `Hello, ${firstName || 'friend'}.`}
-          </p>
-          <p className="mt-2 text-sm leading-6 text-lavender">
-            {firstOpen
-              ? (language === 'ru' ? 'Я здесь, чтобы слушать без осуждения. Можно начать с одного честного предложения.' : "I'm here to listen without judgment. You can begin with one honest sentence.")
-              : (language === 'ru' ? 'Что сейчас внутри тебя?' : "What's happening inside you right now?")}
-          </p>
-        </div>
+        {showWelcome ? (
+          <EmptyConversationState firstName={firstName} firstOpen={firstOpen} language={language} />
+        ) : (
+          <ConversationList
+            conversation={activeConversation}
+            language={language}
+            meditations={meditations}
+            hasPremium={hasPremium}
+            onOpenMeditation={onOpenMeditation}
+          />
+        )}
 
-        <section className="mt-4 space-y-2">
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 luna-scrollbar-none">
-            {quickActions.map((action, index) => (
-              <button
-                key={action}
-                type="button"
-                onClick={() => setDraft(action.replace(/^[^\p{L}\p{N}]+/u, '').trim())}
-                className="luna-suggestion-chip"
-                style={{ animationDelay: `${index * 24}ms` }}
-              >
-                {action}
-              </button>
-            ))}
-          </div>
-        </section>
+        {showWelcome ? <SuggestedPrompts prompts={quickActions} onSelect={setDraft} /> : null}
+        {showWelcome ? <CompactPromptCarousel topics={compactSuggestions} onSelect={setDraft} language={language} /> : null}
 
-        <section className="mt-4 space-y-3">
-          <h3 className="text-sm font-semibold text-cream">{language === 'ru' ? 'Мягкие начала' : 'Gentle Starts'}</h3>
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 luna-scrollbar-none">
-            {compactSuggestions.map((topic) => (
-              <button key={topic.title} type="button" onClick={() => setDraft(topic.prompt)} className="luna-topic-pill">
-                <span>{topic.icon}</span>
-                <strong>{topic.title}</strong>
-              </button>
-            ))}
-          </div>
-        </section>
+        {thinking ? <ThinkingIndicator language={language} /> : null}
 
-        <section className="mt-4 space-y-2">
-          <h3 className="text-sm font-semibold text-cream">{language === 'ru' ? 'Недавние разговоры' : 'Recent Conversations'}</h3>
-          {recentConversations.length ? (
-            <div className="luna-surface rounded-[24px] p-2">
-              {recentConversations.map((conversation) => (
-                <button key={conversation.id} type="button" onClick={() => setDraft(conversation.title)} className="flex min-h-[52px] w-full items-center justify-between rounded-[17px] px-3 text-left">
-                  <span>
-                    <span className="block text-sm font-medium text-cream">{conversation.title}</span>
-                    <span className="text-xs text-lavender">{conversation.when}</span>
-                  </span>
-                  <ChevronRight size={16} className="text-lavender/55" />
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="luna-companion-empty">
-              <span>{language === 'ru' ? 'Когда появятся разговоры, они будут здесь — спокойно, приватно и без лишнего шума.' : 'When conversations appear, they will live here quietly, privately, and without clutter.'}</span>
-            </div>
-          )}
-        </section>
+        <RecentConversations
+          conversations={sortedConversations}
+          activeConversationId={activeConversation?.id ?? ''}
+          language={language}
+          onOpen={setActiveConversationId}
+        />
 
         <section className="luna-thought-card mt-4">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gold/85">{language === 'ru' ? 'Мысль дня' : "Today's Thought"}</p>
           <p className="mt-2 text-[16px] leading-7 text-cream">{dailyLunaThought(language)}</p>
         </section>
+        <div ref={endRef} />
       </div>
 
-      <div className="luna-composer">
-        <button type="button" className="luna-conversation-tool" aria-label={language === 'ru' ? 'Голосовое сообщение' : 'Voice message'}><Mic size={16} /></button>
-        <input
-          value={draft}
-          onChange={(event) => setDraft(event.currentTarget.value)}
-          placeholder={language === 'ru' ? 'Напиши Luna...' : 'Message Luna...'}
-          className="min-w-0 flex-1 bg-transparent text-sm text-cream outline-none placeholder:text-lavender/60"
-        />
-        <button type="button" className="grid h-9 w-9 place-items-center rounded-full bg-gold text-night" aria-label={language === 'ru' ? 'Отправить' : 'Send'}><Send size={16} /></button>
-      </div>
+      <MessageComposer
+        value={draft}
+        language={language}
+        disabled={thinking}
+        onChange={setDraft}
+        onSend={() => void sendMessage(draft)}
+      />
     </div>
+  );
+}
+
+function LunaChatHeader({ language, onNewConversation }: { language: AppLanguage; onNewConversation: () => void }) {
+  return (
+    <div className="luna-chat-header">
+      <div>
+        <h2>Luna</h2>
+        <p>{language === 'ru' ? 'Твой тихий компаньон' : 'Your quiet companion'}</p>
+      </div>
+      <button type="button" onClick={onNewConversation} className="luna-chat-new" aria-label={language === 'ru' ? 'Новый разговор' : 'New conversation'}>
+        +
+      </button>
+    </div>
+  );
+}
+
+function LunaOrb({ state }: { state: LunaOrbState }) {
+  return <div className={`luna-breathing-orb luna-orb-${state}`} aria-hidden="true" />;
+}
+
+function EmptyConversationState({ firstName, firstOpen, language }: { firstName: string; firstOpen: boolean; language: AppLanguage }) {
+  return (
+    <div className="luna-conversation-intro">
+      <p className="text-[21px] font-semibold leading-tight tracking-[-0.035em] text-cream">
+        {language === 'ru' ? `Привет, ${firstName || 'друг'}.` : `Hello, ${firstName || 'friend'}.`}
+      </p>
+      <p className="mt-2 text-sm leading-6 text-lavender">
+        {firstOpen
+          ? (language === 'ru' ? 'Я рядом, когда нужен тихий момент. Расскажи, что у тебя на душе, или выбери, с чего начать.' : "I'm here whenever you need a quiet moment. Tell me what's on your mind, or choose a place to begin.")
+          : (language === 'ru' ? 'Что сейчас внутри тебя?' : "What's happening inside you right now?")}
+      </p>
+    </div>
+  );
+}
+
+function ConversationList({
+  conversation,
+  language,
+  meditations,
+  hasPremium,
+  onOpenMeditation
+}: {
+  conversation: LunaConversation | null;
+  language: AppLanguage;
+  meditations: Meditation[];
+  hasPremium: boolean;
+  onOpenMeditation: (meditation: Meditation) => void;
+}) {
+  if (!conversation) return null;
+  let previousDate = '';
+  return (
+    <section className="luna-chat-messages">
+      {conversation.messages.map((message) => {
+        const currentDate = new Date(message.createdAt).toDateString();
+        const showDate = currentDate !== previousDate;
+        previousDate = currentDate;
+        const recommendation = message.recommendedMeditationId
+          ? meditations.find((meditation) => meditation.id === message.recommendedMeditationId)
+          : undefined;
+        return (
+          <div key={message.id}>
+            {showDate ? <div className="luna-chat-date">{lunaDateLabel(message.createdAt, language)}</div> : null}
+            <ChatMessage message={message} />
+            {recommendation ? (
+              <MeditationRecommendationMessage
+                meditation={recommendation}
+                language={language}
+                locked={recommendation.premium && !hasPremium}
+                onOpen={() => onOpenMeditation(recommendation)}
+              />
+            ) : null}
+          </div>
+        );
+      })}
+    </section>
+  );
+}
+
+function ChatMessage({ message }: { message: LunaChatMessage }) {
+  const isUser = message.role === 'user';
+  return (
+    <article className={`luna-chat-message ${isUser ? 'luna-chat-message-user' : 'luna-chat-message-luna'}`}>
+      {!isUser ? <span className="luna-message-orb" aria-hidden="true" /> : null}
+      <div className="luna-message-bubble">
+        <p>{message.text}</p>
+      </div>
+    </article>
+  );
+}
+
+function SuggestedPrompts({ prompts, onSelect }: { prompts: string[]; onSelect: (prompt: string) => void }) {
+  return (
+    <section className="mt-4">
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 luna-scrollbar-none">
+        {prompts.map((prompt, index) => (
+          <button
+            key={prompt}
+            type="button"
+            onClick={() => onSelect(prompt.replace(/^[^\p{L}\p{N}]+/u, '').trim())}
+            className="luna-suggestion-chip"
+            style={{ animationDelay: `${index * 24}ms` }}
+          >
+            {prompt}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function CompactPromptCarousel({ topics, onSelect, language }: { topics: LunaHelpTopic[]; onSelect: (prompt: string) => void; language: AppLanguage }) {
+  return (
+    <section className="mt-4 space-y-3">
+      <h3 className="text-sm font-semibold text-cream">{language === 'ru' ? 'Мягкие начала' : 'Gentle Starts'}</h3>
+      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 luna-scrollbar-none">
+        {topics.map((topic) => (
+          <button key={topic.title} type="button" onClick={() => onSelect(topic.prompt)} className="luna-topic-pill">
+            <span>{topic.icon}</span>
+            <strong>{topic.title}</strong>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function RecentConversations({
+  conversations,
+  activeConversationId,
+  language,
+  onOpen
+}: {
+  conversations: LunaConversation[];
+  activeConversationId: string;
+  language: AppLanguage;
+  onOpen: (id: string) => void;
+}) {
+  const visible = conversations.filter((conversation) => conversation.messages.length > 0);
+  return (
+    <section className="mt-4 space-y-2">
+      <h3 className="text-sm font-semibold text-cream">{language === 'ru' ? 'Недавние разговоры' : 'Recent Conversations'}</h3>
+      {visible.length ? (
+        <div className="luna-surface rounded-[24px] p-2">
+          {visible.slice(0, 4).map((conversation) => {
+            const preview = conversation.messages[conversation.messages.length - 1]?.text ?? '';
+            return (
+              <button key={conversation.id} type="button" onClick={() => onOpen(conversation.id)} className={`luna-recent-row ${conversation.id === activeConversationId ? 'luna-recent-row-active' : ''}`}>
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-medium text-cream">{conversation.title}</span>
+                  <span className="block truncate text-xs text-lavender">{preview}</span>
+                </span>
+                <span className="shrink-0 text-[11px] text-lavender/75">{lunaDateLabel(conversation.updatedAt, language)}</span>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="luna-companion-empty">
+          <span>{language === 'ru' ? 'Разговоров пока нет. Твои беседы с Luna появятся здесь.' : 'No conversations yet. Your conversations with Luna will appear here.'}</span>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ThinkingIndicator({ language }: { language: AppLanguage }) {
+  return (
+    <div className="luna-thinking-indicator" role="status">
+      <span className="luna-message-orb luna-message-orb-thinking" aria-hidden="true" />
+      <span>{language === 'ru' ? 'Luna размышляет' : 'Luna is reflecting'}</span>
+    </div>
+  );
+}
+
+function MeditationRecommendationMessage({
+  meditation,
+  language,
+  locked,
+  onOpen
+}: {
+  meditation: Meditation;
+  language: AppLanguage;
+  locked: boolean;
+  onOpen: () => void;
+}) {
+  const localized = getLocalizedMeditation(meditation, language);
+  return (
+    <button type="button" onClick={onOpen} className="luna-recommendation-message">
+      <img src={meditation.cover_image} alt="" loading="lazy" />
+      <span className="min-w-0 flex-1 text-left">
+        <strong>{localized.title}</strong>
+        <small>{translateCategory(meditation.category, language)} · {formatTime(meditation.duration)}</small>
+      </span>
+      <span className="rounded-full bg-gold px-3 py-1 text-[11px] font-bold text-night">{locked ? copy[language].premium : copy[language].play}</span>
+    </button>
+  );
+}
+
+function MessageComposer({
+  value,
+  language,
+  disabled,
+  onChange,
+  onSend
+}: {
+  value: string;
+  language: AppLanguage;
+  disabled: boolean;
+  onChange: (value: string) => void;
+  onSend: () => void;
+}) {
+  const canSend = value.trim().length > 0 && !disabled;
+  return (
+    <form
+      className="luna-composer"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (canSend) onSend();
+      }}
+    >
+      <button type="button" className="luna-conversation-tool" aria-label={language === 'ru' ? 'Голосовое сообщение' : 'Voice message'}><Mic size={16} /></button>
+      <textarea
+        rows={1}
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.currentTarget.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            if (canSend) onSend();
+          }
+        }}
+        placeholder={language === 'ru' ? 'Напиши Luna...' : 'Message Luna...'}
+        className="max-h-28 min-h-9 min-w-0 flex-1 resize-none bg-transparent py-2 text-sm leading-5 text-cream outline-none placeholder:text-lavender/60 disabled:opacity-70"
+      />
+      <button type="submit" disabled={!canSend} className="grid h-9 w-9 place-items-center rounded-full bg-gold text-night disabled:bg-white/10 disabled:text-lavender/50" aria-label={language === 'ru' ? 'Отправить' : 'Send'}>
+        <Send size={16} />
+      </button>
+    </form>
   );
 }
 
