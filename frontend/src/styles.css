@@ -341,7 +341,7 @@ input[type="range"] {
   object-fit: cover;
   object-position: center;
   opacity: 0.94;
-  filter: brightness(1.24) contrast(1.08) saturate(1.04);
+  filter: brightness(1.1) contrast(1.06) saturate(1.03);
 }
 
 .hero-progress-overlay {
@@ -372,17 +372,15 @@ input[type="range"] {
   line-height: 1.08;
 }
 
-.hero-streak-icon {
+.hero-moon-halo {
   display: grid;
-  width: 64px;
-  height: 64px;
-  place-items: center;
-  border: 1px solid rgba(244, 214, 122, 0.25);
+  width: 86px;
+  height: 86px;
+  margin-right: -10px;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(244, 214, 122, 0.18), rgba(117, 98, 214, 0.1) 62%, rgba(255, 255, 255, 0.04));
-  color: var(--luna-gold-soft);
-  font-size: 36px;
-  box-shadow: var(--luna-shadow-gold);
+  background: radial-gradient(circle, rgba(244, 214, 122, 0.2), rgba(244, 214, 122, 0.08) 35%, transparent 68%);
+  opacity: 0.76;
+  filter: blur(0.5px);
   animation: lunaStreakGlow 5.5s ease-in-out infinite;
 }
 
@@ -508,6 +506,45 @@ input[type="range"] {
   border-radius: 999px;
   background: rgba(244, 214, 122, 0.12);
   box-shadow: 0 0 18px rgba(244, 214, 122, 0.16);
+}
+
+.mood-trend-row {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.mood-trend-day {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.mood-trend-day span {
+  color: rgba(188, 180, 222, 0.68);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.mood-trend-day b {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(230, 236, 255, 0.11);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+  color: rgba(247, 242, 234, 0.54);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.mood-trend-active b {
+  border-color: rgba(244, 214, 122, 0.22);
+  background: rgba(244, 214, 122, 0.1);
+  box-shadow: 0 0 20px rgba(244, 214, 122, 0.08);
 }
 
 .mood-journey-card,
@@ -1219,7 +1256,7 @@ input[type="range"] {
 	  .luna-progress-enter,
 	  .luna-progress-bar,
 	  .luna-streak-symbol,
-	  .hero-streak-icon,
+	  .hero-moon-halo,
 	  .weekly-day-current,
 	  .weekly-day-freeze_used,
 	  .weekly-day-premium_freeze,

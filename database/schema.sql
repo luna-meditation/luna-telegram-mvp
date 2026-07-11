@@ -164,6 +164,18 @@ create table if not exists public.achievements (
   unique (telegram_id, achievement_id)
 );
 
+create table if not exists public.practice_days (
+  id uuid primary key default gen_random_uuid(),
+  telegram_id bigint not null references public.users(telegram_id) on delete cascade,
+  local_date date not null,
+  source text not null check (source in ('meditation', 'breath', 'scene')),
+  minutes integer not null default 0 check (minutes >= 0),
+  sessions integer not null default 1 check (sessions >= 1),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (telegram_id, local_date, source)
+);
+
 create table if not exists public.daily_checkins (
   id uuid primary key default gen_random_uuid(),
   telegram_id bigint not null references public.users(telegram_id) on delete cascade,
@@ -242,6 +254,7 @@ create index if not exists idx_daily_checkins_telegram_date on public.daily_chec
 create index if not exists idx_breath_sessions_telegram_completed on public.breath_sessions(telegram_id, completed_at desc);
 create index if not exists idx_moon_gardens_telegram_id on public.moon_gardens(telegram_id);
 create index if not exists idx_achievements_telegram_id on public.achievements(telegram_id);
+create index if not exists idx_practice_days_telegram_date on public.practice_days(telegram_id, local_date desc);
 
 create or replace function public.increment_meditation_play_count(meditation_uuid uuid)
 returns void
@@ -293,6 +306,7 @@ alter table public.daily_checkins enable row level security;
 alter table public.breath_sessions enable row level security;
 alter table public.moon_gardens enable row level security;
 alter table public.achievements enable row level security;
+alter table public.practice_days enable row level security;
 
 drop policy if exists "Practices are readable" on public.practices;
 drop policy if exists "Categories are readable" on public.categories;

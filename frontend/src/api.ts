@@ -103,6 +103,36 @@ export type ProfileStats = {
   lastCleanWeekAwarded?: string | null;
   minutesListened: number;
   weeklyPracticeMinutes?: number;
+  weeklyStats?: {
+    listeningMinutes: number;
+    completedSessions: number;
+    checkins: number;
+    completedDays: number;
+  };
+  lifetimeStats?: {
+    totalListeningMinutes: number;
+    totalSessions: number;
+    longestStreak: number;
+    practiceDays: number;
+    completedWeeks: number;
+  };
+  currentWeek?: {
+    weekStart: string;
+    completedDays: number;
+    completedSessions: number;
+    listeningMinutes: number;
+    days: Array<{
+      key: string;
+      label: string;
+      state: 'completed' | 'current' | 'missed' | 'future' | 'freeze_used' | 'premium_freeze';
+      minutes: number;
+      sessions: number;
+    }>;
+  };
+  moodTrend?: Array<{
+    key: string;
+    mood: DailyCheckin['mood'] | null;
+  }>;
   totalPracticeMinutes?: number;
   calmPoints?: number;
   moonSeeds?: number;
