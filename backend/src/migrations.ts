@@ -83,11 +83,29 @@ create table if not exists public.streaks (
   current_streak integer not null default 0,
   longest_streak integer not null default 0,
   last_completed_date date,
+  freeze_count integer not null default 1 check (freeze_count >= 0),
+  last_freeze_used date,
+  last_clean_week_awarded date,
   reward_7 boolean not null default false,
   reward_14 boolean not null default false,
   reward_30 boolean not null default false,
   reward_100 boolean not null default false,
   updated_at timestamptz not null default now()
+);
+
+alter table public.streaks
+  add column if not exists freeze_count integer not null default 1 check (freeze_count >= 0),
+  add column if not exists last_freeze_used date,
+  add column if not exists last_clean_week_awarded date;
+
+create table if not exists public.achievements (
+  id uuid primary key default gen_random_uuid(),
+  telegram_id bigint not null references public.users(telegram_id) on delete cascade,
+  achievement_id text not null,
+  unlocked_at timestamptz not null default now(),
+  progress integer not null default 100 check (progress >= 0 and progress <= 100),
+  metadata jsonb not null default '{}'::jsonb,
+  unique (telegram_id, achievement_id)
 );
 
 create table if not exists public.daily_checkins (
@@ -158,6 +176,7 @@ create index if not exists idx_history_last_played on public.history(last_played
 create index if not exists idx_daily_checkins_telegram_date on public.daily_checkins(telegram_id, local_date desc);
 create index if not exists idx_breath_sessions_telegram_completed on public.breath_sessions(telegram_id, completed_at desc);
 create index if not exists idx_moon_gardens_telegram_id on public.moon_gardens(telegram_id);
+create index if not exists idx_achievements_telegram_id on public.achievements(telegram_id);
 
 do $$
 begin
@@ -212,6 +231,7 @@ alter table public.streaks enable row level security;
 alter table public.daily_checkins enable row level security;
 alter table public.breath_sessions enable row level security;
 alter table public.moon_gardens enable row level security;
+alter table public.achievements enable row level security;
 
 drop policy if exists "Categories are readable" on public.categories;
 drop policy if exists "Meditations are readable" on public.meditations;

@@ -71,6 +71,48 @@ const legacyMoonGardenElementOrder = [
   'breathing_pond'
 ];
 
+type AchievementStats = {
+  completedMeditations: number;
+  completedBreathSessions: number;
+  completed: number;
+  minutesListened: number;
+  currentStreak: number;
+  longestStreak: number;
+  checkinsCount: number;
+  hasPremiumAccess: boolean;
+  gardenLevel: number;
+  hasMorningPractice: boolean;
+  hasEveningPractice: boolean;
+};
+
+type AchievementDefinition = {
+  id: string;
+  title: string;
+  description: string;
+  category: 'practice' | 'rhythm' | 'wellness' | 'garden' | 'premium';
+  unlocked: (stats: AchievementStats) => boolean;
+};
+
+const achievementDefinitions: AchievementDefinition[] = [
+  { id: 'first_meditation', title: 'First Meditation', description: 'Completed your first Luna meditation.', category: 'practice', unlocked: (stats) => stats.completedMeditations >= 1 },
+  { id: 'three_meditations', title: 'Three Calm Returns', description: 'Completed three meditation sessions.', category: 'practice', unlocked: (stats) => stats.completedMeditations >= 3 },
+  { id: 'seven_day_rhythm', title: '7-Day Rhythm', description: 'Protected a full week of quiet rhythm.', category: 'rhythm', unlocked: (stats) => stats.currentStreak >= 7 || stats.longestStreak >= 7 },
+  { id: 'thirty_day_rhythm', title: '30-Day Rhythm', description: 'Built a lasting Luna rhythm.', category: 'rhythm', unlocked: (stats) => stats.currentStreak >= 30 || stats.longestStreak >= 30 },
+  { id: 'hundred_minutes', title: '100 Listening Minutes', description: 'Spent 100 minutes with Luna.', category: 'practice', unlocked: (stats) => stats.minutesListened >= 100 },
+  { id: 'five_hundred_minutes', title: '500 Listening Minutes', description: 'Created a deep practice foundation.', category: 'practice', unlocked: (stats) => stats.minutesListened >= 500 },
+  { id: 'thousand_minutes', title: '1000 Listening Minutes', description: 'Returned to calm again and again.', category: 'practice', unlocked: (stats) => stats.minutesListened >= 1000 },
+  { id: 'morning_practice', title: 'Morning Practice', description: 'Started a day with Luna.', category: 'practice', unlocked: (stats) => stats.hasMorningPractice },
+  { id: 'evening_practice', title: 'Evening Practice', description: 'Closed a day with Luna.', category: 'practice', unlocked: (stats) => stats.hasEveningPractice },
+  { id: 'first_checkin', title: 'First Check-in', description: 'Checked in with your inner weather.', category: 'wellness', unlocked: (stats) => stats.checkinsCount >= 1 },
+  { id: 'seven_checkins', title: 'Seven Check-ins', description: 'Built a gentle reflection habit.', category: 'wellness', unlocked: (stats) => stats.checkinsCount >= 7 },
+  { id: 'thirty_checkins', title: 'Thirty Check-ins', description: 'Created a fuller picture of your rhythm.', category: 'wellness', unlocked: (stats) => stats.checkinsCount >= 30 },
+  { id: 'premium_member', title: 'Premium Member', description: 'Unlocked the deeper Luna experience.', category: 'premium', unlocked: (stats) => stats.hasPremiumAccess },
+  { id: 'moon_garden_level_5', title: 'Moon Garden Level 5', description: 'Grew your garden into a moonlit place.', category: 'garden', unlocked: (stats) => stats.gardenLevel >= 5 },
+  { id: 'moon_garden_level_10', title: 'Moon Garden Level 10', description: 'Prepared for future garden expansions.', category: 'garden', unlocked: (stats) => stats.gardenLevel >= 10 },
+  { id: 'calm_explorer', title: 'Calm Explorer', description: 'Completed practices across Luna.', category: 'practice', unlocked: (stats) => stats.completed >= 5 }
+];
+const achievementCollectionTotal = 42;
+
 export type DailyCheckinInput = {
   sleep_range: 'less_than_4' | '4_6' | '6_8' | '8_plus';
   mood: 'calm' | 'stressed' | 'tired' | 'anxious' | 'focused' | 'low_energy';
@@ -389,6 +431,7 @@ export async function recordSceneMoonSeed(telegramId: number, input: {
   }
 
   await awardMoonSeeds(telegramId, 1);
+  await updateStreak(telegramId);
   return {
     awarded: true,
     moonSeeds: 1,
@@ -409,6 +452,31 @@ export async function getHistory(telegramId: number) {
 
 function todayKey() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function mondayKey(date: Date) {
+  const monday = new Date(date);
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  return monday.toISOString().slice(0, 10);
+}
+
+async function getStreakFreezeMax(telegramId: number) {
+  const [{ data: user }, { data: payments }] = await Promise.all([
+    supabase
+      .from('users')
+      .select('active_until, lifetime_access')
+      .eq('telegram_id', telegramId)
+      .maybeSingle(),
+    supabase
+      .from('payments')
+      .select('plan, created_at')
+      .eq('telegram_id', telegramId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+  ]);
+  const activeUntil = user?.active_until ? new Date(user.active_until).getTime() : 0;
+  const hasPremium = Boolean(user?.lifetime_access || activeUntil > Date.now() || payments?.[0]?.plan);
+  return hasPremium ? 3 : 1;
 }
 
 function mostCommonValue<T extends string>(values: T[]) {
@@ -570,6 +638,8 @@ export async function getWellnessSummary(telegramId: number) {
 export async function updateStreak(telegramId: number) {
   const today = new Date().toISOString().slice(0, 10);
   const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const freezeMax = await getStreakFreezeMax(telegramId);
 
   const { data: current, error: currentError } = await supabase
     .from('streaks')
@@ -580,13 +650,40 @@ export async function updateStreak(telegramId: number) {
 
   if (current?.last_completed_date === today) return current;
 
-  const nextStreak = current?.last_completed_date === yesterday ? current.current_streak + 1 : 1;
+  let freezeCount = Math.min(freezeMax, Math.max(0, Number(current?.freeze_count ?? freezeMax)));
+  let lastFreezeUsed = current?.last_freeze_used ?? null;
+  let protectedByFreeze = false;
+  let nextStreak = 1;
+
+  if (current?.last_completed_date === yesterday) {
+    nextStreak = (current.current_streak ?? 0) + 1;
+  } else if (current?.last_completed_date === twoDaysAgo && freezeCount > 0) {
+    freezeCount -= 1;
+    protectedByFreeze = true;
+    lastFreezeUsed = yesterday;
+    nextStreak = (current.current_streak ?? 0) + 1;
+  }
+
+  const monday = mondayKey(new Date());
+  const yesterdayDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const completedCleanPreviousWeek = current?.last_completed_date === yesterday
+    && yesterdayDate.getDay() === 0
+    && !current?.last_freeze_used
+    && current?.last_clean_week_awarded !== monday;
+
+  if (completedCleanPreviousWeek) {
+    freezeCount = Math.min(freezeMax, freezeCount + 1);
+  }
+
   const longest = Math.max(current?.longest_streak ?? 0, nextStreak);
   const payload = {
     telegram_id: telegramId,
     current_streak: nextStreak,
     longest_streak: longest,
     last_completed_date: today,
+    freeze_count: freezeCount,
+    last_freeze_used: lastFreezeUsed,
+    last_clean_week_awarded: completedCleanPreviousWeek ? monday : current?.last_clean_week_awarded ?? null,
     reward_7: nextStreak >= 7 || Boolean(current?.reward_7),
     reward_14: nextStreak >= 14 || Boolean(current?.reward_14),
     reward_30: nextStreak >= 30 || Boolean(current?.reward_30),
@@ -603,6 +700,9 @@ export async function updateStreak(telegramId: number) {
   if (error) throw error;
   if (nextStreak >= 7 && !current?.reward_7) {
     await awardMoonSeeds(telegramId, 5);
+  }
+  if (protectedByFreeze) {
+    console.info(`Streak protected with freeze for telegram_id=${telegramId}`);
   }
   return data;
 }
@@ -706,6 +806,73 @@ function earnedMoonSeeds(input: {
 }) {
   const streakBonus = Math.max(input.currentStreak, input.longestStreak) >= 7 ? 5 : 0;
   return input.completedMeditations + input.completedBreathSessions + streakBonus;
+}
+
+async function syncAchievements(telegramId: number, stats: AchievementStats) {
+  const unlockedDefinitions = achievementDefinitions.filter((definition) => definition.unlocked(stats));
+  try {
+    if (unlockedDefinitions.length > 0) {
+      const now = new Date().toISOString();
+      const { error: upsertError } = await supabase
+        .from('achievements')
+        .upsert(
+          unlockedDefinitions.map((definition) => ({
+            telegram_id: telegramId,
+            achievement_id: definition.id,
+            progress: 100,
+            metadata: { category: definition.category },
+            unlocked_at: now
+          })),
+          { onConflict: 'telegram_id,achievement_id', ignoreDuplicates: true }
+        );
+      if (upsertError) throw upsertError;
+    }
+
+    const { data, error } = await supabase
+      .from('achievements')
+      .select('achievement_id, unlocked_at, progress')
+      .eq('telegram_id', telegramId);
+    if (error) throw error;
+
+    const unlockedById = new Map((data ?? []).map((item) => [item.achievement_id, item]));
+    const items = achievementDefinitions.map((definition) => {
+      const unlocked = unlockedById.get(definition.id);
+      return {
+        id: definition.id,
+        title: definition.title,
+        description: definition.description,
+        category: definition.category,
+        unlocked: Boolean(unlocked),
+        unlockedAt: unlocked?.unlocked_at ?? null,
+        progress: unlocked?.progress ?? (definition.unlocked(stats) ? 100 : 0)
+      };
+    });
+
+    return {
+      unlocked: items.filter((item) => item.unlocked).length,
+      total: Math.max(achievementCollectionTotal, achievementDefinitions.length),
+      items
+    };
+  } catch (error) {
+    console.warn('Achievements unavailable; returning computed fallback.', error instanceof Error ? error.message : error);
+    const items = achievementDefinitions.map((definition) => {
+      const unlocked = definition.unlocked(stats);
+      return {
+        id: definition.id,
+        title: definition.title,
+        description: definition.description,
+        category: definition.category,
+        unlocked,
+        unlockedAt: unlocked ? new Date().toISOString() : null,
+        progress: unlocked ? 100 : 0
+      };
+    });
+    return {
+      unlocked: items.filter((item) => item.unlocked).length,
+      total: Math.max(achievementCollectionTotal, achievementDefinitions.length),
+      items
+    };
+  }
 }
 
 async function awardMoonSeeds(telegramId: number, amount: number) {
@@ -866,15 +1033,22 @@ export async function getProfileStats(telegramId: number) {
     .maybeSingle();
   if (userError) throw userError;
 
-  const [{ data: history, error: historyError }, { data: streak, error: streakError }, { data: payments, error: paymentsError }] =
+  const [
+    { data: history, error: historyError },
+    { data: streak, error: streakError },
+    { data: payments, error: paymentsError },
+    { data: checkins, error: checkinsError }
+  ] =
     await Promise.all([
       supabase.from('history').select('completion_percent, last_position, completed, last_played').eq('telegram_id', telegramId),
       supabase.from('streaks').select('*').eq('telegram_id', telegramId).maybeSingle(),
-      supabase.from('payments').select('plan, created_at').eq('telegram_id', telegramId).order('created_at', { ascending: false })
+      supabase.from('payments').select('plan, created_at').eq('telegram_id', telegramId).order('created_at', { ascending: false }),
+      supabase.from('daily_checkins').select('local_date').eq('telegram_id', telegramId)
     ]);
   if (historyError) throw historyError;
   if (streakError) throw streakError;
   if (paymentsError) throw paymentsError;
+  if (checkinsError) throw checkinsError;
 
   const { data: legacyProgress, error: progressError } = await supabase
     .from('progress')
@@ -924,6 +1098,29 @@ export async function getProfileStats(telegramId: number) {
     longestStreak: streak?.longest_streak ?? 0,
     gardenLevel
   });
+  const activeUntil = user?.active_until ? new Date(user.active_until).getTime() : 0;
+  const hasPremiumAccess = Boolean(user?.lifetime_access || activeUntil > Date.now() || payments?.[0]?.plan);
+  const hasMorningPractice = (history ?? []).some((item) => {
+    const hour = item.last_played ? new Date(item.last_played).getHours() : -1;
+    return hour >= 5 && hour < 12;
+  });
+  const hasEveningPractice = (history ?? []).some((item) => {
+    const hour = item.last_played ? new Date(item.last_played).getHours() : -1;
+    return hour >= 18 || (hour >= 0 && hour < 3);
+  });
+  const achievements = await syncAchievements(telegramId, {
+    completedMeditations,
+    completedBreathSessions,
+    completed,
+    minutesListened,
+    currentStreak: streak?.current_streak ?? 0,
+    longestStreak: streak?.longest_streak ?? 0,
+    checkinsCount: checkins?.length ?? 0,
+    hasPremiumAccess,
+    gardenLevel: moonGarden.gardenLevel,
+    hasMorningPractice,
+    hasEveningPractice
+  });
 
   return {
     user: user ? {
@@ -937,6 +1134,10 @@ export async function getProfileStats(telegramId: number) {
     dayStreak: streak?.current_streak ?? 0,
     currentStreak: streak?.current_streak ?? 0,
     longestStreak: streak?.longest_streak ?? 0,
+    freezeCount: streak?.freeze_count ?? (hasPremiumAccess ? 3 : 1),
+    freezeMax: hasPremiumAccess ? 3 : 1,
+    lastFreezeUsed: streak?.last_freeze_used ?? null,
+    lastCleanWeekAwarded: streak?.last_clean_week_awarded ?? null,
     rewards: {
       7: Boolean(streak?.reward_7),
       14: Boolean(streak?.reward_14),
@@ -957,7 +1158,8 @@ export async function getProfileStats(telegramId: number) {
     streakDays: streak?.current_streak ?? 0,
     lastPracticeDate,
     purchasedPlan: payments?.[0]?.plan ?? 'free',
-    calmScore
+    calmScore,
+    achievements
   };
 }
 

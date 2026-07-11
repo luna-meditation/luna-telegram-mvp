@@ -3607,6 +3607,8 @@ function ProgressPage({
       <WeeklySummaryCard lines={weeklyInsightLines} language={language} />
 
       <GardenRewardCard stage={stage} plantedCount={plantedCount} seeds={seeds} language={language} onOpen={onMoonGarden} />
+
+      <AchievementsSection profile={profile} language={language} />
     </div>
   );
 }
@@ -3655,7 +3657,7 @@ type WeeklyProgressModel = {
 };
 
 function buildWeeklyProgress(history: PlaybackHistory[], profile: ProfileStats | null, hasPremium: boolean, language: AppLanguage): WeeklyProgressModel {
-  const maxFreezes = hasPremium ? 3 : 1;
+  const maxFreezes = Math.max(1, Number(profile?.freezeMax ?? (hasPremium ? 3 : 1)));
   const today = new Date();
   const todayKey = today.toISOString().slice(0, 10);
   const monday = new Date(today);
@@ -3688,7 +3690,7 @@ function buildWeeklyProgress(history: PlaybackHistory[], profile: ProfileStats |
     };
   });
 
-  let freezeCount = maxFreezes;
+  let freezeCount = Math.min(maxFreezes, Math.max(0, Number(profile?.freezeCount ?? maxFreezes)));
   let freezeUsedThisWeek = false;
   const days = rawDays.map((item) => {
     if (item.state !== 'missed') return item;
@@ -3711,11 +3713,12 @@ function HeroProgressCard({ streak, weeklyProgress, language }: { streak: number
       <div className="hero-progress-overlay" />
       <div className="relative z-10 flex min-h-[260px] flex-col justify-between p-5">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.16em] text-gold/90">{language === 'en' ? 'Current streak' : 'Текущая серия'}</p>
-            <h3 className="mt-2 text-[34px] font-semibold leading-none tracking-[-0.06em] text-cream">
-              {streak} {language === 'en' ? (streak === 1 ? 'Day Streak' : 'Day Streak') : streak === 1 ? 'день подряд' : 'дней подряд'}
-            </h3>
+          <div className="hero-rhythm-lockup">
+            <p className="text-xs uppercase tracking-[0.18em] text-gold/92">{language === 'en' ? 'Current Rhythm' : 'Текущий ритм'}</p>
+            <div className="mt-3 flex items-end gap-3">
+              <strong>{streak}</strong>
+              <span>{language === 'en' ? 'Day Streak' : streak === 1 ? 'день подряд' : 'дней подряд'}</span>
+            </div>
             <p className="mt-2 text-sm text-cream/76">{language === 'en' ? 'Keep your rhythm alive.' : 'Сохраняй свой мягкий ритм.'}</p>
           </div>
           <div className="hero-streak-icon" aria-hidden="true">☾</div>
@@ -3733,9 +3736,10 @@ function HeroProgressCard({ streak, weeklyProgress, language }: { streak: number
 function FreezeIndicator({ model, language }: { model: WeeklyProgressModel; language: AppLanguage }) {
   return (
     <div className="freeze-indicator">
+      <span aria-hidden="true">❄</span>
       <span>{language === 'en' ? 'Freeze' : 'Заморозка'}</span>
-      <strong>{model.freezeCount}/{model.maxFreezes}</strong>
-      {model.freezeUsedThisWeek ? <em>{language === 'en' ? 'Protected rhythm' : 'Ритм сохранён'}</em> : null}
+      <strong>{model.freezeCount} / {model.maxFreezes}</strong>
+      <em>{model.freezeUsedThisWeek ? (language === 'en' ? 'Rhythm Protected' : 'Ритм защищён') : (language === 'en' ? 'Ready' : 'Готово')}</em>
     </div>
   );
 }
@@ -3767,15 +3771,25 @@ function MoodJourneyEmpty({ language }: { language: AppLanguage }) {
 }
 
 function WeeklySummaryCard({ lines, language }: { lines: string[]; language: AppLanguage }) {
+  const minutesMatch = lines[0]?.match(/(\d+)/);
+  const dayMatch = lines[0]?.match(/across\s+(\d+)\s+day|за\s+(\d+)\s+д/iu);
+  const minutes = minutesMatch?.[1] ?? '0';
+  const days = dayMatch?.[1] ?? dayMatch?.[2] ?? '1';
+  const supporting = lines.slice(1, 3);
+
   return (
     <section className="weekly-summary-card luna-progress-enter">
       <p className="text-xs uppercase tracking-[0.16em] text-gold">{copy[language].weeklyTitle}</p>
-      <div className="mt-3 space-y-2">
-        {lines.map((line, index) => (
-          <p key={`${line}-${index}`} className={index === 0 ? 'text-base leading-6 text-cream' : 'text-sm leading-5 text-lavender'}>
-            {line}
-          </p>
+      <div className="weekly-summary-meter">
+        <strong>{minutes} {language === 'en' ? 'min' : 'мин'}</strong>
+        <span>{language === 'en' ? 'across' : 'за'}</span>
+        <strong>{days} {language === 'en' ? (days === '1' ? 'day' : 'days') : 'дн.'}</strong>
+      </div>
+      <div className="mt-4 space-y-3">
+        {supporting.map((line) => (
+          <p key={line} className="text-sm leading-5 text-lavender">{line}</p>
         ))}
+        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gold/80">{language === 'en' ? 'Next gentle step' : 'Мягкий следующий шаг'}</p>
       </div>
     </section>
   );
@@ -3815,6 +3829,48 @@ function GardenRewardCard({
         <p className="mt-3 text-xs font-semibold text-gold">{copy[language].openMoonGarden} →</p>
       </div>
     </button>
+  );
+}
+
+function AchievementsSection({ profile, language }: { profile: ProfileStats | null; language: AppLanguage }) {
+  const fallbackItems = [
+    { id: 'first_meditation', title: language === 'en' ? 'First Meditation' : 'Первая медитация', description: language === 'en' ? 'Complete your first session.' : 'Заверши первую практику.', unlocked: (profile?.completedMeditations ?? 0) >= 1 },
+    { id: 'first_week', title: language === 'en' ? 'First Week' : 'Первая неделя', description: language === 'en' ? 'Build a seven-day rhythm.' : 'Создай ритм на семь дней.', unlocked: (profile?.longestStreak ?? 0) >= 7 },
+    { id: 'hundred_minutes', title: language === 'en' ? '100 Listening Minutes' : '100 минут практики', description: language === 'en' ? 'Spend 100 minutes with Luna.' : 'Проведи 100 минут с Luna.', unlocked: (profile?.minutesListened ?? 0) >= 100 },
+    { id: 'calm_explorer', title: language === 'en' ? 'Calm Explorer' : 'Исследователь спокойствия', description: language === 'en' ? 'Complete five practices.' : 'Заверши пять практик.', unlocked: (profile?.completed ?? 0) >= 5 }
+  ];
+  const sourceItems = profile?.achievements?.items?.length ? profile.achievements.items : fallbackItems;
+  const items = sourceItems.slice(0, 8);
+  const unlocked = profile?.achievements?.unlocked ?? sourceItems.filter((item) => item.unlocked).length;
+  const total = profile?.achievements?.total ?? 42;
+  const icons = ['🏅', '🌙', '🔥', '⭐', '🌸', '❄', '☾', '✦'];
+
+  return (
+    <section className="achievements-section luna-progress-enter">
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'Your Achievements' : 'Твои достижения'}</p>
+          <h3 className="mt-1 text-xl font-semibold tracking-[-0.04em] text-cream">{unlocked} / {total}</h3>
+        </div>
+        <p className="max-w-[140px] text-right text-[11px] leading-4 text-lavender">
+          {language === 'en' ? 'Unlocked badges glow as your rhythm grows.' : 'Открытые значки светятся по мере роста ритма.'}
+        </p>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-2.5">
+        {items.map((item, index) => (
+          <article key={item.id} className={`achievement-badge ${item.unlocked ? 'achievement-unlocked' : 'achievement-locked'}`}>
+            <span aria-hidden="true">{icons[index % icons.length]}</span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-cream">{item.title}</p>
+              <p className="line-clamp-1 text-[11px] leading-4 text-lavender">{item.description}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+      <p className="mt-3 text-center text-xs text-cream/52">
+        {language === 'en' ? `${unlocked} / ${total} achievements unlocked` : `${unlocked} / ${total} достижений открыто`}
+      </p>
+    </section>
   );
 }
 

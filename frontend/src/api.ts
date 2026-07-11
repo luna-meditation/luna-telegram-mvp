@@ -97,6 +97,10 @@ export type ProfileStats = {
   dayStreak: number;
   currentStreak: number;
   longestStreak: number;
+  freezeCount?: number;
+  freezeMax?: number;
+  lastFreezeUsed?: string | null;
+  lastCleanWeekAwarded?: string | null;
   minutesListened: number;
   weeklyPracticeMinutes?: number;
   totalPracticeMinutes?: number;
@@ -113,6 +117,19 @@ export type ProfileStats = {
   purchasedPlan: string;
   calmScore: number;
   rewards: Record<7 | 14 | 30 | 100, boolean>;
+  achievements?: {
+    unlocked: number;
+    total: number;
+    items: Array<{
+      id: string;
+      title: string;
+      description: string;
+      category: string;
+      unlocked: boolean;
+      unlockedAt?: string | null;
+      progress?: number;
+    }>;
+  };
 };
 
 export type NotificationPreferences = {
