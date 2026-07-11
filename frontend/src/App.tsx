@@ -2970,7 +2970,6 @@ function ProgressPage({
   const totalMinutes = profile?.totalPracticeMinutes ?? profile?.minutesListened ?? 0;
   const weeklyMinutes = profile?.weeklyPracticeMinutes ?? 0;
   const currentMood = wellness?.mostCommonMoodLabel ? translateMoodLabel(wellness.mostCommonMoodLabel, language) : copy[language].notEnoughData;
-  const garden = moonGardenLevel(totalMinutes, language);
   const planted = plantedGardenElements(profile);
   const plantedSet = new Set(planted);
   const plantedCount = planted.length;
@@ -2980,22 +2979,30 @@ function ProgressPage({
   const readyElement = readyGardenElement(profile);
   const nextNeeded = nextElement ? Math.max(0, nextElement.cost - seeds) : 0;
   const nextProgress = nextElement ? Math.min(100, (seeds / Math.max(1, nextElement.cost)) * 100) : 100;
+  const isGardenComplete = plantedCount >= gardenElements.length;
+  const growthProgress = Math.min(100, (plantedCount / gardenElements.length) * 100);
   const streak = profile?.currentStreak ?? 0;
   const longestStreak = profile?.longestStreak ?? 0;
+  const completedMeditations = profile?.completedMeditations ?? 0;
+  const averageSessionLength = completedMeditations > 0 ? Math.max(1, Math.round(totalMinutes / completedMeditations)) : 0;
   const weeklyReflection = profileWeeklyInsight(profile, language);
   const practicedToday = Boolean(profile?.lastPracticeDate && profile.lastPracticeDate === new Date().toISOString().slice(0, 10));
-  const todayPractice = practicedToday ? (language === 'en' ? 'You returned today' : 'Ты вернулся сегодня') : (language === 'en' ? 'Still open' : 'Ещё можно');
+  const [showGrowthHistory, setShowGrowthHistory] = useState(false);
+  const todayPractice = practicedToday ? (language === 'en' ? 'Returned today' : 'Сегодня была практика') : (language === 'en' ? 'Still open' : 'Ещё можно');
+  const currentStreakText = language === 'en'
+    ? `${streak} ${streak === 1 ? 'day' : 'days'} in a row`
+    : `${streak} ${streak === 1 ? 'день' : 'дн.'} подряд`;
   const quickStats = [
     {
       label: language === 'en' ? 'Meditation sessions' : 'Сессии медитаций',
-      value: String(profile?.completedMeditations ?? 0),
+      value: String(completedMeditations),
       body: language === 'en' ? 'Completed with Luna' : 'Завершено с Luna',
       tone: 'strong'
     },
     {
-      label: language === 'en' ? 'Listening minutes' : 'Минуты практики',
-      value: minutesCountLabel(totalMinutes, language),
-      body: language === 'en' ? `${weeklyMinutes} min this week` : `${weeklyMinutes} мин на этой неделе`,
+      label: language === 'en' ? 'Average session' : 'Средняя сессия',
+      value: averageSessionLength > 0 ? minutesCountLabel(averageSessionLength, language) : '—',
+      body: language === 'en' ? 'Based on completed sessions' : 'По завершённым сессиям',
       tone: 'gold'
     },
     {
@@ -3011,40 +3018,35 @@ function ProgressPage({
       tone: 'soft'
     }
   ];
-  const weeklyLines = language === 'en'
-    ? [
-        weeklyReflection,
-        weeklyMinutes > 0 ? `Most visible rhythm: ${weeklyMinutes} minutes with Luna this week.` : 'Your calm can begin with one minute today.',
-        currentMood !== copy[language].notEnoughData ? `Your check-ins currently point toward: ${currentMood}.` : 'Check-ins will make future reflections more personal.'
-      ]
-    : [
-        weeklyReflection,
-        weeklyMinutes > 0 ? `Твой заметный ритм: ${weeklyMinutes} мин с Luna на этой неделе.` : 'Твоё спокойствие может начаться с одной минуты сегодня.',
-        currentMood !== copy[language].notEnoughData ? `Сейчас чек-ины показывают: ${currentMood}.` : 'Чек-ины сделают будущие размышления точнее.'
-      ];
+  const weeklyInsights = [
+    weeklyMinutes > 0 ? minutesCountLabel(weeklyMinutes, language) : (language === 'en' ? 'No minutes yet' : 'Пока нет минут'),
+    currentMood !== copy[language].notEnoughData ? currentMood : (language === 'en' ? 'Mood will appear after check-ins' : 'Настроение появится после чек-инов')
+  ];
+  const latestBloom = plantedCount > 0 ? gardenElements[Math.min(plantedCount - 1, gardenElements.length - 1)] : null;
 
   return (
-    <div className="luna-page space-y-5 pb-8">
+    <div className="luna-page space-y-4 pb-8">
       <PageTitle
         title={copy[language].progressTitle}
         subtitle={language === 'en' ? 'Every session helps your mind become calmer.' : 'Каждая практика помогает уму становиться спокойнее.'}
       />
 
-      <section className="luna-surface-strong relative overflow-hidden rounded-[34px] p-5">
-        <div className="pointer-events-none absolute -right-8 -top-12 h-44 w-44 rounded-full bg-gold/14 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-16 left-4 h-44 w-44 rounded-full bg-lavender/18 blur-3xl" />
+      <section className="luna-surface-strong relative overflow-hidden rounded-[30px] p-4">
+        <div className="pointer-events-none absolute -right-8 -top-12 h-36 w-36 rounded-full bg-gold/12 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-14 left-4 h-36 w-36 rounded-full bg-lavender/14 blur-3xl" />
         <div className="relative flex items-start justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].progressStreak}</p>
-            <h3 className="mt-3 text-6xl font-semibold tracking-[-0.07em]">{streak}</h3>
-            <p className="mt-1 text-sm text-lavender">{quietDayCountLabel(streak, language)}</p>
+            <h3 className="mt-2 text-5xl font-semibold tracking-[-0.07em]">{streak}</h3>
+            <p className="mt-1 text-sm text-lavender">{currentStreakText}</p>
+            <p className="mt-2 text-xs text-cream/58">{language === 'en' ? 'Return today to keep your rhythm.' : 'Вернись сегодня, чтобы поддержать ритм.'}</p>
           </div>
-          <div className="relative grid h-16 w-16 shrink-0 place-items-center rounded-full border border-gold/25 bg-night/50 text-gold shadow-gold">
+          <div className="relative grid h-14 w-14 shrink-0 place-items-center rounded-full border border-gold/25 bg-night/50 text-gold shadow-gold">
             <span className="absolute inset-2 rounded-full bg-gold/10 blur-md motion-safe:animate-pulse" />
-            <MoonMark className="relative h-10 w-10" />
+            <MoonMark className="relative h-9 w-9" />
           </div>
         </div>
-        <div className="relative mt-5 grid grid-cols-3 gap-2">
+        <div className="relative mt-4 grid grid-cols-3 gap-2">
           <ProgressMiniStat label={copy[language].longestStreak} value={quietDayCountLabel(longestStreak, language)} />
           <ProgressMiniStat label={language === 'en' ? "Today's practice" : 'Сегодня'} value={todayPractice} />
           <ProgressMiniStat label={copy[language].progressMinutes} value={minutesCountLabel(totalMinutes, language)} />
@@ -3057,22 +3059,24 @@ function ProgressPage({
         ))}
       </section>
 
-      <section className="luna-surface-strong relative overflow-hidden rounded-[32px] p-5">
-        <div className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.06] text-gold">
+      <section className="luna-surface-strong relative overflow-hidden rounded-[28px] p-4">
+        <div className="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.06] text-gold">
           <Bot size={18} />
         </div>
-        <p className="text-xs uppercase tracking-[0.18em] text-gold">{language === 'en' ? 'AI Weekly Reflection' : 'AI-размышление недели'}</p>
-        <h3 className="mt-2 max-w-[260px] font-serif text-2xl leading-tight">
+        <p className="text-xs uppercase tracking-[0.18em] text-gold">{language === 'en' ? 'Weekly Reflection' : 'Размышление недели'}</p>
+        <h3 className="mt-1 max-w-[250px] font-serif text-xl leading-tight">
           {language === 'en' ? 'A softer read on your week.' : 'Мягкий взгляд на твою неделю.'}
         </h3>
-        <div className="mt-4 space-y-3">
-          {weeklyLines.map((line) => (
-            <p key={line} className="rounded-[22px] border border-white/10 bg-white/[0.055] px-4 py-3 text-sm leading-6 text-cream/82">
-              {line}
-            </p>
+        <p className="mt-3 text-sm leading-6 text-cream/82">{weeklyReflection}</p>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {weeklyInsights.map((line, index) => (
+            <div key={line} className="rounded-[18px] border border-white/10 bg-white/[0.045] px-3 py-2">
+              <p className="text-[10px] uppercase tracking-[0.12em] text-lavender/70">{index === 0 ? (language === 'en' ? 'This week' : 'Неделя') : (language === 'en' ? 'Check-ins' : 'Чек-ины')}</p>
+              <p className="mt-1 line-clamp-2 text-xs font-semibold leading-4 text-cream/85">{line}</p>
+            </div>
           ))}
         </div>
-        <button onClick={onWeeklyReflection} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full border border-gold/25 bg-gold/10 px-4 text-sm font-semibold text-gold">
+        <button onClick={onWeeklyReflection} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-full border border-gold/25 bg-gold/10 px-4 text-sm font-semibold text-gold">
           {copy[language].viewWeeklyReflection}
           <span>→</span>
         </button>
@@ -3081,9 +3085,9 @@ function ProgressPage({
       <section className="space-y-3">
         <div>
           <p className="luna-section-kicker">{copy[language].progressMoonGarden}</p>
-          <h3 className="luna-editorial-title mt-1 text-[32px] leading-none">{copy[language].moonGarden}</h3>
+          <h3 className="luna-editorial-title mt-1 text-[28px] leading-none">{language === 'en' ? 'Your Moon Garden' : 'Твой Лунный сад'}</h3>
           <p className="mt-2 text-sm leading-5 text-lavender">
-            {language === 'en' ? 'Scroll into the garden your practice is growing.' : 'Прокрути ниже в сад, который растёт вместе с практикой.'}
+            {copy[language].moonGardenBody}
           </p>
         </div>
         <MoonGardenScene
@@ -3102,41 +3106,44 @@ function ProgressPage({
         <div className="grid grid-cols-2 gap-3">
           <ProgressMiniStat label={copy[language].gardenLevel} value={`${stage.level} · ${stage.title[language]}`} />
           <ProgressMiniStat label={copy[language].moonSeeds} value={String(seeds)} />
-          <ProgressMiniStat label={copy[language].plantedElements} value={`${plantedCount}/${gardenElements.length}`} />
+          <ProgressMiniStat label={language === 'en' ? 'Growth stages' : 'Этапы роста'} value={`${plantedCount}/${gardenElements.length}`} />
           <ProgressMiniStat label={language === 'en' ? 'Current season' : 'Текущий сезон'} value={gardenCollections[0].title[language]} />
         </div>
-        <div className="mt-4">
-          <div className="flex items-center justify-between text-xs text-lavender">
-            <span>{language === 'en' ? 'Progress to next level' : 'Прогресс до уровня'}</span>
-            <span>{Math.round(garden.progress)}%</span>
+        {isGardenComplete ? (
+          <div className="mt-4 rounded-[20px] border border-gold/20 bg-gold/10 px-4 py-3">
+            <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'Garden Complete' : 'Сад завершён'}</p>
+            <p className="mt-1 text-sm text-cream/82">{language === 'en' ? 'Level 7 · Full Moon Garden · 7/7 growth stages bloomed' : 'Уровень 7 · Сад полной луны · 7/7 этапов расцвели'}</p>
           </div>
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-night/70">
-            <div className="h-full rounded-full bg-gradient-to-r from-lavender to-gold" style={{ width: `${Math.max(6, Math.min(100, garden.progress))}%` }} />
+        ) : (
+          <div className="mt-4">
+            <div className="flex items-center justify-between text-xs text-lavender">
+              <span>{language === 'en' ? 'Growth toward full bloom' : 'Рост до полного цветения'}</span>
+              <span>{Math.round(growthProgress)}%</span>
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-night/70">
+              <div className="h-full rounded-full bg-gradient-to-r from-lavender to-gold" style={{ width: `${Math.max(6, growthProgress)}%` }} />
+            </div>
           </div>
-        </div>
+        )}
       </section>
 
       <section className="space-y-3">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <p className="luna-section-kicker">{language === 'en' ? 'Garden Collection' : 'Коллекция сада'}</p>
-            <h3 className="font-serif text-2xl">{language === 'en' ? 'Seasons and spaces' : 'Сезоны и пространства'}</h3>
+            <p className="luna-section-kicker">{language === 'en' ? 'Seasons' : 'Сезоны'}</p>
+            <h3 className="font-serif text-xl">{language === 'en' ? 'Garden collection' : 'Коллекция сада'}</h3>
           </div>
           <span className="rounded-full border border-white/10 bg-white/[0.045] px-3 py-1 text-[10px] text-lavender">Phase 1</span>
         </div>
         <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 luna-scrollbar-none">
-          {gardenCollections.map((collection, index) => (
-            <article key={collection.id} className="w-48 shrink-0 overflow-hidden rounded-[26px] border border-white/10 bg-white/[0.045] p-3 backdrop-blur">
-              <div className={`h-24 rounded-[21px] border border-gold/20 ${
-                index === 0
-                  ? 'bg-[radial-gradient(circle_at_50%_20%,rgba(212,175,55,.32),transparent_32%),linear-gradient(180deg,#2b1746,#0c0814)]'
-                  : index === 1
-                    ? 'bg-[radial-gradient(circle_at_50%_25%,rgba(245,241,233,.24),transparent_30%),linear-gradient(180deg,#263050,#0c0814)]'
-                    : 'bg-[radial-gradient(circle_at_50%_25%,rgba(142,95,214,.3),transparent_30%),linear-gradient(180deg,#2e1f45,#101624)]'
-              }`} />
+          {gardenCollections.slice(0, 2).map((collection, index) => (
+            <article key={collection.id} className="w-44 shrink-0 overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.045] p-3 backdrop-blur">
+              <div className={`grid h-20 place-items-center rounded-[20px] border ${index === 0 ? 'border-gold/25 bg-[radial-gradient(circle_at_50%_20%,rgba(212,175,55,.26),transparent_34%),linear-gradient(180deg,#2b1746,#0c0814)]' : 'border-white/10 bg-[radial-gradient(circle_at_50%_25%,rgba(245,241,233,.14),transparent_30%),linear-gradient(180deg,#263050,#0c0814)]'}`}>
+                <MoonMark className={index === 0 ? 'h-10 w-10' : 'h-9 w-9 opacity-70'} />
+              </div>
               <p className="mt-3 text-xs uppercase tracking-[0.14em] text-gold">{collection.status[language]}</p>
-              <h4 className="mt-1 font-serif text-lg">{collection.title[language]}</h4>
-              <p className="mt-1 text-xs leading-5 text-lavender">{collection.body[language]}</p>
+              <h4 className="mt-1 text-sm font-semibold text-cream">{collection.title[language]}</h4>
+              <p className="mt-1 line-clamp-2 text-xs leading-5 text-lavender">{index === 0 ? collection.body[language] : (language === 'en' ? 'Coming later' : 'Скоро появится')}</p>
             </article>
           ))}
         </div>
@@ -3144,18 +3151,47 @@ function ProgressPage({
 
       <section className="space-y-3">
         <div>
-          <p className="luna-section-kicker">{copy[language].gardenElements}</p>
-          <h3 className="font-serif text-2xl">{language === 'en' ? 'Upgrade timeline' : 'Линия улучшений'}</h3>
+          <p className="luna-section-kicker">{language === 'en' ? 'Garden Growth' : 'Рост сада'}</p>
+          <h3 className="font-serif text-xl">{language === 'en' ? 'Growth summary' : 'Краткая история роста'}</h3>
         </div>
-        <div className="space-y-2">
-          {gardenElements.map((element, index) => {
+        <article className="luna-surface rounded-[26px] p-4">
+          <div className="flex items-center gap-3">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-[18px] border border-gold/25 bg-gold/10">
+              <GardenUpgradeIcon visual={(latestBloom ?? gardenElements[0]).visual} active />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-cream">
+                {isGardenComplete
+                  ? (language === 'en' ? '7 growth stages bloomed' : '7 этапов роста расцвели')
+                  : latestBloom
+                    ? (language === 'en' ? `${latestBloom.name.en} bloomed` : `${latestBloom.name.ru} расцвёл`)
+                    : (language === 'en' ? 'Your first bloom is waiting' : 'Первый цветок ждёт')}
+              </p>
+              <p className="mt-1 text-xs text-lavender">
+                {isGardenComplete
+                  ? (language === 'en' ? 'First Bloom → Full Moon Garden' : 'Первый цветок → Сад полной луны')
+                  : nextElement
+                    ? (language === 'en' ? `Next bloom: ${nextElement.name.en}` : `Следующее цветение: ${nextElement.name.ru}`)
+                    : copy[language].gardenFlourishing}
+              </p>
+            </div>
+          </div>
+          <button onClick={() => setShowGrowthHistory((value) => !value)} className="mt-3 text-xs font-semibold text-gold">
+            {showGrowthHistory
+              ? (language === 'en' ? 'Hide garden history ↑' : 'Скрыть историю ↑')
+              : (language === 'en' ? 'View full garden history →' : 'Вся история сада →')}
+          </button>
+        </article>
+        {showGrowthHistory && (
+          <div className="space-y-2">
+            {gardenElements.map((element, index) => {
             const isUnlocked = plantedSet.has(element.id);
             const isGrowing = !isUnlocked && readyElement?.id === element.id;
             const status = isUnlocked
-              ? (language === 'en' ? 'Unlocked' : 'Открыто')
+              ? (language === 'en' ? 'Bloomed' : 'Расцвело')
               : isGrowing
                 ? (language === 'en' ? 'Growing' : 'Растёт')
-                : copy[language].locked;
+                : (language === 'en' ? 'Yet to bloom' : 'Ещё не расцвело');
             return (
               <article key={element.id} className="relative rounded-[24px] border border-white/10 bg-white/[0.04] p-3 backdrop-blur">
                 {index < gardenElements.length - 1 && <span className="absolute left-9 top-[62px] h-5 w-px bg-white/10" />}
@@ -3173,28 +3209,41 @@ function ProgressPage({
                 </div>
               </article>
             );
-          })}
-        </div>
+            })}
+          </div>
+        )}
       </section>
 
       <section className="luna-surface-strong relative overflow-hidden rounded-[30px] p-5">
         <div className="pointer-events-none absolute right-0 top-0 h-36 w-36 rounded-full bg-gold/14 blur-3xl" />
-        <p className="text-xs uppercase tracking-[0.18em] text-gold">{language === 'en' ? 'Next Goal' : 'Следующая цель'}</p>
+        <p className="text-xs uppercase tracking-[0.18em] text-gold">{isGardenComplete ? (language === 'en' ? 'Next Season' : 'Следующий сезон') : (language === 'en' ? 'Next Bloom' : 'Следующее цветение')}</p>
         <h3 className="relative mt-2 font-serif text-2xl leading-tight">
-          {nextElement
+          {isGardenComplete
+            ? (language === 'en' ? 'Your garden is complete.' : 'Твой сад завершён.')
+            : nextElement
             ? (readyElement
                 ? (language === 'en' ? `${readyElement.name.en} is ready to grow.` : `${readyElement.name.ru} готово расти.`)
                 : (language === 'en' ? `Earn ${nextNeeded} more Moon Seeds.` : `Получи ещё ${nextNeeded} Лунных семян.`))
             : (language === 'en' ? 'Your moon garden is flourishing.' : 'Твой Лунный сад расцветает.')}
         </h3>
         <p className="relative mt-2 text-sm leading-6 text-cream/74">
-          {nextElement
+          {isGardenComplete
+            ? (language === 'en'
+                ? 'You have bloomed every stage of the Classic Moon Garden. Future practice will prepare your next seasonal sanctuary.'
+                : 'Все этапы Классического Лунного сада расцвели. Будущая практика подготовит новое сезонное пространство.')
+            : nextElement
             ? nextElement.description[language]
             : copy[language].gardenFlourishing}
         </p>
-        <div className="relative mt-4 h-2 overflow-hidden rounded-full bg-night/70">
-          <div className="h-full rounded-full bg-gold" style={{ width: `${Math.max(8, nextProgress)}%` }} />
-        </div>
+        {isGardenComplete ? (
+          <p className="relative mt-4 rounded-full border border-white/10 bg-white/[0.055] px-4 py-2 text-xs font-semibold text-lavender">
+            {language === 'en' ? 'Winter Stillness is coming later.' : 'Зимняя тишина появится позже.'}
+          </p>
+        ) : (
+          <div className="relative mt-4 h-2 overflow-hidden rounded-full bg-night/70">
+            <div className="h-full rounded-full bg-gold" style={{ width: `${Math.max(8, nextProgress)}%` }} />
+          </div>
+        )}
       </section>
     </div>
   );
