@@ -41,7 +41,14 @@ create table if not exists public.users (
 );
 
 alter table public.users
-  add column if not exists avatar_url text;
+  add column if not exists avatar_url text,
+  add column if not exists profile_goals text[] not null default '{}'::text[],
+  add column if not exists notification_preferences jsonb not null default jsonb_build_object(
+    'dailyReminder', false,
+    'newContent', false,
+    'reminderTime', '21:00',
+    'timezone', 'UTC'
+  );
 
 create table if not exists public.payments (
   id uuid primary key default gen_random_uuid(),

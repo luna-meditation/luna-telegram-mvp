@@ -26,7 +26,9 @@ import {
   supabase,
   updateMoonGardenDevState,
   updateUserAvatar,
+  updateUserGoals,
   updateUserLanguage,
+  updateUserNotificationPreferences,
   updateMeditation,
   updateAdminUserAccess,
   upsertCategory,
@@ -507,6 +509,31 @@ app.post('/api/profile/language', requireTelegramWebApp, async (req, res, next) 
     }
 
     res.json({ user: await updateUserLanguage(authReq.telegramUser.telegram_id, language) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/profile/goals', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    res.json({ user: await updateUserGoals(authReq.telegramUser.telegram_id, req.body?.goals) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/profile/notifications', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    res.json({
+      user: await updateUserNotificationPreferences(authReq.telegramUser.telegram_id, {
+        dailyReminder: Boolean(req.body?.dailyReminder),
+        newContent: Boolean(req.body?.newContent),
+        reminderTime: req.body?.reminderTime,
+        timezone: req.body?.timezone
+      })
+    });
   } catch (error) {
     next(error);
   }

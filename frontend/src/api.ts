@@ -88,6 +88,8 @@ export type ProfileStats = {
     active_until?: string | null;
     lifetime_access?: boolean;
     avatar_url?: string | null;
+    profile_goals?: string[] | null;
+    notification_preferences?: NotificationPreferences | null;
   };
   completed: number;
   completedMeditations?: number;
@@ -111,6 +113,13 @@ export type ProfileStats = {
   purchasedPlan: string;
   calmScore: number;
   rewards: Record<7 | 14 | 30 | 100, boolean>;
+};
+
+export type NotificationPreferences = {
+  dailyReminder: boolean;
+  newContent: boolean;
+  reminderTime: string;
+  timezone: string;
 };
 
 export type DailyCheckin = {
@@ -383,6 +392,20 @@ export async function updateUserLanguage(language: AppLanguage, initData?: strin
   return request<{ user: unknown }>('/api/profile/language', {
     method: 'POST',
     body: JSON.stringify({ language })
+  }, initData);
+}
+
+export async function updateProfileGoals(goals: string[], initData?: string) {
+  return request<{ user: { profile_goals: string[] } }>('/api/profile/goals', {
+    method: 'POST',
+    body: JSON.stringify({ goals })
+  }, initData);
+}
+
+export async function updateNotificationPreferences(preferences: NotificationPreferences, initData?: string) {
+  return request<{ user: { notification_preferences: NotificationPreferences } }>('/api/profile/notifications', {
+    method: 'POST',
+    body: JSON.stringify(preferences)
   }, initData);
 }
 

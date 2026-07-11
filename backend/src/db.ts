@@ -78,6 +78,36 @@ export type DailyCheckinInput = {
   local_date?: string;
 };
 
+const allowedProfileGoals = new Set(['sleep', 'anxiety', 'focus', 'routine', 'stress']);
+
+export type NotificationPreferences = {
+  dailyReminder: boolean;
+  newContent: boolean;
+  reminderTime: string;
+  timezone: string;
+};
+
+export function normalizeNotificationPreferences(input: Partial<NotificationPreferences> = {}): NotificationPreferences {
+  const reminderTime = typeof input.reminderTime === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(input.reminderTime)
+    ? input.reminderTime
+    : '21:00';
+  const timezone = typeof input.timezone === 'string' && input.timezone.length >= 2 && input.timezone.length <= 64
+    ? input.timezone
+    : 'UTC';
+
+  return {
+    dailyReminder: Boolean(input.dailyReminder),
+    newContent: false,
+    reminderTime,
+    timezone
+  };
+}
+
+function normalizeProfileGoals(goals: unknown) {
+  if (!Array.isArray(goals)) return [];
+  return Array.from(new Set(goals.map(String).filter((goal) => allowedProfileGoals.has(goal))));
+}
+
 export async function upsertUser(user: TelegramUserInput) {
   const { data, error } = await supabase
     .from('users')
@@ -137,6 +167,32 @@ export async function updateUserAvatar(telegramId: number, avatarUrl: string | n
 
   if (error) throw error;
   return data;
+}
+
+export async function updateUserGoals(telegramId: number, goals: unknown) {
+  const normalizedGoals = normalizeProfileGoals(goals);
+  const { data, error } = await supabase
+    .from('users')
+    .update({ profile_goals: normalizedGoals, last_seen_at: new Date().toISOString() })
+    .eq('telegram_id', telegramId)
+    .select('profile_goals')
+    .single();
+
+  if (error) throw error;
+  return { profile_goals: normalizeProfileGoals(data?.profile_goals) };
+}
+
+export async function updateUserNotificationPreferences(telegramId: number, preferences: Partial<NotificationPreferences>) {
+  const normalizedPreferences = normalizeNotificationPreferences(preferences);
+  const { data, error } = await supabase
+    .from('users')
+    .update({ notification_preferences: normalizedPreferences, last_seen_at: new Date().toISOString() })
+    .eq('telegram_id', telegramId)
+    .select('notification_preferences')
+    .single();
+
+  if (error) throw error;
+  return { notification_preferences: normalizeNotificationPreferences(data?.notification_preferences ?? normalizedPreferences) };
 }
 
 export async function getPractices() {
@@ -805,7 +861,7 @@ async function getMoonGardenState(telegramId: number, input: {
 export async function getProfileStats(telegramId: number) {
   const { data: user, error: userError } = await supabase
     .from('users')
-    .select('first_name, username, language_code, active_until, lifetime_access, avatar_url')
+    .select('first_name, username, language_code, active_until, lifetime_access, avatar_url, profile_goals, notification_preferences')
     .eq('telegram_id', telegramId)
     .maybeSingle();
   if (userError) throw userError;
@@ -870,7 +926,11 @@ export async function getProfileStats(telegramId: number) {
   });
 
   return {
-    user,
+    user: user ? {
+      ...user,
+      profile_goals: normalizeProfileGoals(user.profile_goals),
+      notification_preferences: normalizeNotificationPreferences(user.notification_preferences ?? {})
+    } : user,
     completed,
     completedMeditations,
     completedBreathSessions,

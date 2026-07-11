@@ -49,6 +49,8 @@ import {
   setFavorite,
   syncUser,
   uploadProfileAvatar,
+  updateNotificationPreferences,
+  updateProfileGoals,
   updateMoonGardenDevState,
   updateUserLanguage,
   updateMeditation,
@@ -64,6 +66,7 @@ import {
   type Meditation,
   type MeditationPayload,
   type MoonGardenDevAction,
+  type NotificationPreferences,
   type PlaybackHistory,
   type ProfileStats,
   type WellnessSummary
@@ -1859,6 +1862,7 @@ function App() {
   const [favorites, setFavorites] = useState<Meditation[]>([]);
   const [access, setAccess] = useState<AccessState>({ hasPremium: false, plan: 'Free' });
   const [profile, setProfile] = useState<ProfileStats | null>(null);
+  const [profileNestedActive, setProfileNestedActive] = useState(false);
   const [selectedMeditation, setSelectedMeditation] = useState<Meditation | null>(null);
   const [selectedScene, setSelectedScene] = useState<SceneDefinition | null>(null);
   const [selectedMantra, setSelectedMantra] = useState<MantraDefinition | null>(null);
@@ -2072,6 +2076,10 @@ function App() {
       });
     }
   };
+
+  useEffect(() => {
+    if (page !== 'profile') setProfileNestedActive(false);
+  }, [page]);
 
   useEffect(() => {
     if (!wellness || wellness.todayCheckin) return;
@@ -2656,6 +2664,7 @@ function App() {
             onAddHome={addLunaToHomeScreen}
             onLanguageChange={changeLanguage}
             onProfileUpdate={setProfile}
+            onNestedChange={setProfileNestedActive}
             homeScreenMessage={homeScreenMessage}
             initData={initData}
             language={language}
@@ -2769,7 +2778,7 @@ function App() {
             language={language}
           />
         )}
-        {page !== 'admin' && (
+        {page !== 'admin' && !(page === 'profile' && profileNestedActive) && (
           <V2BottomNav
             active={page}
             onChange={setPage}
@@ -4748,7 +4757,43 @@ function resizeAvatarImage(file: File) {
   });
 }
 
-type ProfileSettingsView = 'main' | 'goals' | 'notifications' | 'language' | 'subscription' | 'more';
+type ProfileSettingsView = 'main' | 'goals' | 'notifications' | 'language' | 'subscription' | 'more' | 'privacy' | 'terms' | 'disclaimer';
+type RestoreState = 'idle' | 'loading' | 'success' | 'empty' | 'error';
+
+const APP_VERSION = import.meta.env.VITE_APP_VERSION ?? '0.1.0';
+const profileGoalOptions = [
+  { id: 'sleep', en: 'Sleep better', ru: 'Лучше спать' },
+  { id: 'anxiety', en: 'Reduce anxiety', ru: 'Снизить тревогу' },
+  { id: 'focus', en: 'Improve focus', ru: 'Улучшить фокус' },
+  { id: 'routine', en: 'Build a calm routine', ru: 'Создать спокойный ритм' },
+  { id: 'stress', en: 'Manage stress', ru: 'Управлять стрессом' }
+];
+
+function defaultNotificationPreferences(preferences?: Partial<NotificationPreferences> | null): NotificationPreferences {
+  let timezone = 'UTC';
+  try {
+    timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    timezone = 'UTC';
+  }
+
+  return {
+    dailyReminder: Boolean(preferences?.dailyReminder),
+    newContent: false,
+    reminderTime: preferences?.reminderTime && /^([01]\d|2[0-3]):[0-5]\d$/.test(preferences.reminderTime) ? preferences.reminderTime : '21:00',
+    timezone: preferences?.timezone || timezone
+  };
+}
+
+function goalsCountLabel(count: number, language: AppLanguage) {
+  if (language === 'en') return count === 1 ? '1 goal' : `${count} goals`;
+  return count === 1 ? '1 цель' : `${count} целей`;
+}
+
+function notificationStatusLabel(preferences: NotificationPreferences, language: AppLanguage) {
+  if (preferences.dailyReminder) return `${language === 'en' ? 'Daily' : 'Ежедневно'} ${preferences.reminderTime}`;
+  return language === 'en' ? 'Off' : 'Выкл';
+}
 
 function ProfilePage({
   profile,
@@ -4763,6 +4808,7 @@ function ProfilePage({
   onAddHome,
   onLanguageChange,
   onProfileUpdate,
+  onNestedChange,
   homeScreenMessage,
   initData,
   language
@@ -4775,10 +4821,11 @@ function ProfilePage({
   onLuna: () => void;
   onSubscription: () => void;
   onAdmin: () => void;
-  onRestore: () => void;
+  onRestore: () => void | Promise<void>;
   onAddHome: () => void;
   onLanguageChange: (language: AppLanguage) => void;
   onProfileUpdate: (profile: ProfileStats | null | ((current: ProfileStats | null) => ProfileStats | null)) => void;
+  onNestedChange: (nested: boolean) => void;
   homeScreenMessage: string;
   initData?: string;
   language: AppLanguage;
@@ -4788,51 +4835,104 @@ function ProfilePage({
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarProgress, setAvatarProgress] = useState(0);
   const [avatarMessage, setAvatarMessage] = useState('');
+  const [settingsMessage, setSettingsMessage] = useState('');
+  const [savingSettings, setSavingSettings] = useState<string | null>(null);
+  const [restoreState, setRestoreState] = useState<RestoreState>('idle');
+  const [logoutOpen, setLogoutOpen] = useState(false);
   const chooseInputRef = useRef<HTMLInputElement | null>(null);
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
-  const [goals, setGoals] = useState<string[]>(() => {
-    try {
-      return JSON.parse(window.localStorage.getItem('luna.profile.goals.v1') ?? '[]') as string[];
-    } catch {
-      return [];
-    }
-  });
-  const [dailyReminder, setDailyReminder] = useState(() => window.localStorage.getItem('luna.notifications.daily.v1') === 'true');
-  const [contentReminder, setContentReminder] = useState(() => window.localStorage.getItem('luna.notifications.content.v1') === 'true');
+  const [goals, setGoals] = useState<string[]>(profile?.user?.profile_goals ?? []);
+  const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>(() => defaultNotificationPreferences(profile?.user?.notification_preferences));
 
   useEffect(() => {
-    window.localStorage.setItem('luna.profile.goals.v1', JSON.stringify(goals));
-  }, [goals]);
+    onNestedChange(view !== 'main');
+    return () => onNestedChange(false);
+  }, [onNestedChange, view]);
 
   useEffect(() => {
-    window.localStorage.setItem('luna.notifications.daily.v1', String(dailyReminder));
-  }, [dailyReminder]);
-
-  useEffect(() => {
-    window.localStorage.setItem('luna.notifications.content.v1', String(contentReminder));
-  }, [contentReminder]);
+    setGoals(profile?.user?.profile_goals ?? []);
+    setNotificationPrefs(defaultNotificationPreferences(profile?.user?.notification_preferences));
+  }, [profile?.user?.profile_goals, profile?.user?.notification_preferences]);
 
   const avatarUrl = profile?.user?.avatar_url ?? null;
   const planStatus = access.hasPremium
-    ? access.plan.toLowerCase().includes('lifetime') ? copy[language].lifetime : access.plan.toLowerCase().includes('monthly') ? copy[language].monthly : copy[language].premium
+    ? access.plan.toLowerCase().includes('lifetime') ? 'Lifetime Premium' : access.plan.toLowerCase().includes('monthly') ? 'Monthly Premium' : copy[language].premium
     : copy[language].premiumFree;
-  const goalsLabel = goals.length === 1
-    ? (language === 'en' ? '1 goal' : '1 цель')
-    : (language === 'en' ? `${goals.length} goals` : `${goals.length} целей`);
-  const notificationLabel = dailyReminder || contentReminder ? copy[language].on : copy[language].off;
+  const localizedPlanStatus = language === 'ru' && planStatus === copy.en.premiumFree ? copy.ru.premiumFree : planStatus;
+  const goalsLabel = goalsCountLabel(goals.length, language);
+  const notificationLabel = notificationStatusLabel(notificationPrefs, language);
   const companionStatus = copy[language].comingSoon;
   const languageLabel = language === 'en' ? 'English' : 'Русский';
-
-  const goalOptions = [
-    { id: 'sleep', en: 'Sleep better', ru: 'Лучше спать' },
-    { id: 'anxiety', en: 'Reduce anxiety', ru: 'Снизить тревогу' },
-    { id: 'focus', en: 'Improve focus', ru: 'Улучшить фокус' },
-    { id: 'routine', en: 'Build a calm routine', ru: 'Создать спокойный ритм' },
-    { id: 'stress', en: 'Manage stress', ru: 'Управлять стрессом' }
-  ];
+  const isLifetime = access.hasPremium && access.plan.toLowerCase().includes('lifetime');
+  const isMonthly = access.hasPremium && access.plan.toLowerCase().includes('monthly');
 
   const updateAvatarInProfile = (avatar_url: string | null) => {
     onProfileUpdate((current) => current ? { ...current, user: { ...current.user, avatar_url } } : current);
+  };
+
+  const updateGoalsInProfile = (profile_goals: string[]) => {
+    onProfileUpdate((current) => current ? { ...current, user: { ...current.user, profile_goals } } : current);
+  };
+
+  const updateNotificationsInProfile = (notification_preferences: NotificationPreferences) => {
+    onProfileUpdate((current) => current ? { ...current, user: { ...current.user, notification_preferences } } : current);
+  };
+
+  const saveGoals = async (nextGoals: string[]) => {
+    const previousGoals = goals;
+    setGoals(nextGoals);
+    updateGoalsInProfile(nextGoals);
+    setSettingsMessage('');
+    try {
+      setSavingSettings('goals');
+      const result = await updateProfileGoals(nextGoals, initData);
+      setGoals(result.user.profile_goals);
+      updateGoalsInProfile(result.user.profile_goals);
+    } catch {
+      setGoals(previousGoals);
+      updateGoalsInProfile(previousGoals);
+      setSettingsMessage(language === 'en' ? 'Could not save goals. Please try again.' : 'Не удалось сохранить цели. Попробуй ещё раз.');
+    } finally {
+      setSavingSettings(null);
+    }
+  };
+
+  const saveNotificationPrefs = async (nextPreferences: NotificationPreferences) => {
+    const previousPreferences = notificationPrefs;
+    setNotificationPrefs(nextPreferences);
+    updateNotificationsInProfile(nextPreferences);
+    setSettingsMessage('');
+    try {
+      setSavingSettings('notifications');
+      const result = await updateNotificationPreferences(nextPreferences, initData);
+      setNotificationPrefs(result.user.notification_preferences);
+      updateNotificationsInProfile(result.user.notification_preferences);
+    } catch {
+      setNotificationPrefs(previousPreferences);
+      updateNotificationsInProfile(previousPreferences);
+      setSettingsMessage(language === 'en' ? 'Could not save notification preferences.' : 'Не удалось сохранить настройки уведомлений.');
+    } finally {
+      setSavingSettings(null);
+    }
+  };
+
+  const restorePurchases = async () => {
+    if (restoreState === 'loading') return;
+    try {
+      setRestoreState('loading');
+      await onRestore();
+      setRestoreState(access.hasPremium ? 'success' : 'empty');
+    } catch {
+      setRestoreState('error');
+    }
+  };
+
+  const closeLocalSession = () => {
+    Object.keys(window.localStorage)
+      .filter((key) => key.startsWith('luna.'))
+      .forEach((key) => window.localStorage.removeItem(key));
+    setLogoutOpen(false);
+    window.location.reload();
   };
 
   const handleAvatarFile = async (file?: File | null) => {
@@ -4884,22 +4984,26 @@ function ProfilePage({
   if (view === 'goals') {
     return (
       <ProfileChildScreen title={language === 'en' ? 'Goals' : 'Цели'} onBack={() => setView('main')} language={language}>
+        <p className="text-sm leading-6 text-lavender">{language === 'en' ? 'Choose what you want Luna to support.' : 'Выбери, в чём Luna может тебя поддержать.'}</p>
         <div className="space-y-2">
-          {goalOptions.map((goal) => {
+          {profileGoalOptions.map((goal) => {
             const selected = goals.includes(goal.id);
+            const nextGoals = selected ? goals.filter((id) => id !== goal.id) : [...goals, goal.id];
             return (
               <button
                 key={goal.id}
-                onClick={() => setGoals((current) => selected ? current.filter((id) => id !== goal.id) : [...current, goal.id])}
-                className={`flex min-h-[54px] w-full items-center justify-between rounded-[18px] border px-4 text-left text-sm transition ${selected ? 'border-gold/30 bg-gold/10 text-cream' : 'border-white/10 bg-white/[0.045] text-lavender'}`}
+                onClick={() => void saveGoals(nextGoals)}
+                disabled={savingSettings === 'goals'}
+                className={`flex min-h-[50px] w-full items-center justify-between rounded-[16px] border px-4 text-left text-sm transition ${selected ? 'border-gold/45 bg-gold/10 text-cream' : 'border-white/10 bg-white/[0.04] text-lavender'} disabled:opacity-70`}
               >
                 <span>{language === 'en' ? goal.en : goal.ru}</span>
-                {selected && <CheckCircle size={17} className="text-gold" />}
+                {selected && <CheckCircle size={16} className="text-gold" />}
               </button>
             );
           })}
         </div>
-        <p className="mt-3 text-xs leading-5 text-lavender">{language === 'en' ? 'Goals are saved on this device until onboarding storage is connected.' : 'Цели сохраняются на этом устройстве, пока не подключено хранение онбординга.'}</p>
+        <p className="mt-3 text-xs text-lavender">{goalsLabel}</p>
+        {settingsMessage && <p className="rounded-2xl border border-gold/15 bg-gold/10 px-3 py-2 text-xs text-gold">{settingsMessage}</p>}
       </ProfileChildScreen>
     );
   }
@@ -4908,12 +5012,32 @@ function ProfilePage({
     return (
       <ProfileChildScreen title={language === 'en' ? 'Notifications' : 'Уведомления'} onBack={() => setView('main')} language={language}>
         <section className="luna-surface rounded-[24px] p-2">
-          <ProfileToggleRow title={language === 'en' ? 'Daily reminder' : 'Ежедневное напоминание'} checked={dailyReminder} onChange={setDailyReminder} />
-          <ProfileToggleRow title={language === 'en' ? 'New content' : 'Новый контент'} checked={contentReminder} onChange={setContentReminder} />
+          <ProfileToggleRow
+            title={language === 'en' ? 'Daily reminder' : 'Ежедневное напоминание'}
+            checked={notificationPrefs.dailyReminder}
+            disabled={savingSettings === 'notifications'}
+            onChange={(checked) => void saveNotificationPrefs({ ...notificationPrefs, dailyReminder: checked })}
+          />
+          {notificationPrefs.dailyReminder && (
+            <label className="flex min-h-[54px] w-full items-center justify-between rounded-[18px] px-4 text-sm text-cream">
+              <span>{language === 'en' ? 'Reminder time' : 'Время напоминания'}</span>
+              <input
+                type="time"
+                value={notificationPrefs.reminderTime}
+                disabled={savingSettings === 'notifications'}
+                onChange={(event) => void saveNotificationPrefs({ ...notificationPrefs, reminderTime: event.currentTarget.value })}
+                className="rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2 text-sm text-gold outline-none disabled:opacity-60"
+              />
+            </label>
+          )}
+          <ProfileSettingsRow icon={Bell} title={language === 'en' ? 'New content' : 'Новый контент'} value={copy[language].comingSoon} />
         </section>
         <p className="mt-3 text-xs leading-5 text-lavender">
-          {language === 'en' ? 'Telegram notification permission is managed by Telegram. Luna stores only your reminder preference here.' : 'Разрешения Telegram управляются в Telegram. Здесь Luna хранит только твои предпочтения.'}
+          {notificationPrefs.dailyReminder
+            ? (language === 'en' ? `Preference saved for ${notificationPrefs.reminderTime}. Telegram delivery will be enabled when reminders launch.` : `Предпочтение сохранено на ${notificationPrefs.reminderTime}. Доставка через Telegram будет включена, когда напоминания запустятся.`)
+            : (language === 'en' ? 'Luna can send gentle reminders through Telegram.' : 'Luna сможет отправлять мягкие напоминания через Telegram.')}
         </p>
+        {settingsMessage && <p className="rounded-2xl border border-gold/15 bg-gold/10 px-3 py-2 text-xs text-gold">{settingsMessage}</p>}
       </ProfileChildScreen>
     );
   }
@@ -4923,9 +5047,9 @@ function ProfilePage({
       <ProfileChildScreen title={copy[language].language} onBack={() => setView('main')} language={language}>
         <section className="luna-surface rounded-[24px] p-2">
           {(['en', 'ru'] as const).map((item) => (
-            <button key={item} onClick={() => onLanguageChange(item)} className="flex min-h-[56px] w-full items-center justify-between rounded-[18px] px-4 text-left text-sm text-cream">
+            <button key={item} onClick={() => onLanguageChange(item)} className="flex min-h-[50px] w-full items-center justify-between rounded-[16px] px-4 text-left text-sm text-cream">
               <span>{item === 'en' ? 'English' : 'Русский'}</span>
-              {language === item && <CheckCircle size={17} className="text-gold" />}
+              {language === item && <CheckCircle size={16} className="text-gold" />}
             </button>
           ))}
         </section>
@@ -4938,13 +5062,35 @@ function ProfilePage({
       <ProfileChildScreen title={language === 'en' ? 'Subscription' : 'Подписка'} onBack={() => setView('main')} language={language}>
         <section className="luna-surface rounded-[24px] p-4">
           <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'Current plan' : 'Текущий план'}</p>
-          <h3 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-cream">{planStatus}</h3>
-          <button onClick={onSubscription} className="mt-4 w-full rounded-[18px] bg-gold px-4 py-3 text-sm font-semibold text-night">
-            {language === 'en' ? 'Manage Premium' : 'Управлять Premium'}
+          <h3 className="mt-2 text-[24px] font-semibold tracking-[-0.04em] text-cream">{localizedPlanStatus}</h3>
+          <p className="mt-1 text-sm leading-6 text-lavender">
+            {isLifetime
+              ? (language === 'en' ? 'Active forever. You have permanent access to Luna Premium.' : 'Активно навсегда. У тебя постоянный доступ к Luna Premium.')
+              : isMonthly
+                ? (language === 'en' ? 'Monthly Premium is active through Telegram Stars.' : 'Месячный Premium активен через Telegram Stars.')
+                : (language === 'en' ? 'Unlock the full Luna experience when you are ready.' : 'Открой полный опыт Luna, когда будешь готов.')}
+          </p>
+          <div className="mt-4 space-y-2 text-sm text-lavender">
+            {(language === 'en'
+              ? ['Full meditation library', 'Premium breathing practices', 'Mantras and soundscapes', 'Future premium content']
+              : ['Полная библиотека медитаций', 'Премиум дыхательные практики', 'Мантры и саундскейпы', 'Будущий премиум-контент']
+            ).map((item) => <p key={item}>• {item}</p>)}
+          </div>
+          <button onClick={onSubscription} className={`mt-4 w-full rounded-[18px] px-4 py-3 text-sm font-semibold ${isLifetime ? 'border border-gold/20 bg-gold/10 text-gold' : 'bg-gold text-night'}`}>
+            {access.hasPremium ? (language === 'en' ? 'View Premium benefits' : 'Посмотреть Premium') : (language === 'en' ? 'Upgrade to Premium' : 'Перейти на Premium')}
           </button>
-          <button onClick={onRestore} className="mt-2 w-full rounded-[18px] border border-white/10 bg-white/[0.045] px-4 py-3 text-sm font-semibold text-gold">
-            {copy[language].restore}
+          <button disabled={restoreState === 'loading'} onClick={() => void restorePurchases()} className="mt-2 w-full rounded-[18px] border border-white/10 bg-white/[0.045] px-4 py-3 text-sm font-semibold text-gold disabled:opacity-60">
+            {restoreState === 'loading' ? (language === 'en' ? 'Restoring...' : 'Восстановление...') : copy[language].restore}
           </button>
+          {restoreState !== 'idle' && restoreState !== 'loading' && (
+            <p className="mt-3 text-xs text-lavender">
+              {restoreState === 'success'
+                ? (language === 'en' ? 'Purchases restored.' : 'Покупки восстановлены.')
+                : restoreState === 'empty'
+                  ? (language === 'en' ? 'No purchases found for this account.' : 'Покупки для этого аккаунта не найдены.')
+                  : (language === 'en' ? 'Could not restore purchases. Please try again.' : 'Не удалось восстановить покупки. Попробуй ещё раз.')}
+            </p>
+          )}
         </section>
       </ProfileChildScreen>
     );
@@ -4956,14 +5102,57 @@ function ProfilePage({
         <section className="luna-surface rounded-[24px] p-2">
           <ProfileSettingsRow icon={Upload} title={copy[language].addHomeTitle} value={homeScreenMessage || ''} onClick={onAddHome} />
           <ProfileSettingsRow icon={Heart} title={language === 'en' ? 'Support' : 'Поддержка'} value={language === 'en' ? 'Contact' : 'Связь'} onClick={onLuna} />
-          <ProfileSettingsRow icon={Lock} title={language === 'en' ? 'Privacy Policy' : 'Политика приватности'} value="" />
-          <ProfileSettingsRow icon={CheckCircle} title={language === 'en' ? 'Terms of Use' : 'Условия использования'} value="" />
+          <ProfileSettingsRow icon={Lock} title={language === 'en' ? 'Privacy Policy' : 'Политика приватности'} value="" onClick={() => setView('privacy')} />
+          <ProfileSettingsRow icon={CheckCircle} title={language === 'en' ? 'Terms of Use' : 'Условия использования'} value="" onClick={() => setView('terms')} />
+          <ProfileSettingsRow icon={Heart} title={language === 'en' ? 'Meditation Disclaimer' : 'Дисклеймер медитаций'} value="" onClick={() => setView('disclaimer')} />
           {showAdminButton && <ProfileSettingsRow icon={Settings} title="Admin" value={language === 'en' ? 'Developer' : 'Разработка'} onClick={onAdmin} />}
         </section>
-        <button className="mt-4 w-full rounded-[20px] border border-white/10 bg-white/[0.035] px-4 py-3 text-left text-sm text-lavender">
+        <button onClick={() => setLogoutOpen(true)} className="mt-4 w-full rounded-[20px] border border-white/10 bg-white/[0.035] px-4 py-3 text-left text-sm text-lavender">
           {copy[language].logout}
         </button>
-        <p className="mt-3 text-center text-[11px] text-cream/38">Luna MVP · 0.1.0</p>
+        <p className="mt-3 text-center text-[11px] text-cream/38">Luna Meditation · Version {APP_VERSION}</p>
+        {logoutOpen && (
+          <div className="fixed inset-0 z-40 grid place-items-end bg-night/60 p-4 backdrop-blur-sm">
+            <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#111936] p-4 shadow-glow">
+              <h3 className="text-lg font-semibold text-cream">{language === 'en' ? 'Log out of Luna?' : 'Выйти из Luna?'}</h3>
+              <p className="mt-2 text-sm leading-6 text-lavender">
+                {language === 'en' ? 'This clears local app data on this device. Your Luna account and purchases stay safe.' : 'Это очистит локальные данные приложения на этом устройстве. Аккаунт Luna и покупки сохранятся.'}
+              </p>
+              <button onClick={closeLocalSession} className="mt-4 w-full rounded-[18px] border border-gold/20 bg-gold/10 px-4 py-3 text-sm font-semibold text-gold">
+                {language === 'en' ? 'Log out' : 'Выйти'}
+              </button>
+              <button onClick={() => setLogoutOpen(false)} className="mt-2 w-full rounded-[18px] bg-white/[0.055] px-4 py-3 text-sm font-semibold text-lavender">
+                {language === 'en' ? 'Cancel' : 'Отмена'}
+              </button>
+            </div>
+          </div>
+        )}
+      </ProfileChildScreen>
+    );
+  }
+
+  if (view === 'privacy' || view === 'terms' || view === 'disclaimer') {
+    const title = view === 'privacy'
+      ? (language === 'en' ? 'Privacy Policy' : 'Политика приватности')
+      : view === 'terms'
+        ? (language === 'en' ? 'Terms of Use' : 'Условия использования')
+        : (language === 'en' ? 'Meditation Disclaimer' : 'Дисклеймер медитаций');
+    const body = view === 'disclaimer'
+      ? (language === 'en'
+        ? ['Luna provides wellness and relaxation content.', 'It is not medical or mental-health treatment and does not replace professional care.', 'If you feel urgent or serious symptoms, please seek qualified local support or emergency help.']
+        : ['Luna предлагает контент для расслабления и заботы о себе.', 'Это не медицинское или психотерапевтическое лечение и не замена профессиональной помощи.', 'При срочных или серьёзных симптомах обратись за квалифицированной местной помощью или в экстренные службы.'])
+      : view === 'privacy'
+        ? (language === 'en'
+          ? ['Luna uses your Telegram Mini App session to keep your profile, progress, purchases, favorites, and preferences connected to your account.', 'Your wellness settings are used to personalize Luna inside the app. Contact support if you want help with account or data questions.']
+          : ['Luna использует сессию Telegram Mini App, чтобы связать профиль, прогресс, покупки, избранное и настройки с твоим аккаунтом.', 'Твои wellness-настройки используются для персонализации Luna внутри приложения. По вопросам аккаунта или данных обратись в поддержку.'])
+        : (language === 'en'
+          ? ['By using Luna, you agree to use the app for personal wellness and relaxation.', 'Premium access, payments, and availability are handled through Telegram Stars and the Luna bot experience.']
+          : ['Используя Luna, ты соглашаешься применять приложение для личного wellness и расслабления.', 'Premium-доступ, платежи и доступность обрабатываются через Telegram Stars и опыт Luna bot.']);
+    return (
+      <ProfileChildScreen title={title} onBack={() => setView('more')} language={language}>
+        <section className="luna-surface space-y-3 rounded-[24px] p-4">
+          {body.map((line) => <p key={line} className="text-sm leading-6 text-lavender">{line}</p>)}
+        </section>
       </ProfileChildScreen>
     );
   }
@@ -4981,13 +5170,13 @@ function ProfilePage({
           aria-label={language === 'en' ? 'Change profile photo' : 'Изменить фото профиля'}
         >
           {avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : <MoonMark className="h-full w-full border-0" />}
-          <span className="absolute bottom-0 right-0 grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-night/85 text-gold backdrop-blur">
-            <Camera size={14} />
+          <span className="absolute -bottom-1 -right-1 grid h-11 w-11 place-items-center rounded-full border border-white/15 bg-night/90 text-gold shadow-glow backdrop-blur">
+            <Camera size={17} />
           </span>
         </button>
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-[25px] font-semibold leading-tight tracking-[-0.04em] text-cream">{firstName}</h3>
-          <p className="mt-1 text-sm font-semibold text-gold">{access.hasPremium ? `◆ ${planStatus}` : planStatus}</p>
+          <p className="mt-1 text-sm font-semibold text-gold">{access.hasPremium ? `◆ ${localizedPlanStatus}` : localizedPlanStatus}</p>
           <p className="mt-0.5 truncate text-xs text-lavender">{username ? `@${username}` : copy[language].member}</p>
         </div>
       </section>
@@ -4999,7 +5188,7 @@ function ProfilePage({
         <ProfileSettingsRow icon={Target} title={language === 'en' ? 'Goals' : 'Цели'} value={goalsLabel} onClick={() => setView('goals')} />
         <ProfileSettingsRow icon={Bell} title={language === 'en' ? 'Notifications' : 'Уведомления'} value={notificationLabel} onClick={() => setView('notifications')} />
         <ProfileSettingsRow icon={Bot} title={language === 'en' ? 'AI Companion' : 'AI-компаньон'} value={companionStatus} onClick={onLuna} />
-        <ProfileSettingsRow icon={CreditCard} title={language === 'en' ? 'Subscription' : 'Подписка'} value={planStatus} onClick={() => setView('subscription')} />
+        <ProfileSettingsRow icon={CreditCard} title={language === 'en' ? 'Subscription' : 'Подписка'} value={localizedPlanStatus} onClick={() => setView('subscription')} />
         <ProfileSettingsRow icon={Globe2} title={copy[language].language} value={languageLabel} onClick={() => setView('language')} />
         <ProfileSettingsRow icon={Settings} title={language === 'en' ? 'More Settings' : 'Ещё настройки'} value="" onClick={() => setView('more')} />
       </section>
@@ -5020,18 +5209,18 @@ function ProfilePage({
   );
 }
 
-function ProfileChildScreen({ title, onBack, children }: {
+function ProfileChildScreen({ title, onBack, language, children }: {
   title: string;
   onBack: () => void;
   language: AppLanguage;
   children: React.ReactNode;
 }) {
   return (
-    <div className="luna-page space-y-4 pb-[calc(98px+env(safe-area-inset-bottom))]">
-      <button onClick={onBack} className="luna-icon-button transition active:scale-95" aria-label="Back">
+    <div className="luna-page space-y-3 pb-[calc(34px+env(safe-area-inset-bottom))]">
+      <button onClick={onBack} className="luna-icon-button transition active:scale-95" aria-label={language === 'en' ? 'Back' : 'Назад'}>
         ←
       </button>
-      <h2 className="text-[28px] font-semibold tracking-[-0.04em] text-cream">{title}</h2>
+      <h2 className="text-[24px] font-semibold tracking-[-0.04em] text-cream">{title}</h2>
       {children}
     </div>
   );
@@ -5049,8 +5238,8 @@ function ProfileSettingsRow({ icon: Icon, title, value, onClick }: {
         <Icon size={17} strokeWidth={1.8} />
       </span>
       <span className="min-w-0 flex-1 text-sm font-medium text-cream">{title}</span>
-      {value && <span className="max-w-[118px] truncate text-right text-xs text-lavender">{value}</span>}
-      <ChevronRight size={16} className="shrink-0 text-lavender/55" />
+      {value && <span className="max-w-[132px] truncate text-right text-xs text-lavender">{value}</span>}
+      {onClick && <ChevronRight size={16} className="shrink-0 text-lavender/55" />}
     </>
   );
 
@@ -5059,20 +5248,21 @@ function ProfileSettingsRow({ icon: Icon, title, value, onClick }: {
       type="button"
       onClick={onClick}
       disabled={!onClick}
-      className="flex min-h-[54px] w-full items-center gap-3 rounded-[18px] px-3 text-left transition hover:bg-white/[0.035] active:scale-[0.99] disabled:cursor-default disabled:hover:bg-transparent"
+      className="flex min-h-[52px] w-full items-center gap-3 rounded-[17px] px-3 text-left transition hover:bg-white/[0.035] active:scale-[0.99] disabled:cursor-default disabled:hover:bg-transparent"
     >
       {content}
     </button>
   );
 }
 
-function ProfileToggleRow({ title, checked, onChange }: {
+function ProfileToggleRow({ title, checked, disabled = false, onChange }: {
   title: string;
   checked: boolean;
+  disabled?: boolean;
   onChange: (checked: boolean) => void;
 }) {
   return (
-    <button onClick={() => onChange(!checked)} className="flex min-h-[56px] w-full items-center justify-between rounded-[18px] px-4 text-left text-sm text-cream">
+    <button disabled={disabled} onClick={() => onChange(!checked)} className="flex min-h-[54px] w-full items-center justify-between rounded-[18px] px-4 text-left text-sm text-cream disabled:opacity-60">
       <span>{title}</span>
       <span className={`relative h-7 w-12 rounded-full transition ${checked ? 'bg-gold' : 'bg-white/12'}`} aria-hidden="true">
         <span className={`absolute top-1 h-5 w-5 rounded-full bg-cream transition ${checked ? 'left-6' : 'left-1'}`} />
