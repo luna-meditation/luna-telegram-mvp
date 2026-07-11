@@ -5,7 +5,6 @@ import {
   Camera,
   CheckCircle,
   ChevronRight,
-  Copy,
   CreditCard,
   Crown,
   Edit3,
@@ -16,7 +15,6 @@ import {
   Mic,
   Pause,
   Play,
-  RotateCcw,
   Search,
   Send,
   Settings,
@@ -3007,186 +3005,125 @@ function dailyLunaThought(language: AppLanguage) {
 }
 
 function LunaPage({ firstName, language }: { firstName: string; language: AppLanguage }) {
-  const [mode, setMode] = useState<'home' | 'conversation'>('home');
-  const [preparedPrompt, setPreparedPrompt] = useState('');
+  const [draft, setDraft] = useState('');
+  const [firstOpen, setFirstOpen] = useState(() => window.localStorage.getItem('luna.companion.opened.v1') !== 'true');
   const recentConversations: LunaConversationSummary[] = [];
   const quickActions = language === 'ru'
-    ? ['😴 Не могу уснуть', '😔 Мне тревожно', '🌿 Хочу расслабиться', '💭 Я много думаю', '❤️ Нужна поддержка', '🧘 Подбери медитацию']
-    : ["😴 I can't sleep", "😔 I'm anxious", '🌿 I need to relax', '💭 I overthink', '❤️ I need support', '🧘 Recommend a meditation'];
-  const helpTopics: LunaHelpTopic[] = language === 'ru'
+    ? ['🌙 Не могу уснуть', '🧠 Мысли не останавливаются', '💼 Я перегружен(а)', '❤️ Хочу с кем-то поговорить', '✨ Подбери медитацию на сегодня']
+    : ["🌙 I can't sleep", "🧠 My thoughts won't stop", "💼 I'm overwhelmed", '❤️ I need someone to talk to', "✨ Recommend today's meditation"];
+  const compactSuggestions: LunaHelpTopic[] = language === 'ru'
     ? [
-      { icon: '🌙', title: 'Сон', body: 'Успокоить вечер и подготовиться ко сну.', prompt: 'Мне нужна помощь со сном.' },
-      { icon: '🫧', title: 'Стресс', body: 'Мягко разложить напряжение на части.', prompt: 'Мне нужно снизить стресс.' },
-      { icon: '🤍', title: 'Отношения', body: 'Поговорить о чувствах без осуждения.', prompt: 'Мне нужна поддержка в отношениях.' },
-      { icon: '✨', title: 'Уверенность', body: 'Вернуться к внутренней опоре.', prompt: 'Я хочу почувствовать больше уверенности.' },
-      { icon: '🎧', title: 'Фокус', body: 'Найти спокойный следующий шаг.', prompt: 'Помоги мне сфокусироваться.' },
-      { icon: '🕯️', title: 'Выгорание', body: 'Сделать паузу и услышать свои силы.', prompt: 'Кажется, я выгораю.' },
-      { icon: '🌿', title: 'Осознанность', body: 'Замедлиться и вернуться в момент.', prompt: 'Хочу практику осознанности.' }
+      { icon: '🌙', title: 'Сон', body: '', prompt: 'Помоги мне мягко подготовиться ко сну.' },
+      { icon: '🫧', title: 'Стресс', body: '', prompt: 'Помоги мне снизить напряжение.' },
+      { icon: '🤍', title: 'Поддержка', body: '', prompt: 'Мне нужна поддержка без осуждения.' },
+      { icon: '🎧', title: 'Фокус', body: '', prompt: 'Помоги мне найти спокойный следующий шаг.' },
+      { icon: '🕯️', title: 'Выгорание', body: '', prompt: 'Кажется, я выгораю. Помоги мне остановиться.' },
+      { icon: '🌿', title: 'Осознанность', body: '', prompt: 'Хочу вернуться в настоящий момент.' }
     ]
     : [
-      { icon: '🌙', title: 'Sleep', body: 'Settle the evening and soften into rest.', prompt: 'I need help with sleep.' },
-      { icon: '🫧', title: 'Stress', body: 'Unpack tension one gentle layer at a time.', prompt: 'I need help lowering stress.' },
-      { icon: '🤍', title: 'Relationships', body: 'Talk through feelings without judgment.', prompt: 'I need support with relationships.' },
-      { icon: '✨', title: 'Confidence', body: 'Return to your own quiet steadiness.', prompt: 'I want to feel more confident.' },
-      { icon: '🎧', title: 'Focus', body: 'Find the next calm step forward.', prompt: 'Help me focus.' },
-      { icon: '🕯️', title: 'Burnout', body: 'Pause and listen for what has been too much.', prompt: 'I think I am burned out.' },
-      { icon: '🌿', title: 'Mindfulness', body: 'Slow down and come back to this moment.', prompt: 'I want a mindfulness practice.' }
+      { icon: '🌙', title: 'Sleep', body: '', prompt: 'Help me soften into sleep tonight.' },
+      { icon: '🫧', title: 'Stress', body: '', prompt: 'Help me lower the tension in my body.' },
+      { icon: '🤍', title: 'Support', body: '', prompt: 'I need support without judgment.' },
+      { icon: '🎧', title: 'Focus', body: '', prompt: 'Help me find the next calm step.' },
+      { icon: '🕯️', title: 'Burnout', body: '', prompt: 'I think I am burned out. Help me pause.' },
+      { icon: '🌿', title: 'Mindfulness', body: '', prompt: 'Help me come back to the present moment.' }
     ];
 
-  const openConversation = (prompt = '') => {
-    setPreparedPrompt(prompt);
-    setMode('conversation');
-  };
+  useEffect(() => {
+    window.localStorage.setItem('luna.companion.opened.v1', 'true');
+    if (firstOpen) window.setTimeout(() => setFirstOpen(false), 900);
+  }, [firstOpen]);
 
-  if (mode === 'conversation') {
-    return (
-      <LunaConversationScreen
-        firstName={firstName}
-        language={language}
-        preparedPrompt={preparedPrompt}
-        onBack={() => setMode('home')}
-      />
-    );
-  }
-
-  return (
-    <div className="luna-page luna-companion-page space-y-4 pb-5">
-      <PageTitle title={copy[language].lunaPageTitle} />
-
-      <section className="luna-companion-hero">
-        <div className="luna-companion-hero-glow" />
-        <div className="relative flex items-center gap-3">
-          <div className="luna-companion-avatar">
-            <Bot size={21} />
-          </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gold/90">{copy[language].lunaPageStatus}</p>
-            <h3 className="mt-1 text-[22px] font-semibold tracking-[-0.035em] text-cream">
-              {language === 'ru' ? 'Я рядом, когда нужен тихий момент.' : "I'm here whenever you need a quiet moment."}
-            </h3>
-          </div>
-        </div>
-
-        <div className="luna-companion-message">
-          <p>{language === 'ru' ? `Привет, ${firstName || 'друг'}.` : `Hello, ${firstName || 'friend'}.`}</p>
-          <p>{language === 'ru' ? 'Расскажи, что у тебя на душе.' : "Tell me what's on your mind."}</p>
-          <p>{language === 'ru' ? 'Я здесь, чтобы слушать без осуждения.' : "I'm here to listen without judgment."}</p>
-        </div>
-
-        <button type="button" onClick={() => openConversation()} className="luna-companion-primary">
-          {language === 'ru' ? 'Начать разговор' : 'Start Conversation'}
-          <span>→</span>
-        </button>
-      </section>
-
-      <section className="space-y-2">
-        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 luna-scrollbar-none">
-          {quickActions.map((action, index) => (
-            <button
-              key={action}
-              type="button"
-              onClick={() => openConversation(action)}
-              className="luna-suggestion-chip"
-              style={{ animationDelay: `${index * 24}ms` }}
-            >
-              {action}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-cream">{language === 'ru' ? 'Недавние разговоры' : 'Recent Conversations'}</h3>
-        </div>
-        {recentConversations.length ? (
-          <div className="luna-surface rounded-[24px] p-2">
-            {recentConversations.map((conversation) => (
-              <button key={conversation.id} type="button" onClick={() => openConversation()} className="flex min-h-[52px] w-full items-center justify-between rounded-[17px] px-3 text-left">
-                <span>
-                  <span className="block text-sm font-medium text-cream">{conversation.title}</span>
-                  <span className="text-xs text-lavender">{conversation.when}</span>
-                </span>
-                <ChevronRight size={16} className="text-lavender/55" />
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="luna-companion-empty">
-            <div className="luna-breathing-orb luna-breathing-orb-small" />
-            <span>{language === 'ru' ? 'Твои разговоры будут храниться здесь спокойно и приватно.' : 'Your conversations will rest here, calm and private.'}</span>
-          </div>
-        )}
-      </section>
-
-      <section className="space-y-3">
-        <h3 className="text-sm font-semibold text-cream">{language === 'ru' ? 'Luna может помочь с' : 'Luna Can Help With'}</h3>
-        <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 luna-scrollbar-none">
-          {helpTopics.map((topic) => (
-            <button key={topic.title} type="button" onClick={() => openConversation(topic.prompt)} className="luna-help-card">
-              <span className="text-2xl">{topic.icon}</span>
-              <strong>{topic.title}</strong>
-              <small>{topic.body}</small>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className="luna-thought-card">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gold/85">{language === 'ru' ? 'Мысль дня' : "Today's Thought"}</p>
-        <p className="mt-2 text-[17px] leading-7 text-cream">{dailyLunaThought(language)}</p>
-      </section>
-    </div>
-  );
-}
-
-function LunaConversationScreen({
-  firstName,
-  language,
-  preparedPrompt,
-  onBack
-}: {
-  firstName: string;
-  language: AppLanguage;
-  preparedPrompt: string;
-  onBack: () => void;
-}) {
   return (
     <div className="luna-page luna-conversation-screen flex min-h-[calc(100vh-170px)] flex-col pb-5">
       <div className="flex items-center justify-between">
-        <button type="button" onClick={onBack} className="luna-icon-button" aria-label={language === 'ru' ? 'Назад' : 'Back'}>←</button>
+        <div className="h-11 w-11" />
         <div className="text-center">
           <p className="text-sm font-semibold text-cream">Luna</p>
-          <p className="text-[11px] text-lavender">{language === 'ru' ? 'Тихий разговор' : 'Quiet conversation'}</p>
+          <p className="text-[11px] text-lavender">{copy[language].lunaPageStatus}</p>
         </div>
         <div className="h-11 w-11" />
       </div>
 
-      <div className="flex flex-1 flex-col justify-end py-6">
-        <div className="mx-auto mb-5">
+      <div className="flex flex-1 flex-col py-5">
+        <div className="mx-auto mb-4">
           <div className="luna-breathing-orb" />
         </div>
+
         <div className="luna-conversation-intro">
-          <p className="text-sm leading-6 text-cream">
+          <p className="text-[21px] font-semibold leading-tight tracking-[-0.035em] text-cream">
             {language === 'ru'
-              ? `Привет, ${firstName || 'друг'}. Я готова слушать.`
-              : `Hello, ${firstName || 'friend'}. I'm ready to listen.`}
+              ? `Привет, ${firstName || 'друг'}.`
+              : `Hello, ${firstName || 'friend'}.`}
           </p>
-          {preparedPrompt ? <p className="mt-3 rounded-[18px] bg-white/[0.055] px-4 py-3 text-sm text-lavender">{preparedPrompt}</p> : null}
-          <div className="mt-4 flex items-center gap-2 text-lavender/80">
-            <button type="button" className="luna-conversation-tool" aria-label="Copy message"><Copy size={14} /></button>
-            <button type="button" className="luna-conversation-tool" aria-label="Regenerate response"><RotateCcw size={14} /></button>
-            <span className="ml-auto text-xs">{language === 'ru' ? 'Luna думает мягко' : 'Luna thinks softly'}</span>
-          </div>
+          <p className="mt-2 text-sm leading-6 text-lavender">
+            {firstOpen
+              ? (language === 'ru' ? 'Я здесь, чтобы слушать без осуждения. Можно начать с одного честного предложения.' : "I'm here to listen without judgment. You can begin with one honest sentence.")
+              : (language === 'ru' ? 'Что сейчас внутри тебя?' : "What's happening inside you right now?")}
+          </p>
         </div>
+
+        <section className="mt-4 space-y-2">
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 luna-scrollbar-none">
+            {quickActions.map((action, index) => (
+              <button
+                key={action}
+                type="button"
+                onClick={() => setDraft(action.replace(/^[^\p{L}\p{N}]+/u, '').trim())}
+                className="luna-suggestion-chip"
+                style={{ animationDelay: `${index * 24}ms` }}
+              >
+                {action}
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-4 space-y-3">
+          <h3 className="text-sm font-semibold text-cream">{language === 'ru' ? 'Мягкие начала' : 'Gentle Starts'}</h3>
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 luna-scrollbar-none">
+            {compactSuggestions.map((topic) => (
+              <button key={topic.title} type="button" onClick={() => setDraft(topic.prompt)} className="luna-topic-pill">
+                <span>{topic.icon}</span>
+                <strong>{topic.title}</strong>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="mt-4 space-y-2">
+          <h3 className="text-sm font-semibold text-cream">{language === 'ru' ? 'Недавние разговоры' : 'Recent Conversations'}</h3>
+          {recentConversations.length ? (
+            <div className="luna-surface rounded-[24px] p-2">
+              {recentConversations.map((conversation) => (
+                <button key={conversation.id} type="button" onClick={() => setDraft(conversation.title)} className="flex min-h-[52px] w-full items-center justify-between rounded-[17px] px-3 text-left">
+                  <span>
+                    <span className="block text-sm font-medium text-cream">{conversation.title}</span>
+                    <span className="text-xs text-lavender">{conversation.when}</span>
+                  </span>
+                  <ChevronRight size={16} className="text-lavender/55" />
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="luna-companion-empty">
+              <span>{language === 'ru' ? 'Когда появятся разговоры, они будут здесь — спокойно, приватно и без лишнего шума.' : 'When conversations appear, they will live here quietly, privately, and without clutter.'}</span>
+            </div>
+          )}
+        </section>
+
+        <section className="luna-thought-card mt-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gold/85">{language === 'ru' ? 'Мысль дня' : "Today's Thought"}</p>
+          <p className="mt-2 text-[16px] leading-7 text-cream">{dailyLunaThought(language)}</p>
+        </section>
       </div>
 
       <div className="luna-composer">
-        <button type="button" className="luna-conversation-tool" aria-label={language === 'ru' ? 'Голос позже' : 'Voice later'}><Mic size={16} /></button>
+        <button type="button" className="luna-conversation-tool" aria-label={language === 'ru' ? 'Голосовое сообщение' : 'Voice message'}><Mic size={16} /></button>
         <input
-          value=""
-          readOnly
-          placeholder={language === 'ru' ? 'Настоящий AI-чат скоро появится...' : 'Real AI chat is coming soon...'}
+          value={draft}
+          onChange={(event) => setDraft(event.currentTarget.value)}
+          placeholder={language === 'ru' ? 'Напиши Luna...' : 'Message Luna...'}
           className="min-w-0 flex-1 bg-transparent text-sm text-cream outline-none placeholder:text-lavender/60"
         />
         <button type="button" className="grid h-9 w-9 place-items-center rounded-full bg-gold text-night" aria-label={language === 'ru' ? 'Отправить' : 'Send'}><Send size={16} /></button>
