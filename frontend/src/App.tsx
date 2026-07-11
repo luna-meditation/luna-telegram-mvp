@@ -64,7 +64,7 @@ import { MoonGardenScene as AnimatedMoonGardenScene } from './components/moon-ga
 import { V2BottomNav } from './v2/components/V2BottomNav';
 import { HomeV2 } from './v2/pages/HomeV2';
 
-type Page = 'home' | 'luna' | 'library' | 'progress' | 'weeklyReflection' | 'favorites' | 'profile' | 'pricing' | 'player' | 'scenePlayer' | 'mantraPlayer' | 'breathCircle' | 'moonGarden' | 'admin';
+type Page = 'home' | 'luna' | 'library' | 'progress' | 'favorites' | 'profile' | 'pricing' | 'player' | 'scenePlayer' | 'mantraPlayer' | 'breathCircle' | 'moonGarden' | 'admin';
 type Mood = 'Calm' | 'Stressed' | 'Tired' | 'Anxious' | 'Focused';
 type MoodChip = 'Sleep' | 'Calm' | 'Focus' | 'Anxiety' | 'Breath' | 'Energy';
 type LibraryMode = 'meditations' | 'breathing' | 'mantras';
@@ -1410,81 +1410,77 @@ function sessionNoun(count: number, language: AppLanguage) {
 
 function practiceDaysLabel(days: number, language: AppLanguage) {
   if (language === 'en') return days === 1 ? '1 day' : `${days} days`;
-  return days === 1 ? '1 день' : `${days} дней`;
+  const lastDigit = days % 10;
+  const lastTwoDigits = days % 100;
+  const word = lastDigit === 1 && lastTwoDigits !== 11
+    ? 'день'
+    : lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14)
+      ? 'дня'
+      : 'дней';
+  return `${days} ${word}`;
 }
 
-function weeklyReflectionSummary(profile: ProfileStats | null, wellness: WellnessSummary | null, language: AppLanguage) {
-  const sessions = profile?.completedMeditations ?? profile?.completed ?? 0;
-  const minutes = profile?.weeklyPracticeMinutes ?? 0;
-  const checkins = wellness?.weeklyCheckinCount ?? 0;
-
-  if (checkins >= 7) {
-    return language === 'en'
-      ? 'You made space to notice how you felt each day.'
-      : 'Ты находил(а) место, чтобы замечать своё состояние каждый день.';
-  }
-  if (sessions > 1 || minutes > 10) {
-    return language === 'en'
-      ? 'You returned to your practice several times this week.'
-      : 'На этой неделе ты несколько раз возвращался(лась) к практике.';
-  }
-  if (sessions === 1 || minutes > 0 || checkins > 0) {
-    return language === 'en'
-      ? 'You started your rhythm this week.'
-      : 'На этой неделе ты начал(а) свой ритм.';
-  }
-  return language === 'en'
-    ? 'Your week is still open. One quiet minute is enough to begin.'
-    : 'Неделя ещё открыта. Одной тихой минуты достаточно, чтобы начать.';
-}
-
-function weeklyReflectionNote(profile: ProfileStats | null, wellness: WellnessSummary | null, language: AppLanguage) {
-  const minutes = profile?.weeklyPracticeMinutes ?? 0;
-  const checkins = wellness?.weeklyCheckinCount ?? 0;
-
-  if (minutes > 10) {
-    return language === 'en'
-      ? 'You do not need a perfect week. Returning once is already part of the rhythm.'
-      : 'Тебе не нужна идеальная неделя. Одно возвращение уже часть ритма.';
-  }
-  if (checkins > 0) {
-    return language === 'en'
-      ? 'Noticing your state is a practice too. Keep it gentle.'
-      : 'Замечать своё состояние — тоже практика. Пусть она остаётся мягкой.';
-  }
-  return language === 'en'
-    ? 'Begin small. Luna will meet you wherever you are.'
-    : 'Начни с малого. Luna встретит тебя там, где ты сейчас.';
-}
-
-function weeklyPracticePattern(profile: ProfileStats | null, wellness: WellnessSummary | null, history: PlaybackHistory[], language: AppLanguage) {
-  const weeklyCheckins = wellness?.weeklyCheckinCount ?? 0;
-  const minutes = profile?.weeklyPracticeMinutes ?? 0;
+function thisWeekWithLunaInsight(profile: ProfileStats | null, wellness: WellnessSummary | null, history: PlaybackHistory[], language: AppLanguage) {
+  const now = Date.now();
   const recentHistory = history.filter((item) => {
     const played = new Date(item.last_played);
-    return !Number.isNaN(played.getTime()) && Date.now() - played.getTime() <= 7 * 24 * 60 * 60 * 1000;
+    return !Number.isNaN(played.getTime()) && now - played.getTime() <= 7 * 24 * 60 * 60 * 1000;
   });
-  const longestSeconds = recentHistory.reduce((max, item) => Math.max(max, Number(item.last_position ?? 0)), 0);
+  const practiceDates = new Set(
+    recentHistory.map((item) => new Date(item.last_played).toISOString().slice(0, 10))
+  );
+  if (profile?.lastPracticeDate) {
+    const lastPractice = new Date(`${profile.lastPracticeDate}T12:00:00`);
+    if (!Number.isNaN(lastPractice.getTime()) && now - lastPractice.getTime() <= 7 * 24 * 60 * 60 * 1000) {
+      practiceDates.add(profile.lastPracticeDate);
+    }
+  }
 
-  if (weeklyCheckins >= 7) {
+  const fallbackMinutes = recentHistory.reduce((sum, item) => sum + Math.max(0, Math.round(Number(item.last_position ?? 0) / 60)), 0);
+  const weeklyMinutes = profile?.weeklyPracticeMinutes ?? fallbackMinutes;
+  const completedThisWeek = recentHistory.filter((item) => item.completed || Number(item.completion_percent ?? 0) >= 95).length;
+  const categoryCounts = recentHistory.reduce<Record<string, number>>((map, item) => {
+    const category = item.meditation?.category;
+    if (!category) return map;
+    map[category] = (map[category] ?? 0) + 1;
+    return map;
+  }, {});
+  const mostUsedCategory = Object.entries(categoryCounts).sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
+  const checkins = [...(wellness?.weeklyCheckins ?? [])].sort((left, right) => (left.local_date || '').localeCompare(right.local_date || ''));
+  const latestMood = wellness?.todayCheckin?.mood ?? checkins[checkins.length - 1]?.mood ?? wellness?.mostCommonMood ?? null;
+  const hasPractice = weeklyMinutes > 0 || practiceDates.size > 0 || completedThisWeek > 0;
+
+  if (!hasPractice) {
     return language === 'en'
-      ? 'You checked in on 7 of 7 days.'
-      : 'Ты сделал(а) чек-ин 7 дней из 7.';
+      ? ['You’re just beginning.', 'Complete one practice and Luna will have more to reflect on.']
+      : ['Ты только начинаешь.', 'Заверши одну практику, и Luna сможет мягче отразить твою неделю.'];
   }
-  if (longestSeconds >= 60) {
-    const longestMinutes = Math.max(1, Math.round(longestSeconds / 60));
-    return language === 'en'
-      ? `Your longest recent listening moment was ${longestMinutes} min.`
-      : `Самое длинное недавнее прослушивание: ${longestMinutes} мин.`;
+
+  const lines = [
+    language === 'en'
+      ? `You practiced for ${minutesCountLabel(weeklyMinutes, language)} across ${practiceDaysLabel(practiceDates.size || 1, language)}.`
+      : `Ты практиковал(а) ${minutesCountLabel(weeklyMinutes, language)} за ${practiceDaysLabel(practiceDates.size || 1, language)}.`
+  ];
+
+  if (completedThisWeek > 0) {
+    lines.push(language === 'en'
+      ? `${completedThisWeek} completed ${completedThisWeek === 1 ? 'session' : 'sessions'} helped shape the rhythm.`
+      : `Завершённых сессий: ${completedThisWeek}. Это поддержало твой ритм.`);
+  } else if (mostUsedCategory) {
+    lines.push(language === 'en'
+      ? `${translateCategory(mostUsedCategory, language)} was your most used focus.`
+      : `Чаще всего ты выбирал(а): ${translateCategory(mostUsedCategory, language)}.`);
+  } else if (latestMood) {
+    lines.push(language === 'en'
+      ? `Your latest check-in was ${translateMoodLabel(latestMood, language)}.`
+      : `Последний чек-ин: ${translateMoodLabel(latestMood, language)}.`);
   }
-  if (minutes > 0) {
-    return language === 'en'
-      ? 'A few minutes already started your weekly pattern.'
-      : 'Несколько минут уже начали твой недельный ритм.';
-  }
-  return language === 'en'
-    ? 'More practice will reveal your weekly pattern.'
-    : 'Больше практики поможет увидеть твой недельный ритм.';
+
+  lines.push(language === 'en'
+    ? (profile?.currentStreak ? 'A gentle next step: return for one short evening practice.' : 'A gentle next step: return for one short practice.')
+    : (profile?.currentStreak ? 'Мягкий следующий шаг: вернуться к короткой вечерней практике.' : 'Мягкий следующий шаг: вернуться к одной короткой практике.'));
+
+  return lines.slice(0, 3);
 }
 
 function normalizeSlug(value?: string | null) {
@@ -2651,18 +2647,7 @@ function App() {
             wellness={wellness}
             history={history}
             language={language}
-            onWeeklyReflection={() => setPage('weeklyReflection')}
             onMoonGarden={() => setPage('moonGarden')}
-          />
-        )}
-
-        {page === 'weeklyReflection' && (
-          <WeeklyReflectionPage
-            profile={profile}
-            wellness={wellness}
-            history={history}
-            language={language}
-            onBack={() => setPage('progress')}
           />
         )}
 
@@ -3044,14 +3029,12 @@ function ProgressPage({
   wellness,
   history,
   language,
-  onWeeklyReflection,
   onMoonGarden
 }: {
   profile: ProfileStats | null;
   wellness: WellnessSummary | null;
   history: PlaybackHistory[];
   language: AppLanguage;
-  onWeeklyReflection: () => void;
   onMoonGarden: () => void;
 }) {
   const totalMinutes = profile?.totalPracticeMinutes ?? profile?.minutesListened ?? 0;
@@ -3062,7 +3045,7 @@ function ProgressPage({
   const stage = getCurrentGardenStage(plantedCount);
   const streak = profile?.currentStreak ?? 0;
   const completedMeditations = profile?.completedMeditations ?? 0;
-  const weeklyReflection = weeklyReflectionSummary(profile, wellness, language);
+  const weeklyInsightLines = thisWeekWithLunaInsight(profile, wellness, history, language);
   const todayKey = new Date().toISOString().slice(0, 10);
   const checkins = [...(wellness?.weeklyCheckins ?? [])].sort((left, right) => (left.local_date || '').localeCompare(right.local_date || ''));
   const activityByDate = history.reduce<Record<string, number>>((map, item) => {
@@ -3183,17 +3166,16 @@ function ProgressPage({
         </section>
       )}
 
-      <button onClick={onWeeklyReflection} className="w-full rounded-[24px] border border-white/10 bg-white/[0.045] p-3.5 text-left transition active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-gold/30">
-        <div className="flex items-center justify-between gap-4">
+      <section className="rounded-[24px] border border-white/10 bg-white/[0.045] p-3.5">
         <div className="min-w-0">
-          <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'Weekly Reflection' : 'Размышление недели'}</p>
-          <p className="mt-1 line-clamp-2 text-sm leading-5 text-cream/82">{weeklyReflection}</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-gold">{copy[language].weeklyTitle}</p>
+          <div className="mt-1 space-y-0.5">
+            {weeklyInsightLines.map((line) => (
+              <p key={line} className="text-sm leading-5 text-cream/82">{line}</p>
+            ))}
+          </div>
         </div>
-        <span className="shrink-0 rounded-full border border-gold/25 bg-gold/10 px-3 py-2 text-xs font-semibold text-gold">
-          {language === 'en' ? 'View →' : 'Открыть →'}
-        </span>
-        </div>
-      </button>
+      </section>
 
       <button onClick={onMoonGarden} className="w-full overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.045] p-3 text-left shadow-glow backdrop-blur transition active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-gold/30">
         <div className="flex gap-3">
@@ -3259,107 +3241,6 @@ function ProgressCompareCard({ label, date, mood, metric }: { label: string; dat
         </div>
       </div>
     </article>
-  );
-}
-
-function WeeklyReflectionPage({ profile, wellness, history, language, onBack }: {
-  profile: ProfileStats | null;
-  wellness: WellnessSummary | null;
-  history: PlaybackHistory[];
-  language: AppLanguage;
-  onBack: () => void;
-}) {
-  const totalMinutes = profile?.weeklyPracticeMinutes ?? 0;
-  const completedMeditations = profile?.completedMeditations ?? profile?.completed ?? 0;
-  const checkins = wellness?.weeklyCheckinCount ?? 0;
-  const currentMood = wellness?.mostCommonMoodLabel ? translateMoodLabel(wellness.mostCommonMoodLabel, language) : copy[language].notEnoughData;
-  const weeklyDates = new Set(
-    history
-      .map((item) => {
-        const played = new Date(item.last_played);
-        return Number.isNaN(played.getTime()) || Date.now() - played.getTime() > 7 * 24 * 60 * 60 * 1000
-          ? null
-          : played.toISOString().slice(0, 10);
-      })
-      .filter(Boolean) as string[]
-  );
-  if (profile?.lastPracticeDate) weeklyDates.add(profile.lastPracticeDate);
-  const practiceDays = weeklyDates.size;
-  const summary = weeklyReflectionSummary(profile, wellness, language);
-  const note = weeklyReflectionNote(profile, wellness, language);
-  const pattern = weeklyPracticePattern(profile, wellness, history, language);
-  const intention = checkins >= 4
-    ? (language === 'en' ? 'Keep your check-in rhythm gentle.' : 'Сохрани мягкий ритм чек-инов.')
-    : (language === 'en' ? 'Return for one five-minute practice.' : 'Вернись к одной пятиминутной практике.');
-  const highlights = [
-    {
-      label: language === 'en' ? 'Listening' : 'Практика',
-      value: minutesCountLabel(totalMinutes, language),
-      body: language === 'en' ? 'This week' : 'На неделе',
-      tone: 'gold'
-    },
-    {
-      label: language === 'en' ? 'Practice days' : 'Дни практики',
-      value: practiceDaysLabel(practiceDays, language),
-      body: language === 'en' ? 'Last 7 days' : 'За 7 дней',
-      tone: 'soft'
-    },
-    {
-      label: language === 'en' ? 'Sessions' : 'Сессии',
-      value: String(completedMeditations),
-      body: sessionNoun(completedMeditations, language),
-      tone: 'strong'
-    },
-    {
-      label: language === 'en' ? 'Check-ins' : 'Чек-ины',
-      value: `${checkins}/7`,
-      body: currentMood,
-      tone: 'soft'
-    }
-  ];
-
-  return (
-    <div className="luna-page luna-child-page space-y-3 pb-[calc(104px+env(safe-area-inset-bottom))]">
-      <button onClick={onBack} className="luna-icon-button transition active:scale-95" aria-label={copy[language].back}>
-        ←
-      </button>
-      <div>
-        <h2 className="text-[29px] font-semibold tracking-[-0.04em] text-cream">{copy[language].weeklyReflectionTitle}</h2>
-        <p className="mt-0.5 max-w-[315px] text-sm leading-5 text-lavender/78">{copy[language].weeklyReflectionBody}</p>
-      </div>
-
-      <section className="luna-progress-enter relative overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_88%_12%,rgba(212,175,55,.16),transparent_30%),linear-gradient(145deg,rgba(30,42,86,.58),rgba(7,12,30,.72))] p-5 shadow-glow">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-gold/10 blur-3xl" />
-        <p className="relative text-xs uppercase tracking-[0.18em] text-gold">{copy[language].weeklyReflection}</p>
-        <h3 className="relative mt-3 font-serif text-2xl leading-tight text-cream">{summary}</h3>
-        <p className="relative mt-3 text-sm leading-6 text-cream/72">
-          {totalMinutes > 0
-            ? profileWeeklyInsight(profile, language)
-            : (language === 'en' ? 'Luna will shape this reflection as you check in and listen.' : 'Luna дополнит эту рефлексию по мере чек-инов и практик.')}
-        </p>
-      </section>
-
-      <section className="grid grid-cols-2 gap-2.5">
-        {highlights.map((item) => (
-          <ProgressMetricCard key={item.label} {...item} />
-        ))}
-      </section>
-
-      <section className="luna-progress-enter rounded-[24px] border border-white/10 bg-white/[0.045] p-4">
-        <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'Practice Pattern' : 'Ритм практики'}</p>
-        <p className="mt-2 text-sm leading-5 text-cream/82">{pattern}</p>
-      </section>
-
-      <section className="luna-progress-enter rounded-[24px] border border-white/10 bg-white/[0.045] p-4">
-        <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'Luna’s Note' : 'Заметка Luna'}</p>
-        <p className="mt-2 font-serif text-xl leading-7 text-cream">“{note}”</p>
-      </section>
-
-      <section className="luna-progress-enter rounded-[24px] border border-white/10 bg-white/[0.045] p-4">
-        <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'For Next Week' : 'На следующую неделю'}</p>
-        <p className="mt-2 text-sm leading-5 text-lavender">{intention}</p>
-      </section>
-    </div>
   );
 }
 

@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react';
 import { BarChart3, BookOpen, Home, MessageCircle, User } from 'lucide-react';
 
-type Page = 'home' | 'luna' | 'library' | 'progress' | 'weeklyReflection' | 'favorites' | 'profile' | 'pricing' | 'player' | 'scenePlayer' | 'mantraPlayer' | 'breathCircle' | 'moonGarden' | 'admin';
+type Page = 'home' | 'luna' | 'library' | 'progress' | 'favorites' | 'profile' | 'pricing' | 'player' | 'scenePlayer' | 'mantraPlayer' | 'breathCircle' | 'moonGarden' | 'admin';
 
 type V2BottomNavProps = {
   active: Page;
@@ -28,7 +28,7 @@ export function V2BottomNav({ active, onChange, labels }: V2BottomNavProps) {
     <nav className="home-v2-bottom-nav">
       {items.map((item) => {
         const Icon = item.icon;
-        const selected = active === item.page || ((active === 'weeklyReflection' || active === 'moonGarden') && item.page === 'progress');
+        const selected = active === item.page || (active === 'moonGarden' && item.page === 'progress');
         return (
           <button
             key={item.page}
