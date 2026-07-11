@@ -4,7 +4,6 @@ import {
   CheckCircle,
   Crown,
   Edit3,
-  Flame,
   Heart,
   Image as ImageIcon,
   Lock,
@@ -1458,27 +1457,27 @@ function thisWeekWithLunaInsight(profile: ProfileStats | null, wellness: Wellnes
 
   const lines = [
     language === 'en'
-      ? `You practiced for ${minutesCountLabel(weeklyMinutes, language)} across ${practiceDaysLabel(practiceDates.size || 1, language)}.`
-      : `Ты практиковал(а) ${minutesCountLabel(weeklyMinutes, language)} за ${practiceDaysLabel(practiceDates.size || 1, language)}.`
+      ? `${minutesCountLabel(weeklyMinutes, language)} across ${practiceDaysLabel(practiceDates.size || 1, language)} became part of your week.`
+      : `${minutesCountLabel(weeklyMinutes, language)} за ${practiceDaysLabel(practiceDates.size || 1, language)} стали частью твоей недели.`
   ];
 
   if (completedThisWeek > 0) {
     lines.push(language === 'en'
-      ? `${completedThisWeek} completed ${completedThisWeek === 1 ? 'session' : 'sessions'} helped shape the rhythm.`
-      : `Завершённых сессий: ${completedThisWeek}. Это поддержало твой ритм.`);
+      ? `${completedThisWeek === 1 ? 'One completed session' : `${completedThisWeek} completed sessions`} gave the rhythm a little shape.`
+      : `${completedThisWeek === 1 ? 'Одна завершённая сессия' : `${completedThisWeek} завершённые сессии`} мягко поддержали ритм.`);
   } else if (mostUsedCategory) {
     lines.push(language === 'en'
-      ? `${translateCategory(mostUsedCategory, language)} was your most used focus.`
-      : `Чаще всего ты выбирал(а): ${translateCategory(mostUsedCategory, language)}.`);
+      ? `${translateCategory(mostUsedCategory, language)} quietly led your focus.`
+      : `${translateCategory(mostUsedCategory, language)} мягко вело твой фокус.`);
   } else if (latestMood) {
     lines.push(language === 'en'
-      ? `Your latest check-in was ${translateMoodLabel(latestMood, language)}.`
+      ? `Your latest check-in felt ${translateMoodLabel(latestMood, language)}.`
       : `Последний чек-ин: ${translateMoodLabel(latestMood, language)}.`);
   }
 
   lines.push(language === 'en'
-    ? (profile?.currentStreak ? 'A gentle next step: return for one short evening practice.' : 'A gentle next step: return for one short practice.')
-    : (profile?.currentStreak ? 'Мягкий следующий шаг: вернуться к короткой вечерней практике.' : 'Мягкий следующий шаг: вернуться к одной короткой практике.'));
+    ? (profile?.currentStreak ? 'Come back tomorrow and keep the rhythm soft.' : 'One quiet return is enough for tomorrow.')
+    : (profile?.currentStreak ? 'Вернись завтра и сохрани мягкий ритм.' : 'Одного тихого возвращения завтра достаточно.'));
 
   return lines.slice(0, 3);
 }
@@ -3103,73 +3102,75 @@ function ProgressPage({
   ];
 
   return (
-    <div className="luna-page luna-child-page space-y-2.5 pb-[calc(98px+env(safe-area-inset-bottom))]">
+    <div className="luna-page luna-child-page space-y-3 pb-[calc(98px+env(safe-area-inset-bottom))]">
       <div>
-        <h2 className="max-w-[280px] text-[29px] font-semibold tracking-[-0.04em] text-cream">{copy[language].progressTitle}</h2>
+        <h2 className="max-w-[280px] text-[28px] font-semibold tracking-[-0.04em] text-cream">{copy[language].progressTitle}</h2>
         <p className="mt-0.5 max-w-[310px] text-sm leading-5 text-lavender/78">{language === 'en' ? 'A calm view of how your practice is growing.' : 'Спокойный взгляд на то, как растёт твоя практика.'}</p>
       </div>
 
-      <section className="luna-progress-enter relative overflow-hidden rounded-[30px] border border-white/10 bg-[radial-gradient(circle_at_84%_20%,rgba(244,159,92,.2),transparent_28%),linear-gradient(135deg,rgba(30,42,86,.66),rgba(24,20,58,.82))] p-5 shadow-glow">
+      <section className="luna-progress-enter relative overflow-hidden rounded-[30px] border border-white/10 bg-[radial-gradient(circle_at_84%_20%,rgba(212,175,55,.12),transparent_30%),linear-gradient(135deg,rgba(26,38,82,.58),rgba(17,18,49,.78))] p-5 shadow-glow">
         <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-white/18" />
         <div className="relative flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-5xl font-semibold tracking-[-0.07em] text-cream">{streak}</h3>
+            <h3 className="text-[44px] font-semibold leading-none tracking-[-0.07em] text-cream">{streak}</h3>
             <p className="mt-1 text-sm font-semibold text-cream/82">{language === 'en' ? 'Day Streak' : 'Дней подряд'}</p>
             <p className="mt-1 text-xs leading-4 text-lavender/76">{heroLine}</p>
           </div>
-          <div className="luna-streak-symbol grid h-16 w-16 shrink-0 place-items-center rounded-full border border-gold/20 bg-[radial-gradient(circle,rgba(244,159,92,.24),rgba(212,175,55,.08)_54%,rgba(255,255,255,.03))] text-gold shadow-gold" aria-hidden="true">
-            <Flame size={34} strokeWidth={1.7} />
+          <div className="luna-streak-symbol grid h-16 w-16 shrink-0 place-items-center rounded-full border border-gold/20 bg-[radial-gradient(circle,rgba(212,175,55,.12),rgba(142,95,214,.09)_58%,rgba(255,255,255,.025))] shadow-gold" aria-hidden="true">
+            <MoonMark className="h-10 w-10 border-gold/60 opacity-95" />
           </div>
         </div>
-        <div className="mt-6 flex h-14 items-end gap-2" aria-label={language === 'en' ? 'Seven day listening activity chart' : 'Активность прослушиваний за семь дней'}>
+        <div className="relative mt-6 flex h-14 items-end gap-2" aria-label={language === 'en' ? 'Seven day listening activity chart' : 'Активность прослушиваний за семь дней'}>
+          <div className="pointer-events-none absolute inset-x-1 bottom-1 h-px bg-white/10" />
           {chartDays.map((day) => (
             <div key={day.key} className="flex flex-1 flex-col items-center gap-1">
               <span
                 role="img"
                 aria-label={language === 'en' ? `${day.label}: ${day.value} min` : `${day.label}: ${day.value} мин`}
                 title={language === 'en' ? `${day.label}: ${day.value} min` : `${day.label}: ${day.value} мин`}
-                className={`luna-progress-bar w-full max-w-[12px] rounded-full ${day.value > 0 ? (day.key === todayKey ? 'bg-gold shadow-gold' : 'bg-lavender/70') : 'bg-lavender/22'}`}
-                style={{ height: `${day.value > 0 ? Math.max(10, Math.round((day.value / maxChartValue) * 44)) : 6}px` }}
+                className={`luna-progress-bar w-full max-w-[10px] rounded-full ${day.value > 0 ? (day.key === todayKey ? 'bg-gold/80 shadow-gold' : 'bg-lavender/48') : 'bg-cream/12'}`}
+                style={{ height: `${day.value > 0 ? Math.max(10, Math.round((day.value / maxChartValue) * 42)) : 5}px` }}
               />
             </div>
           ))}
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-2.5">
+      <section className="grid grid-cols-2 gap-3">
         {quickStats.map((item) => (
           <ProgressMetricCard key={item.label} {...item} />
         ))}
       </section>
 
       {hasComparison ? (
-        <section className="grid grid-cols-2 gap-2.5">
-          <ProgressCompareCard
-            label={language === 'en' ? 'Earlier' : 'Раньше'}
-            date={localizedShortDate(earliestCheckin?.local_date, language)}
-            mood={earliestCheckin?.mood ?? null}
-            metric={translateMoodLabel(earliestCheckin?.mood ?? null, language)}
-          />
-          <ProgressCompareCard
-            label={latestCheckin?.local_date === todayKey ? (language === 'en' ? 'Today' : 'Сегодня') : (language === 'en' ? 'Latest' : 'Последний')}
-            date={localizedShortDate(latestCheckin?.local_date, language)}
-            mood={latestCheckin?.mood ?? null}
-            metric={translateMoodLabel(latestCheckin?.mood ?? null, language)}
-          />
-        </section>
+        <ProgressMoodTimeline
+          language={language}
+          earlier={{
+            label: language === 'en' ? 'Earlier' : 'Раньше',
+            date: localizedShortDate(earliestCheckin?.local_date, language),
+            mood: earliestCheckin?.mood ?? null,
+            metric: translateMoodLabel(earliestCheckin?.mood ?? null, language)
+          }}
+          latest={{
+            label: latestCheckin?.local_date === todayKey ? (language === 'en' ? 'Today' : 'Сегодня') : (language === 'en' ? 'Current' : 'Сейчас'),
+            date: localizedShortDate(latestCheckin?.local_date, language),
+            mood: latestCheckin?.mood ?? null,
+            metric: translateMoodLabel(latestCheckin?.mood ?? null, language)
+          }}
+        />
       ) : (
         <section className="rounded-[24px] border border-white/10 bg-white/[0.045] p-3.5">
-          <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'Before / Now' : 'Было / Сейчас'}</p>
+          <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'Mood Journey' : 'Путь настроения'}</p>
           <p className="mt-2 text-sm leading-5 text-lavender">
             {language === 'en' ? 'Complete more check-ins to see how your state changes over time.' : 'Сделай ещё несколько чек-инов, чтобы увидеть изменения состояния.'}
           </p>
         </section>
       )}
 
-      <section className="rounded-[24px] border border-white/10 bg-white/[0.045] p-3.5">
+      <section className="luna-progress-enter rounded-[24px] border border-white/10 bg-white/[0.045] p-4">
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-[0.16em] text-gold">{copy[language].weeklyTitle}</p>
-          <div className="mt-1 space-y-0.5">
+          <div className="mt-2 space-y-1">
             {weeklyInsightLines.map((line) => (
               <p key={line} className="text-sm leading-5 text-cream/82">{line}</p>
             ))}
@@ -3177,14 +3178,21 @@ function ProgressPage({
         </div>
       </section>
 
-      <button onClick={onMoonGarden} className="w-full overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.045] p-3 text-left shadow-glow backdrop-blur transition active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-gold/30">
+      <button onClick={onMoonGarden} className="luna-progress-enter w-full overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.025))] p-3 text-left shadow-glow backdrop-blur transition hover:border-gold/20 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-gold/30">
         <div className="flex gap-3">
-          <img src={stage.path} alt="" className="h-24 w-24 shrink-0 rounded-[20px] object-cover" loading="lazy" />
-          <div className="min-w-0 flex-1 py-1">
+          <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-[22px] border border-white/10 bg-night">
+            <img src={stage.path} alt="" className="luna-garden-thumb h-full w-full object-cover" loading="lazy" />
+            <span className="luna-garden-firefly left-[24%] top-[28%]" />
+            <span className="luna-garden-firefly left-[66%] top-[42%]" />
+          </div>
+          <div className="min-w-0 flex-1 py-1.5">
             <p className="text-xs uppercase tracking-[0.16em] text-gold">{copy[language].moonGarden}</p>
-            <h3 className="mt-1 truncate text-base font-semibold text-cream">{stage.level} · {stage.title[language]}</h3>
-            <p className="mt-1 text-xs leading-4 text-lavender">{seeds} {copy[language].moonSeeds} · {plantedCount}/{gardenElements.length} {language === 'en' ? 'growth stages' : 'этапов роста'}</p>
-            <p className="mt-2 text-xs font-semibold text-gold">{language === 'en' ? 'Open Garden →' : 'Открыть сад →'}</p>
+            <h3 className="mt-1 truncate text-base font-semibold text-cream">{language === 'en' ? 'Your Moon Garden' : 'Твой Лунный сад'}</h3>
+            <p className="mt-1.5 line-clamp-2 text-xs leading-4 text-lavender/86">
+              {language === 'en' ? 'A quiet place that grows with every meditation.' : 'Тихое место, которое растёт с каждой практикой.'}
+            </p>
+            <p className="mt-2 text-[11px] leading-4 text-cream/48">{stage.level} · {stage.title[language]} · {seeds} {copy[language].moonSeeds}</p>
+            <p className="mt-2 text-xs font-semibold text-gold">{language === 'en' ? 'Continue growing →' : 'Продолжить растить →'}</p>
           </div>
         </div>
       </button>
@@ -3219,6 +3227,32 @@ function ProgressMetricCard({
   );
 }
 
+function ProgressMoodTimeline({
+  language,
+  earlier,
+  latest
+}: {
+  language: AppLanguage;
+  earlier: { label: string; date: string; mood: DailyCheckin['mood'] | null; metric: string };
+  latest: { label: string; date: string; mood: DailyCheckin['mood'] | null; metric: string };
+}) {
+  return (
+    <section className="luna-progress-enter rounded-[24px] border border-white/10 bg-white/[0.045] p-3.5 backdrop-blur">
+      <div className="mb-3 flex items-center justify-between">
+        <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'Mood Journey' : 'Путь настроения'}</p>
+        <span className="text-[11px] text-lavender/64">{language === 'en' ? 'Earlier → Today' : 'Раньше → Сейчас'}</span>
+      </div>
+      <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-2.5">
+        <ProgressCompareCard {...earlier} />
+        <div className="flex items-center justify-center" aria-hidden="true">
+          <span className="h-px w-5 rounded-full bg-gold/30" />
+        </div>
+        <ProgressCompareCard {...latest} />
+      </div>
+    </section>
+  );
+}
+
 function ProgressCompareCard({ label, date, mood, metric }: { label: string; date: string; mood: DailyCheckin['mood'] | null; metric: string }) {
   const tone = mood === 'calm' || mood === 'focused'
     ? 'border-gold/25 bg-gold/12'
@@ -3227,13 +3261,13 @@ function ProgressCompareCard({ label, date, mood, metric }: { label: string; dat
       : 'border-lavender/25 bg-lavender/12';
 
   return (
-    <article className="luna-progress-enter rounded-[24px] border border-white/10 bg-white/[0.045] p-3.5 backdrop-blur">
+    <article className="rounded-[20px] border border-white/10 bg-night/25 p-3">
       <p className="text-[11px] font-semibold text-lavender">{label}</p>
-      <div className="mt-3 flex items-center gap-3">
-        <span className={`relative h-11 w-11 shrink-0 rounded-[16px] border ${tone}`} aria-hidden="true">
-          <span className="absolute left-3 top-3 h-1.5 w-1.5 rounded-full bg-cream/75" />
-          <span className="absolute right-3 top-3 h-1.5 w-1.5 rounded-full bg-cream/75" />
-          <span className={`absolute bottom-3 left-1/2 h-2 w-5 -translate-x-1/2 rounded-b-full border-b-2 ${mood === 'anxious' || mood === 'stressed' ? 'rotate-180 border-cream/55' : 'border-cream/65'}`} />
+      <div className="mt-2.5 flex items-center gap-2.5">
+        <span className={`relative h-10 w-10 shrink-0 rounded-[15px] border ${tone}`} aria-hidden="true">
+          <span className="absolute left-[11px] top-[11px] h-1.5 w-1.5 rounded-full bg-cream/75" />
+          <span className="absolute right-[11px] top-[11px] h-1.5 w-1.5 rounded-full bg-cream/75" />
+          <span className={`absolute bottom-[11px] left-1/2 h-2 w-5 -translate-x-1/2 rounded-b-full border-b-2 ${mood === 'anxious' || mood === 'stressed' ? 'rotate-180 border-cream/55' : 'border-cream/65'}`} />
         </span>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-cream">{metric}</p>

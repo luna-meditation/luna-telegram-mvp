@@ -303,6 +303,24 @@ input[type="range"] {
   animation: lunaStreakGlow 5.5s ease-in-out infinite;
 }
 
+.luna-garden-thumb {
+  animation: lunaGardenThumbIn 520ms ease-out both;
+}
+
+.luna-garden-firefly {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  border-radius: 999px;
+  background: rgba(244, 214, 122, 0.78);
+  box-shadow: 0 0 14px rgba(244, 214, 122, 0.32);
+  animation: lunaFireflyDrift 7s ease-in-out infinite;
+}
+
+.luna-garden-firefly:nth-of-type(2) {
+  animation-delay: 1.8s;
+}
+
 @keyframes lunaFade {
   from {
     opacity: 0;
@@ -354,11 +372,36 @@ input[type="range"] {
 @keyframes lunaStreakGlow {
   0%,
   100% {
-    box-shadow: 0 18px 50px rgba(212, 175, 55, 0.14);
+    box-shadow: 0 18px 50px rgba(212, 175, 55, 0.12);
   }
 
   50% {
-    box-shadow: 0 20px 58px rgba(244, 159, 92, 0.22);
+    box-shadow: 0 20px 58px rgba(142, 95, 214, 0.18);
+  }
+}
+
+@keyframes lunaGardenThumbIn {
+  from {
+    opacity: 0.82;
+    transform: scale(1.015);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes lunaFireflyDrift {
+  0%,
+  100% {
+    opacity: 0.18;
+    transform: translate3d(0, 0, 0);
+  }
+
+  50% {
+    opacity: 0.58;
+    transform: translate3d(5px, -7px, 0);
   }
 }
 
@@ -389,7 +432,9 @@ input[type="range"] {
 	  .luna-child-page,
 	  .luna-progress-enter,
 	  .luna-progress-bar,
-	  .luna-streak-symbol {
+	  .luna-streak-symbol,
+	  .luna-garden-thumb,
+	  .luna-garden-firefly {
 	    animation: none;
 	  }
 	}
