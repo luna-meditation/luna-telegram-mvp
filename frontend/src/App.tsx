@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  BarChart3,
   Bot,
   CheckCircle,
   Crown,
@@ -2557,7 +2556,11 @@ function App() {
             wellness={wellness}
             language={language}
             onWeeklyReflection={() => setPage('weeklyReflection')}
-            onMoonGarden={() => setPage('moonGarden')}
+            ambiencePlaying={moonGardenAmbiencePlaying}
+            ambienceVolume={moonGardenVolume}
+            ambienceError={moonGardenAmbienceError}
+            onToggleAmbience={toggleMoonGardenAmbience}
+            onAmbienceVolume={changeMoonGardenVolume}
           />
         )}
 
@@ -2943,54 +2946,293 @@ function LunaPage({ firstName, language }: { firstName: string; language: AppLan
   );
 }
 
-function ProgressPage({ profile, wellness, language, onWeeklyReflection, onMoonGarden }: {
+function ProgressPage({
+  profile,
+  wellness,
+  language,
+  onWeeklyReflection,
+  ambiencePlaying,
+  ambienceVolume,
+  ambienceError,
+  onToggleAmbience,
+  onAmbienceVolume
+}: {
   profile: ProfileStats | null;
   wellness: WellnessSummary | null;
   language: AppLanguage;
   onWeeklyReflection: () => void;
-  onMoonGarden: () => void;
+  ambiencePlaying: boolean;
+  ambienceVolume: number;
+  ambienceError: boolean;
+  onToggleAmbience: () => Promise<void>;
+  onAmbienceVolume: (volume: number) => void;
 }) {
+  const totalMinutes = profile?.totalPracticeMinutes ?? profile?.minutesListened ?? 0;
+  const weeklyMinutes = profile?.weeklyPracticeMinutes ?? 0;
   const currentMood = wellness?.mostCommonMoodLabel ? translateMoodLabel(wellness.mostCommonMoodLabel, language) : copy[language].notEnoughData;
-  const garden = moonGardenLevel(profile?.totalPracticeMinutes ?? profile?.minutesListened ?? 0, language);
-  const stats = [
-    { label: copy[language].progressSessions, value: String(profile?.completedMeditations ?? 0) },
-    { label: copy[language].progressMinutes, value: String(profile?.totalPracticeMinutes ?? profile?.minutesListened ?? 0) },
-    { label: copy[language].weeklyCheckins, value: `${wellness?.weeklyCheckinCount ?? 0}/7` },
-    { label: copy[language].statMood, value: currentMood }
+  const garden = moonGardenLevel(totalMinutes, language);
+  const planted = plantedGardenElements(profile);
+  const plantedSet = new Set(planted);
+  const plantedCount = planted.length;
+  const seeds = availableMoonSeeds(profile);
+  const stage = getCurrentGardenStage(plantedCount);
+  const nextElement = nextGardenElement(profile);
+  const readyElement = readyGardenElement(profile);
+  const nextNeeded = nextElement ? Math.max(0, nextElement.cost - seeds) : 0;
+  const nextProgress = nextElement ? Math.min(100, (seeds / Math.max(1, nextElement.cost)) * 100) : 100;
+  const streak = profile?.currentStreak ?? 0;
+  const longestStreak = profile?.longestStreak ?? 0;
+  const weeklyReflection = profileWeeklyInsight(profile, language);
+  const practicedToday = Boolean(profile?.lastPracticeDate && profile.lastPracticeDate === new Date().toISOString().slice(0, 10));
+  const todayPractice = practicedToday ? (language === 'en' ? 'You returned today' : 'Ты вернулся сегодня') : (language === 'en' ? 'Still open' : 'Ещё можно');
+  const quickStats = [
+    {
+      label: language === 'en' ? 'Meditation sessions' : 'Сессии медитаций',
+      value: String(profile?.completedMeditations ?? 0),
+      body: language === 'en' ? 'Completed with Luna' : 'Завершено с Luna',
+      tone: 'strong'
+    },
+    {
+      label: language === 'en' ? 'Listening minutes' : 'Минуты практики',
+      value: minutesCountLabel(totalMinutes, language),
+      body: language === 'en' ? `${weeklyMinutes} min this week` : `${weeklyMinutes} мин на этой неделе`,
+      tone: 'gold'
+    },
+    {
+      label: language === 'en' ? 'Current mood' : 'Текущее настроение',
+      value: currentMood,
+      body: language === 'en' ? 'From your check-ins' : 'Из твоих чек-инов',
+      tone: 'soft'
+    },
+    {
+      label: copy[language].weeklyCheckins,
+      value: `${wellness?.weeklyCheckinCount ?? 0}/7`,
+      body: language === 'en' ? 'Gentle self-awareness' : 'Мягкое внимание к себе',
+      tone: 'soft'
+    }
   ];
+  const weeklyLines = language === 'en'
+    ? [
+        weeklyReflection,
+        weeklyMinutes > 0 ? `Most visible rhythm: ${weeklyMinutes} minutes with Luna this week.` : 'Your calm can begin with one minute today.',
+        currentMood !== copy[language].notEnoughData ? `Your check-ins currently point toward: ${currentMood}.` : 'Check-ins will make future reflections more personal.'
+      ]
+    : [
+        weeklyReflection,
+        weeklyMinutes > 0 ? `Твой заметный ритм: ${weeklyMinutes} мин с Luna на этой неделе.` : 'Твоё спокойствие может начаться с одной минуты сегодня.',
+        currentMood !== copy[language].notEnoughData ? `Сейчас чек-ины показывают: ${currentMood}.` : 'Чек-ины сделают будущие размышления точнее.'
+      ];
 
   return (
-    <div className="luna-page space-y-4">
-      <PageTitle title={copy[language].progressTitle} subtitle={copy[language].progressSubtitle} />
-      <section className="luna-surface-strong relative overflow-hidden rounded-[30px] p-5">
-        <div className="flex items-start justify-between gap-4">
+    <div className="luna-page space-y-5 pb-8">
+      <PageTitle
+        title={copy[language].progressTitle}
+        subtitle={language === 'en' ? 'Every session helps your mind become calmer.' : 'Каждая практика помогает уму становиться спокойнее.'}
+      />
+
+      <section className="luna-surface-strong relative overflow-hidden rounded-[34px] p-5">
+        <div className="pointer-events-none absolute -right-8 -top-12 h-44 w-44 rounded-full bg-gold/14 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-16 left-4 h-44 w-44 rounded-full bg-lavender/18 blur-3xl" />
+        <div className="relative flex items-start justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].progressStreak}</p>
-            <h3 className="mt-3 text-5xl font-semibold tracking-[-0.06em]">{profile?.currentStreak ?? 0}</h3>
-            <p className="mt-1 text-sm text-lavender">{(profile?.currentStreak ?? 0) === 1 ? copy[language].statDay : copy[language].statDays}</p>
+            <h3 className="mt-3 text-6xl font-semibold tracking-[-0.07em]">{streak}</h3>
+            <p className="mt-1 text-sm text-lavender">{quietDayCountLabel(streak, language)}</p>
           </div>
-          <div className="grid h-14 w-14 place-items-center rounded-full bg-gold/15 text-gold">
-            <BarChart3 size={26} />
+          <div className="relative grid h-16 w-16 shrink-0 place-items-center rounded-full border border-gold/25 bg-night/50 text-gold shadow-gold">
+            <span className="absolute inset-2 rounded-full bg-gold/10 blur-md motion-safe:animate-pulse" />
+            <MoonMark className="relative h-10 w-10" />
+          </div>
+        </div>
+        <div className="relative mt-5 grid grid-cols-3 gap-2">
+          <ProgressMiniStat label={copy[language].longestStreak} value={quietDayCountLabel(longestStreak, language)} />
+          <ProgressMiniStat label={language === 'en' ? "Today's practice" : 'Сегодня'} value={todayPractice} />
+          <ProgressMiniStat label={copy[language].progressMinutes} value={minutesCountLabel(totalMinutes, language)} />
+        </div>
+      </section>
+
+      <section className="grid grid-cols-2 gap-3">
+        {quickStats.map((item) => (
+          <ProgressMetricCard key={item.label} {...item} />
+        ))}
+      </section>
+
+      <section className="luna-surface-strong relative overflow-hidden rounded-[32px] p-5">
+        <div className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.06] text-gold">
+          <Bot size={18} />
+        </div>
+        <p className="text-xs uppercase tracking-[0.18em] text-gold">{language === 'en' ? 'AI Weekly Reflection' : 'AI-размышление недели'}</p>
+        <h3 className="mt-2 max-w-[260px] font-serif text-2xl leading-tight">
+          {language === 'en' ? 'A softer read on your week.' : 'Мягкий взгляд на твою неделю.'}
+        </h3>
+        <div className="mt-4 space-y-3">
+          {weeklyLines.map((line) => (
+            <p key={line} className="rounded-[22px] border border-white/10 bg-white/[0.055] px-4 py-3 text-sm leading-6 text-cream/82">
+              {line}
+            </p>
+          ))}
+        </div>
+        <button onClick={onWeeklyReflection} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-full border border-gold/25 bg-gold/10 px-4 text-sm font-semibold text-gold">
+          {copy[language].viewWeeklyReflection}
+          <span>→</span>
+        </button>
+      </section>
+
+      <section className="space-y-3">
+        <div>
+          <p className="luna-section-kicker">{copy[language].progressMoonGarden}</p>
+          <h3 className="luna-editorial-title mt-1 text-[32px] leading-none">{copy[language].moonGarden}</h3>
+          <p className="mt-2 text-sm leading-5 text-lavender">
+            {language === 'en' ? 'Scroll into the garden your practice is growing.' : 'Прокрути ниже в сад, который растёт вместе с практикой.'}
+          </p>
+        </div>
+        <MoonGardenScene
+          profile={profile}
+          language={language}
+          expanded
+          ambiencePlaying={ambiencePlaying}
+          ambienceVolume={ambienceVolume}
+          ambienceError={ambienceError}
+          onToggleAmbience={onToggleAmbience}
+          onAmbienceVolume={onAmbienceVolume}
+        />
+      </section>
+
+      <section className="luna-surface rounded-[28px] p-4">
+        <div className="grid grid-cols-2 gap-3">
+          <ProgressMiniStat label={copy[language].gardenLevel} value={`${stage.level} · ${stage.title[language]}`} />
+          <ProgressMiniStat label={copy[language].moonSeeds} value={String(seeds)} />
+          <ProgressMiniStat label={copy[language].plantedElements} value={`${plantedCount}/${gardenElements.length}`} />
+          <ProgressMiniStat label={language === 'en' ? 'Current season' : 'Текущий сезон'} value={gardenCollections[0].title[language]} />
+        </div>
+        <div className="mt-4">
+          <div className="flex items-center justify-between text-xs text-lavender">
+            <span>{language === 'en' ? 'Progress to next level' : 'Прогресс до уровня'}</span>
+            <span>{Math.round(garden.progress)}%</span>
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-night/70">
+            <div className="h-full rounded-full bg-gradient-to-r from-lavender to-gold" style={{ width: `${Math.max(6, Math.min(100, garden.progress))}%` }} />
           </div>
         </div>
       </section>
-      <section className="grid grid-cols-2 gap-3">
-        {stats.map((item) => (
-          <article key={item.label} className="luna-card rounded-[22px] p-4">
-            <p className="text-[11px] text-lavender">{item.label}</p>
-            <p className="mt-2 text-2xl font-semibold tracking-[-0.04em]">{item.value}</p>
-          </article>
-        ))}
+
+      <section className="space-y-3">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <p className="luna-section-kicker">{language === 'en' ? 'Garden Collection' : 'Коллекция сада'}</p>
+            <h3 className="font-serif text-2xl">{language === 'en' ? 'Seasons and spaces' : 'Сезоны и пространства'}</h3>
+          </div>
+          <span className="rounded-full border border-white/10 bg-white/[0.045] px-3 py-1 text-[10px] text-lavender">Phase 1</span>
+        </div>
+        <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 luna-scrollbar-none">
+          {gardenCollections.map((collection, index) => (
+            <article key={collection.id} className="w-48 shrink-0 overflow-hidden rounded-[26px] border border-white/10 bg-white/[0.045] p-3 backdrop-blur">
+              <div className={`h-24 rounded-[21px] border border-gold/20 ${
+                index === 0
+                  ? 'bg-[radial-gradient(circle_at_50%_20%,rgba(212,175,55,.32),transparent_32%),linear-gradient(180deg,#2b1746,#0c0814)]'
+                  : index === 1
+                    ? 'bg-[radial-gradient(circle_at_50%_25%,rgba(245,241,233,.24),transparent_30%),linear-gradient(180deg,#263050,#0c0814)]'
+                    : 'bg-[radial-gradient(circle_at_50%_25%,rgba(142,95,214,.3),transparent_30%),linear-gradient(180deg,#2e1f45,#101624)]'
+              }`} />
+              <p className="mt-3 text-xs uppercase tracking-[0.14em] text-gold">{collection.status[language]}</p>
+              <h4 className="mt-1 font-serif text-lg">{collection.title[language]}</h4>
+              <p className="mt-1 text-xs leading-5 text-lavender">{collection.body[language]}</p>
+            </article>
+          ))}
+        </div>
       </section>
-      <button onClick={onMoonGarden} className="luna-surface w-full rounded-[24px] p-4 text-left">
-        <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].progressMoonGarden}</p>
-        <p className="mt-2 font-serif text-2xl">{copy[language].profileLevel.replace('{level}', `${garden.level}`)} · {garden.title}</p>
-      </button>
-      <button onClick={onWeeklyReflection} className="flex w-full items-center justify-between rounded-[24px] border border-white/10 bg-white/[0.055] p-4 text-left text-cream shadow-glow backdrop-blur">
-        <span>{copy[language].viewWeeklyReflection}</span>
-        <span className="text-gold">→</span>
-      </button>
+
+      <section className="space-y-3">
+        <div>
+          <p className="luna-section-kicker">{copy[language].gardenElements}</p>
+          <h3 className="font-serif text-2xl">{language === 'en' ? 'Upgrade timeline' : 'Линия улучшений'}</h3>
+        </div>
+        <div className="space-y-2">
+          {gardenElements.map((element, index) => {
+            const isUnlocked = plantedSet.has(element.id);
+            const isGrowing = !isUnlocked && readyElement?.id === element.id;
+            const status = isUnlocked
+              ? (language === 'en' ? 'Unlocked' : 'Открыто')
+              : isGrowing
+                ? (language === 'en' ? 'Growing' : 'Растёт')
+                : copy[language].locked;
+            return (
+              <article key={element.id} className="relative rounded-[24px] border border-white/10 bg-white/[0.04] p-3 backdrop-blur">
+                {index < gardenElements.length - 1 && <span className="absolute left-9 top-[62px] h-5 w-px bg-white/10" />}
+                <div className="flex items-center gap-3">
+                  <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-[18px] border ${isUnlocked ? 'border-gold bg-gold/20 shadow-gold' : isGrowing ? 'border-gold/30 bg-gold/10' : 'border-white/10 bg-night/60'}`}>
+                    <GardenUpgradeIcon visual={element.visual} active={isUnlocked || isGrowing} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <h4 className="truncate text-sm font-semibold text-cream">{element.name[language]}</h4>
+                      <span className={`shrink-0 rounded-full px-2 py-1 text-[10px] ${isUnlocked ? 'bg-white/10 text-lavender' : isGrowing ? 'bg-gold/15 text-gold' : 'bg-night/70 text-lavender'}`}>{status}</span>
+                    </div>
+                    <p className="mt-1 line-clamp-1 text-xs text-lavender">{element.description[language]}</p>
+                  </div>
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="luna-surface-strong relative overflow-hidden rounded-[30px] p-5">
+        <div className="pointer-events-none absolute right-0 top-0 h-36 w-36 rounded-full bg-gold/14 blur-3xl" />
+        <p className="text-xs uppercase tracking-[0.18em] text-gold">{language === 'en' ? 'Next Goal' : 'Следующая цель'}</p>
+        <h3 className="relative mt-2 font-serif text-2xl leading-tight">
+          {nextElement
+            ? (readyElement
+                ? (language === 'en' ? `${readyElement.name.en} is ready to grow.` : `${readyElement.name.ru} готово расти.`)
+                : (language === 'en' ? `Earn ${nextNeeded} more Moon Seeds.` : `Получи ещё ${nextNeeded} Лунных семян.`))
+            : (language === 'en' ? 'Your moon garden is flourishing.' : 'Твой Лунный сад расцветает.')}
+        </h3>
+        <p className="relative mt-2 text-sm leading-6 text-cream/74">
+          {nextElement
+            ? nextElement.description[language]
+            : copy[language].gardenFlourishing}
+        </p>
+        <div className="relative mt-4 h-2 overflow-hidden rounded-full bg-night/70">
+          <div className="h-full rounded-full bg-gold" style={{ width: `${Math.max(8, nextProgress)}%` }} />
+        </div>
+      </section>
     </div>
+  );
+}
+
+function ProgressMiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <article className="rounded-[20px] border border-white/10 bg-white/[0.045] px-3 py-3 backdrop-blur">
+      <p className="text-[10px] uppercase tracking-[0.12em] text-lavender/75">{label}</p>
+      <p className="mt-1 line-clamp-2 text-sm font-semibold leading-5 text-cream">{value}</p>
+    </article>
+  );
+}
+
+function ProgressMetricCard({
+  label,
+  value,
+  body,
+  tone
+}: {
+  label: string;
+  value: string;
+  body: string;
+  tone: string;
+}) {
+  const accent = tone === 'gold'
+    ? 'from-gold/18 via-white/[0.045] to-white/[0.025]'
+    : tone === 'strong'
+      ? 'from-lavender/18 via-white/[0.05] to-white/[0.025]'
+      : 'from-white/[0.07] via-white/[0.04] to-white/[0.02]';
+
+  return (
+    <article className={`relative overflow-hidden rounded-[26px] border border-white/10 bg-gradient-to-br ${accent} p-4 shadow-glow backdrop-blur`}>
+      <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-gold/10 blur-2xl" />
+      <p className="relative text-[11px] leading-4 text-lavender">{label}</p>
+      <p className="relative mt-3 text-2xl font-semibold tracking-[-0.04em] text-cream">{value}</p>
+      <p className="relative mt-2 text-[11px] leading-4 text-cream/58">{body}</p>
+    </article>
   );
 }
 
