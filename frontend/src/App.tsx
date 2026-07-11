@@ -2871,15 +2871,15 @@ function LibraryPage(props: {
 
 function MeditationCardSkeleton() {
   return (
-    <article className="animate-pulse border-b border-white/10 py-2">
-      <div className="grid grid-cols-[88px_minmax(0,1fr)_42px] items-center gap-3">
-        <div className="h-[88px] w-[88px] rounded-[18px] bg-cream/10" />
+    <article className="animate-pulse border-b border-white/10 py-1.5">
+      <div className="grid grid-cols-[80px_minmax(0,1fr)_38px] items-center gap-3">
+        <div className="h-20 w-20 rounded-[17px] bg-cream/10" />
         <div className="min-w-0 flex-1">
           <div className="h-4 w-36 rounded-full bg-cream/15" />
           <div className="mt-2 h-3 w-24 rounded-full bg-cream/10" />
           <div className="mt-2 h-3 w-full rounded-full bg-cream/10" />
         </div>
-        <div className="h-10 w-10 rounded-full bg-cream/10" />
+        <div className="h-[38px] w-[38px] rounded-full bg-cream/10" />
       </div>
     </article>
   );
@@ -3041,12 +3041,12 @@ function MeditationCard({ meditation, locked, showPopular, onOpen, onFavorite, o
   const hasBadges = meditation.premium || showPopular || hasProgress;
   return (
     <article className="luna-editorial-row">
-      <div className="grid grid-cols-[88px_minmax(0,1fr)_42px] items-center gap-3">
+      <div className="grid grid-cols-[80px_minmax(0,1fr)_38px] items-center gap-3">
         <button onClick={() => (locked ? onUnlock() : onOpen(meditation))} className="relative shrink-0 text-left">
-          <img src={meditation.cover_image} alt="" className={`h-[88px] w-[88px] rounded-[18px] object-cover shadow-glow ${locked ? 'blur-sm' : ''}`} loading="lazy" />
+          <img src={meditation.cover_image} alt="" className={`h-20 w-20 rounded-[17px] object-cover shadow-glow ${locked ? 'blur-sm' : ''}`} loading="lazy" />
           {locked && <Lock className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gold" />}
         </button>
-        <div className="grid min-h-[88px] min-w-0 content-center">
+        <div className="grid min-h-20 min-w-0 content-center">
           <button onClick={() => (locked ? onUnlock() : onOpen(meditation))} className="w-full text-left">
             <div className="flex items-center gap-2">
               <h3 className="truncate text-[15px] font-semibold leading-tight text-cream">{localized.title}</h3>
@@ -3064,7 +3064,7 @@ function MeditationCard({ meditation, locked, showPopular, onOpen, onFavorite, o
             </div>
           )}
         </div>
-        <button onClick={() => onFavorite(meditation)} className="grid min-h-10 min-w-10 place-items-center rounded-full border border-white/10 bg-white/[0.045] text-cream transition hover:bg-white/[0.075]" aria-label="Favorite meditation">
+        <button onClick={() => onFavorite(meditation)} className="grid min-h-[38px] min-w-[38px] place-items-center rounded-full border border-white/10 bg-white/[0.045] text-cream transition hover:bg-white/[0.075]" aria-label="Favorite meditation">
           <Heart size={16} className={meditation.favorite ? 'fill-gold text-gold' : 'text-cream/72'} />
         </button>
       </div>
