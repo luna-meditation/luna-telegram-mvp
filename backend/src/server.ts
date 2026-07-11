@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import cors from 'cors';
 import express from 'express';
+import { ZodError } from 'zod';
 import { requireTelegramWebApp, type AuthenticatedRequest } from './auth.js';
 import { env } from './config.js';
 import { bot, configureTelegramBot, createStarsInvoiceLink, sendStarsInvoice } from './bot.js';
@@ -41,6 +42,17 @@ import {
 } from './db.js';
 import { runMigrations } from './migrations.js';
 import { isPlanId } from './plans.js';
+import {
+  clearLunaConversations,
+  deleteLunaConversation,
+  deleteLunaMemory,
+  getLunaConversation,
+  getLunaMemory,
+  listLunaConversations,
+  LunaAiError,
+  sendLunaMessage,
+  setLunaMemoryEnabled
+} from './luna-ai.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -146,6 +158,7 @@ function storagePathFromPublicUrl(publicUrl?: string | null, bucket = 'avatars')
 
 app.use('/api/admin', rateLimit({ windowMs: 60_000, max: 120 }));
 app.use('/api/payments', rateLimit({ windowMs: 60_000, max: 30 }));
+app.use('/api/luna', rateLimit({ windowMs: 60_000, max: 30 }));
 
 app.post(
   '/api/admin/storage/:kind',
@@ -464,6 +477,92 @@ app.get('/api/profile/me', requireTelegramWebApp, async (req, res, next) => {
   }
 });
 
+app.get('/api/luna/conversations', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    res.json({ conversations: await listLunaConversations(authReq.telegramUser.telegram_id) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/luna/conversations/:id', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    res.json(await getLunaConversation(authReq.telegramUser.telegram_id, req.params.id));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/luna/chat', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    res.json(await sendLunaMessage(authReq.telegramUser, req.body));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete('/api/luna/conversations/:id', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    await deleteLunaConversation(authReq.telegramUser.telegram_id, req.params.id);
+    res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete('/api/luna/conversations', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    await clearLunaConversations(authReq.telegramUser.telegram_id);
+    res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/luna/memory', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    res.json(await getLunaMemory(authReq.telegramUser.telegram_id));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.patch('/api/luna/memory', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    await setLunaMemoryEnabled(authReq.telegramUser.telegram_id, Boolean(req.body?.enabled));
+    res.json({ ok: true, enabled: Boolean(req.body?.enabled) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete('/api/luna/memory/:id', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    await deleteLunaMemory(authReq.telegramUser.telegram_id, req.params.id);
+    res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete('/api/luna/memory', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    await deleteLunaMemory(authReq.telegramUser.telegram_id);
+    res.json({ ok: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.post('/api/moon-garden/plant', requireTelegramWebApp, async (req, res, next) => {
   try {
     const authReq = req as AuthenticatedRequest;
@@ -663,7 +762,15 @@ app.use((error: unknown, req: express.Request, res: express.Response, next: expr
     path: req.path,
     error: error instanceof Error ? error.message : 'Unknown error'
   });
-  res.status(500).json({ error: 'Something went wrong.' });
+  if (error instanceof LunaAiError) {
+    res.status(error.status).json({ error: error.message, code: error.code });
+    return;
+  }
+  if (error instanceof ZodError) {
+    res.status(400).json({ error: 'Invalid request.', code: 'invalid_request' });
+    return;
+  }
+  res.status(500).json({ error: 'Something went wrong.', code: 'internal_error' });
 });
 
 app.listen(env.PORT, async () => {

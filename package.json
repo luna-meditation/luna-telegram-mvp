@@ -12,6 +12,7 @@
     "dev:backend": "pnpm --filter @luna/backend dev",
     "build": "pnpm --filter @luna/frontend build && pnpm --filter @luna/backend build && pnpm --filter @luna/website build",
     "lint": "pnpm --filter @luna/frontend lint && pnpm --filter @luna/backend lint",
+    "test": "pnpm --filter @luna/backend test",
     "typecheck": "pnpm --filter @luna/frontend typecheck && pnpm --filter @luna/backend typecheck"
   }
 }

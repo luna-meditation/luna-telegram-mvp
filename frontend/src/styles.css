@@ -838,6 +838,394 @@ input[type="range"] {
   animation: lunaConversationIn 240ms ease-out both;
 }
 
+.luna-ai-overview {
+  display: grid;
+  gap: 18px;
+  padding-bottom: 20px;
+  animation: lunaConversationIn 220ms ease-out both;
+}
+
+.luna-ai-overview-header,
+.luna-live-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.luna-ai-overview-header h2,
+.luna-live-chat-header h2 {
+  color: var(--luna-text-primary);
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.08;
+}
+
+.luna-ai-overview-header p,
+.luna-live-chat-header p {
+  margin-top: 4px;
+  color: var(--luna-text-secondary);
+  font-size: 12px;
+}
+
+.luna-ai-overview-header > button,
+.luna-live-chat-header > button {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(230, 236, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--luna-gold-soft);
+}
+
+.luna-live-chat-header > button:disabled {
+  opacity: 0.28;
+}
+
+.luna-ai-welcome,
+.luna-live-empty {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+}
+
+.luna-ai-welcome .luna-breathing-orb,
+.luna-live-empty .luna-breathing-orb {
+  width: 86px;
+  height: 86px;
+  margin: 4px 0 18px;
+}
+
+.luna-ai-welcome h3,
+.luna-live-empty h3 {
+  color: var(--luna-text-primary);
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.04em;
+}
+
+.luna-ai-welcome p,
+.luna-live-empty p {
+  margin-top: 7px;
+  color: var(--luna-text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.luna-ai-prompts,
+.luna-live-empty > div:last-child {
+  display: flex;
+  gap: 8px;
+  margin-inline: -16px;
+  padding: 0 16px 3px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.luna-ai-prompts::-webkit-scrollbar,
+.luna-live-empty > div:last-child::-webkit-scrollbar {
+  display: none;
+}
+
+.luna-ai-prompts button,
+.luna-live-empty > div:last-child button {
+  min-height: 42px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(230, 236, 255, 0.1);
+  border-radius: 999px;
+  padding: 0 14px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--luna-text-primary);
+  font-size: 13px;
+  transition: transform 200ms ease, border-color 200ms ease, background 200ms ease;
+}
+
+.luna-ai-prompts button:active,
+.luna-live-empty > div:last-child button:active {
+  transform: scale(0.97);
+  border-color: rgba(212, 175, 55, 0.3);
+  background: rgba(212, 175, 55, 0.08);
+}
+
+.luna-ai-recent h3 {
+  margin-bottom: 9px;
+  color: var(--luna-text-primary);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.luna-ai-recent > button {
+  display: flex;
+  min-height: 62px;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid rgba(230, 236, 255, 0.07);
+  padding: 9px 2px;
+  text-align: left;
+}
+
+.luna-ai-recent > button span {
+  min-width: 0;
+}
+
+.luna-ai-recent strong,
+.luna-ai-recent small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.luna-ai-recent strong {
+  color: var(--luna-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.luna-ai-recent small,
+.luna-ai-recent time,
+.luna-ai-empty-history {
+  color: var(--luna-text-secondary);
+  font-size: 11px;
+}
+
+.luna-ai-recent small {
+  max-width: 270px;
+  margin-top: 4px;
+}
+
+.luna-ai-recent time {
+  flex: 0 0 auto;
+}
+
+.luna-ai-empty-history {
+  border: 1px solid rgba(230, 236, 255, 0.08);
+  border-radius: 20px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.03);
+  line-height: 1.6;
+}
+
+.luna-ai-kicker {
+  color: var(--luna-gold-soft) !important;
+  font-size: 11px !important;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.luna-ai-kicker + p {
+  margin-top: 8px;
+  color: var(--luna-text-primary);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.luna-ai-error,
+.luna-live-error {
+  border: 1px solid rgba(244, 190, 122, 0.2);
+  border-radius: 18px;
+  padding: 11px 13px;
+  background: rgba(110, 61, 75, 0.18);
+  color: #f2d7cf;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.luna-ai-loading-line {
+  height: 62px;
+  border-radius: 18px;
+  background: linear-gradient(90deg, rgba(255,255,255,.03), rgba(255,255,255,.08), rgba(255,255,255,.03));
+  background-size: 200% 100%;
+  animation: lunaShimmer 1.6s linear infinite;
+}
+
+.luna-live-chat {
+  position: relative;
+  display: flex;
+  height: calc(100dvh - 148px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+  animation: lunaConversationIn 220ms ease-out both;
+}
+
+.luna-live-chat-header {
+  flex: 0 0 auto;
+  min-height: 58px;
+  border-bottom: 1px solid rgba(230, 236, 255, 0.075);
+  padding-bottom: 9px;
+}
+
+.luna-live-chat-header > div {
+  min-width: 0;
+  flex: 1;
+  text-align: center;
+}
+
+.luna-live-chat-header h2 {
+  overflow: hidden;
+  font-size: 17px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.luna-live-message-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px 1px 18px;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.luna-live-empty {
+  min-height: 100%;
+  align-content: center;
+  padding: 24px 4px;
+}
+
+.luna-live-empty > div:last-child {
+  width: calc(100% + 32px);
+  margin-top: 22px;
+}
+
+.luna-live-message-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  margin: 10px 0;
+  animation: lunaConversationIn 200ms ease-out both;
+}
+
+.luna-live-message-user {
+  justify-content: flex-end;
+}
+
+.luna-live-message-content {
+  min-width: 0;
+  max-width: 86%;
+}
+
+.luna-live-message-row .luna-message-bubble {
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.luna-live-message-user .luna-message-bubble {
+  border-color: rgba(157, 140, 255, 0.28);
+  border-bottom-right-radius: 8px;
+  background: linear-gradient(145deg, rgba(117, 98, 214, 0.48), rgba(66, 55, 142, 0.44));
+}
+
+.luna-live-message-assistant .luna-message-bubble {
+  border-bottom-left-radius: 8px;
+  background: rgba(255, 255, 255, 0.055);
+  backdrop-filter: blur(16px);
+}
+
+.luna-live-message-content .luna-recommendation-message {
+  width: 100%;
+  margin: 8px 0 0;
+}
+
+.luna-recommendation-message b {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 6px 8px;
+  background: var(--luna-gold-soft);
+  color: #11152d;
+  font-size: 10px;
+}
+
+.luna-live-error {
+  margin: 12px 0;
+}
+
+.luna-live-error button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--luna-gold-soft);
+  font-weight: 650;
+}
+
+.luna-scroll-latest {
+  position: absolute;
+  right: 8px;
+  bottom: 68px;
+  z-index: 3;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 1px solid rgba(212, 175, 55, 0.24);
+  border-radius: 999px;
+  background: rgba(17, 25, 54, 0.9);
+  color: var(--luna-gold-soft);
+  box-shadow: 0 10px 24px rgba(0,0,0,.24);
+  backdrop-filter: blur(14px);
+}
+
+.luna-live-composer {
+  display: flex;
+  min-height: 52px;
+  flex: 0 0 auto;
+  align-items: flex-end;
+  gap: 8px;
+  border: 1px solid rgba(230, 236, 255, 0.11);
+  border-radius: 24px;
+  padding: 7px 8px 7px 14px;
+  background: rgba(16, 23, 50, 0.9);
+  box-shadow: 0 -10px 32px rgba(6, 10, 28, 0.22);
+  backdrop-filter: blur(20px);
+}
+
+.luna-live-composer textarea {
+  max-height: 112px;
+  min-height: 36px;
+  min-width: 0;
+  flex: 1;
+  resize: none;
+  border: 0;
+  padding: 8px 0;
+  background: transparent;
+  color: var(--luna-text-primary);
+  font: inherit;
+  font-size: 14px;
+  line-height: 20px;
+  outline: none;
+}
+
+.luna-live-composer textarea::placeholder {
+  color: rgba(181, 189, 220, 0.56);
+}
+
+.luna-live-composer > button {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--luna-gold-soft);
+  color: #11152d;
+}
+
+.luna-live-composer > button:disabled {
+  background: rgba(255,255,255,.08);
+  color: rgba(181,189,220,.45);
+}
+
 .luna-chat-header {
   display: flex;
   min-height: 48px;

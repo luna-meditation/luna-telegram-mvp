@@ -226,6 +226,37 @@ export type MeditationPayload = {
   translations?: Partial<Record<AppLanguage, MeditationTranslation>>;
 };
 
+export type LunaConversationSummary = {
+  id: string;
+  title: string;
+  language: AppLanguage;
+  status: 'active' | 'archived';
+  created_at: string;
+  updated_at: string;
+  last_message_at: string;
+  latestMessage: string;
+};
+
+export type LunaMessage = {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  metadata?: {
+    recommendedMeditationId?: string | null;
+    safetyState?: string;
+  };
+  created_at: string;
+};
+
+export type LunaMemory = {
+  id: string;
+  category: string;
+  memory_key: string;
+  memory_value: string;
+  created_at: string;
+  updated_at: string;
+};
+
 function telegramHeaders(initData?: string) {
   const headers: Record<string, string> = {};
 
@@ -433,6 +464,51 @@ export async function getWellnessSummary(initData?: string): Promise<WellnessSum
 
 export async function getProfile(initData?: string): Promise<ProfileStats> {
   return request('/api/profile/me', undefined, initData);
+}
+
+export async function getLunaConversations(initData?: string) {
+  const response = await request<{ conversations: LunaConversationSummary[] }>('/api/luna/conversations', undefined, initData);
+  return response.conversations;
+}
+
+export async function getLunaConversation(conversationId: string, initData?: string) {
+  return request<{ conversation: LunaConversationSummary; messages: LunaMessage[] }>(`/api/luna/conversations/${conversationId}`, undefined, initData);
+}
+
+export async function sendLunaMessage(input: {
+  conversationId?: string;
+  message: string;
+  language: AppLanguage;
+  requestId: string;
+}, initData?: string) {
+  return request<{ conversationId: string; message: LunaMessage; duplicate: boolean; remaining: number }>('/api/luna/chat', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  }, initData);
+}
+
+export async function deleteLunaConversation(conversationId: string, initData?: string) {
+  return request<{ ok: true }>(`/api/luna/conversations/${conversationId}`, { method: 'DELETE' }, initData);
+}
+
+export async function clearLunaConversations(initData?: string) {
+  return request<{ ok: true }>('/api/luna/conversations', { method: 'DELETE' }, initData);
+}
+
+export async function getLunaMemory(initData?: string) {
+  return request<{ enabled: boolean; available: boolean; memories: LunaMemory[] }>('/api/luna/memory', undefined, initData);
+}
+
+export async function setLunaMemoryEnabled(enabled: boolean, initData?: string) {
+  return request<{ ok: true; enabled: boolean }>('/api/luna/memory', { method: 'PATCH', body: JSON.stringify({ enabled }) }, initData);
+}
+
+export async function deleteLunaMemory(memoryId: string, initData?: string) {
+  return request<{ ok: true }>(`/api/luna/memory/${memoryId}`, { method: 'DELETE' }, initData);
+}
+
+export async function clearLunaMemory(initData?: string) {
+  return request<{ ok: true }>('/api/luna/memory', { method: 'DELETE' }, initData);
 }
 
 export async function updateUserLanguage(language: AppLanguage, initData?: string) {

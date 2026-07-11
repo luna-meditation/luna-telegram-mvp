@@ -12,11 +12,9 @@ import {
   Heart,
   Image as ImageIcon,
   Lock,
-  Mic,
   Pause,
   Play,
   Search,
-  Send,
   Settings,
   Share2,
   SkipBack,
@@ -31,6 +29,9 @@ import {
 import {
   createInvoiceLink,
   createMeditation,
+  clearLunaConversations,
+  clearLunaMemory,
+  deleteLunaMemory,
   deleteMeditation,
   getAccess,
   checkAdmin,
@@ -39,6 +40,7 @@ import {
   getAdminMeditations,
   getFavorites,
   getHistory,
+  getLunaMemory,
   getMeditations,
   getProfile,
   getWellnessSummary,
@@ -49,6 +51,7 @@ import {
   saveBreathSession,
   saveHistory,
   setFavorite,
+  setLunaMemoryEnabled,
   syncUser,
   uploadProfileAvatar,
   updateNotificationPreferences,
@@ -67,6 +70,7 @@ import {
   type DailyCheckinPayload,
   type Meditation,
   type MeditationPayload,
+  type LunaMemory,
   type MoonGardenDevAction,
   type NotificationPreferences,
   type PlaybackHistory,
@@ -74,6 +78,7 @@ import {
   type WellnessSummary
 } from './api';
 import { MoonGardenScene as AnimatedMoonGardenScene } from './components/moon-garden/MoonGardenScene';
+import { LunaChat } from './components/LunaChat';
 import { V2BottomNav } from './v2/components/V2BottomNav';
 import { HomeV2 } from './v2/pages/HomeV2';
 
@@ -1919,14 +1924,18 @@ function App() {
   useEffect(() => {
     telegram?.ready();
     telegram?.expand();
-    telegram?.checkHomeScreenStatus?.((status) => {
-      if (status === 'added') {
-        setHomeScreenStatus('added');
-        setHomeScreenMessage(copy[language].addHomeDone);
-      } else if (status === 'unsupported') {
-        setHomeScreenStatus('unsupported');
-      }
-    });
+    try {
+      telegram?.checkHomeScreenStatus?.((status) => {
+        if (status === 'added') {
+          setHomeScreenStatus('added');
+          setHomeScreenMessage(copy[language].addHomeDone);
+        } else if (status === 'unsupported') {
+          setHomeScreenStatus('unsupported');
+        }
+      });
+    } catch {
+      setHomeScreenStatus('unsupported');
+    }
     if (initialLibraryCache?.meditations.length) {
       preloadCoverImages(initialLibraryCache.meditations);
     }
@@ -2224,21 +2233,26 @@ function App() {
     }
 
     if (telegram?.checkHomeScreenStatus) {
-      telegram.checkHomeScreenStatus((status) => {
-        if (status === 'added') {
+      try {
+        telegram.checkHomeScreenStatus((status) => {
+          if (status === 'added') {
+            setHomeScreenStatus('added');
+            setHomeScreenMessage(copy[language].addHomeDone);
+            return;
+          }
+          if (status === 'unsupported' || !telegram.addToHomeScreen) {
+            setHomeScreenStatus('unsupported');
+            setHomeScreenMessage(copy[language].addHomeUnsupported);
+            return;
+          }
+          telegram.addToHomeScreen();
           setHomeScreenStatus('added');
           setHomeScreenMessage(copy[language].addHomeDone);
-          return;
-        }
-        if (status === 'unsupported' || !telegram.addToHomeScreen) {
-          setHomeScreenStatus('unsupported');
-          setHomeScreenMessage(copy[language].addHomeUnsupported);
-          return;
-        }
-        telegram.addToHomeScreen();
-        setHomeScreenStatus('added');
-        setHomeScreenMessage(copy[language].addHomeDone);
-      });
+        });
+      } catch {
+        setHomeScreenStatus('unsupported');
+        setHomeScreenMessage(copy[language].addHomeUnsupported);
+      }
       return;
     }
 
@@ -2595,6 +2609,7 @@ function App() {
             language={language}
             meditations={decoratedMeditations}
             hasPremium={access.hasPremium}
+            initData={initData}
             onOpenMeditation={openMeditation}
           />
         )}
@@ -2964,539 +2979,32 @@ function PageTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   );
 }
 
-type LunaHelpTopic = {
-  icon: string;
-  title: string;
-  body: string;
-  prompt: string;
-};
-
-type LunaOrbState = 'idle' | 'listening' | 'thinking' | 'responding';
-type LunaMessageRole = 'user' | 'assistant';
-type LunaMessageStatus = 'sent' | 'thinking' | 'retry' | 'error';
-type LunaSafetyState = 'none' | 'crisis' | 'medical_disclaimer' | 'blocked' | 'unavailable';
-
-type LunaChatMessage = {
-  id: string;
-  role: LunaMessageRole;
-  text: string;
-  createdAt: string;
-  status?: LunaMessageStatus;
-  safetyState?: LunaSafetyState;
-  recommendedMeditationId?: string;
-};
-
-type LunaConversation = {
-  id: string;
-  title: string;
-  createdAt: string;
-  updatedAt: string;
-  messages: LunaChatMessage[];
-};
-
-const lunaConversationsStorageKey = 'luna.companion.conversations.v1';
-const lunaActiveConversationStorageKey = 'luna.companion.activeConversation.v1';
-
-function lunaId(prefix: string) {
-  return `${prefix}-${typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`}`;
-}
-
-function readLunaConversations(): LunaConversation[] {
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(lunaConversationsStorageKey) ?? '[]') as LunaConversation[];
-    return Array.isArray(parsed) ? parsed.filter((conversation) => Array.isArray(conversation.messages)) : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeLunaConversations(conversations: LunaConversation[]) {
-  window.localStorage.setItem(lunaConversationsStorageKey, JSON.stringify(conversations.slice(0, 12)));
-}
-
-function createLunaConversation(seedText: string, language: AppLanguage): LunaConversation {
-  const now = new Date().toISOString();
-  const clean = seedText.trim();
-  return {
-    id: lunaId('conversation'),
-    title: clean ? clean.slice(0, 42) : (language === 'ru' ? 'Новый разговор' : 'New conversation'),
-    createdAt: now,
-    updatedAt: now,
-    messages: []
-  };
-}
-
-function updateLunaConversation(conversation: LunaConversation, messages: LunaChatMessage[]): LunaConversation {
-  return {
-    ...conversation,
-    title: conversation.title || messages.find((message) => message.role === 'user')?.text.slice(0, 42) || conversation.title,
-    updatedAt: new Date().toISOString(),
-    messages
-  };
-}
-
-function lunaDateLabel(value: string, language: AppLanguage) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US', { month: 'short', day: 'numeric' });
-}
-
-function chooseLunaRecommendation(input: string, meditations: Meditation[]) {
-  const lower = input.toLowerCase();
-  const official = meditations.filter((meditation) => !isDemoMeditation(meditation));
-  return official.find((meditation) => lower.includes('sleep') || lower.includes('сон') ? meditation.category === 'sleep' : false) ??
-    official.find((meditation) => lower.includes('anxious') || lower.includes('трев') ? meditation.category === 'anxiety' : false) ??
-    official.find((meditation) => lower.includes('focus') || lower.includes('фокус') ? meditation.category === 'focus' : false) ??
-    official[0];
-}
-
-const localLunaChatService = {
-  async respond(input: string, language: AppLanguage, meditations: Meditation[]): Promise<LunaChatMessage> {
-    await new Promise((resolve) => window.setTimeout(resolve, 620));
-    const lower = input.toLowerCase();
-    const wantsRecommendation = /recommend|meditation|practice|подбери|медитац|практик|sleep|сон|anxious|трев/.test(lower);
-    const recommended = wantsRecommendation ? chooseLunaRecommendation(input, meditations) : undefined;
-    const text = language === 'ru'
-      ? lower.includes('сон') || lower.includes('уснуть')
-        ? 'Давай начнём мягко. Положи внимание на выдох и не пытайся заставить себя уснуть — просто дай телу понять, что сейчас можно отпускать.'
-        : lower.includes('трев') || lower.includes('мысли')
-          ? 'Я рядом. Попробуй назвать одно чувство и одно место в теле, где оно ощущается. Не нужно решать всё сразу — сначала просто заметить.'
-          : recommended
-            ? 'Я подобрала спокойную практику, с которой можно начать прямо сейчас.'
-            : 'Спасибо, что сказал(а). Давай сделаем это маленьким и бережным: один вдох, один выдох, один следующий шаг.'
-      : lower.includes('sleep') || lower.includes("can't sleep")
-        ? "Let's begin softly. Place your attention on the exhale and don't try to force sleep — just let your body know it is allowed to let go."
-        : lower.includes('anxious') || lower.includes('thoughts')
-          ? "I'm here. Try naming one feeling and one place in your body where it lives. We don't have to solve everything at once."
-          : recommended
-            ? 'I found a gentle practice you can begin with right now.'
-            : 'Thank you for saying that. Let’s keep this small and kind: one inhale, one exhale, one next step.';
-
-    return {
-      id: lunaId('message'),
-      role: 'assistant',
-      text,
-      createdAt: new Date().toISOString(),
-      status: 'sent',
-      safetyState: 'none',
-      recommendedMeditationId: recommended?.id
-    };
-  }
-};
-
-function dailyLunaThought(language: AppLanguage) {
-  const thoughts = language === 'ru'
-    ? [
-      'Отдых не нужно заслуживать. Иногда его просто можно себе позволить.',
-      'Мягкий выдох тоже считается возвращением к себе.',
-      'Тебе не нужно решать всё сразу. Начни с одного спокойного момента.',
-      'Иногда забота о себе звучит очень тихо: я здесь.'
-    ]
-    : [
-      "Rest isn't something you earn. Sometimes it's simply something you allow yourself.",
-      'A softer breath still counts as returning to yourself.',
-      "You don't have to solve everything at once. Begin with one calm moment.",
-      "Sometimes self-care sounds very quiet: I'm here."
-    ];
-  const dayIndex = Math.floor(Date.now() / 86_400_000) % thoughts.length;
-  return thoughts[dayIndex];
-}
-
 function LunaPage({
   firstName,
   language,
   meditations,
   hasPremium,
+  initData,
   onOpenMeditation
 }: {
   firstName: string;
   language: AppLanguage;
   meditations: Meditation[];
   hasPremium: boolean;
+  initData?: string;
   onOpenMeditation: (meditation: Meditation) => void;
 }) {
-  const [draft, setDraft] = useState('');
-  const [firstOpen, setFirstOpen] = useState(() => window.localStorage.getItem('luna.companion.opened.v1') !== 'true');
-  const [conversations, setConversations] = useState<LunaConversation[]>(readLunaConversations);
-  const [activeConversationId, setActiveConversationId] = useState(() => window.localStorage.getItem(lunaActiveConversationStorageKey) ?? '');
-  const [thinking, setThinking] = useState(false);
-  const endRef = useRef<HTMLDivElement | null>(null);
-  const quickActions = language === 'ru'
-    ? ['🌙 Не могу уснуть', '🧠 Мысли не останавливаются', '💼 Я перегружен(а)', '❤️ Хочу с кем-то поговорить', '✨ Подбери медитацию на сегодня']
-    : ["🌙 I can't sleep", "🧠 My thoughts won't stop", "💼 I'm overwhelmed", '❤️ I need someone to talk to', "✨ Recommend today's meditation"];
-  const compactSuggestions: LunaHelpTopic[] = language === 'ru'
-    ? [
-      { icon: '🌙', title: 'Сон', body: '', prompt: 'Помоги мне мягко подготовиться ко сну.' },
-      { icon: '🫧', title: 'Стресс', body: '', prompt: 'Помоги мне снизить напряжение.' },
-      { icon: '🤍', title: 'Поддержка', body: '', prompt: 'Мне нужна поддержка без осуждения.' },
-      { icon: '🎧', title: 'Фокус', body: '', prompt: 'Помоги мне найти спокойный следующий шаг.' },
-      { icon: '🕯️', title: 'Выгорание', body: '', prompt: 'Кажется, я выгораю. Помоги мне остановиться.' },
-      { icon: '🌿', title: 'Осознанность', body: '', prompt: 'Хочу вернуться в настоящий момент.' }
-    ]
-    : [
-      { icon: '🌙', title: 'Sleep', body: '', prompt: 'Help me soften into sleep tonight.' },
-      { icon: '🫧', title: 'Stress', body: '', prompt: 'Help me lower the tension in my body.' },
-      { icon: '🤍', title: 'Support', body: '', prompt: 'I need support without judgment.' },
-      { icon: '🎧', title: 'Focus', body: '', prompt: 'Help me find the next calm step.' },
-      { icon: '🕯️', title: 'Burnout', body: '', prompt: 'I think I am burned out. Help me pause.' },
-      { icon: '🌿', title: 'Mindfulness', body: '', prompt: 'Help me come back to the present moment.' }
-    ];
-
-  useEffect(() => {
-    window.localStorage.setItem('luna.companion.opened.v1', 'true');
-    if (firstOpen) window.setTimeout(() => setFirstOpen(false), 900);
-  }, [firstOpen]);
-
-  useEffect(() => {
-    writeLunaConversations(conversations);
-  }, [conversations]);
-
-  useEffect(() => {
-    if (activeConversationId) window.localStorage.setItem(lunaActiveConversationStorageKey, activeConversationId);
-  }, [activeConversationId]);
-
-  const activeConversation = conversations.find((conversation) => conversation.id === activeConversationId) ?? conversations[0] ?? null;
-  const messages = activeConversation?.messages ?? [];
-  const lastMessage = messages[messages.length - 1];
-  const orbState: LunaOrbState = thinking ? 'thinking' : draft.trim() ? 'listening' : lastMessage?.role === 'assistant' ? 'responding' : 'idle';
-  const showWelcome = messages.length === 0;
-  const sortedConversations = [...conversations].sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime());
-
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [messages.length, thinking]);
-
-  const startNewConversation = () => {
-    const next = createLunaConversation('', language);
-    setConversations((current) => [next, ...current]);
-    setActiveConversationId(next.id);
-    setDraft('');
-  };
-
-  const sendMessage = async (text: string) => {
-    const clean = text.trim();
-    if (!clean || thinking) return;
-    const baseConversation = activeConversation ?? createLunaConversation(clean, language);
-    const userMessage: LunaChatMessage = {
-      id: lunaId('message'),
-      role: 'user',
-      text: clean,
-      createdAt: new Date().toISOString(),
-      status: 'sent',
-      safetyState: 'none'
-    };
-    const nextConversation = updateLunaConversation(baseConversation, [...baseConversation.messages, userMessage]);
-
-    setDraft('');
-    setActiveConversationId(nextConversation.id);
-    setConversations((current) => {
-      const exists = current.some((conversation) => conversation.id === nextConversation.id);
-      return exists
-        ? current.map((conversation) => conversation.id === nextConversation.id ? nextConversation : conversation)
-        : [nextConversation, ...current];
-    });
-
-    setThinking(true);
-    try {
-      const response = await localLunaChatService.respond(clean, language, meditations);
-      setConversations((current) => current.map((conversation) => {
-        if (conversation.id !== nextConversation.id) return conversation;
-        return updateLunaConversation(conversation, [...conversation.messages, response]);
-      }));
-    } finally {
-      setThinking(false);
-    }
-  };
-
   return (
-    <div className="luna-page luna-conversation-screen flex min-h-[calc(100vh-170px)] flex-col pb-[calc(92px+env(safe-area-inset-bottom))]">
-      <LunaChatHeader language={language} onNewConversation={startNewConversation} />
-
-      <div className="flex flex-1 flex-col py-4">
-        <div className="mx-auto mb-4"><LunaOrb state={orbState} /></div>
-
-        {showWelcome ? (
-          <EmptyConversationState firstName={firstName} firstOpen={firstOpen} language={language} />
-        ) : (
-          <ConversationList
-            conversation={activeConversation}
-            language={language}
-            meditations={meditations}
-            hasPremium={hasPremium}
-            onOpenMeditation={onOpenMeditation}
-          />
-        )}
-
-        {showWelcome ? <SuggestedPrompts prompts={quickActions} onSelect={setDraft} /> : null}
-        {showWelcome ? <CompactPromptCarousel topics={compactSuggestions} onSelect={setDraft} language={language} /> : null}
-
-        {thinking ? <ThinkingIndicator language={language} /> : null}
-
-        <RecentConversations
-          conversations={sortedConversations}
-          activeConversationId={activeConversation?.id ?? ''}
-          language={language}
-          onOpen={setActiveConversationId}
-        />
-
-        <section className="luna-thought-card mt-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gold/85">{language === 'ru' ? 'Мысль дня' : "Today's Thought"}</p>
-          <p className="mt-2 text-[16px] leading-7 text-cream">{dailyLunaThought(language)}</p>
-        </section>
-        <div ref={endRef} />
-      </div>
-
-      <MessageComposer
-        value={draft}
-        language={language}
-        disabled={thinking}
-        onChange={setDraft}
-        onSend={() => void sendMessage(draft)}
-      />
-    </div>
+    <LunaChat
+      firstName={firstName}
+      language={language}
+      meditations={meditations}
+      hasPremium={hasPremium}
+      initData={initData}
+      onOpenMeditation={onOpenMeditation}
+    />
   );
 }
-
-function LunaChatHeader({ language, onNewConversation }: { language: AppLanguage; onNewConversation: () => void }) {
-  return (
-    <div className="luna-chat-header">
-      <div>
-        <h2>Luna</h2>
-        <p>{language === 'ru' ? 'Твой тихий компаньон' : 'Your quiet companion'}</p>
-      </div>
-      <button type="button" onClick={onNewConversation} className="luna-chat-new" aria-label={language === 'ru' ? 'Новый разговор' : 'New conversation'}>
-        +
-      </button>
-    </div>
-  );
-}
-
-function LunaOrb({ state }: { state: LunaOrbState }) {
-  return <div className={`luna-breathing-orb luna-orb-${state}`} aria-hidden="true" />;
-}
-
-function EmptyConversationState({ firstName, firstOpen, language }: { firstName: string; firstOpen: boolean; language: AppLanguage }) {
-  return (
-    <div className="luna-conversation-intro">
-      <p className="text-[21px] font-semibold leading-tight tracking-[-0.035em] text-cream">
-        {language === 'ru' ? `Привет, ${firstName || 'друг'}.` : `Hello, ${firstName || 'friend'}.`}
-      </p>
-      <p className="mt-2 text-sm leading-6 text-lavender">
-        {firstOpen
-          ? (language === 'ru' ? 'Я рядом, когда нужен тихий момент. Расскажи, что у тебя на душе, или выбери, с чего начать.' : "I'm here whenever you need a quiet moment. Tell me what's on your mind, or choose a place to begin.")
-          : (language === 'ru' ? 'Что сейчас внутри тебя?' : "What's happening inside you right now?")}
-      </p>
-    </div>
-  );
-}
-
-function ConversationList({
-  conversation,
-  language,
-  meditations,
-  hasPremium,
-  onOpenMeditation
-}: {
-  conversation: LunaConversation | null;
-  language: AppLanguage;
-  meditations: Meditation[];
-  hasPremium: boolean;
-  onOpenMeditation: (meditation: Meditation) => void;
-}) {
-  if (!conversation) return null;
-  let previousDate = '';
-  return (
-    <section className="luna-chat-messages">
-      {conversation.messages.map((message) => {
-        const currentDate = new Date(message.createdAt).toDateString();
-        const showDate = currentDate !== previousDate;
-        previousDate = currentDate;
-        const recommendation = message.recommendedMeditationId
-          ? meditations.find((meditation) => meditation.id === message.recommendedMeditationId)
-          : undefined;
-        return (
-          <div key={message.id}>
-            {showDate ? <div className="luna-chat-date">{lunaDateLabel(message.createdAt, language)}</div> : null}
-            <ChatMessage message={message} />
-            {recommendation ? (
-              <MeditationRecommendationMessage
-                meditation={recommendation}
-                language={language}
-                locked={recommendation.premium && !hasPremium}
-                onOpen={() => onOpenMeditation(recommendation)}
-              />
-            ) : null}
-          </div>
-        );
-      })}
-    </section>
-  );
-}
-
-function ChatMessage({ message }: { message: LunaChatMessage }) {
-  const isUser = message.role === 'user';
-  return (
-    <article className={`luna-chat-message ${isUser ? 'luna-chat-message-user' : 'luna-chat-message-luna'}`}>
-      {!isUser ? <span className="luna-message-orb" aria-hidden="true" /> : null}
-      <div className="luna-message-bubble">
-        <p>{message.text}</p>
-      </div>
-    </article>
-  );
-}
-
-function SuggestedPrompts({ prompts, onSelect }: { prompts: string[]; onSelect: (prompt: string) => void }) {
-  return (
-    <section className="mt-4">
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 luna-scrollbar-none">
-        {prompts.map((prompt, index) => (
-          <button
-            key={prompt}
-            type="button"
-            onClick={() => onSelect(prompt.replace(/^[^\p{L}\p{N}]+/u, '').trim())}
-            className="luna-suggestion-chip"
-            style={{ animationDelay: `${index * 24}ms` }}
-          >
-            {prompt}
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function CompactPromptCarousel({ topics, onSelect, language }: { topics: LunaHelpTopic[]; onSelect: (prompt: string) => void; language: AppLanguage }) {
-  return (
-    <section className="mt-4 space-y-3">
-      <h3 className="text-sm font-semibold text-cream">{language === 'ru' ? 'Мягкие начала' : 'Gentle Starts'}</h3>
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 luna-scrollbar-none">
-        {topics.map((topic) => (
-          <button key={topic.title} type="button" onClick={() => onSelect(topic.prompt)} className="luna-topic-pill">
-            <span>{topic.icon}</span>
-            <strong>{topic.title}</strong>
-          </button>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function RecentConversations({
-  conversations,
-  activeConversationId,
-  language,
-  onOpen
-}: {
-  conversations: LunaConversation[];
-  activeConversationId: string;
-  language: AppLanguage;
-  onOpen: (id: string) => void;
-}) {
-  const visible = conversations.filter((conversation) => conversation.messages.length > 0);
-  return (
-    <section className="mt-4 space-y-2">
-      <h3 className="text-sm font-semibold text-cream">{language === 'ru' ? 'Недавние разговоры' : 'Recent Conversations'}</h3>
-      {visible.length ? (
-        <div className="luna-surface rounded-[24px] p-2">
-          {visible.slice(0, 4).map((conversation) => {
-            const preview = conversation.messages[conversation.messages.length - 1]?.text ?? '';
-            return (
-              <button key={conversation.id} type="button" onClick={() => onOpen(conversation.id)} className={`luna-recent-row ${conversation.id === activeConversationId ? 'luna-recent-row-active' : ''}`}>
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-medium text-cream">{conversation.title}</span>
-                  <span className="block truncate text-xs text-lavender">{preview}</span>
-                </span>
-                <span className="shrink-0 text-[11px] text-lavender/75">{lunaDateLabel(conversation.updatedAt, language)}</span>
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <div className="luna-companion-empty">
-          <span>{language === 'ru' ? 'Разговоров пока нет. Твои беседы с Luna появятся здесь.' : 'No conversations yet. Your conversations with Luna will appear here.'}</span>
-        </div>
-      )}
-    </section>
-  );
-}
-
-function ThinkingIndicator({ language }: { language: AppLanguage }) {
-  return (
-    <div className="luna-thinking-indicator" role="status">
-      <span className="luna-message-orb luna-message-orb-thinking" aria-hidden="true" />
-      <span>{language === 'ru' ? 'Luna размышляет' : 'Luna is reflecting'}</span>
-    </div>
-  );
-}
-
-function MeditationRecommendationMessage({
-  meditation,
-  language,
-  locked,
-  onOpen
-}: {
-  meditation: Meditation;
-  language: AppLanguage;
-  locked: boolean;
-  onOpen: () => void;
-}) {
-  const localized = getLocalizedMeditation(meditation, language);
-  return (
-    <button type="button" onClick={onOpen} className="luna-recommendation-message">
-      <img src={meditation.cover_image} alt="" loading="lazy" />
-      <span className="min-w-0 flex-1 text-left">
-        <strong>{localized.title}</strong>
-        <small>{translateCategory(meditation.category, language)} · {formatTime(meditation.duration)}</small>
-      </span>
-      <span className="rounded-full bg-gold px-3 py-1 text-[11px] font-bold text-night">{locked ? copy[language].premium : copy[language].play}</span>
-    </button>
-  );
-}
-
-function MessageComposer({
-  value,
-  language,
-  disabled,
-  onChange,
-  onSend
-}: {
-  value: string;
-  language: AppLanguage;
-  disabled: boolean;
-  onChange: (value: string) => void;
-  onSend: () => void;
-}) {
-  const canSend = value.trim().length > 0 && !disabled;
-  return (
-    <form
-      className="luna-composer"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (canSend) onSend();
-      }}
-    >
-      <button type="button" className="luna-conversation-tool" aria-label={language === 'ru' ? 'Голосовое сообщение' : 'Voice message'}><Mic size={16} /></button>
-      <textarea
-        rows={1}
-        value={value}
-        disabled={disabled}
-        onChange={(event) => onChange(event.currentTarget.value)}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter' && !event.shiftKey) {
-            event.preventDefault();
-            if (canSend) onSend();
-          }
-        }}
-        placeholder={language === 'ru' ? 'Напиши Luna...' : 'Message Luna...'}
-        className="max-h-28 min-h-9 min-w-0 flex-1 resize-none bg-transparent py-2 text-sm leading-5 text-cream outline-none placeholder:text-lavender/60 disabled:opacity-70"
-      />
-      <button type="submit" disabled={!canSend} className="grid h-9 w-9 place-items-center rounded-full bg-gold text-night disabled:bg-white/10 disabled:text-lavender/50" aria-label={language === 'ru' ? 'Отправить' : 'Send'}>
-        <Send size={16} />
-      </button>
-    </form>
-  );
-}
-
 function ProgressPage({
   profile,
   wellness,
@@ -5384,7 +4892,7 @@ function resizeAvatarImage(file: File) {
   });
 }
 
-type ProfileSettingsView = 'main' | 'goals' | 'notifications' | 'language' | 'subscription' | 'more' | 'privacy' | 'terms' | 'disclaimer';
+type ProfileSettingsView = 'main' | 'goals' | 'notifications' | 'language' | 'subscription' | 'memory' | 'more' | 'privacy' | 'terms' | 'disclaimer';
 type RestoreState = 'idle' | 'loading' | 'success' | 'empty' | 'error';
 
 const APP_VERSION = import.meta.env.VITE_APP_VERSION ?? '0.1.0';
@@ -5470,6 +4978,9 @@ function ProfilePage({
   const cameraInputRef = useRef<HTMLInputElement | null>(null);
   const [goals, setGoals] = useState<string[]>(profile?.user?.profile_goals ?? []);
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPreferences>(() => defaultNotificationPreferences(profile?.user?.notification_preferences));
+  const [memoryEnabled, setMemoryEnabled] = useState(true);
+  const [memories, setMemories] = useState<LunaMemory[]>([]);
+  const [memoryLoading, setMemoryLoading] = useState(false);
 
   useEffect(() => {
     onNestedChange(view !== 'main');
@@ -5481,6 +4992,19 @@ function ProfilePage({
     setNotificationPrefs(defaultNotificationPreferences(profile?.user?.notification_preferences));
   }, [profile?.user?.profile_goals, profile?.user?.notification_preferences]);
 
+  useEffect(() => {
+    if (view !== 'memory') return;
+    setMemoryLoading(true);
+    setSettingsMessage('');
+    getLunaMemory(initData)
+      .then((result) => {
+        setMemoryEnabled(result.enabled);
+        setMemories(result.memories);
+      })
+      .catch(() => setSettingsMessage(language === 'en' ? 'Could not load Luna Memory.' : 'Не удалось загрузить память Luna.'))
+      .finally(() => setMemoryLoading(false));
+  }, [initData, language, view]);
+
   const avatarUrl = profile?.user?.avatar_url ?? null;
   const planStatus = access.hasPremium
     ? access.plan.toLowerCase().includes('lifetime') ? 'Lifetime Premium' : access.plan.toLowerCase().includes('monthly') ? 'Monthly Premium' : copy[language].premium
@@ -5488,7 +5012,7 @@ function ProfilePage({
   const localizedPlanStatus = language === 'ru' && planStatus === copy.en.premiumFree ? copy.ru.premiumFree : planStatus;
   const goalsLabel = goalsCountLabel(goals.length, language);
   const notificationLabel = notificationStatusLabel(notificationPrefs, language);
-  const companionStatus = copy[language].comingSoon;
+  const companionStatus = language === 'en' ? 'Ready' : 'Готова';
   const languageLabel = language === 'en' ? 'English' : 'Русский';
   const isLifetime = access.hasPremium && access.plan.toLowerCase().includes('lifetime');
   const isMonthly = access.hasPremium && access.plan.toLowerCase().includes('monthly');
@@ -5723,12 +5247,76 @@ function ProfilePage({
     );
   }
 
+  if (view === 'memory') {
+    const toggleMemory = async (enabled: boolean) => {
+      const previous = memoryEnabled;
+      setMemoryEnabled(enabled);
+      setSettingsMessage('');
+      try {
+        await setLunaMemoryEnabled(enabled, initData);
+      } catch {
+        setMemoryEnabled(previous);
+        setSettingsMessage(language === 'en' ? 'Could not update Luna Memory.' : 'Не удалось изменить память Luna.');
+      }
+    };
+    const removeMemory = async (memoryId: string) => {
+      try {
+        await deleteLunaMemory(memoryId, initData);
+        setMemories((current) => current.filter((memory) => memory.id !== memoryId));
+      } catch {
+        setSettingsMessage(language === 'en' ? 'Could not remove this memory.' : 'Не удалось удалить это воспоминание.');
+      }
+    };
+    const removeAllMemory = async () => {
+      if (!window.confirm(language === 'en' ? 'Clear everything Luna remembers?' : 'Удалить всё, что помнит Luna?')) return;
+      try {
+        await clearLunaMemory(initData);
+        setMemories([]);
+      } catch {
+        setSettingsMessage(language === 'en' ? 'Could not clear Luna Memory.' : 'Не удалось очистить память Luna.');
+      }
+    };
+    const removeHistory = async () => {
+      if (!window.confirm(language === 'en' ? 'Delete all Luna conversations?' : 'Удалить все разговоры с Luna?')) return;
+      try {
+        await clearLunaConversations(initData);
+        window.localStorage.removeItem('luna.ai.activeConversation.v1');
+        setSettingsMessage(language === 'en' ? 'Conversation history deleted.' : 'История разговоров удалена.');
+      } catch {
+        setSettingsMessage(language === 'en' ? 'Could not delete conversation history.' : 'Не удалось удалить историю разговоров.');
+      }
+    };
+    return (
+      <ProfileChildScreen title={language === 'en' ? 'Luna Memory' : 'Память Luna'} onBack={() => setView('more')} language={language}>
+        <p className="text-sm leading-6 text-lavender">
+          {language === 'en' ? 'Memory helps Luna continue conversations with useful details you have shared. You stay in control.' : 'Память помогает Luna продолжать разговоры, используя полезные детали, которыми ты поделился или поделилась. Управление всегда у тебя.'}
+        </p>
+        <section className="luna-surface rounded-[24px] p-2">
+          <ProfileToggleRow title={language === 'en' ? 'Allow helpful memory' : 'Разрешить полезную память'} checked={memoryEnabled} disabled={memoryLoading} onChange={(enabled) => void toggleMemory(enabled)} />
+        </section>
+        <section className="space-y-2">
+          <h3 className="text-sm font-semibold text-cream">{language === 'en' ? 'Remembered details' : 'Что помнит Luna'}</h3>
+          {memoryLoading ? <p className="text-xs text-lavender">{language === 'en' ? 'Loading...' : 'Загрузка...'}</p> : memories.length ? memories.map((memory) => (
+            <div key={memory.id} className="luna-surface flex items-start gap-3 rounded-[20px] p-3">
+              <div className="min-w-0 flex-1"><p className="text-[11px] uppercase tracking-[0.12em] text-gold">{memory.category.replace(/_/g, ' ')}</p><p className="mt-1 text-sm leading-5 text-lavender">{memory.memory_value}</p></div>
+              <button type="button" onClick={() => void removeMemory(memory.id)} className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/[0.045] text-lavender" aria-label={language === 'en' ? 'Delete memory' : 'Удалить воспоминание'}><X size={15} /></button>
+            </div>
+          )) : <p className="rounded-[20px] border border-white/10 bg-white/[0.03] p-4 text-sm leading-6 text-lavender">{language === 'en' ? 'Luna has not saved any helpful details yet.' : 'Luna пока не сохранила полезных деталей.'}</p>}
+        </section>
+        <button type="button" onClick={() => void removeAllMemory()} disabled={!memories.length} className="w-full rounded-[18px] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-lavender disabled:opacity-40">{language === 'en' ? 'Clear Luna Memory' : 'Очистить память Luna'}</button>
+        <button type="button" onClick={() => void removeHistory()} className="w-full rounded-[18px] border border-gold/15 bg-gold/[0.06] px-4 py-3 text-sm font-semibold text-gold">{language === 'en' ? 'Delete conversation history' : 'Удалить историю разговоров'}</button>
+        {settingsMessage ? <p className="rounded-2xl border border-gold/15 bg-gold/10 px-3 py-2 text-xs text-gold">{settingsMessage}</p> : null}
+      </ProfileChildScreen>
+    );
+  }
+
   if (view === 'more') {
     return (
       <ProfileChildScreen title={language === 'en' ? 'More Settings' : 'Ещё настройки'} onBack={() => setView('main')} language={language}>
         <section className="luna-surface rounded-[24px] p-2">
           <ProfileSettingsRow icon={Upload} title={copy[language].addHomeTitle} value={homeScreenMessage || ''} onClick={onAddHome} />
           <ProfileSettingsRow icon={Heart} title={language === 'en' ? 'Support' : 'Поддержка'} value={language === 'en' ? 'Contact' : 'Связь'} onClick={onLuna} />
+          <ProfileSettingsRow icon={Bot} title={language === 'en' ? 'Luna Memory' : 'Память Luna'} value={language === 'en' ? 'Privacy' : 'Приватность'} onClick={() => setView('memory')} />
           <ProfileSettingsRow icon={Lock} title={language === 'en' ? 'Privacy Policy' : 'Политика приватности'} value="" onClick={() => setView('privacy')} />
           <ProfileSettingsRow icon={CheckCircle} title={language === 'en' ? 'Terms of Use' : 'Условия использования'} value="" onClick={() => setView('terms')} />
           <ProfileSettingsRow icon={Heart} title={language === 'en' ? 'Meditation Disclaimer' : 'Дисклеймер медитаций'} value="" onClick={() => setView('disclaimer')} />

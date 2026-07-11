@@ -1,5 +1,6 @@
 import { Client } from 'pg';
 import { env } from './config.js';
+import { lunaAiMigration } from './luna-ai-migration.js';
 
 const meditationPlatformMigration = `
 create extension if not exists pgcrypto;
@@ -289,6 +290,7 @@ export async function runMigrations() {
   await client.connect();
   try {
     await client.query(meditationPlatformMigration);
+    await client.query(lunaAiMigration);
     console.log('Database migrations applied.');
   } finally {
     await client.end();
