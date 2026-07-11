@@ -400,6 +400,8 @@ const gardenStages = [
   }
 ];
 
+type GardenStage = typeof gardenStages[number];
+
 const gardenCollections = [
   {
     id: 'classic-moon',
@@ -410,14 +412,14 @@ const gardenCollections = [
   {
     id: 'winter-stillness',
     title: { en: 'Winter Stillness', ru: 'Зимняя тишина' },
-    body: { en: 'A soft seasonal garden theme for later.', ru: 'Мягкая сезонная тема сада на будущее.' },
-    status: { en: 'Phase 1 preview', ru: 'Превью Phase 1' }
+    body: { en: 'A quiet seasonal direction for your garden.', ru: 'Тихое сезонное направление для твоего сада.' },
+    status: { en: 'Season concept', ru: 'Концепт сезона' }
   },
   {
     id: 'spring-bloom',
     title: { en: 'Spring Bloom', ru: 'Весенний цвет' },
-    body: { en: 'A brighter collection concept for future upgrades.', ru: 'Более светлая коллекция для будущих улучшений.' },
-    status: { en: 'Phase 1 preview', ru: 'Превью Phase 1' }
+    body: { en: 'A lighter collection inspired by gentle renewal.', ru: 'Светлая коллекция о мягком обновлении.' },
+    status: { en: 'Season concept', ru: 'Концепт сезона' }
   }
 ];
 
@@ -601,14 +603,14 @@ const copy = {
     noMeditations: 'No meditations found.',
     noMeditationsBody: 'Try another mood, category, or search phrase.',
     moonMantraBody: 'A gentle mantra for returning to yourself.',
-    mantrasEmpty: 'More Luna mantras are coming soon.',
+    mantrasEmpty: 'New Luna mantras will appear here as your library grows.',
     addHomeTitle: 'Add Luna to Home Screen',
     addHomeBody: 'Open your calm in one tap from Telegram.',
     addHomeAction: 'Add',
     addHomeDone: 'Luna is on your Home Screen.',
     addHomeUnsupported: 'Home Screen shortcut is not available on this device yet.',
-    firstPracticeTitle: 'Your first calm practice is coming soon.',
-    firstPracticeBody: 'Luna’s library will appear here as soon as new meditations are published.',
+    firstPracticeTitle: 'Your first calm practice is waiting.',
+    firstPracticeBody: 'Published Luna practices will appear here automatically.',
     unlockPremium: 'Unlock Premium',
     popularToday: 'Popular today',
     profile: 'Profile',
@@ -925,14 +927,14 @@ const copy = {
     noMeditations: 'Медитации не найдены.',
     noMeditationsBody: 'Попробуй другое настроение, категорию или запрос.',
     moonMantraBody: 'Мягкая мантра, чтобы вернуться к себе.',
-    mantrasEmpty: 'Скоро появятся новые мантры Luna.',
+    mantrasEmpty: 'Новые мантры Luna появятся здесь по мере роста библиотеки.',
     addHomeTitle: 'Добавить Luna на экран',
     addHomeBody: 'Открывай спокойствие в один тап из Telegram.',
     addHomeAction: 'Добавить',
     addHomeDone: 'Luna уже на твоём экране.',
     addHomeUnsupported: 'Добавление на экран пока недоступно на этом устройстве.',
-    firstPracticeTitle: 'Первая практика скоро появится.',
-    firstPracticeBody: 'Библиотека Luna появится здесь, когда медитации будут опубликованы.',
+    firstPracticeTitle: 'Первая спокойная практика ждёт тебя.',
+    firstPracticeBody: 'Опубликованные практики Luna появятся здесь автоматически.',
     unlockPremium: 'Открыть Premium',
     popularToday: 'Популярно сегодня',
     profile: 'Профиль',
@@ -2647,6 +2649,7 @@ function App() {
             profile={profile}
             wellness={wellness}
             history={history}
+            hasPremium={access.hasPremium}
             language={language}
             onMoonGarden={() => setPage('moonGarden')}
           />
@@ -3513,12 +3516,14 @@ function ProgressPage({
   profile,
   wellness,
   history,
+  hasPremium,
   language,
   onMoonGarden
 }: {
   profile: ProfileStats | null;
   wellness: WellnessSummary | null;
   history: PlaybackHistory[];
+  hasPremium: boolean;
   language: AppLanguage;
   onMoonGarden: () => void;
 }) {
@@ -3533,33 +3538,10 @@ function ProgressPage({
   const weeklyInsightLines = thisWeekWithLunaInsight(profile, wellness, history, language);
   const todayKey = new Date().toISOString().slice(0, 10);
   const checkins = [...(wellness?.weeklyCheckins ?? [])].sort((left, right) => (left.local_date || '').localeCompare(right.local_date || ''));
-  const activityByDate = history.reduce<Record<string, number>>((map, item) => {
-    const played = new Date(item.last_played);
-    if (Number.isNaN(played.getTime())) return map;
-    const key = played.toISOString().slice(0, 10);
-    const listenedMinutes = Math.max(1, Math.round(Number(item.last_position ?? 0) / 60));
-    map[key] = (map[key] ?? 0) + listenedMinutes;
-    return map;
-  }, {});
-  const chartDays = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date();
-    date.setDate(date.getDate() - (6 - index));
-    const key = date.toISOString().slice(0, 10);
-    const value = activityByDate[key] ?? (profile?.lastPracticeDate === key ? 1 : 0);
-    return {
-      key,
-      value,
-      label: date.toLocaleDateString(language === 'en' ? 'en-US' : 'ru-RU', { weekday: 'long' }),
-      shortLabel: date.toLocaleDateString(language === 'en' ? 'en-US' : 'ru-RU', { weekday: 'short' })
-    };
-  });
-  const maxChartValue = Math.max(1, ...chartDays.map((day) => day.value));
+  const weeklyProgress = buildWeeklyProgress(history, profile, hasPremium, language);
   const earliestCheckin = checkins[0] ?? null;
   const latestCheckin = checkins[checkins.length - 1] ?? null;
   const hasComparison = Boolean(earliestCheckin && latestCheckin && earliestCheckin.local_date !== latestCheckin.local_date);
-  const heroLine = streak > 0
-    ? (language === 'en' ? 'Keep your rhythm alive.' : 'Сохраняй свой мягкий ритм.')
-    : (language === 'en' ? 'Return today to begin your rhythm.' : 'Вернись сегодня, чтобы начать ритм.');
   const quickStats = [
     {
       label: language === 'en' ? 'Meditations' : 'Медитации',
@@ -3588,39 +3570,13 @@ function ProgressPage({
   ];
 
   return (
-    <div className="luna-page luna-child-page space-y-3 pb-[calc(98px+env(safe-area-inset-bottom))]">
+    <div className="luna-page luna-child-page space-y-4 pb-[calc(104px+env(safe-area-inset-bottom))]">
       <div>
         <h2 className="max-w-[280px] text-[28px] font-semibold tracking-[-0.04em] text-cream">{copy[language].progressTitle}</h2>
-        <p className="mt-0.5 max-w-[310px] text-sm leading-5 text-lavender/78">{language === 'en' ? 'A calm view of how your practice is growing.' : 'Спокойный взгляд на то, как растёт твоя практика.'}</p>
+        <p className="mt-1 max-w-[310px] text-sm leading-5 text-lavender/78">{language === 'en' ? 'Your practice story, one quiet return at a time.' : 'История твоей практики — одно мягкое возвращение за раз.'}</p>
       </div>
 
-      <section className="luna-progress-enter relative overflow-hidden rounded-[30px] border border-white/10 bg-[radial-gradient(circle_at_84%_20%,rgba(212,175,55,.12),transparent_30%),linear-gradient(135deg,rgba(26,38,82,.58),rgba(17,18,49,.78))] p-5 shadow-glow">
-        <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-white/18" />
-        <div className="relative flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-[44px] font-semibold leading-none tracking-[-0.07em] text-cream">{streak}</h3>
-            <p className="mt-1 text-sm font-semibold text-cream/82">{language === 'en' ? 'Day Streak' : 'Дней подряд'}</p>
-            <p className="mt-1 text-xs leading-4 text-lavender/76">{heroLine}</p>
-          </div>
-          <div className="luna-streak-symbol grid h-16 w-16 shrink-0 place-items-center rounded-full border border-gold/20 bg-[radial-gradient(circle,rgba(212,175,55,.12),rgba(142,95,214,.09)_58%,rgba(255,255,255,.025))] shadow-gold" aria-hidden="true">
-            <MoonMark className="h-10 w-10 border-gold/60 opacity-95" />
-          </div>
-        </div>
-        <div className="relative mt-6 flex h-14 items-end gap-2" aria-label={language === 'en' ? 'Seven day listening activity chart' : 'Активность прослушиваний за семь дней'}>
-          <div className="pointer-events-none absolute inset-x-1 bottom-1 h-px bg-white/10" />
-          {chartDays.map((day) => (
-            <div key={day.key} className="flex flex-1 flex-col items-center gap-1">
-              <span
-                role="img"
-                aria-label={language === 'en' ? `${day.label}: ${day.value} min` : `${day.label}: ${day.value} мин`}
-                title={language === 'en' ? `${day.label}: ${day.value} min` : `${day.label}: ${day.value} мин`}
-                className={`luna-progress-bar w-full max-w-[10px] rounded-full ${day.value > 0 ? (day.key === todayKey ? 'bg-gold/80 shadow-gold' : 'bg-lavender/48') : 'bg-cream/12'}`}
-                style={{ height: `${day.value > 0 ? Math.max(10, Math.round((day.value / maxChartValue) * 42)) : 5}px` }}
-              />
-            </div>
-          ))}
-        </div>
-      </section>
+      <HeroProgressCard streak={streak} weeklyProgress={weeklyProgress} language={language} />
 
       <section className="grid grid-cols-2 gap-3">
         {quickStats.map((item) => (
@@ -3645,43 +3601,12 @@ function ProgressPage({
           }}
         />
       ) : (
-        <section className="rounded-[24px] border border-white/10 bg-white/[0.045] p-3.5">
-          <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'Mood Journey' : 'Путь настроения'}</p>
-          <p className="mt-2 text-sm leading-5 text-lavender">
-            {language === 'en' ? 'Complete more check-ins to see how your state changes over time.' : 'Сделай ещё несколько чек-инов, чтобы увидеть изменения состояния.'}
-          </p>
-        </section>
+        <MoodJourneyEmpty language={language} />
       )}
 
-      <section className="luna-progress-enter rounded-[24px] border border-white/10 bg-white/[0.045] p-4">
-        <div className="min-w-0">
-          <p className="text-xs uppercase tracking-[0.16em] text-gold">{copy[language].weeklyTitle}</p>
-          <div className="mt-2 space-y-1">
-            {weeklyInsightLines.map((line) => (
-              <p key={line} className="text-sm leading-5 text-cream/82">{line}</p>
-            ))}
-          </div>
-        </div>
-      </section>
+      <WeeklySummaryCard lines={weeklyInsightLines} language={language} />
 
-      <button onClick={onMoonGarden} className="luna-progress-enter w-full overflow-hidden rounded-[26px] border border-white/10 bg-[linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.025))] p-3 text-left shadow-glow backdrop-blur transition hover:border-gold/20 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-gold/30">
-        <div className="flex gap-3">
-          <div className="relative h-28 w-28 shrink-0 overflow-hidden rounded-[22px] border border-white/10 bg-night">
-            <img src={stage.path} alt="" className="luna-garden-thumb h-full w-full object-cover" loading="lazy" />
-            <span className="luna-garden-firefly left-[24%] top-[28%]" />
-            <span className="luna-garden-firefly left-[66%] top-[42%]" />
-          </div>
-          <div className="min-w-0 flex-1 py-1.5">
-            <p className="text-xs uppercase tracking-[0.16em] text-gold">{copy[language].moonGarden}</p>
-            <h3 className="mt-1 truncate text-base font-semibold text-cream">{language === 'en' ? 'Your Moon Garden' : 'Твой Лунный сад'}</h3>
-            <p className="mt-1.5 line-clamp-2 text-xs leading-4 text-lavender/86">
-              {language === 'en' ? 'A quiet place that grows with every meditation.' : 'Тихое место, которое растёт с каждой практикой.'}
-            </p>
-            <p className="mt-2 text-[11px] leading-4 text-cream/48">{stage.level} · {stage.title[language]} · {seeds} {copy[language].moonSeeds}</p>
-            <p className="mt-2 text-xs font-semibold text-gold">{language === 'en' ? 'Continue growing →' : 'Продолжить растить →'}</p>
-          </div>
-        </div>
-      </button>
+      <GardenRewardCard stage={stage} plantedCount={plantedCount} seeds={seeds} language={language} onOpen={onMoonGarden} />
     </div>
   );
 }
@@ -3713,6 +3638,186 @@ function ProgressMetricCard({
   );
 }
 
+type WeeklyDayState = 'completed' | 'current' | 'missed' | 'future' | 'freeze_used' | 'premium_freeze';
+type WeeklyProgressDay = {
+  key: string;
+  label: string;
+  shortLabel: string;
+  state: WeeklyDayState;
+  minutes: number;
+};
+type WeeklyProgressModel = {
+  days: WeeklyProgressDay[];
+  freezeCount: number;
+  maxFreezes: number;
+  freezeUsedThisWeek: boolean;
+  cleanWeek: boolean;
+};
+
+function buildWeeklyProgress(history: PlaybackHistory[], profile: ProfileStats | null, hasPremium: boolean, language: AppLanguage): WeeklyProgressModel {
+  const maxFreezes = hasPremium ? 3 : 1;
+  const today = new Date();
+  const todayKey = today.toISOString().slice(0, 10);
+  const monday = new Date(today);
+  const day = monday.getDay();
+  monday.setDate(monday.getDate() - ((day + 6) % 7));
+  const activityByDate = history.reduce<Record<string, number>>((map, item) => {
+    const played = new Date(item.last_played);
+    if (Number.isNaN(played.getTime())) return map;
+    const key = played.toISOString().slice(0, 10);
+    map[key] = (map[key] ?? 0) + Math.max(1, Math.round(Number(item.last_position ?? 0) / 60));
+    return map;
+  }, {});
+  if (profile?.lastPracticeDate && !activityByDate[profile.lastPracticeDate]) {
+    activityByDate[profile.lastPracticeDate] = 1;
+  }
+
+  const rawDays = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(monday);
+    date.setDate(monday.getDate() + index);
+    const key = date.toISOString().slice(0, 10);
+    const minutes = activityByDate[key] ?? 0;
+    const isFuture = key > todayKey;
+    const isToday = key === todayKey;
+    return {
+      key,
+      label: date.toLocaleDateString(language === 'en' ? 'en-US' : 'ru-RU', { weekday: 'long' }),
+      shortLabel: date.toLocaleDateString(language === 'en' ? 'en-US' : 'ru-RU', { weekday: 'short' }).slice(0, 3),
+      state: minutes > 0 ? 'completed' as WeeklyDayState : isFuture ? 'future' as WeeklyDayState : isToday ? 'current' as WeeklyDayState : 'missed' as WeeklyDayState,
+      minutes
+    };
+  });
+
+  let freezeCount = maxFreezes;
+  let freezeUsedThisWeek = false;
+  const days = rawDays.map((item) => {
+    if (item.state !== 'missed') return item;
+    if (freezeCount > 0 && !freezeUsedThisWeek) {
+      freezeCount -= 1;
+      freezeUsedThisWeek = true;
+      return { ...item, state: hasPremium ? 'premium_freeze' as WeeklyDayState : 'freeze_used' as WeeklyDayState };
+    }
+    return item;
+  });
+  const cleanWeek = rawDays.filter((item) => item.key <= todayKey).every((item) => item.minutes > 0);
+  if (cleanWeek) freezeCount = Math.min(maxFreezes, freezeCount + 1);
+  return { days, freezeCount, maxFreezes, freezeUsedThisWeek, cleanWeek };
+}
+
+function HeroProgressCard({ streak, weeklyProgress, language }: { streak: number; weeklyProgress: WeeklyProgressModel; language: AppLanguage }) {
+  return (
+    <section className="hero-progress-card luna-progress-enter">
+      <img src="/images/progress/progress-bg-01.webp" alt="" className="hero-progress-bg" loading="lazy" />
+      <div className="hero-progress-overlay" />
+      <div className="relative z-10 flex min-h-[260px] flex-col justify-between p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs uppercase tracking-[0.16em] text-gold/90">{language === 'en' ? 'Current streak' : 'Текущая серия'}</p>
+            <h3 className="mt-2 text-[34px] font-semibold leading-none tracking-[-0.06em] text-cream">
+              {streak} {language === 'en' ? (streak === 1 ? 'Day Streak' : 'Day Streak') : streak === 1 ? 'день подряд' : 'дней подряд'}
+            </h3>
+            <p className="mt-2 text-sm text-cream/76">{language === 'en' ? 'Keep your rhythm alive.' : 'Сохраняй свой мягкий ритм.'}</p>
+          </div>
+          <div className="hero-streak-icon" aria-hidden="true">☾</div>
+        </div>
+
+        <div>
+          <FreezeIndicator model={weeklyProgress} language={language} />
+          <WeeklyTracker days={weeklyProgress.days} language={language} />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function FreezeIndicator({ model, language }: { model: WeeklyProgressModel; language: AppLanguage }) {
+  return (
+    <div className="freeze-indicator">
+      <span>{language === 'en' ? 'Freeze' : 'Заморозка'}</span>
+      <strong>{model.freezeCount}/{model.maxFreezes}</strong>
+      {model.freezeUsedThisWeek ? <em>{language === 'en' ? 'Protected rhythm' : 'Ритм сохранён'}</em> : null}
+    </div>
+  );
+}
+
+function WeeklyTracker({ days, language }: { days: WeeklyProgressDay[]; language: AppLanguage }) {
+  return (
+    <div className="weekly-tracker" aria-label={language === 'en' ? 'Weekly tracker' : 'Недельный трекер'}>
+      {days.map((day) => (
+        <div key={day.key} className="weekly-day">
+          <span className="weekly-day-label">{day.shortLabel}</span>
+          <span className={`weekly-day-mark weekly-day-${day.state}`} title={`${day.label}: ${day.state}`}>
+            {day.state === 'completed' ? '✓' : day.state === 'current' ? '•' : day.state === 'freeze_used' || day.state === 'premium_freeze' ? '❄' : ''}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MoodJourneyEmpty({ language }: { language: AppLanguage }) {
+  return (
+    <section className="mood-journey-card luna-progress-enter">
+      <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'Mood Journey' : 'Путь настроения'}</p>
+      <p className="mt-2 text-sm leading-5 text-lavender">
+        {language === 'en' ? 'Complete more check-ins to see how your state changes over time.' : 'Сделай ещё несколько чек-инов, чтобы увидеть изменения состояния.'}
+      </p>
+    </section>
+  );
+}
+
+function WeeklySummaryCard({ lines, language }: { lines: string[]; language: AppLanguage }) {
+  return (
+    <section className="weekly-summary-card luna-progress-enter">
+      <p className="text-xs uppercase tracking-[0.16em] text-gold">{copy[language].weeklyTitle}</p>
+      <div className="mt-3 space-y-2">
+        {lines.map((line, index) => (
+          <p key={`${line}-${index}`} className={index === 0 ? 'text-base leading-6 text-cream' : 'text-sm leading-5 text-lavender'}>
+            {line}
+          </p>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function GardenRewardCard({
+  stage,
+  plantedCount,
+  seeds,
+  language,
+  onOpen
+}: {
+  stage: GardenStage;
+  plantedCount: number;
+  seeds: number;
+  language: AppLanguage;
+  onOpen: () => void;
+}) {
+  return (
+    <button onClick={onOpen} className="garden-reward-card luna-progress-enter">
+      <div className="garden-reward-image">
+        <img src={stage.path} alt="" className="luna-garden-thumb h-full w-full object-cover" loading="lazy" />
+        <span className="luna-garden-firefly left-[24%] top-[28%]" />
+        <span className="luna-garden-firefly left-[66%] top-[42%]" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs uppercase tracking-[0.16em] text-gold">{copy[language].moonGarden}</p>
+        <h3 className="mt-1 text-lg font-semibold tracking-[-0.035em] text-cream">{stage.title[language]}</h3>
+        <p className="mt-1.5 text-sm leading-5 text-lavender">
+          {language === 'en' ? 'Your reward for returning to calm.' : 'Твоя награда за возвращение к спокойствию.'}
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-cream/70">
+          <span className="garden-reward-pill">{language === 'en' ? 'Level' : 'Уровень'} {stage.level}</span>
+          <span className="garden-reward-pill">{seeds} {copy[language].moonSeeds}</span>
+          <span className="garden-reward-pill">{plantedCount} {language === 'en' ? 'planted' : 'посажено'}</span>
+        </div>
+        <p className="mt-3 text-xs font-semibold text-gold">{copy[language].openMoonGarden} →</p>
+      </div>
+    </button>
+  );
+}
+
 function ProgressMoodTimeline({
   language,
   earlier,
@@ -3723,15 +3828,17 @@ function ProgressMoodTimeline({
   latest: { label: string; date: string; mood: DailyCheckin['mood'] | null; metric: string };
 }) {
   return (
-    <section className="luna-progress-enter rounded-[24px] border border-white/10 bg-white/[0.045] p-3.5 backdrop-blur">
-      <div className="mb-3 flex items-center justify-between">
+    <section className="mood-journey-card luna-progress-enter">
+      <div className="mb-4 flex items-center justify-between">
         <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'Mood Journey' : 'Путь настроения'}</p>
-        <span className="text-[11px] text-lavender/64">{language === 'en' ? 'Earlier → Today' : 'Раньше → Сейчас'}</span>
+        <span className="text-[11px] text-lavender/64">{language === 'en' ? 'Timeline' : 'Линия'}</span>
       </div>
-      <div className="grid grid-cols-[1fr_auto_1fr] items-stretch gap-2.5">
+      <div className="mood-timeline">
         <ProgressCompareCard {...earlier} />
-        <div className="flex items-center justify-center" aria-hidden="true">
-          <span className="h-px w-5 rounded-full bg-gold/30" />
+        <div className="mood-timeline-link" aria-hidden="true">
+          <span />
+          <b>↓</b>
+          <span />
         </div>
         <ProgressCompareCard {...latest} />
       </div>
