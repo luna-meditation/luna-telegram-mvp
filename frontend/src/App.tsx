@@ -5,6 +5,7 @@ import {
   Camera,
   CheckCircle,
   ChevronRight,
+  Copy,
   CreditCard,
   Crown,
   Edit3,
@@ -12,9 +13,12 @@ import {
   Heart,
   Image as ImageIcon,
   Lock,
+  Mic,
   Pause,
   Play,
+  RotateCcw,
   Search,
+  Send,
   Settings,
   Share2,
   SkipBack,
@@ -2965,49 +2969,228 @@ function FilterPill({ active, label, onClick }: { active: boolean; label: string
 function PageTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <div className="luna-page-title">
-      <p className="luna-section-kicker">LUNA</p>
       <h2 className="luna-editorial-title text-[34px] leading-none">{title}</h2>
       {subtitle ? <p className="mt-2 max-w-[310px] text-sm leading-5 text-lavender">{subtitle}</p> : null}
     </div>
   );
 }
 
+type LunaConversationSummary = {
+  id: string;
+  when: string;
+  title: string;
+};
+
+type LunaHelpTopic = {
+  icon: string;
+  title: string;
+  body: string;
+  prompt: string;
+};
+
+function dailyLunaThought(language: AppLanguage) {
+  const thoughts = language === 'ru'
+    ? [
+      'Отдых не нужно заслуживать. Иногда его просто можно себе позволить.',
+      'Мягкий выдох тоже считается возвращением к себе.',
+      'Тебе не нужно решать всё сразу. Начни с одного спокойного момента.',
+      'Иногда забота о себе звучит очень тихо: я здесь.'
+    ]
+    : [
+      "Rest isn't something you earn. Sometimes it's simply something you allow yourself.",
+      'A softer breath still counts as returning to yourself.',
+      "You don't have to solve everything at once. Begin with one calm moment.",
+      "Sometimes self-care sounds very quiet: I'm here."
+    ];
+  const dayIndex = Math.floor(Date.now() / 86_400_000) % thoughts.length;
+  return thoughts[dayIndex];
+}
+
 function LunaPage({ firstName, language }: { firstName: string; language: AppLanguage }) {
-  const starters = language === 'ru'
-    ? ['Подобрать практику', 'Мне тревожно', 'Помоги выдохнуть']
-    : ['Recommend a practice', 'I feel anxious', 'Help me reset'];
+  const [mode, setMode] = useState<'home' | 'conversation'>('home');
+  const [preparedPrompt, setPreparedPrompt] = useState('');
+  const recentConversations: LunaConversationSummary[] = [];
+  const quickActions = language === 'ru'
+    ? ['😴 Не могу уснуть', '😔 Мне тревожно', '🌿 Хочу расслабиться', '💭 Я много думаю', '❤️ Нужна поддержка', '🧘 Подбери медитацию']
+    : ["😴 I can't sleep", "😔 I'm anxious", '🌿 I need to relax', '💭 I overthink', '❤️ I need support', '🧘 Recommend a meditation'];
+  const helpTopics: LunaHelpTopic[] = language === 'ru'
+    ? [
+      { icon: '🌙', title: 'Сон', body: 'Успокоить вечер и подготовиться ко сну.', prompt: 'Мне нужна помощь со сном.' },
+      { icon: '🫧', title: 'Стресс', body: 'Мягко разложить напряжение на части.', prompt: 'Мне нужно снизить стресс.' },
+      { icon: '🤍', title: 'Отношения', body: 'Поговорить о чувствах без осуждения.', prompt: 'Мне нужна поддержка в отношениях.' },
+      { icon: '✨', title: 'Уверенность', body: 'Вернуться к внутренней опоре.', prompt: 'Я хочу почувствовать больше уверенности.' },
+      { icon: '🎧', title: 'Фокус', body: 'Найти спокойный следующий шаг.', prompt: 'Помоги мне сфокусироваться.' },
+      { icon: '🕯️', title: 'Выгорание', body: 'Сделать паузу и услышать свои силы.', prompt: 'Кажется, я выгораю.' },
+      { icon: '🌿', title: 'Осознанность', body: 'Замедлиться и вернуться в момент.', prompt: 'Хочу практику осознанности.' }
+    ]
+    : [
+      { icon: '🌙', title: 'Sleep', body: 'Settle the evening and soften into rest.', prompt: 'I need help with sleep.' },
+      { icon: '🫧', title: 'Stress', body: 'Unpack tension one gentle layer at a time.', prompt: 'I need help lowering stress.' },
+      { icon: '🤍', title: 'Relationships', body: 'Talk through feelings without judgment.', prompt: 'I need support with relationships.' },
+      { icon: '✨', title: 'Confidence', body: 'Return to your own quiet steadiness.', prompt: 'I want to feel more confident.' },
+      { icon: '🎧', title: 'Focus', body: 'Find the next calm step forward.', prompt: 'Help me focus.' },
+      { icon: '🕯️', title: 'Burnout', body: 'Pause and listen for what has been too much.', prompt: 'I think I am burned out.' },
+      { icon: '🌿', title: 'Mindfulness', body: 'Slow down and come back to this moment.', prompt: 'I want a mindfulness practice.' }
+    ];
+
+  const openConversation = (prompt = '') => {
+    setPreparedPrompt(prompt);
+    setMode('conversation');
+  };
+
+  if (mode === 'conversation') {
+    return (
+      <LunaConversationScreen
+        firstName={firstName}
+        language={language}
+        preparedPrompt={preparedPrompt}
+        onBack={() => setMode('home')}
+      />
+    );
+  }
+
   return (
-    <div className="luna-page space-y-4">
+    <div className="luna-page luna-companion-page space-y-4 pb-5">
       <PageTitle title={copy[language].lunaPageTitle} />
-      <section className="luna-surface-strong relative overflow-hidden rounded-[30px] p-5">
-        <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-lavender/10 blur-3xl" />
+
+      <section className="luna-companion-hero">
+        <div className="luna-companion-hero-glow" />
         <div className="relative flex items-center gap-3">
-          <div className="grid h-12 w-12 place-items-center rounded-full border border-gold/25 bg-gold/10 text-gold backdrop-blur">
-            <Bot size={23} />
+          <div className="luna-companion-avatar">
+            <Bot size={21} />
           </div>
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].lunaPageStatus}</p>
-            <h3 className="mt-1 font-serif text-2xl leading-tight">{copy[language].lunaPageSubtitle}</h3>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gold/90">{copy[language].lunaPageStatus}</p>
+            <h3 className="mt-1 text-[22px] font-semibold tracking-[-0.035em] text-cream">
+              {language === 'ru' ? 'Я рядом, когда нужен тихий момент.' : "I'm here whenever you need a quiet moment."}
+            </h3>
           </div>
         </div>
-        <div className="relative mt-5 space-y-3">
-          <div className="max-w-[285px] rounded-[22px] border border-white/10 bg-white/[0.07] p-4 text-sm leading-6 text-cream/82">
-            {copy[language].lunaPageBody}
-            <span className="mt-2 block text-xs text-lavender">{firstName ? `${firstName}, ${copy[language].lunaPageSoon}` : copy[language].lunaPageSoon}</span>
-          </div>
-          <div className="ml-auto max-w-[220px] rounded-[20px] bg-lavender/20 px-4 py-3 text-sm text-cream">
-            {language === 'ru' ? 'Я хочу больше спокойствия сегодня.' : 'I want a little more calm today.'}
-          </div>
+
+        <div className="luna-companion-message">
+          <p>{language === 'ru' ? `Привет, ${firstName || 'друг'}.` : `Hello, ${firstName || 'friend'}.`}</p>
+          <p>{language === 'ru' ? 'Расскажи, что у тебя на душе.' : "Tell me what's on your mind."}</p>
+          <p>{language === 'ru' ? 'Я здесь, чтобы слушать без осуждения.' : "I'm here to listen without judgment."}</p>
+        </div>
+
+        <button type="button" onClick={() => openConversation()} className="luna-companion-primary">
+          {language === 'ru' ? 'Начать разговор' : 'Start Conversation'}
+          <span>→</span>
+        </button>
+      </section>
+
+      <section className="space-y-2">
+        <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 luna-scrollbar-none">
+          {quickActions.map((action, index) => (
+            <button
+              key={action}
+              type="button"
+              onClick={() => openConversation(action)}
+              className="luna-suggestion-chip"
+              style={{ animationDelay: `${index * 24}ms` }}
+            >
+              {action}
+            </button>
+          ))}
         </div>
       </section>
-      <section className="grid gap-2">
-        {starters.map((starter) => (
-          <button key={starter} className="flex items-center justify-between rounded-[20px] border border-white/10 bg-white/[0.055] px-4 py-3 text-left text-sm text-cream/85 shadow-glow">
-            <span>{starter}</span>
-            <span className="text-gold">→</span>
-          </button>
-        ))}
+
+      <section className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-cream">{language === 'ru' ? 'Недавние разговоры' : 'Recent Conversations'}</h3>
+        </div>
+        {recentConversations.length ? (
+          <div className="luna-surface rounded-[24px] p-2">
+            {recentConversations.map((conversation) => (
+              <button key={conversation.id} type="button" onClick={() => openConversation()} className="flex min-h-[52px] w-full items-center justify-between rounded-[17px] px-3 text-left">
+                <span>
+                  <span className="block text-sm font-medium text-cream">{conversation.title}</span>
+                  <span className="text-xs text-lavender">{conversation.when}</span>
+                </span>
+                <ChevronRight size={16} className="text-lavender/55" />
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="luna-companion-empty">
+            <div className="luna-breathing-orb luna-breathing-orb-small" />
+            <span>{language === 'ru' ? 'Твои разговоры будут храниться здесь спокойно и приватно.' : 'Your conversations will rest here, calm and private.'}</span>
+          </div>
+        )}
       </section>
+
+      <section className="space-y-3">
+        <h3 className="text-sm font-semibold text-cream">{language === 'ru' ? 'Luna может помочь с' : 'Luna Can Help With'}</h3>
+        <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 luna-scrollbar-none">
+          {helpTopics.map((topic) => (
+            <button key={topic.title} type="button" onClick={() => openConversation(topic.prompt)} className="luna-help-card">
+              <span className="text-2xl">{topic.icon}</span>
+              <strong>{topic.title}</strong>
+              <small>{topic.body}</small>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="luna-thought-card">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-gold/85">{language === 'ru' ? 'Мысль дня' : "Today's Thought"}</p>
+        <p className="mt-2 text-[17px] leading-7 text-cream">{dailyLunaThought(language)}</p>
+      </section>
+    </div>
+  );
+}
+
+function LunaConversationScreen({
+  firstName,
+  language,
+  preparedPrompt,
+  onBack
+}: {
+  firstName: string;
+  language: AppLanguage;
+  preparedPrompt: string;
+  onBack: () => void;
+}) {
+  return (
+    <div className="luna-page luna-conversation-screen flex min-h-[calc(100vh-170px)] flex-col pb-5">
+      <div className="flex items-center justify-between">
+        <button type="button" onClick={onBack} className="luna-icon-button" aria-label={language === 'ru' ? 'Назад' : 'Back'}>←</button>
+        <div className="text-center">
+          <p className="text-sm font-semibold text-cream">Luna</p>
+          <p className="text-[11px] text-lavender">{language === 'ru' ? 'Тихий разговор' : 'Quiet conversation'}</p>
+        </div>
+        <div className="h-11 w-11" />
+      </div>
+
+      <div className="flex flex-1 flex-col justify-end py-6">
+        <div className="mx-auto mb-5">
+          <div className="luna-breathing-orb" />
+        </div>
+        <div className="luna-conversation-intro">
+          <p className="text-sm leading-6 text-cream">
+            {language === 'ru'
+              ? `Привет, ${firstName || 'друг'}. Я готова слушать.`
+              : `Hello, ${firstName || 'friend'}. I'm ready to listen.`}
+          </p>
+          {preparedPrompt ? <p className="mt-3 rounded-[18px] bg-white/[0.055] px-4 py-3 text-sm text-lavender">{preparedPrompt}</p> : null}
+          <div className="mt-4 flex items-center gap-2 text-lavender/80">
+            <button type="button" className="luna-conversation-tool" aria-label="Copy message"><Copy size={14} /></button>
+            <button type="button" className="luna-conversation-tool" aria-label="Regenerate response"><RotateCcw size={14} /></button>
+            <span className="ml-auto text-xs">{language === 'ru' ? 'Luna думает мягко' : 'Luna thinks softly'}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="luna-composer">
+        <button type="button" className="luna-conversation-tool" aria-label={language === 'ru' ? 'Голос позже' : 'Voice later'}><Mic size={16} /></button>
+        <input
+          value=""
+          readOnly
+          placeholder={language === 'ru' ? 'Настоящий AI-чат скоро появится...' : 'Real AI chat is coming soon...'}
+          className="min-w-0 flex-1 bg-transparent text-sm text-cream outline-none placeholder:text-lavender/60"
+        />
+        <button type="button" className="grid h-9 w-9 place-items-center rounded-full bg-gold text-night" aria-label={language === 'ru' ? 'Отправить' : 'Send'}><Send size={16} /></button>
+      </div>
     </div>
   );
 }
