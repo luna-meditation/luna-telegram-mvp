@@ -28,7 +28,7 @@ export function V2BottomNav({ active, onChange, labels }: V2BottomNavProps) {
     <nav className="home-v2-bottom-nav">
       {items.map((item) => {
         const Icon = item.icon;
-        const selected = active === item.page || (active === 'weeklyReflection' && item.page === 'progress');
+        const selected = active === item.page || ((active === 'weeklyReflection' || active === 'moonGarden') && item.page === 'progress');
         return (
           <button
             key={item.page}

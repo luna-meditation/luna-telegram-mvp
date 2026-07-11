@@ -286,6 +286,23 @@ input[type="range"] {
   animation: lunaFade 420ms ease-in-out both;
 }
 
+.luna-child-page {
+  animation: lunaChildIn 220ms ease-out both;
+}
+
+.luna-progress-enter {
+  animation: lunaProgressIn 220ms ease-out both;
+}
+
+.luna-progress-bar {
+  animation: lunaProgressBarRise 520ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  transform-origin: bottom;
+}
+
+.luna-streak-symbol {
+  animation: lunaStreakGlow 5.5s ease-in-out infinite;
+}
+
 @keyframes lunaFade {
   from {
     opacity: 0;
@@ -295,6 +312,53 @@ input[type="range"] {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes lunaChildIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lunaProgressIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lunaProgressBarRise {
+  from {
+    transform: scaleY(0.18);
+    opacity: 0.42;
+  }
+
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+@keyframes lunaStreakGlow {
+  0%,
+  100% {
+    box-shadow: 0 18px 50px rgba(212, 175, 55, 0.14);
+  }
+
+  50% {
+    box-shadow: 0 20px 58px rgba(244, 159, 92, 0.22);
   }
 }
 
@@ -321,7 +385,11 @@ input[type="range"] {
 @media (prefers-reduced-motion: reduce) {
 	  .luna-bg::before,
 	  .luna-bg::after,
-	  .luna-fade {
+	  .luna-fade,
+	  .luna-child-page,
+	  .luna-progress-enter,
+	  .luna-progress-bar,
+	  .luna-streak-symbol {
 	    animation: none;
 	  }
 	}

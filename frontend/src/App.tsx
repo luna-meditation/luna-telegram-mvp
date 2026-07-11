@@ -4,6 +4,7 @@ import {
   CheckCircle,
   Crown,
   Edit3,
+  Flame,
   Heart,
   Image as ImageIcon,
   Lock,
@@ -1392,6 +1393,100 @@ function profileWeeklyInsight(profile: ProfileStats | null, language: AppLanguag
   return text(language, 'weeklyInsightStrong', { minutes });
 }
 
+function localizedShortDate(value: string | null | undefined, language: AppLanguage) {
+  if (!value) return '';
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString(language === 'en' ? 'en-US' : 'ru-RU', {
+    month: 'short',
+    day: 'numeric'
+  });
+}
+
+function sessionNoun(count: number, language: AppLanguage) {
+  if (language === 'en') return count === 1 ? 'Session' : 'Sessions';
+  return count === 1 ? 'Сессия' : 'Сессии';
+}
+
+function practiceDaysLabel(days: number, language: AppLanguage) {
+  if (language === 'en') return days === 1 ? '1 day' : `${days} days`;
+  return days === 1 ? '1 день' : `${days} дней`;
+}
+
+function weeklyReflectionSummary(profile: ProfileStats | null, wellness: WellnessSummary | null, language: AppLanguage) {
+  const sessions = profile?.completedMeditations ?? profile?.completed ?? 0;
+  const minutes = profile?.weeklyPracticeMinutes ?? 0;
+  const checkins = wellness?.weeklyCheckinCount ?? 0;
+
+  if (checkins >= 7) {
+    return language === 'en'
+      ? 'You made space to notice how you felt each day.'
+      : 'Ты находил(а) место, чтобы замечать своё состояние каждый день.';
+  }
+  if (sessions > 1 || minutes > 10) {
+    return language === 'en'
+      ? 'You returned to your practice several times this week.'
+      : 'На этой неделе ты несколько раз возвращался(лась) к практике.';
+  }
+  if (sessions === 1 || minutes > 0 || checkins > 0) {
+    return language === 'en'
+      ? 'You started your rhythm this week.'
+      : 'На этой неделе ты начал(а) свой ритм.';
+  }
+  return language === 'en'
+    ? 'Your week is still open. One quiet minute is enough to begin.'
+    : 'Неделя ещё открыта. Одной тихой минуты достаточно, чтобы начать.';
+}
+
+function weeklyReflectionNote(profile: ProfileStats | null, wellness: WellnessSummary | null, language: AppLanguage) {
+  const minutes = profile?.weeklyPracticeMinutes ?? 0;
+  const checkins = wellness?.weeklyCheckinCount ?? 0;
+
+  if (minutes > 10) {
+    return language === 'en'
+      ? 'You do not need a perfect week. Returning once is already part of the rhythm.'
+      : 'Тебе не нужна идеальная неделя. Одно возвращение уже часть ритма.';
+  }
+  if (checkins > 0) {
+    return language === 'en'
+      ? 'Noticing your state is a practice too. Keep it gentle.'
+      : 'Замечать своё состояние — тоже практика. Пусть она остаётся мягкой.';
+  }
+  return language === 'en'
+    ? 'Begin small. Luna will meet you wherever you are.'
+    : 'Начни с малого. Luna встретит тебя там, где ты сейчас.';
+}
+
+function weeklyPracticePattern(profile: ProfileStats | null, wellness: WellnessSummary | null, history: PlaybackHistory[], language: AppLanguage) {
+  const weeklyCheckins = wellness?.weeklyCheckinCount ?? 0;
+  const minutes = profile?.weeklyPracticeMinutes ?? 0;
+  const recentHistory = history.filter((item) => {
+    const played = new Date(item.last_played);
+    return !Number.isNaN(played.getTime()) && Date.now() - played.getTime() <= 7 * 24 * 60 * 60 * 1000;
+  });
+  const longestSeconds = recentHistory.reduce((max, item) => Math.max(max, Number(item.last_position ?? 0)), 0);
+
+  if (weeklyCheckins >= 7) {
+    return language === 'en'
+      ? 'You checked in on 7 of 7 days.'
+      : 'Ты сделал(а) чек-ин 7 дней из 7.';
+  }
+  if (longestSeconds >= 60) {
+    const longestMinutes = Math.max(1, Math.round(longestSeconds / 60));
+    return language === 'en'
+      ? `Your longest recent listening moment was ${longestMinutes} min.`
+      : `Самое длинное недавнее прослушивание: ${longestMinutes} мин.`;
+  }
+  if (minutes > 0) {
+    return language === 'en'
+      ? 'A few minutes already started your weekly pattern.'
+      : 'Несколько минут уже начали твой недельный ритм.';
+  }
+  return language === 'en'
+    ? 'More practice will reveal your weekly pattern.'
+    : 'Больше практики поможет увидеть твой недельный ритм.';
+}
+
 function normalizeSlug(value?: string | null) {
   return (value ?? '').trim().toLowerCase().replace(/_/g, '-').replace(/\s+/g, '-');
 }
@@ -2554,6 +2649,7 @@ function App() {
           <ProgressPage
             profile={profile}
             wellness={wellness}
+            history={history}
             language={language}
             onWeeklyReflection={() => setPage('weeklyReflection')}
             onMoonGarden={() => setPage('moonGarden')}
@@ -2564,6 +2660,7 @@ function App() {
           <WeeklyReflectionPage
             profile={profile}
             wellness={wellness}
+            history={history}
             language={language}
             onBack={() => setPage('progress')}
           />
@@ -2945,12 +3042,14 @@ function LunaPage({ firstName, language }: { firstName: string; language: AppLan
 function ProgressPage({
   profile,
   wellness,
+  history,
   language,
   onWeeklyReflection,
   onMoonGarden
 }: {
   profile: ProfileStats | null;
   wellness: WellnessSummary | null;
+  history: PlaybackHistory[];
   language: AppLanguage;
   onWeeklyReflection: () => void;
   onMoonGarden: () => void;
@@ -2963,35 +3062,41 @@ function ProgressPage({
   const stage = getCurrentGardenStage(plantedCount);
   const streak = profile?.currentStreak ?? 0;
   const completedMeditations = profile?.completedMeditations ?? 0;
-  const weeklyReflection = profileWeeklyInsight(profile, language);
+  const weeklyReflection = weeklyReflectionSummary(profile, wellness, language);
   const todayKey = new Date().toISOString().slice(0, 10);
   const checkins = [...(wellness?.weeklyCheckins ?? [])].sort((left, right) => (left.local_date || '').localeCompare(right.local_date || ''));
-  const checkinsByDate = checkins.reduce<Record<string, number>>((map, checkin) => {
-    map[checkin.local_date] = (map[checkin.local_date] ?? 0) + 1;
+  const activityByDate = history.reduce<Record<string, number>>((map, item) => {
+    const played = new Date(item.last_played);
+    if (Number.isNaN(played.getTime())) return map;
+    const key = played.toISOString().slice(0, 10);
+    const listenedMinutes = Math.max(1, Math.round(Number(item.last_position ?? 0) / 60));
+    map[key] = (map[key] ?? 0) + listenedMinutes;
     return map;
   }, {});
   const chartDays = Array.from({ length: 7 }, (_, index) => {
     const date = new Date();
     date.setDate(date.getDate() - (6 - index));
     const key = date.toISOString().slice(0, 10);
-    const value = (checkinsByDate[key] ?? 0) + (profile?.lastPracticeDate === key ? 1 : 0);
-    return { key, value, label: date.toLocaleDateString(language === 'en' ? 'en-US' : 'ru-RU', { weekday: 'short' }) };
+    const value = activityByDate[key] ?? (profile?.lastPracticeDate === key ? 1 : 0);
+    return {
+      key,
+      value,
+      label: date.toLocaleDateString(language === 'en' ? 'en-US' : 'ru-RU', { weekday: 'long' }),
+      shortLabel: date.toLocaleDateString(language === 'en' ? 'en-US' : 'ru-RU', { weekday: 'short' })
+    };
   });
   const maxChartValue = Math.max(1, ...chartDays.map((day) => day.value));
   const earliestCheckin = checkins[0] ?? null;
   const latestCheckin = checkins[checkins.length - 1] ?? null;
   const hasComparison = Boolean(earliestCheckin && latestCheckin && earliestCheckin.local_date !== latestCheckin.local_date);
-  const moodEmoji = (mood?: DailyCheckin['mood'] | null) => {
-    if (mood === 'calm' || mood === 'focused') return '🙂';
-    if (mood === 'tired' || mood === 'low_energy') return '😐';
-    if (mood === 'anxious' || mood === 'stressed') return '😟';
-    return '◌';
-  };
+  const heroLine = streak > 0
+    ? (language === 'en' ? 'Keep your rhythm alive.' : 'Сохраняй свой мягкий ритм.')
+    : (language === 'en' ? 'Return today to begin your rhythm.' : 'Вернись сегодня, чтобы начать ритм.');
   const quickStats = [
     {
       label: language === 'en' ? 'Meditations' : 'Медитации',
       value: String(completedMeditations),
-      body: language === 'en' ? 'Sessions' : 'Сессии',
+      body: sessionNoun(completedMeditations, language),
       tone: 'strong'
     },
     {
@@ -3015,58 +3120,62 @@ function ProgressPage({
   ];
 
   return (
-    <div className="luna-page space-y-3 pb-8">
+    <div className="luna-page luna-child-page space-y-2.5 pb-[calc(98px+env(safe-area-inset-bottom))]">
       <div>
-        <h2 className="text-[30px] font-semibold tracking-[-0.04em] text-cream">{copy[language].progressTitle}</h2>
-        <p className="mt-1 text-sm leading-5 text-lavender">{language === 'en' ? 'A calm view of how your practice is growing.' : 'Спокойный взгляд на то, как растёт твоя практика.'}</p>
+        <h2 className="max-w-[280px] text-[29px] font-semibold tracking-[-0.04em] text-cream">{copy[language].progressTitle}</h2>
+        <p className="mt-0.5 max-w-[310px] text-sm leading-5 text-lavender/78">{language === 'en' ? 'A calm view of how your practice is growing.' : 'Спокойный взгляд на то, как растёт твоя практика.'}</p>
       </div>
 
-      <section className="relative overflow-hidden rounded-[30px] border border-white/10 bg-[radial-gradient(circle_at_84%_18%,rgba(244,159,92,.34),transparent_24%),linear-gradient(135deg,rgba(34,43,95,.72),rgba(32,23,66,.86))] p-5 shadow-glow">
+      <section className="luna-progress-enter relative overflow-hidden rounded-[30px] border border-white/10 bg-[radial-gradient(circle_at_84%_20%,rgba(244,159,92,.2),transparent_28%),linear-gradient(135deg,rgba(30,42,86,.66),rgba(24,20,58,.82))] p-5 shadow-glow">
+        <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-white/18" />
         <div className="relative flex items-start justify-between gap-4">
           <div>
             <h3 className="text-5xl font-semibold tracking-[-0.07em] text-cream">{streak}</h3>
             <p className="mt-1 text-sm font-semibold text-cream/82">{language === 'en' ? 'Day Streak' : 'Дней подряд'}</p>
+            <p className="mt-1 text-xs leading-4 text-lavender/76">{heroLine}</p>
           </div>
-          <div className="grid h-16 w-16 shrink-0 place-items-center rounded-full bg-gold/10 text-[46px] shadow-gold">
-            🔥
+          <div className="luna-streak-symbol grid h-16 w-16 shrink-0 place-items-center rounded-full border border-gold/20 bg-[radial-gradient(circle,rgba(244,159,92,.24),rgba(212,175,55,.08)_54%,rgba(255,255,255,.03))] text-gold shadow-gold" aria-hidden="true">
+            <Flame size={34} strokeWidth={1.7} />
           </div>
         </div>
-        <div className="mt-8 flex h-16 items-end gap-2" aria-label={language === 'en' ? 'Seven day activity chart' : 'Активность за семь дней'}>
+        <div className="mt-6 flex h-14 items-end gap-2" aria-label={language === 'en' ? 'Seven day listening activity chart' : 'Активность прослушиваний за семь дней'}>
           {chartDays.map((day) => (
             <div key={day.key} className="flex flex-1 flex-col items-center gap-1">
               <span
-                title={`${day.label}: ${day.value}`}
-                className={`w-full max-w-[12px] rounded-full ${day.key === todayKey ? 'bg-lavender shadow-glow' : 'bg-lavender/55'}`}
-                style={{ height: `${Math.max(8, Math.round((day.value / maxChartValue) * 48))}px` }}
+                role="img"
+                aria-label={language === 'en' ? `${day.label}: ${day.value} min` : `${day.label}: ${day.value} мин`}
+                title={language === 'en' ? `${day.label}: ${day.value} min` : `${day.label}: ${day.value} мин`}
+                className={`luna-progress-bar w-full max-w-[12px] rounded-full ${day.value > 0 ? (day.key === todayKey ? 'bg-gold shadow-gold' : 'bg-lavender/70') : 'bg-lavender/22'}`}
+                style={{ height: `${day.value > 0 ? Math.max(10, Math.round((day.value / maxChartValue) * 44)) : 6}px` }}
               />
             </div>
           ))}
         </div>
       </section>
 
-      <section className="grid grid-cols-2 gap-3">
+      <section className="grid grid-cols-2 gap-2.5">
         {quickStats.map((item) => (
           <ProgressMetricCard key={item.label} {...item} />
         ))}
       </section>
 
       {hasComparison ? (
-        <section className="grid grid-cols-2 gap-3">
+        <section className="grid grid-cols-2 gap-2.5">
           <ProgressCompareCard
             label={language === 'en' ? 'Earlier' : 'Раньше'}
-            date={earliestCheckin?.local_date ?? ''}
-            emoji={moodEmoji(earliestCheckin?.mood)}
+            date={localizedShortDate(earliestCheckin?.local_date, language)}
+            mood={earliestCheckin?.mood ?? null}
             metric={translateMoodLabel(earliestCheckin?.mood ?? null, language)}
           />
           <ProgressCompareCard
             label={latestCheckin?.local_date === todayKey ? (language === 'en' ? 'Today' : 'Сегодня') : (language === 'en' ? 'Latest' : 'Последний')}
-            date={latestCheckin?.local_date ?? ''}
-            emoji={moodEmoji(latestCheckin?.mood)}
+            date={localizedShortDate(latestCheckin?.local_date, language)}
+            mood={latestCheckin?.mood ?? null}
             metric={translateMoodLabel(latestCheckin?.mood ?? null, language)}
           />
         </section>
       ) : (
-        <section className="rounded-[24px] border border-white/10 bg-white/[0.045] p-4">
+        <section className="rounded-[24px] border border-white/10 bg-white/[0.045] p-3.5">
           <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'Before / Now' : 'Было / Сейчас'}</p>
           <p className="mt-2 text-sm leading-5 text-lavender">
             {language === 'en' ? 'Complete more check-ins to see how your state changes over time.' : 'Сделай ещё несколько чек-инов, чтобы увидеть изменения состояния.'}
@@ -3074,23 +3183,25 @@ function ProgressPage({
         </section>
       )}
 
-      <section className="flex items-center justify-between gap-4 rounded-[24px] border border-white/10 bg-white/[0.045] p-4">
+      <button onClick={onWeeklyReflection} className="w-full rounded-[24px] border border-white/10 bg-white/[0.045] p-3.5 text-left transition active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-gold/30">
+        <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'Weekly Reflection' : 'Размышление недели'}</p>
           <p className="mt-1 line-clamp-2 text-sm leading-5 text-cream/82">{weeklyReflection}</p>
         </div>
-        <button onClick={onWeeklyReflection} className="shrink-0 rounded-full border border-gold/25 bg-gold/10 px-3 py-2 text-xs font-semibold text-gold">
+        <span className="shrink-0 rounded-full border border-gold/25 bg-gold/10 px-3 py-2 text-xs font-semibold text-gold">
           {language === 'en' ? 'View →' : 'Открыть →'}
-        </button>
-      </section>
+        </span>
+        </div>
+      </button>
 
-      <button onClick={onMoonGarden} className="w-full overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.045] p-3 text-left shadow-glow backdrop-blur">
+      <button onClick={onMoonGarden} className="w-full overflow-hidden rounded-[24px] border border-white/10 bg-white/[0.045] p-3 text-left shadow-glow backdrop-blur transition active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-gold/30">
         <div className="flex gap-3">
-          <img src={stage.path} alt="" className="h-20 w-20 shrink-0 rounded-[20px] object-cover" loading="lazy" />
+          <img src={stage.path} alt="" className="h-24 w-24 shrink-0 rounded-[20px] object-cover" loading="lazy" />
           <div className="min-w-0 flex-1 py-1">
             <p className="text-xs uppercase tracking-[0.16em] text-gold">{copy[language].moonGarden}</p>
             <h3 className="mt-1 truncate text-base font-semibold text-cream">{stage.level} · {stage.title[language]}</h3>
-            <p className="mt-1 text-xs text-lavender">{seeds} {copy[language].moonSeeds} · {plantedCount}/{gardenElements.length} {language === 'en' ? 'growth stages' : 'этапов'}</p>
+            <p className="mt-1 text-xs leading-4 text-lavender">{seeds} {copy[language].moonSeeds} · {plantedCount}/{gardenElements.length} {language === 'en' ? 'growth stages' : 'этапов роста'}</p>
             <p className="mt-2 text-xs font-semibold text-gold">{language === 'en' ? 'Open Garden →' : 'Открыть сад →'}</p>
           </div>
         </div>
@@ -3117,21 +3228,31 @@ function ProgressMetricCard({
       : 'from-white/[0.07] via-white/[0.04] to-white/[0.02]';
 
   return (
-    <article className={`relative overflow-hidden rounded-[26px] border border-white/10 bg-gradient-to-br ${accent} p-4 shadow-glow backdrop-blur`}>
+    <article className={`luna-progress-enter relative overflow-hidden rounded-[24px] border border-white/10 bg-gradient-to-br ${accent} p-3.5 shadow-glow backdrop-blur`}>
       <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-gold/10 blur-2xl" />
       <p className="relative text-[11px] leading-4 text-lavender">{label}</p>
-      <p className="relative mt-3 text-2xl font-semibold tracking-[-0.04em] text-cream">{value}</p>
-      <p className="relative mt-2 text-[11px] leading-4 text-cream/58">{body}</p>
+      <p className="relative mt-2.5 truncate text-2xl font-semibold tracking-[-0.04em] text-cream">{value}</p>
+      <p className="relative mt-1 text-[11px] leading-4 text-cream/58">{body}</p>
     </article>
   );
 }
 
-function ProgressCompareCard({ label, date, emoji, metric }: { label: string; date: string; emoji: string; metric: string }) {
+function ProgressCompareCard({ label, date, mood, metric }: { label: string; date: string; mood: DailyCheckin['mood'] | null; metric: string }) {
+  const tone = mood === 'calm' || mood === 'focused'
+    ? 'border-gold/25 bg-gold/12'
+    : mood === 'anxious' || mood === 'stressed'
+      ? 'border-danger/25 bg-danger/10'
+      : 'border-lavender/25 bg-lavender/12';
+
   return (
-    <article className="rounded-[24px] border border-white/10 bg-white/[0.045] p-4 backdrop-blur">
+    <article className="luna-progress-enter rounded-[24px] border border-white/10 bg-white/[0.045] p-3.5 backdrop-blur">
       <p className="text-[11px] font-semibold text-lavender">{label}</p>
-      <div className="mt-4 flex items-center gap-3">
-        <span className="text-4xl leading-none">{emoji}</span>
+      <div className="mt-3 flex items-center gap-3">
+        <span className={`relative h-11 w-11 shrink-0 rounded-[16px] border ${tone}`} aria-hidden="true">
+          <span className="absolute left-3 top-3 h-1.5 w-1.5 rounded-full bg-cream/75" />
+          <span className="absolute right-3 top-3 h-1.5 w-1.5 rounded-full bg-cream/75" />
+          <span className={`absolute bottom-3 left-1/2 h-2 w-5 -translate-x-1/2 rounded-b-full border-b-2 ${mood === 'anxious' || mood === 'stressed' ? 'rotate-180 border-cream/55' : 'border-cream/65'}`} />
+        </span>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-cream">{metric}</p>
           <p className="mt-1 text-xs text-lavender">{date}</p>
@@ -3141,33 +3262,102 @@ function ProgressCompareCard({ label, date, emoji, metric }: { label: string; da
   );
 }
 
-function WeeklyReflectionPage({ profile, wellness, language, onBack }: {
+function WeeklyReflectionPage({ profile, wellness, history, language, onBack }: {
   profile: ProfileStats | null;
   wellness: WellnessSummary | null;
+  history: PlaybackHistory[];
   language: AppLanguage;
   onBack: () => void;
 }) {
+  const totalMinutes = profile?.weeklyPracticeMinutes ?? 0;
+  const completedMeditations = profile?.completedMeditations ?? profile?.completed ?? 0;
+  const checkins = wellness?.weeklyCheckinCount ?? 0;
+  const currentMood = wellness?.mostCommonMoodLabel ? translateMoodLabel(wellness.mostCommonMoodLabel, language) : copy[language].notEnoughData;
+  const weeklyDates = new Set(
+    history
+      .map((item) => {
+        const played = new Date(item.last_played);
+        return Number.isNaN(played.getTime()) || Date.now() - played.getTime() > 7 * 24 * 60 * 60 * 1000
+          ? null
+          : played.toISOString().slice(0, 10);
+      })
+      .filter(Boolean) as string[]
+  );
+  if (profile?.lastPracticeDate) weeklyDates.add(profile.lastPracticeDate);
+  const practiceDays = weeklyDates.size;
+  const summary = weeklyReflectionSummary(profile, wellness, language);
+  const note = weeklyReflectionNote(profile, wellness, language);
+  const pattern = weeklyPracticePattern(profile, wellness, history, language);
+  const intention = checkins >= 4
+    ? (language === 'en' ? 'Keep your check-in rhythm gentle.' : 'Сохрани мягкий ритм чек-инов.')
+    : (language === 'en' ? 'Return for one five-minute practice.' : 'Вернись к одной пятиминутной практике.');
+  const highlights = [
+    {
+      label: language === 'en' ? 'Listening' : 'Практика',
+      value: minutesCountLabel(totalMinutes, language),
+      body: language === 'en' ? 'This week' : 'На неделе',
+      tone: 'gold'
+    },
+    {
+      label: language === 'en' ? 'Practice days' : 'Дни практики',
+      value: practiceDaysLabel(practiceDays, language),
+      body: language === 'en' ? 'Last 7 days' : 'За 7 дней',
+      tone: 'soft'
+    },
+    {
+      label: language === 'en' ? 'Sessions' : 'Сессии',
+      value: String(completedMeditations),
+      body: sessionNoun(completedMeditations, language),
+      tone: 'strong'
+    },
+    {
+      label: language === 'en' ? 'Check-ins' : 'Чек-ины',
+      value: `${checkins}/7`,
+      body: currentMood,
+      tone: 'soft'
+    }
+  ];
+
   return (
-    <div className="luna-page space-y-4">
-      <button onClick={onBack} className="luna-icon-button" aria-label={copy[language].back}>
+    <div className="luna-page luna-child-page space-y-3 pb-[calc(104px+env(safe-area-inset-bottom))]">
+      <button onClick={onBack} className="luna-icon-button transition active:scale-95" aria-label={copy[language].back}>
         ←
       </button>
       <div>
-        <PageTitle title={copy[language].weeklyReflectionTitle} subtitle={copy[language].weeklyReflectionBody} />
+        <h2 className="text-[29px] font-semibold tracking-[-0.04em] text-cream">{copy[language].weeklyReflectionTitle}</h2>
+        <p className="mt-0.5 max-w-[315px] text-sm leading-5 text-lavender/78">{copy[language].weeklyReflectionBody}</p>
       </div>
-      <section className="luna-surface-strong rounded-[28px] p-5">
-        <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].weeklyReflection}</p>
-        <p className="mt-3 text-sm leading-6 text-cream/75">{profileWeeklyInsight(profile, language)}</p>
+
+      <section className="luna-progress-enter relative overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_88%_12%,rgba(212,175,55,.16),transparent_30%),linear-gradient(145deg,rgba(30,42,86,.58),rgba(7,12,30,.72))] p-5 shadow-glow">
+        <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-gold/10 blur-3xl" />
+        <p className="relative text-xs uppercase tracking-[0.18em] text-gold">{copy[language].weeklyReflection}</p>
+        <h3 className="relative mt-3 font-serif text-2xl leading-tight text-cream">{summary}</h3>
+        <p className="relative mt-3 text-sm leading-6 text-cream/72">
+          {totalMinutes > 0
+            ? profileWeeklyInsight(profile, language)
+            : (language === 'en' ? 'Luna will shape this reflection as you check in and listen.' : 'Luna дополнит эту рефлексию по мере чек-инов и практик.')}
+        </p>
       </section>
-      <section className="grid grid-cols-2 gap-3">
-        <article className="luna-card rounded-[22px] p-4">
-          <p className="text-[11px] text-lavender">{copy[language].progressMinutes}</p>
-          <p className="mt-2 text-2xl font-semibold">{profile?.weeklyPracticeMinutes ?? 0}</p>
-        </article>
-        <article className="luna-card rounded-[22px] p-4">
-          <p className="text-[11px] text-lavender">{copy[language].weeklyCheckins}</p>
-          <p className="mt-2 text-2xl font-semibold">{wellness?.weeklyCheckinCount ?? 0}/7</p>
-        </article>
+
+      <section className="grid grid-cols-2 gap-2.5">
+        {highlights.map((item) => (
+          <ProgressMetricCard key={item.label} {...item} />
+        ))}
+      </section>
+
+      <section className="luna-progress-enter rounded-[24px] border border-white/10 bg-white/[0.045] p-4">
+        <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'Practice Pattern' : 'Ритм практики'}</p>
+        <p className="mt-2 text-sm leading-5 text-cream/82">{pattern}</p>
+      </section>
+
+      <section className="luna-progress-enter rounded-[24px] border border-white/10 bg-white/[0.045] p-4">
+        <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'Luna’s Note' : 'Заметка Luna'}</p>
+        <p className="mt-2 font-serif text-xl leading-7 text-cream">“{note}”</p>
+      </section>
+
+      <section className="luna-progress-enter rounded-[24px] border border-white/10 bg-white/[0.045] p-4">
+        <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'For Next Week' : 'На следующую неделю'}</p>
+        <p className="mt-2 text-sm leading-5 text-lavender">{intention}</p>
       </section>
     </div>
   );
