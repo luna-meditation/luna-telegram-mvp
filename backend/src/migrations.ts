@@ -4,6 +4,22 @@ import { env } from './config.js';
 const meditationPlatformMigration = `
 create extension if not exists pgcrypto;
 
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'avatars',
+  'avatars',
+  true,
+  2097152,
+  array['image/jpeg', 'image/png', 'image/webp']
+)
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+alter table public.users
+  add column if not exists avatar_url text;
+
 create table if not exists public.categories (
   id uuid primary key default gen_random_uuid(),
   name text not null unique,

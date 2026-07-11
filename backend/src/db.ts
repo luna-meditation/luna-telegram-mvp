@@ -98,7 +98,7 @@ export async function upsertUser(user: TelegramUserInput) {
 export async function getUserAccess(telegramId: number) {
   const { data, error } = await supabase
     .from('users')
-    .select('telegram_id, first_name, username, language_code, active_until, lifetime_access, free_used')
+    .select('telegram_id, first_name, username, language_code, active_until, lifetime_access, free_used, avatar_url')
     .eq('telegram_id', telegramId)
     .maybeSingle();
 
@@ -121,6 +121,18 @@ export async function updateUserLanguage(telegramId: number, language: 'en' | 'r
     .update({ language_code: language, last_seen_at: new Date().toISOString() })
     .eq('telegram_id', telegramId)
     .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateUserAvatar(telegramId: number, avatarUrl: string | null) {
+  const { data, error } = await supabase
+    .from('users')
+    .update({ avatar_url: avatarUrl, last_seen_at: new Date().toISOString() })
+    .eq('telegram_id', telegramId)
+    .select('avatar_url')
     .single();
 
   if (error) throw error;
@@ -793,7 +805,7 @@ async function getMoonGardenState(telegramId: number, input: {
 export async function getProfileStats(telegramId: number) {
   const { data: user, error: userError } = await supabase
     .from('users')
-    .select('first_name, username, language_code, active_until, lifetime_access')
+    .select('first_name, username, language_code, active_until, lifetime_access, avatar_url')
     .eq('telegram_id', telegramId)
     .maybeSingle();
   if (userError) throw userError;

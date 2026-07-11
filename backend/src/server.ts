@@ -25,6 +25,7 @@ import {
   recordSceneMoonSeed,
   supabase,
   updateMoonGardenDevState,
+  updateUserAvatar,
   updateUserLanguage,
   updateMeditation,
   updateAdminUserAccess,
@@ -129,6 +130,18 @@ function isCoverUpload(contentType: string, fileName: string) {
   return ['image/jpeg', 'image/png', 'image/webp'].includes(contentType) && /\.(jpe?g|png|webp)$/i.test(fileName);
 }
 
+function isAvatarUpload(contentType: string, fileName: string) {
+  return ['image/jpeg', 'image/png', 'image/webp'].includes(contentType) && /\.(jpe?g|png|webp)$/i.test(fileName);
+}
+
+function storagePathFromPublicUrl(publicUrl?: string | null, bucket = 'avatars') {
+  if (!publicUrl) return null;
+  const marker = `/storage/v1/object/public/${bucket}/`;
+  const index = publicUrl.indexOf(marker);
+  if (index === -1) return null;
+  return decodeURIComponent(publicUrl.slice(index + marker.length));
+}
+
 app.use('/api/admin', rateLimit({ windowMs: 60_000, max: 120 }));
 app.use('/api/payments', rateLimit({ windowMs: 60_000, max: 30 }));
 
@@ -169,6 +182,51 @@ app.post(
 
       const { data } = supabase.storage.from('meditations').getPublicUrl(storagePath);
       res.json({ path: storagePath, publicUrl: data.publicUrl });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+app.post(
+  '/api/profile/avatar',
+  requireTelegramWebApp,
+  express.raw({ type: ['image/jpeg', 'image/png', 'image/webp'], limit: '2mb' }),
+  async (req, res, next) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const contentType = req.header('content-type') ?? '';
+      const originalName = req.header('x-file-name') ?? 'avatar.webp';
+
+      if (!isAvatarUpload(contentType, originalName)) {
+        res.status(400).json({ error: 'Please upload a JPEG, PNG, or WebP image.' });
+        return;
+      }
+
+      if (!Buffer.isBuffer(req.body) || req.body.length === 0) {
+        res.status(400).json({ error: 'Avatar image is empty.' });
+        return;
+      }
+
+      const extension = contentType === 'image/png' ? 'png' : contentType === 'image/jpeg' ? 'jpg' : 'webp';
+      const storagePath = `${authReq.telegramUser.telegram_id}/${crypto.randomUUID()}.${extension}`;
+      const currentProfile = await getProfileStats(authReq.telegramUser.telegram_id);
+      const previousPath = storagePathFromPublicUrl(currentProfile.user?.avatar_url);
+
+      const { error } = await supabase.storage
+        .from('avatars')
+        .upload(storagePath, req.body, { contentType, upsert: false });
+
+      if (error) throw error;
+
+      const { data } = supabase.storage.from('avatars').getPublicUrl(storagePath);
+      const user = await updateUserAvatar(authReq.telegramUser.telegram_id, data.publicUrl);
+
+      if (previousPath && previousPath !== storagePath) {
+        await supabase.storage.from('avatars').remove([previousPath]).catch(() => undefined);
+      }
+
+      res.json({ avatarUrl: data.publicUrl, user });
     } catch (error) {
       next(error);
     }
@@ -449,6 +507,23 @@ app.post('/api/profile/language', requireTelegramWebApp, async (req, res, next) 
     }
 
     res.json({ user: await updateUserLanguage(authReq.telegramUser.telegram_id, language) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete('/api/profile/avatar', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const currentProfile = await getProfileStats(authReq.telegramUser.telegram_id);
+    const previousPath = storagePathFromPublicUrl(currentProfile.user?.avatar_url);
+    const user = await updateUserAvatar(authReq.telegramUser.telegram_id, null);
+
+    if (previousPath) {
+      await supabase.storage.from('avatars').remove([previousPath]).catch(() => undefined);
+    }
+
+    res.json({ user });
   } catch (error) {
     next(error);
   }

@@ -87,6 +87,7 @@ export type ProfileStats = {
     language_code?: string | null;
     active_until?: string | null;
     lifetime_access?: boolean;
+    avatar_url?: string | null;
   };
   completed: number;
   completedMeditations?: number;
@@ -385,6 +386,10 @@ export async function updateUserLanguage(language: AppLanguage, initData?: strin
   }, initData);
 }
 
+export async function removeProfileAvatar(initData?: string) {
+  return request<{ user: { avatar_url?: string | null } }>('/api/profile/avatar', { method: 'DELETE' }, initData);
+}
+
 export async function checkAdmin(initData?: string) {
   return request<{ admin: boolean }>('/api/admin/me', undefined, initData);
 }
@@ -572,6 +577,45 @@ export async function uploadAdminAsset(
     request.onload = () => {
       if (request.status >= 200 && request.status < 300) {
         resolve(JSON.parse(request.responseText) as { path: string; publicUrl: string });
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(request.responseText) as { error?: string };
+        reject(new Error(parsed.error || `Upload failed: ${request.status}`));
+      } catch {
+        reject(new Error(`Upload failed: ${request.status}`));
+      }
+    };
+
+    request.onerror = () => reject(new Error('Upload failed. Please check your connection and try again.'));
+    request.send(file);
+  });
+}
+
+export async function uploadProfileAvatar(
+  file: Blob,
+  initData?: string,
+  onProgress?: (progress: number) => void
+) {
+  return new Promise<{ avatarUrl: string }>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('POST', `${API_URL}/api/profile/avatar`);
+    request.setRequestHeader('content-type', file.type || 'image/webp');
+    request.setRequestHeader('x-file-name', 'avatar.webp');
+
+    for (const [key, value] of Object.entries(telegramHeaders(initData))) {
+      request.setRequestHeader(key, value);
+    }
+
+    request.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress?.(Math.round((event.loaded / event.total) * 100));
+    };
+
+    request.onload = () => {
+      if (request.status >= 200 && request.status < 300) {
+        const parsed = JSON.parse(request.responseText) as { avatarUrl: string };
+        resolve(parsed);
         return;
       }
 

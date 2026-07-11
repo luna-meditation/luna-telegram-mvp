@@ -13,6 +13,19 @@ on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'avatars',
+  'avatars',
+  true,
+  2097152,
+  array['image/jpeg', 'image/png', 'image/webp']
+)
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
 create table if not exists public.users (
   id uuid primary key default gen_random_uuid(),
   telegram_id bigint not null unique,
@@ -26,6 +39,9 @@ create table if not exists public.users (
   lifetime_access boolean not null default false,
   free_used boolean not null default false
 );
+
+alter table public.users
+  add column if not exists avatar_url text;
 
 create table if not exists public.payments (
   id uuid primary key default gen_random_uuid(),
@@ -255,6 +271,7 @@ drop policy if exists "Practices are readable" on public.practices;
 drop policy if exists "Categories are readable" on public.categories;
 drop policy if exists "Meditations are readable" on public.meditations;
 drop policy if exists "Meditation storage is readable" on storage.objects;
+drop policy if exists "Avatar storage is readable" on storage.objects;
 
 create policy "Practices are readable" on public.practices
   for select using (true);
@@ -267,6 +284,9 @@ create policy "Meditations are readable" on public.meditations
 
 create policy "Meditation storage is readable" on storage.objects
   for select using (bucket_id = 'meditations');
+
+create policy "Avatar storage is readable" on storage.objects
+  for select using (bucket_id = 'avatars');
 
 insert into public.categories (name, slug, sort_order)
 values

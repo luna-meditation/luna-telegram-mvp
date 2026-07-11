@@ -1,19 +1,26 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Bot,
+  Bell,
+  Camera,
   CheckCircle,
+  ChevronRight,
+  CreditCard,
   Crown,
   Edit3,
+  Globe2,
   Heart,
   Image as ImageIcon,
   Lock,
   Pause,
   Play,
   Search,
+  Settings,
   Share2,
   SkipBack,
   SkipForward,
   Sparkles,
+  Target,
   Timer,
   Upload,
   Volume2,
@@ -35,11 +42,13 @@ import {
   getWellnessSummary,
   plantMoonGardenElement,
   recordSceneMoonSeed,
+  removeProfileAvatar,
   saveDailyCheckin,
   saveBreathSession,
   saveHistory,
   setFavorite,
   syncUser,
+  uploadProfileAvatar,
   updateMoonGardenDevState,
   updateUserLanguage,
   updateMeditation,
@@ -526,6 +535,10 @@ const copy = {
     language: 'Language',
     premium: 'Premium',
     free: 'Free',
+    monthly: 'Monthly',
+    lifetime: 'Lifetime',
+    on: 'On',
+    off: 'Off',
     begin: 'Begin',
     play: 'Play',
     resume: 'Continue',
@@ -846,6 +859,10 @@ const copy = {
     language: 'Язык',
     premium: 'Премиум',
     free: 'Бесплатно',
+    monthly: 'Месячный',
+    lifetime: 'Навсегда',
+    on: 'Вкл',
+    off: 'Выкл',
     begin: 'Начать',
     play: 'Слушать',
     resume: 'Продолжить',
@@ -1269,23 +1286,8 @@ function streakLabel(count: number, language: AppLanguage) {
   return `${count} тихих дней с Luna`;
 }
 
-function quietDayCountLabel(count: number, language: AppLanguage) {
-  if (language === 'en') return count === 1 ? '1 quiet day' : `${count} quiet days`;
-  if (count === 1) return '1 тихий день';
-  if ([2, 3, 4].includes(count % 10) && ![12, 13, 14].includes(count % 100)) return `${count} тихих дня`;
-  return `${count} тихих дней`;
-}
-
 function minutesCountLabel(minutes: number, language: AppLanguage) {
   return `${minutes} ${language === 'en' ? 'min' : 'мин'}`;
-}
-
-function moonGardenLevel(minutes: number, language: AppLanguage) {
-  if (minutes >= 150) return { level: 5, title: copy[language].levelInnerSanctuary, next: copy[language].levelInnerSanctuary, ceiling: 150, progress: 100 };
-  if (minutes >= 60) return { level: 4, title: copy[language].levelMoonlitPath, next: copy[language].levelInnerSanctuary, ceiling: 150, progress: ((minutes - 60) / 90) * 100 };
-  if (minutes >= 30) return { level: 3, title: copy[language].levelQuietGarden, next: copy[language].levelMoonlitPath, ceiling: 60, progress: ((minutes - 30) / 30) * 100 };
-  if (minutes >= 10) return { level: 2, title: copy[language].levelGentleRhythm, next: copy[language].levelQuietGarden, ceiling: 30, progress: ((minutes - 10) / 20) * 100 };
-  return { level: 1, title: copy[language].levelFirstLight, next: copy[language].levelGentleRhythm, ceiling: 10, progress: (minutes / 10) * 100 };
 }
 
 function availableMoonSeeds(profile: ProfileStats | null) {
@@ -1324,12 +1326,6 @@ function getCurrentGardenStage(plantedCount: number) {
 function nextGardenElement(profile: ProfileStats | null) {
   const planted = new Set(plantedGardenElements(profile));
   return gardenElements.find((element) => !planted.has(element.id)) ?? null;
-}
-
-function readyGardenElement(profile: ProfileStats | null) {
-  const seeds = availableMoonSeeds(profile);
-  const planted = new Set(plantedGardenElements(profile));
-  return gardenElements.find((element) => !planted.has(element.id) && element.cost <= seeds) ?? null;
 }
 
 function GardenUpgradeIcon({ visual, active }: { visual: GardenVisual; active: boolean }) {
@@ -1383,13 +1379,6 @@ function GardenUpgradeIcon({ visual, active }: { visual: GardenVisual; active: b
       {visual === 'twinBloom' && <span className={`absolute right-2 top-4 h-3 w-3 rounded-full ${active ? 'bg-gold/70' : 'bg-lavender/35'}`} />}
     </span>
   );
-}
-
-function profileWeeklyInsight(profile: ProfileStats | null, language: AppLanguage) {
-  const minutes = profile?.weeklyPracticeMinutes ?? 0;
-  if (minutes <= 0) return copy[language].weeklyInsightZero;
-  if (minutes <= 10) return copy[language].weeklyInsightSmall;
-  return text(language, 'weeklyInsightStrong', { minutes });
 }
 
 function localizedShortDate(value: string | null | undefined, language: AppLanguage) {
@@ -2656,9 +2645,7 @@ function App() {
             access={access}
             firstName={user.first_name ?? 'Luna'}
             username={user.username}
-            wellness={wellness}
             showAdminButton={adminStatus === 'allowed'}
-            onMoonGarden={() => setPage('moonGarden')}
             onLuna={() => setPage('luna')}
             onSubscription={() => setPage('pricing')}
             onAdmin={() => {
@@ -2667,7 +2654,10 @@ function App() {
             }}
             onRestore={refreshAccount}
             onAddHome={addLunaToHomeScreen}
+            onLanguageChange={changeLanguage}
+            onProfileUpdate={setProfile}
             homeScreenMessage={homeScreenMessage}
+            initData={initData}
             language={language}
           />
         )}
@@ -2837,16 +2827,6 @@ function Header({
     </div>
   );
 }
-function InsightCard({ title, body, meta }: { title: string; body: string; meta?: string }) {
-  return (
-    <section className="luna-surface rounded-[24px] p-4">
-      <p className="text-xs uppercase tracking-[0.18em] text-gold">{title}</p>
-      <p className="mt-3 text-sm leading-6 text-cream/85">{body}</p>
-      {meta ? <p className="mt-3 text-xs text-lavender">{meta}</p> : null}
-    </section>
-  );
-}
-
 function LibraryPage(props: {
   categories: Category[];
   query: string;
@@ -4307,84 +4287,6 @@ function BreathCirclePage({
   );
 }
 
-function MoonGardenCard({
-  profile,
-  onOpen,
-  language,
-  compact = false
-}: {
-  profile: ProfileStats | null;
-  onOpen: () => void;
-  language: AppLanguage;
-  compact?: boolean;
-}) {
-  const minutes = profile?.totalPracticeMinutes ?? profile?.minutesListened ?? 0;
-  const wellnessLevel = moonGardenLevel(minutes, language);
-  const seeds = availableMoonSeeds(profile);
-  const plantedCount = plantedGardenElements(profile).length;
-  const nextElement = nextGardenElement(profile);
-  const readyElement = readyGardenElement(profile);
-  const stage = getCurrentGardenStage(plantedCount);
-  const progress = Math.max(0, Math.min(100, (stage.level / 7) * 100));
-
-  return (
-    <section className="overflow-hidden rounded-[30px] border border-gold/20 bg-night shadow-glow">
-      <div className={`relative ${compact ? 'min-h-[190px]' : 'min-h-[300px]'}`}>
-        <img src={stage.path} alt={stage.title[language]} className="absolute inset-0 h-full w-full object-cover object-[center_58%]" draggable={false} />
-        <div className="absolute inset-0 bg-gradient-to-b from-night/70 via-night/10 to-night/85" />
-        <div className={`relative flex flex-col justify-between p-4 ${compact ? 'min-h-[190px]' : 'min-h-[300px]'}`}>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].moonGarden}</p>
-              <h3 className={`mt-1 font-serif leading-tight ${compact ? 'text-2xl' : 'text-3xl'}`}>{wellnessLevel.title}</h3>
-              <p className="mt-1 text-sm leading-5 text-cream/75">{copy[language].profileLevel.replace('{level}', `${stage.level}`)} · {stage.title[language]}</p>
-            </div>
-            <div className={`grid shrink-0 place-items-center rounded-full border border-gold/30 bg-night/70 shadow-gold ${compact ? 'h-11 w-11' : 'h-14 w-14'}`}>
-              <MoonMark className={compact ? 'h-7 w-7' : 'h-9 w-9'} />
-            </div>
-          </div>
-          <div>
-            <div className="h-2 overflow-hidden rounded-full bg-night/80">
-              <div className="h-full rounded-full bg-gold transition-all duration-500" style={{ width: `${progress}%` }} />
-            </div>
-            <div className="mt-3 flex gap-4 text-xs">
-              <span className="text-lavender">
-                {copy[language].moonSeeds}
-                <strong className="mt-1 block text-2xl text-cream">{seeds}</strong>
-              </span>
-              <span className="text-lavender">
-                {copy[language].plantedElements}
-                <strong className="mt-1 block text-2xl text-cream">{plantedCount}</strong>
-              </span>
-            </div>
-            {!compact && (
-              <div className="mt-3 max-w-[280px] text-xs text-lavender">
-                <p className="text-gold">
-                  {readyElement
-                    ? text(language, 'readyToPlant', { name: readyElement.name[language] })
-                    : plantedCount >= 7
-                      ? copy[language].gardenFlourishing
-                      : seeds === 0
-                        ? copy[language].completePracticeSeed
-                        : nextElement
-                          ? `${copy[language].nextUnlock}: ${nextElement.name[language]}`
-                          : copy[language].yourRhythm}
-                </p>
-              </div>
-            )}
-            <button
-              onClick={onOpen}
-              className={`rounded-full border border-gold/35 bg-night/55 font-semibold text-gold backdrop-blur ${compact ? 'mt-3 px-4 py-2 text-xs' : 'mt-4 px-5 py-3 text-sm'}`}
-            >
-              {copy[language].openMoonGarden}
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 function MoonGardenScene({
   profile,
   language,
@@ -4811,83 +4713,371 @@ function MoonGardenPage({
   );
 }
 
+function resizeAvatarImage(file: File) {
+  return new Promise<Blob>((resolve, reject) => {
+    const image = new Image();
+    const url = URL.createObjectURL(file);
+    image.onload = () => {
+      const size = Math.min(image.width, image.height);
+      const sourceX = (image.width - size) / 2;
+      const sourceY = (image.height - size) / 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = 512;
+      canvas.height = 512;
+      const context = canvas.getContext('2d');
+      if (!context) {
+        URL.revokeObjectURL(url);
+        reject(new Error('Could not prepare avatar image.'));
+        return;
+      }
+      context.drawImage(image, sourceX, sourceY, size, size, 0, 0, 512, 512);
+      canvas.toBlob((blob) => {
+        URL.revokeObjectURL(url);
+        if (!blob) {
+          reject(new Error('Could not prepare avatar image.'));
+          return;
+        }
+        resolve(blob);
+      }, 'image/webp', 0.86);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('Could not read avatar image.'));
+    };
+    image.src = url;
+  });
+}
+
+type ProfileSettingsView = 'main' | 'goals' | 'notifications' | 'language' | 'subscription' | 'more';
+
 function ProfilePage({
   profile,
   access,
   firstName,
   username,
-  wellness,
   showAdminButton,
-  onMoonGarden,
   onLuna,
   onSubscription,
   onAdmin,
   onRestore,
   onAddHome,
+  onLanguageChange,
+  onProfileUpdate,
   homeScreenMessage,
+  initData,
   language
 }: {
   profile: ProfileStats | null;
   access: AccessState;
   firstName: string;
   username?: string;
-  wellness: WellnessSummary | null;
   showAdminButton: boolean;
-  onMoonGarden: () => void;
   onLuna: () => void;
   onSubscription: () => void;
   onAdmin: () => void;
   onRestore: () => void;
   onAddHome: () => void;
+  onLanguageChange: (language: AppLanguage) => void;
+  onProfileUpdate: (profile: ProfileStats | null | ((current: ProfileStats | null) => ProfileStats | null)) => void;
   homeScreenMessage: string;
+  initData?: string;
   language: AppLanguage;
 }) {
-  const weeklyMinutes = profile?.weeklyPracticeMinutes ?? 0;
-  const currentMood = wellness?.mostCommonMoodLabel ? translateMoodLabel(wellness.mostCommonMoodLabel, language) : copy[language].notEnoughData;
-  return (
-    <div className="luna-page space-y-4">
-      <PageTitle title={copy[language].profile} />
-      <section className="luna-surface-strong flex items-center gap-4 rounded-[30px] p-4">
-        <MoonMark className="h-14 w-14 shrink-0" />
-        <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-            <h3 className="luna-editorial-title text-3xl leading-none">{firstName}</h3>
-              <span className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${access.hasPremium ? 'bg-gold text-night' : 'bg-cream/10 text-lavender'}`}>
-                {access.hasPremium ? copy[language].premiumActive : copy[language].premiumFree}
-              </span>
-            </div>
-            <p className="text-sm text-lavender">{username ? `@${username}` : copy[language].member}</p>
-          </div>
-      </section>
-      <section className="grid grid-cols-2 gap-3 text-sm">
-          <Stat label={copy[language].thisWeek} value={minutesCountLabel(weeklyMinutes, language)} />
-          <Stat label={copy[language].quietRhythm} value={quietDayCountLabel(profile?.currentStreak ?? 0, language)} />
-          <Stat label={copy[language].weeklyCheckins} value={`${wellness?.weeklyCheckinCount ?? 0}/7`} />
-          <Stat label={copy[language].currentMood} value={currentMood} />
-      </section>
-      <section className="luna-surface rounded-[26px] p-2">
-        <ProfileAction label={copy[language].askLunaTitle} value={copy[language].lunaPageSubtitle} onClick={onLuna} />
-        <ProfileAction label={copy[language].premiumStatus} value={access.hasPremium ? copy[language].premiumActive : copy[language].premiumFree} onClick={onSubscription} />
-        <ProfileAction label={copy[language].language} value={language.toUpperCase()} />
-      </section>
-      <MoonGardenCard profile={profile} onOpen={onMoonGarden} language={language} compact />
-      <InsightCard title={copy[language].weeklyInsightTitle} body={profileWeeklyInsight(profile, language)} />
-        {showAdminButton && (
-        <div className="border-t border-white/10 pt-3">
-            <button onClick={onAdmin} className="rounded-full border border-gold/25 bg-gold/10 px-4 py-2 text-xs font-semibold text-gold">
-              Admin
+  const [view, setView] = useState<ProfileSettingsView>('main');
+  const [avatarActionsOpen, setAvatarActionsOpen] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarProgress, setAvatarProgress] = useState(0);
+  const [avatarMessage, setAvatarMessage] = useState('');
+  const chooseInputRef = useRef<HTMLInputElement | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement | null>(null);
+  const [goals, setGoals] = useState<string[]>(() => {
+    try {
+      return JSON.parse(window.localStorage.getItem('luna.profile.goals.v1') ?? '[]') as string[];
+    } catch {
+      return [];
+    }
+  });
+  const [dailyReminder, setDailyReminder] = useState(() => window.localStorage.getItem('luna.notifications.daily.v1') === 'true');
+  const [contentReminder, setContentReminder] = useState(() => window.localStorage.getItem('luna.notifications.content.v1') === 'true');
+
+  useEffect(() => {
+    window.localStorage.setItem('luna.profile.goals.v1', JSON.stringify(goals));
+  }, [goals]);
+
+  useEffect(() => {
+    window.localStorage.setItem('luna.notifications.daily.v1', String(dailyReminder));
+  }, [dailyReminder]);
+
+  useEffect(() => {
+    window.localStorage.setItem('luna.notifications.content.v1', String(contentReminder));
+  }, [contentReminder]);
+
+  const avatarUrl = profile?.user?.avatar_url ?? null;
+  const planStatus = access.hasPremium
+    ? access.plan.toLowerCase().includes('lifetime') ? copy[language].lifetime : access.plan.toLowerCase().includes('monthly') ? copy[language].monthly : copy[language].premium
+    : copy[language].premiumFree;
+  const goalsLabel = goals.length === 1
+    ? (language === 'en' ? '1 goal' : '1 цель')
+    : (language === 'en' ? `${goals.length} goals` : `${goals.length} целей`);
+  const notificationLabel = dailyReminder || contentReminder ? copy[language].on : copy[language].off;
+  const companionStatus = copy[language].comingSoon;
+  const languageLabel = language === 'en' ? 'English' : 'Русский';
+
+  const goalOptions = [
+    { id: 'sleep', en: 'Sleep better', ru: 'Лучше спать' },
+    { id: 'anxiety', en: 'Reduce anxiety', ru: 'Снизить тревогу' },
+    { id: 'focus', en: 'Improve focus', ru: 'Улучшить фокус' },
+    { id: 'routine', en: 'Build a calm routine', ru: 'Создать спокойный ритм' },
+    { id: 'stress', en: 'Manage stress', ru: 'Управлять стрессом' }
+  ];
+
+  const updateAvatarInProfile = (avatar_url: string | null) => {
+    onProfileUpdate((current) => current ? { ...current, user: { ...current.user, avatar_url } } : current);
+  };
+
+  const handleAvatarFile = async (file?: File | null) => {
+    if (!file) return;
+    setAvatarMessage('');
+    setAvatarProgress(0);
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setAvatarMessage(language === 'en' ? 'Please choose a JPEG, PNG, or WebP image.' : 'Выбери JPEG, PNG или WebP изображение.');
+      return;
+    }
+
+    if (file.size > 8 * 1024 * 1024) {
+      setAvatarMessage(language === 'en' ? 'Please choose an image under 8 MB.' : 'Выбери изображение меньше 8 МБ.');
+      return;
+    }
+
+    try {
+      setAvatarBusy(true);
+      const resized = await resizeAvatarImage(file);
+      const result = await uploadProfileAvatar(resized, initData, setAvatarProgress);
+      updateAvatarInProfile(result.avatarUrl);
+      setAvatarMessage(language === 'en' ? 'Avatar updated.' : 'Аватар обновлён.');
+      setAvatarActionsOpen(false);
+    } catch (error) {
+      setAvatarMessage(error instanceof Error ? error.message : (language === 'en' ? 'Upload failed.' : 'Не удалось загрузить.'));
+    } finally {
+      setAvatarBusy(false);
+      setAvatarProgress(0);
+      if (chooseInputRef.current) chooseInputRef.current.value = '';
+      if (cameraInputRef.current) cameraInputRef.current.value = '';
+    }
+  };
+
+  const removeAvatar = async () => {
+    try {
+      setAvatarBusy(true);
+      await removeProfileAvatar(initData);
+      updateAvatarInProfile(null);
+      setAvatarMessage(language === 'en' ? 'Avatar removed.' : 'Аватар удалён.');
+      setAvatarActionsOpen(false);
+    } catch (error) {
+      setAvatarMessage(error instanceof Error ? error.message : (language === 'en' ? 'Could not remove avatar.' : 'Не удалось удалить аватар.'));
+    } finally {
+      setAvatarBusy(false);
+    }
+  };
+
+  if (view === 'goals') {
+    return (
+      <ProfileChildScreen title={language === 'en' ? 'Goals' : 'Цели'} onBack={() => setView('main')} language={language}>
+        <div className="space-y-2">
+          {goalOptions.map((goal) => {
+            const selected = goals.includes(goal.id);
+            return (
+              <button
+                key={goal.id}
+                onClick={() => setGoals((current) => selected ? current.filter((id) => id !== goal.id) : [...current, goal.id])}
+                className={`flex min-h-[54px] w-full items-center justify-between rounded-[18px] border px-4 text-left text-sm transition ${selected ? 'border-gold/30 bg-gold/10 text-cream' : 'border-white/10 bg-white/[0.045] text-lavender'}`}
+              >
+                <span>{language === 'en' ? goal.en : goal.ru}</span>
+                {selected && <CheckCircle size={17} className="text-gold" />}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-3 text-xs leading-5 text-lavender">{language === 'en' ? 'Goals are saved on this device until onboarding storage is connected.' : 'Цели сохраняются на этом устройстве, пока не подключено хранение онбординга.'}</p>
+      </ProfileChildScreen>
+    );
+  }
+
+  if (view === 'notifications') {
+    return (
+      <ProfileChildScreen title={language === 'en' ? 'Notifications' : 'Уведомления'} onBack={() => setView('main')} language={language}>
+        <section className="luna-surface rounded-[24px] p-2">
+          <ProfileToggleRow title={language === 'en' ? 'Daily reminder' : 'Ежедневное напоминание'} checked={dailyReminder} onChange={setDailyReminder} />
+          <ProfileToggleRow title={language === 'en' ? 'New content' : 'Новый контент'} checked={contentReminder} onChange={setContentReminder} />
+        </section>
+        <p className="mt-3 text-xs leading-5 text-lavender">
+          {language === 'en' ? 'Telegram notification permission is managed by Telegram. Luna stores only your reminder preference here.' : 'Разрешения Telegram управляются в Telegram. Здесь Luna хранит только твои предпочтения.'}
+        </p>
+      </ProfileChildScreen>
+    );
+  }
+
+  if (view === 'language') {
+    return (
+      <ProfileChildScreen title={copy[language].language} onBack={() => setView('main')} language={language}>
+        <section className="luna-surface rounded-[24px] p-2">
+          {(['en', 'ru'] as const).map((item) => (
+            <button key={item} onClick={() => onLanguageChange(item)} className="flex min-h-[56px] w-full items-center justify-between rounded-[18px] px-4 text-left text-sm text-cream">
+              <span>{item === 'en' ? 'English' : 'Русский'}</span>
+              {language === item && <CheckCircle size={17} className="text-gold" />}
             </button>
-          </div>
-        )}
-      <section className="luna-surface rounded-[26px] p-2">
-        <button onClick={onRestore} className="w-full rounded-[20px] px-4 py-3 text-left text-sm font-semibold text-gold">{copy[language].restore}</button>
-        <button onClick={onAddHome} className="w-full border-t border-white/10 px-4 py-3 text-left text-sm text-cream">
-          <span className="block font-semibold">{copy[language].addHomeTitle}</span>
-          <span className="mt-1 block text-xs text-lavender">{homeScreenMessage || copy[language].addHomeBody}</span>
+          ))}
+        </section>
+      </ProfileChildScreen>
+    );
+  }
+
+  if (view === 'subscription') {
+    return (
+      <ProfileChildScreen title={language === 'en' ? 'Subscription' : 'Подписка'} onBack={() => setView('main')} language={language}>
+        <section className="luna-surface rounded-[24px] p-4">
+          <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'Current plan' : 'Текущий план'}</p>
+          <h3 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-cream">{planStatus}</h3>
+          <button onClick={onSubscription} className="mt-4 w-full rounded-[18px] bg-gold px-4 py-3 text-sm font-semibold text-night">
+            {language === 'en' ? 'Manage Premium' : 'Управлять Premium'}
+          </button>
+          <button onClick={onRestore} className="mt-2 w-full rounded-[18px] border border-white/10 bg-white/[0.045] px-4 py-3 text-sm font-semibold text-gold">
+            {copy[language].restore}
+          </button>
+        </section>
+      </ProfileChildScreen>
+    );
+  }
+
+  if (view === 'more') {
+    return (
+      <ProfileChildScreen title={language === 'en' ? 'More Settings' : 'Ещё настройки'} onBack={() => setView('main')} language={language}>
+        <section className="luna-surface rounded-[24px] p-2">
+          <ProfileSettingsRow icon={Upload} title={copy[language].addHomeTitle} value={homeScreenMessage || ''} onClick={onAddHome} />
+          <ProfileSettingsRow icon={Heart} title={language === 'en' ? 'Support' : 'Поддержка'} value={language === 'en' ? 'Contact' : 'Связь'} onClick={onLuna} />
+          <ProfileSettingsRow icon={Lock} title={language === 'en' ? 'Privacy Policy' : 'Политика приватности'} value="" />
+          <ProfileSettingsRow icon={CheckCircle} title={language === 'en' ? 'Terms of Use' : 'Условия использования'} value="" />
+          {showAdminButton && <ProfileSettingsRow icon={Settings} title="Admin" value={language === 'en' ? 'Developer' : 'Разработка'} onClick={onAdmin} />}
+        </section>
+        <button className="mt-4 w-full rounded-[20px] border border-white/10 bg-white/[0.035] px-4 py-3 text-left text-sm text-lavender">
+          {copy[language].logout}
         </button>
-        <button className="w-full border-t border-white/10 px-4 py-3 text-left text-sm text-lavender">{copy[language].logout}</button>
+        <p className="mt-3 text-center text-[11px] text-cream/38">Luna MVP · 0.1.0</p>
+      </ProfileChildScreen>
+    );
+  }
+
+  return (
+    <div className="luna-page space-y-4 pb-[calc(98px+env(safe-area-inset-bottom))]">
+      <div>
+        <h2 className="text-[28px] font-semibold tracking-[-0.04em] text-cream">{copy[language].profile}</h2>
+      </div>
+
+      <section className="flex items-center gap-4 px-1">
+        <button
+          onClick={() => setAvatarActionsOpen(true)}
+          className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border border-gold/30 bg-white/[0.045] shadow-glow focus:outline-none focus:ring-2 focus:ring-gold/35"
+          aria-label={language === 'en' ? 'Change profile photo' : 'Изменить фото профиля'}
+        >
+          {avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : <MoonMark className="h-full w-full border-0" />}
+          <span className="absolute bottom-0 right-0 grid h-7 w-7 place-items-center rounded-full border border-white/10 bg-night/85 text-gold backdrop-blur">
+            <Camera size={14} />
+          </span>
+        </button>
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-[25px] font-semibold leading-tight tracking-[-0.04em] text-cream">{firstName}</h3>
+          <p className="mt-1 text-sm font-semibold text-gold">{access.hasPremium ? `◆ ${planStatus}` : planStatus}</p>
+          <p className="mt-0.5 truncate text-xs text-lavender">{username ? `@${username}` : copy[language].member}</p>
+        </div>
       </section>
+
+      {avatarMessage && <p className="rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-2 text-xs text-lavender" role="status">{avatarMessage}</p>}
+      {avatarBusy && <div className="h-1 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gold transition-all" style={{ width: `${Math.max(8, avatarProgress)}%` }} /></div>}
+
+      <section className="luna-surface rounded-[26px] p-2">
+        <ProfileSettingsRow icon={Target} title={language === 'en' ? 'Goals' : 'Цели'} value={goalsLabel} onClick={() => setView('goals')} />
+        <ProfileSettingsRow icon={Bell} title={language === 'en' ? 'Notifications' : 'Уведомления'} value={notificationLabel} onClick={() => setView('notifications')} />
+        <ProfileSettingsRow icon={Bot} title={language === 'en' ? 'AI Companion' : 'AI-компаньон'} value={companionStatus} onClick={onLuna} />
+        <ProfileSettingsRow icon={CreditCard} title={language === 'en' ? 'Subscription' : 'Подписка'} value={planStatus} onClick={() => setView('subscription')} />
+        <ProfileSettingsRow icon={Globe2} title={copy[language].language} value={languageLabel} onClick={() => setView('language')} />
+        <ProfileSettingsRow icon={Settings} title={language === 'en' ? 'More Settings' : 'Ещё настройки'} value="" onClick={() => setView('more')} />
+      </section>
+
+      {avatarActionsOpen && (
+        <div className="fixed inset-0 z-40 grid place-items-end bg-night/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#111936] p-3 shadow-glow">
+            <button disabled={avatarBusy} onClick={() => chooseInputRef.current?.click()} className="w-full rounded-[18px] px-4 py-3 text-left text-sm font-semibold text-cream">{language === 'en' ? 'Choose photo' : 'Выбрать фото'}</button>
+            <button disabled={avatarBusy} onClick={() => cameraInputRef.current?.click()} className="w-full rounded-[18px] px-4 py-3 text-left text-sm font-semibold text-cream">{language === 'en' ? 'Take photo' : 'Сделать фото'}</button>
+            {avatarUrl && <button disabled={avatarBusy} onClick={() => void removeAvatar()} className="w-full rounded-[18px] px-4 py-3 text-left text-sm font-semibold text-gold">{language === 'en' ? 'Remove photo' : 'Удалить фото'}</button>}
+            <button disabled={avatarBusy} onClick={() => setAvatarActionsOpen(false)} className="mt-2 w-full rounded-[18px] bg-white/[0.055] px-4 py-3 text-center text-sm font-semibold text-lavender">{language === 'en' ? 'Cancel' : 'Отмена'}</button>
+          </div>
+        </div>
+      )}
+      <input ref={chooseInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => void handleAvatarFile(event.currentTarget.files?.[0])} />
+      <input ref={cameraInputRef} type="file" accept="image/jpeg,image/png,image/webp" capture="user" className="hidden" onChange={(event) => void handleAvatarFile(event.currentTarget.files?.[0])} />
     </div>
+  );
+}
+
+function ProfileChildScreen({ title, onBack, children }: {
+  title: string;
+  onBack: () => void;
+  language: AppLanguage;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="luna-page space-y-4 pb-[calc(98px+env(safe-area-inset-bottom))]">
+      <button onClick={onBack} className="luna-icon-button transition active:scale-95" aria-label="Back">
+        ←
+      </button>
+      <h2 className="text-[28px] font-semibold tracking-[-0.04em] text-cream">{title}</h2>
+      {children}
+    </div>
+  );
+}
+
+function ProfileSettingsRow({ icon: Icon, title, value, onClick }: {
+  icon: typeof Target;
+  title: string;
+  value: string;
+  onClick?: () => void;
+}) {
+  const content = (
+    <>
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-[14px] border border-white/10 bg-white/[0.045] text-lavender">
+        <Icon size={17} strokeWidth={1.8} />
+      </span>
+      <span className="min-w-0 flex-1 text-sm font-medium text-cream">{title}</span>
+      {value && <span className="max-w-[118px] truncate text-right text-xs text-lavender">{value}</span>}
+      <ChevronRight size={16} className="shrink-0 text-lavender/55" />
+    </>
+  );
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!onClick}
+      className="flex min-h-[54px] w-full items-center gap-3 rounded-[18px] px-3 text-left transition hover:bg-white/[0.035] active:scale-[0.99] disabled:cursor-default disabled:hover:bg-transparent"
+    >
+      {content}
+    </button>
+  );
+}
+
+function ProfileToggleRow({ title, checked, onChange }: {
+  title: string;
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <button onClick={() => onChange(!checked)} className="flex min-h-[56px] w-full items-center justify-between rounded-[18px] px-4 text-left text-sm text-cream">
+      <span>{title}</span>
+      <span className={`relative h-7 w-12 rounded-full transition ${checked ? 'bg-gold' : 'bg-white/12'}`} aria-hidden="true">
+        <span className={`absolute top-1 h-5 w-5 rounded-full bg-cream transition ${checked ? 'left-6' : 'left-1'}`} />
+      </span>
+    </button>
   );
 }
 
@@ -5747,29 +5937,6 @@ function Stat({ label, value }: { label: string; value: string }) {
       <p className="mt-1 break-words font-semibold leading-5">{value}</p>
     </div>
   );
-}
-
-function ProfileAction({ label, value, onClick }: { label: string; value: string; onClick?: () => void }) {
-  const content = (
-    <>
-      <span className="min-w-0">
-        <strong className="block text-sm font-semibold text-cream">{label}</strong>
-        <small className="mt-1 block truncate text-xs text-lavender">{value}</small>
-      </span>
-      {onClick ? <span className="shrink-0 text-sm text-gold">→</span> : null}
-    </>
-  );
-  const className = 'flex w-full items-center justify-between gap-3 rounded-[20px] px-4 py-3 text-left transition hover:bg-white/[0.04]';
-
-  if (onClick) {
-    return (
-      <button type="button" onClick={onClick} className={className}>
-        {content}
-      </button>
-    );
-  }
-
-  return <div className={className}>{content}</div>;
 }
 
 function EmptyState({ title, body }: { title: string; body: string }) {
