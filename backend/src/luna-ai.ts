@@ -116,7 +116,7 @@ function pathJoin(base: string, key: string | number) {
   return typeof key === 'number' ? `${base}[${key}]` : base ? `${base}.${key}` : key;
 }
 
-function firstTextFromValue(value: unknown, path: string, seen = new WeakSet<object>()): { text: string; path: string } | null {
+function firstKnownAssistantText(value: unknown, path: string, seen = new WeakSet<object>()): { text: string; path: string } | null {
   if (typeof value === 'string') {
     const text = value.trim();
     return text ? { text, path } : null;
@@ -128,7 +128,7 @@ function firstTextFromValue(value: unknown, path: string, seen = new WeakSet<obj
 
   if (Array.isArray(value)) {
     for (let index = 0; index < value.length; index += 1) {
-      const match = firstTextFromValue(value[index], pathJoin(path, index), seen);
+      const match = firstKnownAssistantText(value[index], pathJoin(path, index), seen);
       if (match) return match;
     }
     return null;
@@ -136,7 +136,6 @@ function firstTextFromValue(value: unknown, path: string, seen = new WeakSet<obj
 
   const record = value as Record<string, unknown>;
   const priorityKeys = ['text', 'value', 'output_text', 'input_text', 'content', 'message', 'parsed', 'refusal'];
-  const skippedStringKeys = new Set(['id', 'object', 'type', 'role', 'status', 'model', 'finish_reason', 'reason', 'name']);
 
   for (const key of priorityKeys) {
     if (!(key in record)) continue;
@@ -144,14 +143,39 @@ function firstTextFromValue(value: unknown, path: string, seen = new WeakSet<obj
       const text = valueToText(record[key]);
       if (text) return { text, path: pathJoin(path, key) };
     }
-    const match = firstTextFromValue(record[key], pathJoin(path, key), seen);
+    const match = firstKnownAssistantText(record[key], pathJoin(path, key), seen);
     if (match) return match;
   }
 
-  for (const [key, child] of Object.entries(record)) {
-    if (priorityKeys.includes(key)) continue;
-    if (typeof child === 'string' && skippedStringKeys.has(key)) continue;
-    const match = firstTextFromValue(child, pathJoin(path, key), seen);
+  return null;
+}
+
+function fallbackOutputText(value: unknown, path: string, seen = new WeakSet<object>()): { text: string; path: string } | null {
+  if (typeof value === 'string') {
+    const text = value.trim();
+    return text ? { text, path } : null;
+  }
+
+  if (!value || typeof value !== 'object') return null;
+  if (seen.has(value)) return null;
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index += 1) {
+      const match = fallbackOutputText(value[index], pathJoin(path, index), seen);
+      if (match) return match;
+    }
+    return null;
+  }
+
+  const skippedKeys = new Set([
+    'id', 'object', 'type', 'role', 'status', 'model', 'finish_reason', 'reason',
+    'name', 'metadata', 'schema', 'instructions', 'catalog', 'usage'
+  ]);
+
+  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+    if (skippedKeys.has(key)) continue;
+    const match = fallbackOutputText(child, pathJoin(path, key), seen);
     if (match) return match;
   }
 
@@ -161,7 +185,7 @@ function firstTextFromValue(value: unknown, path: string, seen = new WeakSet<obj
 function recursiveOutputText(response: OpenAiResponse) {
   const output = response.output as unknown;
   if (!output) return null;
-  return firstTextFromValue(output, 'output');
+  return firstKnownAssistantText(output, 'output') ?? fallbackOutputText(output, 'output');
 }
 
 export function extractOpenAiText(response: OpenAiResponse): ExtractedOpenAiText {
@@ -174,13 +198,13 @@ export function extractOpenAiText(response: OpenAiResponse): ExtractedOpenAiText
   ];
 
   for (const candidate of directCandidates) {
-    const text = firstTextFromValue(candidate.value, candidate.path);
+    const text = firstKnownAssistantText(candidate.value, candidate.path);
     if (text) return { text: text.text, refusal: null, path: text.path };
   }
 
   for (const item of response.output ?? []) {
     if (item.content) {
-      const refusal = firstTextFromValue(item.content, 'output.content.refusal');
+      const refusal = firstKnownAssistantText(item.content, 'output.content.refusal');
       if (item.type === 'refusal' && refusal) return { text: '', refusal: refusal.text, path: refusal.path };
     }
   }
@@ -191,10 +215,10 @@ export function extractOpenAiText(response: OpenAiResponse): ExtractedOpenAiText
     return { text: outputText.text, refusal: null, path: outputText.path };
   }
 
-  const refusal = firstTextFromValue(response, 'response');
+  const refusal = firstKnownAssistantText(response, 'response');
   if (refusal && refusal.path.endsWith('.refusal')) return { text: '', refusal: refusal.text, path: refusal.path };
 
-  console.error('[Luna AI OpenAI extraction failed]', { response });
+  console.error('[Luna AI OpenAI extraction failed]', JSON.stringify({ response }, null, 2));
   throw new LunaAiError('malformed_response', 'OpenAI returned no assistant text anywhere in the response.', 502);
 }
 
@@ -245,6 +269,120 @@ export function normalizeOpenAiModelResult(extracted: { text: string; refusal: s
 function extractFinishReason(response: OpenAiResponse) {
   const outputReason = response.output?.find((item) => item.finish_reason)?.finish_reason;
   return outputReason ?? response.choices?.find((choice) => choice.finish_reason)?.finish_reason ?? response.incomplete_details?.reason ?? response.status ?? 'unknown';
+}
+
+export function shouldRetryOpenAiResponse(response: OpenAiResponse, extracted: ExtractedOpenAiText | null) {
+  return !extracted && response.incomplete_details?.reason === 'max_output_tokens';
+}
+
+export function retryMaxOutputTokens(baseTokens = env.AI_MAX_OUTPUT_TOKENS) {
+  return Math.min(Math.max(baseTokens * 2, 4000), 8192);
+}
+
+function compactText(value: unknown, maxLength: number) {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.replace(/\s+/g, ' ').trim();
+  if (!trimmed) return null;
+  return trimmed.length > maxLength ? `${trimmed.slice(0, maxLength - 1)}…` : trimmed;
+}
+
+function lunaStructuredTextFormat() {
+  return {
+    format: {
+      type: 'json_schema',
+      name: 'luna_companion_response',
+      strict: true,
+      schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          message: { type: 'string' },
+          conversationTitle: { type: ['string', 'null'] },
+          recommendedMeditationId: { type: ['string', 'null'] },
+          memoryCandidates: {
+            type: 'array',
+            maxItems: 3,
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                category: { type: 'string', enum: memoryCategories },
+                key: { type: 'string' },
+                value: { type: 'string' },
+                confidence: { type: 'number' }
+              },
+              required: ['category', 'key', 'value', 'confidence']
+            }
+          }
+        },
+        required: ['message', 'conversationTitle', 'recommendedMeditationId', 'memoryCandidates']
+      }
+    }
+  };
+}
+
+export function buildLunaOpenAiRequest(input: {
+  language: 'en' | 'ru';
+  catalog: Array<Record<string, unknown>>;
+  context: unknown;
+  recent: Array<{ role: string; content: string }>;
+  maxOutputTokens?: number;
+}) {
+  return {
+    model: env.AI_CHAT_MODEL,
+    store: false,
+    reasoning: { effort: env.AI_REASONING_EFFORT },
+    instructions: systemPrompt(input.language, JSON.stringify(input.catalog), JSON.stringify(input.context)),
+    input: input.recent.map((message) => ({ role: message.role, content: message.content })),
+    max_output_tokens: input.maxOutputTokens ?? env.AI_MAX_OUTPUT_TOKENS,
+    text: lunaStructuredTextFormat()
+  };
+}
+
+async function callOpenAiResponses(input: {
+  requestBody: ReturnType<typeof buildLunaOpenAiRequest>;
+  signal: AbortSignal;
+  telegramId: number;
+  conversationId: string;
+  attempt: number;
+}) {
+  console.info('[Luna AI OpenAI request body]', JSON.stringify({
+    user: userHash(input.telegramId),
+    conversationId: input.conversationId,
+    attempt: input.attempt,
+    requestBody: input.requestBody
+  }, null, 2));
+
+  const response = await fetch('https://api.openai.com/v1/responses', {
+    method: 'POST',
+    signal: input.signal,
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${env.OPENAI_API_KEY}` },
+    body: JSON.stringify(input.requestBody)
+  });
+  const body = await response.text();
+  console.info('[Luna AI OpenAI raw response]', JSON.stringify({
+    user: userHash(input.telegramId),
+    conversationId: input.conversationId,
+    attempt: input.attempt,
+    status: response.status,
+    model: env.AI_CHAT_MODEL,
+    rawResponse: body
+  }, null, 2));
+
+  if (!response.ok) {
+    const code = response.status === 429 ? 'openai_rate_limit' : response.status === 401 ? 'openai_auth' : 'openai_error';
+    throw new LunaAiError(code, `OpenAI request failed with status ${response.status}.`, response.status === 429 ? 429 : 502);
+  }
+
+  try {
+    const parsed = JSON.parse(body) as OpenAiResponse;
+    console.info('[Luna AI OpenAI full response]', JSON.stringify(parsed, null, 2));
+    console.info('[Luna AI OpenAI output]', JSON.stringify(parsed.output ?? null, null, 2));
+    console.info('[Luna AI OpenAI incomplete details]', JSON.stringify(parsed.incomplete_details ?? null, null, 2));
+    return parsed;
+  } catch {
+    throw new LunaAiError('malformed_response', 'OpenAI returned invalid JSON.', 502);
+  }
 }
 
 async function ownedConversation(telegramId: number, conversationId: string) {
@@ -460,73 +598,68 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
 
     const { recent, context, catalog, memoryEnabled } = await loadContext(telegramId, resolvedConversationId, input.message);
     const catalogForModel = catalog.map((item) => ({
-      id: item.id, title: item.title, subtitle: item.subtitle, description: item.description,
-      category: item.category, duration: item.duration, language: input.language,
-      premium: item.premium, mood: item.mood, translation: item.translations?.[input.language] ?? null
+      id: item.id,
+      title: item.translations?.[input.language]?.title ?? item.title,
+      category: item.category,
+      mood: item.mood,
+      language: input.language,
+      premium: item.premium,
+      summary: compactText(item.translations?.[input.language]?.subtitle ?? item.subtitle ?? item.description, 120)
     }));
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), env.AI_REQUEST_TIMEOUT_MS);
     let openAiResponse: OpenAiResponse;
+    let extracted: ExtractedOpenAiText | null = null;
     try {
-      const response = await fetch('https://api.openai.com/v1/responses', {
-        method: 'POST',
+      openAiResponse = await callOpenAiResponses({
+        requestBody: buildLunaOpenAiRequest({
+          language: input.language,
+          catalog: catalogForModel,
+          context,
+          recent,
+          maxOutputTokens: env.AI_MAX_OUTPUT_TOKENS
+        }),
         signal: controller.signal,
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${env.OPENAI_API_KEY}` },
-        body: JSON.stringify({
-          model: env.AI_CHAT_MODEL,
-          store: false,
-          instructions: systemPrompt(input.language, JSON.stringify(catalogForModel), JSON.stringify(context)),
-          input: recent.map((message) => ({ role: message.role, content: message.content })),
-          max_output_tokens: env.AI_MAX_OUTPUT_TOKENS,
-          text: {
-            format: {
-              type: 'json_schema', name: 'luna_companion_response', strict: true,
-              schema: {
-                type: 'object', additionalProperties: false,
-                properties: {
-                  message: { type: 'string' },
-                  conversationTitle: { type: ['string', 'null'] },
-                  recommendedMeditationId: { type: ['string', 'null'] },
-                  memoryCandidates: {
-                    type: 'array', maxItems: 3,
-                    items: {
-                      type: 'object', additionalProperties: false,
-                      properties: {
-                        category: { type: 'string', enum: memoryCategories }, key: { type: 'string' },
-                        value: { type: 'string' }, confidence: { type: 'number' }
-                      },
-                      required: ['category', 'key', 'value', 'confidence']
-                    }
-                  }
-                },
-                required: ['message', 'conversationTitle', 'recommendedMeditationId', 'memoryCandidates']
-              }
-            }
-          }
-        })
-      });
-      const body = await response.text();
-      console.info('[Luna AI OpenAI raw response]', {
-        user: userHash(telegramId),
+        telegramId,
         conversationId: resolvedConversationId,
-        status: response.status,
-        model: env.AI_CHAT_MODEL,
-        rawResponse: body
+        attempt: 1
       });
-      if (!response.ok) {
-        const code = response.status === 429 ? 'openai_rate_limit' : response.status === 401 ? 'openai_auth' : 'openai_error';
-        throw new LunaAiError(code, `OpenAI request failed with status ${response.status}.`, response.status === 429 ? 429 : 502);
-      }
       try {
-        openAiResponse = JSON.parse(body) as OpenAiResponse;
-      } catch {
-        throw new LunaAiError('malformed_response', 'OpenAI returned invalid JSON.', 502);
+        extracted = extractOpenAiText(openAiResponse);
+      } catch (error) {
+        if (!shouldRetryOpenAiResponse(openAiResponse, extracted)) throw error;
+      }
+
+      if (shouldRetryOpenAiResponse(openAiResponse, extracted)) {
+        const retryTokens = retryMaxOutputTokens(env.AI_MAX_OUTPUT_TOKENS);
+        console.warn('[Luna AI OpenAI retry]', JSON.stringify({
+          user: userHash(telegramId),
+          conversationId: resolvedConversationId,
+          reason: openAiResponse.incomplete_details?.reason,
+          firstMaxOutputTokens: env.AI_MAX_OUTPUT_TOKENS,
+          retryMaxOutputTokens: retryTokens,
+          reasoningEffort: env.AI_REASONING_EFFORT
+        }, null, 2));
+        openAiResponse = await callOpenAiResponses({
+          requestBody: buildLunaOpenAiRequest({
+            language: input.language,
+            catalog: catalogForModel,
+            context,
+            recent,
+            maxOutputTokens: retryTokens
+          }),
+          signal: controller.signal,
+          telegramId,
+          conversationId: resolvedConversationId,
+          attempt: 2
+        });
+        extracted = extractOpenAiText(openAiResponse);
       }
     } finally {
       clearTimeout(timeout);
     }
 
-    const extracted = extractOpenAiText(openAiResponse);
+    if (!extracted) throw new LunaAiError('malformed_response', 'OpenAI returned no assistant text after retry.', 502);
     const finishReason = extractFinishReason(openAiResponse);
     console.info('[Luna AI OpenAI parsed response]', {
       user: userHash(telegramId),

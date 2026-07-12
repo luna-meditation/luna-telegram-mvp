@@ -28,7 +28,8 @@ const envSchema = z.object({
   AI_MAX_MESSAGES_PER_DAY: z.coerce.number().int().positive().default(8),
   AI_PREMIUM_MAX_MESSAGES_PER_DAY: z.coerce.number().int().positive().default(40),
   AI_MAX_MESSAGE_LENGTH: z.coerce.number().int().min(100).max(10000).default(2000),
-  AI_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(128).max(4096).default(800),
+  AI_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(512).max(8192).default(2000),
+  AI_REASONING_EFFORT: z.enum(['minimal', 'low', 'medium', 'high']).default('minimal'),
   AI_RECENT_MESSAGE_LIMIT: z.coerce.number().int().min(4).max(40).default(16),
   AI_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(5000).max(120000).default(30000),
   PORT: z.coerce.number().default(4000)
