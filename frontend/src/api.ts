@@ -239,10 +239,12 @@ export type LunaConversationSummary = {
 
 export type LunaMessage = {
   id: string;
+  request_id?: string | null;
   role: 'user' | 'assistant';
   content: string;
   metadata?: {
     recommendedMeditationId?: string | null;
+    recommendedMeditation?: Meditation | null;
     safetyState?: string;
   };
   created_at: string;
@@ -481,7 +483,7 @@ export async function sendLunaMessage(input: {
   language: AppLanguage;
   requestId: string;
 }, initData?: string) {
-  return request<{ conversationId: string; message: LunaMessage; duplicate: boolean; remaining: number }>('/api/luna/chat', {
+  return request<{ conversationId: string; message: LunaMessage; duplicate: boolean; remaining: number; requestState: 'completed' }>('/api/luna/chat', {
     method: 'POST',
     body: JSON.stringify(input)
   }, initData);

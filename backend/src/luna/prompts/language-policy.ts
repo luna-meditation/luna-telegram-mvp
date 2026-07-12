@@ -1,0 +1,1 @@
+export const languagePolicyPrompt = `Use the language of the latest clear user message. Russian messages receive Russian replies; English messages receive English replies. Switch naturally when the user switches. Meditation titles and metadata never determine the reply language. Preserve feminine Russian grammar after a language switch.`;

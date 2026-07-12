@@ -31,16 +31,55 @@ function requestId() {
     : `luna-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function localizedError(error: unknown, language: AppLanguage) {
+type FailedTurn = {
+  clientRequestId: string;
+  text: string;
+  optimisticMessageId: string;
+  message: string;
+  retryable: boolean;
+  state: 'failed_retryable' | 'failed_non_retryable' | 'quota_exhausted' | 'processing';
+  resetAt?: string | null;
+};
+
+function errorDetails(error: unknown, language: AppLanguage): Omit<FailedTurn, 'clientRequestId' | 'text' | 'optimisticMessageId'> {
   let code = '';
+  let retryable = false;
+  let state: FailedTurn['state'] = 'failed_retryable';
+  let resetAt: string | null = null;
   if (error instanceof ApiRequestError && error.responseBody) {
-    try { code = (JSON.parse(error.responseBody) as { code?: string }).code ?? ''; } catch { code = ''; }
+    try {
+      const body = JSON.parse(error.responseBody) as { code?: string; retryable?: boolean; requestState?: FailedTurn['state']; resetAt?: string | null };
+      code = body.code ?? '';
+      retryable = Boolean(body.retryable);
+      state = body.requestState ?? state;
+      resetAt = body.resetAt ?? null;
+    } catch { code = ''; }
   }
-  if (code === 'daily_limit') return language === 'ru' ? 'Лимит сообщений на сегодня достигнут. Возвращайся завтра или открой Luna Premium.' : 'Your Luna messages for today are used. Return tomorrow or explore Luna Premium.';
-  if (code === 'chat_disabled' || code === 'missing_api_key') return language === 'ru' ? 'Разговоры с Luna пока недоступны. Попробуй немного позже.' : 'Luna conversations are unavailable right now. Please try again later.';
-  if (code === 'timeout') return language === 'ru' ? 'Luna не успела ответить. Попробуй ещё раз.' : 'Luna took too long to respond. Please try again.';
-  if (error instanceof ApiRequestError && error.status === 401) return language === 'ru' ? 'Открой Luna внутри Telegram, чтобы продолжить разговор.' : 'Open Luna inside Telegram to continue your conversation.';
-  return language === 'ru' ? 'Luna сейчас не смогла ответить. Попробуй ещё раз через минуту.' : 'Luna could not respond just now. Please try again in a moment.';
+  if (code === 'quota_exhausted' || code === 'daily_limit') return {
+    message: language === 'ru' ? 'Сообщения Luna на сегодня закончились. Лимит обновится завтра.' : 'Your Luna messages for today are used. The limit resets tomorrow.',
+    retryable: false, state: 'quota_exhausted', resetAt
+  };
+  if (code === 'chat_disabled' || code === 'missing_api_key') return {
+    message: language === 'ru' ? 'Разговоры с Luna сейчас недоступны.' : 'Luna conversations are unavailable right now.',
+    retryable: false, state: 'failed_non_retryable', resetAt
+  };
+  if (code === 'timeout') return {
+    message: language === 'ru' ? 'Luna не успела ответить. Можно повторить этот запрос.' : 'Luna took too long to respond. You can retry this message.',
+    retryable: true, state: 'failed_retryable', resetAt
+  };
+  if (code === 'request_in_progress') return {
+    message: language === 'ru' ? 'Luna ещё отвечает на это сообщение.' : 'Luna is still responding to this message.',
+    retryable: true, state: 'processing', resetAt
+  };
+  if (error instanceof ApiRequestError && error.status === 401) return {
+    message: language === 'ru' ? 'Открой Luna внутри Telegram, чтобы продолжить разговор.' : 'Open Luna inside Telegram to continue your conversation.',
+    retryable: false, state: 'failed_non_retryable', resetAt
+  };
+  return {
+    message: language === 'ru' ? 'Luna сейчас не смогла ответить. Можно повторить этот запрос.' : 'Luna could not respond just now. You can retry this message.',
+    retryable: retryable || !(error instanceof ApiRequestError && error.status !== null && error.status < 500),
+    state: retryable ? state : 'failed_retryable', resetAt
+  };
 }
 
 function localizeMeditation(meditation: Meditation, language: AppLanguage) {
@@ -64,7 +103,8 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
   const [loading, setLoading] = useState(true);
   const [thinking, setThinking] = useState(false);
   const [error, setError] = useState('');
-  const [retryText, setRetryText] = useState('');
+  const [failedTurn, setFailedTurn] = useState<FailedTurn | null>(null);
+  const [quotaExhausted, setQuotaExhausted] = useState(false);
   const [awayFromBottom, setAwayFromBottom] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -106,7 +146,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
         if (list) list.scrollTop = list.scrollHeight;
       });
     } catch (loadError) {
-      setError(localizedError(loadError, language));
+      setError(errorDetails(loadError, language).message);
     } finally {
       setLoading(false);
     }
@@ -157,15 +197,18 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
     setMessages([]);
     setDraft(seed.replace(/^[^\p{L}\p{N}]+/u, '').trim());
     setError('');
-    setRetryText('');
+    setFailedTurn(null);
     setScreen('chat');
     window.localStorage.removeItem(activeConversationKey);
   };
 
-  const submit = async (text: string) => {
+  const submit = async (text: string, retry?: FailedTurn) => {
     const clean = text.trim();
-    if (!clean || thinking || clean.length > 2000) return;
-    const optimistic: LunaMessage = { id: requestId(), role: 'user', content: clean, created_at: new Date().toISOString() };
+    if (!clean || thinking || quotaExhausted || clean.length > 2000) return;
+    const clientRequestId = retry?.clientRequestId ?? requestId();
+    const optimistic: LunaMessage = retry
+      ? { id: retry.optimisticMessageId, request_id: clientRequestId, role: 'user', content: clean, created_at: new Date().toISOString() }
+      : { id: requestId(), request_id: clientRequestId, role: 'user', content: clean, created_at: new Date().toISOString() };
     if (screen !== 'chat') {
       setActiveId('');
       setMessages([]);
@@ -174,20 +217,20 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
     }
     setDraft('');
     setError('');
-    setRetryText('');
-    setMessages((current) => [...current, optimistic]);
+    setFailedTurn(null);
+    if (!retry) setMessages((current) => [...current, optimistic]);
     setThinking(true);
     nearBottomRef.current = true;
     try {
-      const result = await sendLunaMessage({ conversationId: activeId || undefined, message: clean, language, requestId: requestId() }, initData);
+      const result = await sendLunaMessage({ conversationId: activeId || undefined, message: clean, language, requestId: clientRequestId }, initData);
       setActiveId(result.conversationId);
       window.localStorage.setItem(activeConversationKey, result.conversationId);
       setMessages((current) => [...current, result.message]);
       await refreshConversations();
     } catch (sendError) {
-      setMessages((current) => current.filter((message) => message.id !== optimistic.id));
-      setError(localizedError(sendError, language));
-      setRetryText(clean);
+      const details = errorDetails(sendError, language);
+      setQuotaExhausted(details.state === 'quota_exhausted');
+      setFailedTurn({ ...details, clientRequestId, text: clean, optimisticMessageId: optimistic.id });
     } finally {
       setThinking(false);
     }
@@ -203,7 +246,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
       setScreen('chat');
       await refreshConversations();
     } catch (removeError) {
-      setError(localizedError(removeError, language));
+      setError(errorDetails(removeError, language).message);
     }
   };
 
@@ -258,7 +301,9 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
           </div>
         ) : visibleMessages.map((message) => {
           const recommendationId = message.metadata?.recommendedMeditationId;
-          const recommendation = recommendationId ? meditations.find((item) => item.id === recommendationId) : undefined;
+          const recommendation = recommendationId
+            ? meditations.find((item) => item.id === recommendationId) ?? message.metadata?.recommendedMeditation ?? undefined
+            : undefined;
           const localized = recommendation ? localizeMeditation(recommendation, language) : null;
           return (
             <div key={message.id} className={`luna-live-message-row luna-live-message-${message.role}`}>
@@ -277,7 +322,10 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
           );
         })}
         {thinking ? <div className="luna-thinking-indicator"><span className="luna-message-orb luna-message-orb-thinking" /><span>{language === 'ru' ? 'Luna рядом...' : 'Luna is here...'}</span></div> : null}
-        {error ? <div className="luna-live-error"><p>{error}</p>{retryText ? <button type="button" onClick={() => void submit(retryText)}><RotateCcw size={14} />{language === 'ru' ? 'Повторить' : 'Retry'}</button> : null}</div> : null}
+        {failedTurn ? <div className={`luna-live-error luna-live-error-${failedTurn.state}`} role="status">
+          <p>{failedTurn.message}</p>
+          {failedTurn.retryable && failedTurn.state !== 'quota_exhausted' ? <button type="button" disabled={thinking} onClick={() => void submit(failedTurn.text, failedTurn)}><RotateCcw size={14} />{language === 'ru' ? 'Повторить' : 'Retry'}</button> : null}
+        </div> : null}
       </div>
 
       {awayFromBottom ? <button type="button" className="luna-scroll-latest" onClick={() => scrollToLatest()} aria-label={language === 'ru' ? 'К последнему сообщению' : 'Scroll to latest'}><ArrowDown size={17} /></button> : null}
@@ -287,7 +335,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
           value={draft}
           rows={1}
           maxLength={2000}
-          disabled={thinking}
+          disabled={thinking || quotaExhausted}
           onChange={(event) => setDraft(event.currentTarget.value)}
           onFocus={() => requestAnimationFrame(() => scrollToLatest(false))}
           onKeyDown={(event) => {
@@ -296,9 +344,9 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
               void submit(draft);
             }
           }}
-          placeholder={language === 'ru' ? 'Напишите Luna...' : 'Message Luna...'}
+          placeholder={quotaExhausted ? (language === 'ru' ? 'Лимит обновится завтра' : 'Limit resets tomorrow') : (language === 'ru' ? 'Напишите Luna...' : 'Message Luna...')}
         />
-        <button type="submit" disabled={!draft.trim() || thinking} aria-label={language === 'ru' ? 'Отправить' : 'Send'}><Send size={17} /></button>
+        <button type="submit" disabled={!draft.trim() || thinking || quotaExhausted} aria-label={language === 'ru' ? 'Отправить' : 'Send'}><Send size={17} /></button>
       </form>
     </section>
   );

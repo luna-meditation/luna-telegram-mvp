@@ -6,6 +6,8 @@ import {
   detectConversationLanguage,
   enforceLunaFeminineIdentity,
   formatMeditationDuration,
+  enforceCardClaimConsistency,
+  messageClaimsMeditationCard,
   hasInternalDataLeak,
   isAmbiguousSleepyTiredContext,
   isInChatGuidanceRequest,
@@ -135,6 +137,15 @@ test('explicit meditation requests override cooldown and return one valid card i
   }), 'anxiety');
 });
 
+test('a second explicit clarity request overrides cooldown and changes the card', () => {
+  assert.equal(semanticMeditationRecommendation({
+    message: 'А что-нибудь для ясности ума? Покажи медитацию.',
+    catalog: recommendationCatalog,
+    recentAssistantRecommendations: ['anxiety'],
+    modelRecommendationGoal: 'focus'
+  }), 'focus');
+});
+
 test('send it here reuses the latest selected meditation card', () => {
   assert.equal(isReadyMeditationRequest('Можешь сюда прислать?'), true);
   assert.equal(semanticMeditationRecommendation({
@@ -181,6 +192,12 @@ test('never exposes ids, uuid, audio urls, or manual Library instructions when a
   assert.doesNotMatch(noLibrary, /Open Library|search for/i);
   assert.match(noLibrary, /card below/i);
   assert.equal(hasInternalDataLeak('recommendedMeditationId: abc'), true);
+});
+
+test('card claims cannot survive without a validated recommendation payload', () => {
+  assert.equal(messageClaimsMeditationCard('Открой карточку ниже.'), true);
+  assert.doesNotMatch(enforceCardClaimConsistency('Открой карточку ниже.', 'ru', false), /карточк.*ниже/i);
+  assert.equal(enforceCardClaimConsistency('Открой карточку ниже.', 'ru', true), 'Открой карточку ниже.');
 });
 
 test('repairs an unambiguous catalog title mentioned without recommendation id', () => {

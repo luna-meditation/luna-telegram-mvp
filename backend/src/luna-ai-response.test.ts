@@ -10,11 +10,19 @@ process.env.OPENAI_API_KEY = 'test-openai-key';
 
 const {
   buildLunaOpenAiRequest,
+  classifyLunaFailure,
   extractOpenAiText,
+  LunaAiError,
   normalizeOpenAiModelResult,
   retryMaxOutputTokens,
   shouldRetryOpenAiResponse
 } = await import('./luna-ai.js');
+
+test('classifies retryable and permanent request failures', () => {
+  assert.deepEqual(classifyLunaFailure(new LunaAiError('timeout', 'timeout', 504)), { code: 'timeout', retryable: true });
+  assert.deepEqual(classifyLunaFailure(new LunaAiError('openai_auth', 'auth', 502)), { code: 'openai_auth', retryable: false });
+  assert.deepEqual(classifyLunaFailure(new LunaAiError('quota_exhausted', 'limit', 429)), { code: 'quota_exhausted', retryable: false });
+});
 
 test('extracts Responses API output_text', () => {
   assert.deepEqual(extractOpenAiText({ output_text: '{"message":"ok"}' }), {
@@ -181,7 +189,7 @@ test('handles one successful retry shape and still fails for empty retry output'
 test('builds Responses request with larger output budget and minimal reasoning', () => {
   const request = buildLunaOpenAiRequest({
     language: 'en',
-    catalog: [{ id: 'm1', title: 'Deep Sleep', category: 'sleep', mood: 'calm', language: 'en', premium: false, summary: 'Short' }],
+    catalog: [{ catalogKey: 'deep-sleep', title: 'Deep Sleep', category: 'sleep', mood: 'calm', language: 'en', premium: false, summary: 'Short' }],
     context: { profile: null },
     recent: [{ role: 'user', content: 'I need rest' }]
   });
@@ -194,23 +202,23 @@ test('builds Responses request with larger output budget and minimal reasoning',
   assert.ok(request.instructions.includes('"summary":"Short"'));
   assert.equal(request.instructions.includes('audio_url'), false);
   assert.equal(request.instructions.includes('translations'), false);
-  assert.match(request.instructions, /Luna is always female/);
-  assert.match(request.instructions, /VERIFIED_APP_CAPABILITIES/);
-  assert.match(request.instructions, /Default to 30-100 words/);
-  assert.match(request.instructions, /team behind Luna Meditation created you/);
-  assert.match(request.instructions, /never claim to be human, a girlfriend/);
-  assert.match(request.instructions, /Never invent screens, menus, buttons/);
-  assert.match(request.instructions, /Never claim to start playback/);
-  assert.match(request.instructions, /show a meditation card in this chat/);
-  assert.match(request.instructions, /Do not tell the user to open Library/);
-  assert.match(request.instructions, /In-chat guidance requests/);
+  assert.match(request.instructions, /Luna is a female mindfulness companion/);
+  assert.match(request.instructions, /VERIFIED_PRODUCT_CAPABILITIES/);
+  assert.match(request.instructions, /Default to 30-120 words/);
+  assert.match(request.instructions, /team behind Luna Meditation created her/);
+  assert.match(request.instructions, /Never invent navigation/);
+  assert.match(request.instructions, /Never claim that a card was rendered or playback started/);
+  assert.match(request.instructions, /Product copy is added by the backend only after validation/);
+  assert.match(request.instructions, /guidance is requested directly in chat/);
+  assert.equal(request.instructions.includes('"id":"m1"'), false);
 });
 
 test('normalizes plain text OpenAI output into an assistant message', () => {
   assert.deepEqual(normalizeOpenAiModelResult({ text: 'Take one quiet breath.', refusal: null }, 'en'), {
     message: 'Take one quiet breath.',
+    detectedIntent: 'chat',
+    recommendationIntent: { needed: false, goal: null, preferredCatalogKey: null },
     conversationTitle: null,
-    recommendedMeditationId: null,
     memoryCandidates: []
   });
 });
@@ -218,8 +226,9 @@ test('normalizes plain text OpenAI output into an assistant message', () => {
 test('normalizes partial JSON OpenAI output with defaults', () => {
   assert.deepEqual(normalizeOpenAiModelResult({ text: '{"message":"A soft answer."}', refusal: null }, 'en'), {
     message: 'A soft answer.',
+    detectedIntent: 'chat',
+    recommendationIntent: { needed: false, goal: null, preferredCatalogKey: null },
     conversationTitle: null,
-    recommendedMeditationId: null,
     memoryCandidates: []
   });
 });
@@ -230,8 +239,9 @@ test('normalizes fenced JSON OpenAI output', () => {
     refusal: null
   }, 'en'), {
     message: 'Fenced answer.',
+    detectedIntent: 'chat',
+    recommendationIntent: { needed: true, goal: null, preferredCatalogKey: 'not-a-real-id' },
     conversationTitle: 'Evening',
-    recommendedMeditationId: 'not-a-real-id',
     memoryCandidates: []
   });
 });

@@ -1171,6 +1171,12 @@ input[type="range"] {
   font-weight: 650;
 }
 
+.luna-live-error-quota_exhausted {
+  border-color: rgba(212, 175, 55, 0.24);
+  background: rgba(42, 34, 79, 0.76);
+  color: var(--luna-text-primary);
+}
+
 .luna-scroll-latest {
   position: absolute;
   right: 8px;

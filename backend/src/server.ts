@@ -763,7 +763,13 @@ app.use((error: unknown, req: express.Request, res: express.Response, next: expr
     error: error instanceof Error ? error.message : 'Unknown error'
   });
   if (error instanceof LunaAiError) {
-    res.status(error.status).json({ error: error.message, code: error.code });
+    res.status(error.status).json({
+      error: error.message,
+      code: error.code,
+      requestState: error.requestState,
+      retryable: error.retryable,
+      resetAt: error.resetAt
+    });
     return;
   }
   if (error instanceof ZodError) {

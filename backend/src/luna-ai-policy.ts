@@ -38,6 +38,7 @@ export function validatedMeditationId(candidate: string | null, availableIds: It
 
 export type RecommendationCatalogItem = {
   id: string;
+  catalogKey?: string | null;
   title: string;
   category?: string | null;
   mood?: string | null;
@@ -46,6 +47,22 @@ export type RecommendationCatalogItem = {
   language?: string | null;
   summary?: string | null;
 };
+
+const cardClaimPatterns = [
+  /(?:карточк[ауи]\s+(?:ниже|здесь)|показываю\s+(?:карточк|медитац)|я\s+(?:открыла|показала)\s+карточк|открой\s+карточк[ау]\s+ниже)/i,
+  /(?:card\s+(?:below|here)|showing\s+(?:the\s+)?(?:card|meditation)|i (?:opened|showed) the card|tap the card below)/i
+];
+
+export function messageClaimsMeditationCard(message: string) {
+  return cardClaimPatterns.some((pattern) => pattern.test(message));
+}
+
+export function enforceCardClaimConsistency(message: string, language: LunaLanguage, hasRecommendation: boolean) {
+  if (hasRecommendation || !messageClaimsMeditationCard(message)) return message;
+  return language === 'ru'
+    ? 'Я могу помочь подобрать медитацию, когда пойму, что тебе сейчас нужнее всего.'
+    : 'I can help choose a meditation once I understand what would support you most right now.';
+}
 
 export function meditationDurationMinutes(seconds: number | string | null | undefined) {
   return Math.max(1, Math.round(Math.max(0, Number(seconds) || 0) / 60));
@@ -186,6 +203,7 @@ export function semanticMeditationRecommendation(input: {
   catalog: RecommendationCatalogItem[];
   language?: LunaLanguage;
   modelRecommendationId?: string | null;
+  modelRecommendationGoal?: string | null;
   recentAssistantRecommendations?: Array<string | null | undefined>;
   recentMessages?: Array<{ role?: string | null; content?: string | null }>;
 }) {
@@ -202,7 +220,13 @@ export function semanticMeditationRecommendation(input: {
     .slice(-4)
     .map((message) => message.content ?? '')
     .join('\n');
-  const intent = detectIntent(input.message) ?? (explicitlyRequested ? detectIntent(`${recentContext}\n${input.message}`) : null);
+  const goalIntent: Record<string, string> = {
+    sleep: 'sleep', anxiety: 'anxiety', focus: 'focus', grounding: 'grounding', self_compassion: 'self_kindness',
+    morning_clarity: 'morning', stress_reset: 'anxiety'
+  };
+  const intent = detectIntent(input.message)
+    ?? (explicitlyRequested ? detectIntent(`${recentContext}\n${input.message}`) : null)
+    ?? (input.modelRecommendationGoal ? goalIntent[input.modelRecommendationGoal] ?? null : null);
 
   const available = input.catalog.filter((item) => item.id && item.title && (!input.language || !item.language || item.language === input.language));
   if (explicitlyRequested && !intent) {
