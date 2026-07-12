@@ -1059,7 +1059,9 @@ input[type="range"] {
 .luna-live-chat {
   position: relative;
   display: flex;
-  height: calc(100dvh - 148px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  width: 100%;
+  max-width: 100%;
+  height: calc(var(--luna-visual-height, 100dvh) - 148px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   min-height: 0;
   flex-direction: column;
   overflow: hidden;
@@ -1091,7 +1093,7 @@ input[type="range"] {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 14px 1px 18px;
+  padding: 14px 1px max(18px, env(safe-area-inset-bottom));
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
 }
@@ -1103,7 +1105,7 @@ input[type="range"] {
 }
 
 .luna-live-empty > div:last-child {
-  width: calc(100% + 32px);
+  width: 100%;
   margin-top: 22px;
 }
 
@@ -1198,6 +1200,7 @@ input[type="range"] {
   background: rgba(16, 23, 50, 0.9);
   box-shadow: 0 -10px 32px rgba(6, 10, 28, 0.22);
   backdrop-filter: blur(20px);
+  margin-bottom: max(0px, env(safe-area-inset-bottom));
 }
 
 .luna-live-composer textarea {
@@ -1211,9 +1214,25 @@ input[type="range"] {
   background: transparent;
   color: var(--luna-text-primary);
   font: inherit;
-  font-size: 14px;
-  line-height: 20px;
+  font-size: 16px;
+  line-height: 22px;
+  overflow-y: auto;
   outline: none;
+}
+
+@supports not (height: 100dvh) {
+  .luna-live-chat {
+    height: calc(var(--luna-visual-height, 100vh) - 148px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (max-width: 480px) {
+  input,
+  textarea,
+  select,
+  [contenteditable="true"] {
+    font-size: max(16px, 1em);
+  }
 }
 
 .luna-live-composer textarea::placeholder {

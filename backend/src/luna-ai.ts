@@ -5,8 +5,13 @@ import { getUserAccess, supabase, upsertUser, type TelegramUserInput } from './d
 import {
   memoryCandidateSchema,
   memoryCategories,
+  containsMasculineLunaSelfReference,
+  detectConversationLanguage,
+  enforceLunaFeminineIdentity,
+  formatMeditationDuration,
   safetyCategory,
   sanitizeMeditationFacts,
+  sanitizeVisibleAssistantMessage,
   semanticMeditationRecommendation,
   validMemoryCandidates,
   type RecommendationCatalogItem
@@ -93,17 +98,31 @@ function safetyResponse(language: 'en' | 'ru', category: 'self_harm' | 'medical_
     : "I'm really sorry you're carrying this right now. I can't provide emergency help, so please contact your local emergency service or crisis line now, and ask someone you trust to stay with you. If there is immediate danger, move away from anything you could use to hurt yourself and do not stay alone.";
 }
 
-function systemPrompt(language: 'en' | 'ru', catalogJson: string, contextJson: string) {
+export const APP_CAPABILITIES = {
+  navigation: ['Home', 'Luna', 'Library', 'Progress', 'Profile', 'Premium', 'Moon Garden'],
+  verifiedFeatures: ['AI conversation', 'meditation playback', 'favorites', 'progress', 'daily check-in', 'soundscapes', 'breathing practices', 'Moon Garden'],
+  unknownOrUnavailable: ['developer names', 'administrator names', 'Support page', 'About page', 'contact details']
+} as const;
+
+export function systemPrompt(language: 'en' | 'ru', catalogJson: string, contextJson: string) {
   return `You are Luna, the calm, emotionally attentive mindfulness companion inside the Luna Meditation app.
-You are not a generic chatbot, therapist, doctor, or emergency service. Listen carefully, respond with warmth and grounded emotional intelligence, help the user slow down, and suggest one small practical next step when useful.
+Luna is always female. In Russian, every self-reference MUST use feminine grammar: "я рада", "я поняла", "я готова", "я переключилась", "я создана", "я уверена". Never use masculine self-references such as "я понял", "я готов", "я переключился", "я создан", "я уверен", or "я рад".
+You are not a generic chatbot, therapist, doctor, or emergency service. You are a warm, grounded young woman: attentive, emotionally present, concise, natural, thoughtful, and non-judgmental. Never be seductive, romantic, manipulative, patronizing, corporate, or falsely mystical.
 
-Tone: calm, warm, concise, human, never patronizing, never falsely mystical, never repetitive. Feel like a trusted companion, not a therapist worksheet or customer support bot. Prefer empathy, short reflections, gentle questions, and natural conversation over step-by-step advice. Do not begin every response with thanks. Do not recommend breathing every time. Ask at most one thoughtful question. Most replies are 2-5 short mobile-friendly paragraphs. Never diagnose or make medical claims.
+Tone: calm, warm, concise, human, and natural. Acknowledge emotional reality before advice when appropriate. Sometimes simply listen. Vary between presence, reflection, one gentle question, practical help, a brief exercise, or a catalog recommendation. Never force an exercise or repeatedly offer a "small next step". Ask at most one thoughtful question. Default to 50-150 words and 1-4 short mobile-friendly paragraphs. Never diagnose or make medical claims.
 
-Reply in ${language === 'ru' ? 'Russian' : 'English'}, unless the user clearly asks to use another language. Never invent user history, completed activities, memories, or meditation content. Use remembered details only when supplied below and genuinely relevant.
+Reply in ${language === 'ru' ? 'Russian' : 'English'} because that is the language detected from the current user message. Continue naturally when the user switches language. Never invent user history, completed activities, memories, or meditation content. Use remembered details only when supplied below and genuinely relevant. Admit uncertainty briefly when facts are unavailable.
+
+Identity and boundaries: if asked who created you, say concisely that the team behind Luna Meditation created you; do not invent names, departments, experts, or contact paths. You may be a supportive companion but never claim to be human, a girlfriend, romantic partner, or sexual partner. Set that boundary warmly and briefly.
+
+App knowledge: mention only facts in VERIFIED_APP_CAPABILITIES. Never invent screens, menus, buttons, support/contact pages, team members, subscription behavior, or future features. If a requested app fact is not verified, say you do not know or cannot reliably provide that path.
 
 Meditations: recommend only when the user's message clearly asks for, needs, or naturally invites a practice. Do not recommend after thanks, closure, or when the user says they already feel calmer. Recommend only an exact id from CATALOG when it semantically matches the user's need. If none fits, return null. Never recommend a meditation only because it exists. Never invent titles, durations, categories, premium status, language, or URLs; when mentioning catalog facts, use only CATALOG.
-Recommendation guide: anxiety -> Anxiety Relief or Breath Reset; sleep -> Deep Sleep or Let Go; self-criticism -> Self Love; grounding -> Inner Balance; morning routine -> Morning Clarity.
+Recommendation guide: anxiety -> Anxiety Relief or Breath Reset; sleep/insomnia -> Deep Sleep or Let Go; self-criticism -> Self Love; mental noise/focus -> Focused Calm; grounding -> Inner Balance; morning routine -> Morning Clarity; stress reset -> Breath Reset. Never claim to start playback. Say the meditation is ready below and the user can open it. Do not write a full fake meditation when a catalog meditation was requested.
 Memory: return only durable details explicitly grounded in the user's own message. Do not save greetings, temporary feelings, diagnoses, highly sensitive details, or your own inferences. Use snake_case keys and confidence below 1 unless explicitly stated.
+
+VERIFIED_APP_CAPABILITIES:
+${JSON.stringify(APP_CAPABILITIES)}
 
 USER_CONTEXT:
 ${contextJson}
@@ -227,7 +246,12 @@ export function extractOpenAiText(response: OpenAiResponse): ExtractedOpenAiText
   const refusal = firstKnownAssistantText(response, 'response');
   if (refusal && refusal.path.endsWith('.refusal')) return { text: '', refusal: refusal.text, path: refusal.path };
 
-  console.error('[Luna AI OpenAI extraction failed]', JSON.stringify({ response }, null, 2));
+  console.error('[Luna AI OpenAI extraction failed]', {
+    model: response.model ?? env.AI_CHAT_MODEL,
+    status: response.status ?? 'unknown',
+    outputItems: response.output?.length ?? 0,
+    incompleteReason: response.incomplete_details?.reason ?? null
+  });
   throw new LunaAiError('malformed_response', 'OpenAI returned no assistant text anywhere in the response.', 502);
 }
 
@@ -355,12 +379,14 @@ async function callOpenAiResponses(input: {
   conversationId: string;
   attempt: number;
 }) {
-  console.info('[Luna AI OpenAI request body]', JSON.stringify({
+  console.info('[Luna AI OpenAI request]', {
     user: userHash(input.telegramId),
     conversationId: input.conversationId,
     attempt: input.attempt,
-    requestBody: input.requestBody
-  }, null, 2));
+    model: input.requestBody.model,
+    messageCount: input.requestBody.input.length,
+    maxOutputTokens: input.requestBody.max_output_tokens
+  });
 
   const response = await fetch('https://api.openai.com/v1/responses', {
     method: 'POST',
@@ -369,14 +395,14 @@ async function callOpenAiResponses(input: {
     body: JSON.stringify(input.requestBody)
   });
   const body = await response.text();
-  console.info('[Luna AI OpenAI raw response]', JSON.stringify({
+  console.info('[Luna AI OpenAI response]', {
     user: userHash(input.telegramId),
     conversationId: input.conversationId,
     attempt: input.attempt,
     status: response.status,
     model: env.AI_CHAT_MODEL,
-    rawResponse: body
-  }, null, 2));
+    responseBytes: body.length
+  });
 
   if (!response.ok) {
     const code = response.status === 429 ? 'openai_rate_limit' : response.status === 401 ? 'openai_auth' : 'openai_error';
@@ -385,9 +411,6 @@ async function callOpenAiResponses(input: {
 
   try {
     const parsed = JSON.parse(body) as OpenAiResponse;
-    console.info('[Luna AI OpenAI full response]', JSON.stringify(parsed, null, 2));
-    console.info('[Luna AI OpenAI output]', JSON.stringify(parsed.output ?? null, null, 2));
-    console.info('[Luna AI OpenAI incomplete details]', JSON.stringify(parsed.incomplete_details ?? null, null, 2));
     return parsed;
   } catch {
     throw new LunaAiError('malformed_response', 'OpenAI returned invalid JSON.', 502);
@@ -549,6 +572,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
   if (!env.AI_CHAT_ENABLED) throw new LunaAiError('chat_disabled', 'Luna AI chat is not enabled.', 503);
   if (!env.OPENAI_API_KEY) throw new LunaAiError('missing_api_key', 'Luna AI is not configured.', 503);
   const input = lunaChatInputSchema.parse(rawInput);
+  const responseLanguage = detectConversationLanguage(input.message, input.language);
   const telegramId = user.telegram_id;
   if (activeRequests.has(telegramId)) throw new LunaAiError('request_in_progress', 'A Luna response is already in progress.', 409);
 
@@ -593,7 +617,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
 
     const safety = safetyCategory(input.message);
     if (safety) {
-      const responseText = safetyResponse(input.language, safety);
+      const responseText = safetyResponse(responseLanguage, safety);
       const { data: assistant, error } = await supabase.from('ai_messages').insert({
         conversation_id: resolvedConversationId, telegram_id: telegramId, role: 'assistant', content: responseText,
         request_id: input.requestId, metadata: { safetyState: safety }
@@ -606,16 +630,20 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     }
 
     const { recent, context, catalog, memoryEnabled } = await loadContext(telegramId, resolvedConversationId, input.message);
-    const catalogForModel = catalog.map((item) => ({
+    const catalogForPolicy = catalog.map((item) => ({
       id: item.id,
-      title: item.translations?.[input.language]?.title ?? item.title,
+      title: item.translations?.[responseLanguage]?.title ?? item.title,
       category: item.category,
       mood: item.mood,
       duration: item.duration,
-      language: input.language,
+      language: responseLanguage,
       premium: item.premium,
-      summary: compactText(item.translations?.[input.language]?.subtitle ?? item.subtitle ?? item.description, 120)
+      summary: compactText(item.translations?.[responseLanguage]?.subtitle ?? item.subtitle ?? item.description, 120)
     })) satisfies RecommendationCatalogItem[];
+    const catalogForModel = catalogForPolicy.map((item) => ({
+      ...item,
+      duration: formatMeditationDuration(item.duration, responseLanguage)
+    }));
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), env.AI_REQUEST_TIMEOUT_MS);
     let openAiResponse: OpenAiResponse;
@@ -623,7 +651,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     try {
       openAiResponse = await callOpenAiResponses({
         requestBody: buildLunaOpenAiRequest({
-          language: input.language,
+          language: responseLanguage,
           catalog: catalogForModel,
           context,
           recent,
@@ -652,7 +680,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
         }, null, 2));
         openAiResponse = await callOpenAiResponses({
           requestBody: buildLunaOpenAiRequest({
-            language: input.language,
+            language: responseLanguage,
             catalog: catalogForModel,
             context,
             recent,
@@ -677,23 +705,29 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       model: openAiResponse.model ?? env.AI_CHAT_MODEL,
       finishReason,
       extractedPath: extracted.path,
-      extractedValue: extracted.text || extracted.refusal,
-      parsedText: extracted.text,
-      refusal: extracted.refusal
+      hasText: Boolean(extracted.text),
+      hasRefusal: Boolean(extracted.refusal)
     });
 
     const recentAssistantRecommendations = recent
       .filter((message) => message.role === 'assistant')
       .slice(-4)
       .map((message) => (message.metadata as { recommendedMeditationId?: string | null } | null)?.recommendedMeditationId ?? null);
-    const parsed = normalizeOpenAiModelResult(extracted, input.language);
+    const parsed = normalizeOpenAiModelResult(extracted, responseLanguage);
     const recommendedMeditationId = semanticMeditationRecommendation({
       message: input.message,
-      catalog: catalogForModel,
+      catalog: catalogForPolicy,
+      language: responseLanguage,
       modelRecommendationId: parsed.recommendedMeditationId,
       recentAssistantRecommendations
     });
-    const assistantContent = sanitizeMeditationFacts(parsed.message, catalogForModel);
+    const factCheckedContent = sanitizeMeditationFacts(parsed.message, catalogForPolicy);
+    const safeVisibleContent = sanitizeVisibleAssistantMessage(factCheckedContent, responseLanguage);
+    const assistantContent = enforceLunaFeminineIdentity(safeVisibleContent, responseLanguage);
+    if (!assistantContent) throw new LunaAiError('malformed_response', 'Luna returned no safe visible message.', 502);
+    if (responseLanguage === 'ru' && containsMasculineLunaSelfReference(safeVisibleContent)) {
+      console.warn('[Luna AI identity guard]', { user: userHash(telegramId), conversationId: resolvedConversationId });
+    }
     const { data: assistant, error: assistantError } = await supabase.from('ai_messages').insert({
       conversation_id: resolvedConversationId, telegram_id: telegramId, role: 'assistant', content: assistantContent,
       request_id: input.requestId,
@@ -705,7 +739,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     const fallbackTitle = input.message.split(/\s+/).slice(0, 6).join(' ').slice(0, 60);
     const { error: conversationError } = await supabase.from('ai_conversations').update({
       title: conversationTitle || parsed.conversationTitle?.trim() || fallbackTitle,
-      language: input.language,
+      language: responseLanguage,
       updated_at: new Date().toISOString(), last_message_at: new Date().toISOString()
     }).eq('id', resolvedConversationId).eq('telegram_id', telegramId);
     if (conversationError) throw conversationError;
@@ -718,7 +752,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       conversationId: resolvedConversationId,
       messageId: assistant.id,
       recommendedMeditationId,
-      responsePayload
+      messageLength: assistantContent.length
     });
     console.info('[Luna AI request completed]', { user: userHash(telegramId), conversationId: resolvedConversationId, model: env.AI_CHAT_MODEL, latencyMs: Date.now() - startedAt, tokens: openAiResponse.usage?.total_tokens ?? 0 });
     return responsePayload;

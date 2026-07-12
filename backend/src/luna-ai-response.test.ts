@@ -194,6 +194,13 @@ test('builds Responses request with larger output budget and minimal reasoning',
   assert.ok(request.instructions.includes('"summary":"Short"'));
   assert.equal(request.instructions.includes('audio_url'), false);
   assert.equal(request.instructions.includes('translations'), false);
+  assert.match(request.instructions, /Luna is always female/);
+  assert.match(request.instructions, /VERIFIED_APP_CAPABILITIES/);
+  assert.match(request.instructions, /Default to 50-150 words/);
+  assert.match(request.instructions, /team behind Luna Meditation created you/);
+  assert.match(request.instructions, /never claim to be human, a girlfriend/);
+  assert.match(request.instructions, /Never invent screens, menus, buttons/);
+  assert.match(request.instructions, /Never claim to start playback/);
 });
 
 test('normalizes plain text OpenAI output into an assistant message', () => {

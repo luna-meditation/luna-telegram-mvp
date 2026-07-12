@@ -2527,7 +2527,7 @@ function App() {
     <main className={`min-h-screen overflow-hidden bg-night text-cream ${page === 'home' ? 'home-v2-shell' : ''}`}>
       <div className="fixed inset-0 luna-bg" />
       <section className="relative mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-[calc(112px+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top,0px)+14px)]">
-        <Header plan={access.plan} streak={profile?.currentStreak ?? 0} language={language} onLanguageChange={changeLanguage} compact={page === 'home'} />
+        {page !== 'luna' && <Header plan={access.plan} streak={profile?.currentStreak ?? 0} language={language} onLanguageChange={changeLanguage} compact={page === 'home'} />}
 
         {page === 'home' && (
           <HomeV2

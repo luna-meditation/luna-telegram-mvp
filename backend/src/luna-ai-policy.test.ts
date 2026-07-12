@@ -1,9 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  containsMasculineLunaSelfReference,
+  detectConversationLanguage,
+  enforceLunaFeminineIdentity,
+  formatMeditationDuration,
   isCrisisMessage,
   safetyCategory,
   sanitizeMeditationFacts,
+  sanitizeVisibleAssistantMessage,
   semanticMeditationRecommendation,
   validatedMeditationId,
   validMemoryCandidates,
@@ -64,6 +69,22 @@ test('semantic recommendations match anxiety, sleep, and self criticism', () => 
   }), 'self_love');
 });
 
+test('detects the current message language, including language switches and mixed text', () => {
+  assert.equal(detectConversationLanguage('Мне сейчас тревожно', 'en'), 'ru');
+  assert.equal(detectConversationLanguage('I feel anxious today', 'ru'), 'en');
+  assert.equal(detectConversationLanguage('Luna, мне тревожно today', 'en'), 'ru');
+  assert.equal(detectConversationLanguage('ok', 'ru'), 'ru');
+});
+
+test('recognizes forbidden masculine Luna self-references', () => {
+  assert.equal(containsMasculineLunaSelfReference('Я поняла тебя и я рядом.'), false);
+  assert.equal(containsMasculineLunaSelfReference('Я рада, что ты написал.'), false);
+  assert.equal(containsMasculineLunaSelfReference('Я понял тебя.'), true);
+  assert.equal(containsMasculineLunaSelfReference('Я переключился на русский.'), true);
+  assert.doesNotMatch(enforceLunaFeminineIdentity('Я понял тебя.', 'ru'), /я понял/i);
+  assert.match(enforceLunaFeminineIdentity('Я поняла тебя.', 'ru'), /Я поняла/);
+});
+
 test('semantic recommendations support grounding and morning routine', () => {
   assert.equal(semanticMeditationRecommendation({
     message: 'I need grounding and want to feel centered.',
@@ -91,6 +112,26 @@ test('recommendation cooldown suppresses promotional cards', () => {
   }), null);
 });
 
+test('recommendations reject duplicates and acknowledgements', () => {
+  assert.equal(semanticMeditationRecommendation({
+    message: 'Recommend a meditation for my anxiety.',
+    catalog: recommendationCatalog,
+    modelRecommendationId: 'anxiety',
+    recentAssistantRecommendations: ['anxiety']
+  }), 'breath');
+  assert.equal(semanticMeditationRecommendation({
+    message: 'Thanks', catalog: recommendationCatalog, modelRecommendationId: 'sleep'
+  }), null);
+});
+
+test('sanitizes internal data, playback claims, and invented navigation', () => {
+  const uuid = '11111111-1111-4111-8111-111111111111';
+  assert.doesNotMatch(sanitizeVisibleAssistantMessage(`Open ${uuid}`, 'en'), /11111111/);
+  assert.doesNotMatch(sanitizeVisibleAssistantMessage('I will start it now.', 'en'), /start it/i);
+  assert.match(sanitizeVisibleAssistantMessage('Open Settings and go to Support.', 'en'), /not sure/i);
+  assert.match(sanitizeVisibleAssistantMessage('Открой настройки и перейди в поддержку.', 'ru'), /не уверена/i);
+});
+
 test('sanitizes hallucinated meditation durations using catalog values', () => {
   assert.equal(
     sanitizeMeditationFacts('Try Anxiety Relief, a 10 minute meditation.', recommendationCatalog),
@@ -100,4 +141,9 @@ test('sanitizes hallucinated meditation durations using catalog values', () => {
     sanitizeMeditationFacts('A 10 minute meditation like Deep Sleep may help.', recommendationCatalog),
     'A 20 min meditation like Deep Sleep may help.'
   );
+});
+
+test('uses one exact human-readable catalog duration formatter', () => {
+  assert.equal(formatMeditationDuration(900, 'en'), '15 min');
+  assert.equal(formatMeditationDuration(900, 'ru'), '15 мин');
 });

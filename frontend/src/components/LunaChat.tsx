@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowDown, ArrowLeft, Plus, RotateCcw, Send, Trash2 } from 'lucide-react';
+import { ArrowDown, History, Plus, RotateCcw, Send, Trash2 } from 'lucide-react';
 import {
   ApiRequestError,
   deleteLunaConversation,
@@ -11,6 +11,8 @@ import {
   type LunaMessage,
   type Meditation
 } from '../api';
+import { useChatViewport } from '../hooks/useChatViewport';
+import { formatMeditationDuration } from '../utils/duration';
 
 type LunaChatProps = {
   firstName: string;
@@ -53,18 +55,11 @@ function dateLabel(value: string, language: AppLanguage) {
   return new Intl.DateTimeFormat(language === 'ru' ? 'ru-RU' : 'en-US', { month: 'short', day: 'numeric' }).format(date);
 }
 
-function dailyThought(language: AppLanguage) {
-  const thoughts = language === 'ru'
-    ? ['Отдых не нужно заслуживать. Иногда его просто можно себе позволить.', 'Мягкий выдох тоже считается возвращением к себе.', 'Тебе не нужно решать всё сразу. Начни с одного спокойного момента.', 'Иногда забота о себе звучит очень тихо: я здесь.']
-    : ["Rest isn't something you earn. Sometimes it's simply something you allow yourself.", 'A softer breath still counts as returning to yourself.', "You don't have to solve everything at once. Begin with one calm moment.", "Sometimes self-care sounds very quiet: I'm here."];
-  return thoughts[Math.floor(Date.now() / 86_400_000) % thoughts.length];
-}
-
 export function LunaChat({ firstName, language, meditations, hasPremium, initData, onOpenMeditation }: LunaChatProps) {
   const [conversations, setConversations] = useState<LunaConversationSummary[]>([]);
   const [activeId, setActiveId] = useState('');
   const [messages, setMessages] = useState<LunaMessage[]>([]);
-  const [screen, setScreen] = useState<'overview' | 'chat'>('overview');
+  const [screen, setScreen] = useState<'overview' | 'chat'>('chat');
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(true);
   const [thinking, setThinking] = useState(false);
@@ -72,19 +67,27 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
   const [retryText, setRetryText] = useState('');
   const [awayFromBottom, setAwayFromBottom] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const nearBottomRef = useRef(true);
+  useChatViewport(true);
 
   const prompts = language === 'ru'
     ? ['🌙 Не могу уснуть', '🧠 Мысли не останавливаются', '💼 Я перегружен(а)', '❤️ Мне нужно поговорить', '✨ Подбери медитацию']
     : ["🌙 I can't sleep", "🧠 My thoughts won't stop", "💼 I'm overwhelmed", '❤️ I need someone to talk to', '✨ Recommend a meditation'];
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = '0px';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 112)}px`;
+  }, [draft]);
 
   const refreshConversations = useCallback(async () => {
     try {
       const next = await getLunaConversations(initData);
       setConversations(next);
       return next;
-    } catch (loadError) {
-      setError(localizedError(loadError, language));
+    } catch {
       return [];
     }
   }, [initData, language]);
@@ -116,7 +119,10 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
       if (!alive) return;
       const stored = window.localStorage.getItem(activeConversationKey);
       if (stored && next.some((conversation) => conversation.id === stored)) await openConversation(stored);
-      else setLoading(false);
+      else {
+        setScreen('chat');
+        setLoading(false);
+      }
     })();
     return () => { alive = false; };
   }, [openConversation, refreshConversations]);
@@ -194,14 +200,14 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
       window.localStorage.removeItem(activeConversationKey);
       setActiveId('');
       setMessages([]);
-      setScreen('overview');
+      setScreen('chat');
       await refreshConversations();
     } catch (removeError) {
       setError(localizedError(removeError, language));
     }
   };
 
-  const activeTitle = conversations.find((conversation) => conversation.id === activeId)?.title || (language === 'ru' ? 'Новый разговор' : 'New conversation');
+  const activeTitle = conversations.find((conversation) => conversation.id === activeId)?.title || 'Luna';
   const visibleMessages = useMemo(() => messages.filter((message) => message.role === 'user' || message.role === 'assistant'), [messages]);
 
   if (screen === 'overview') {
@@ -210,31 +216,6 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
         <div className="luna-ai-overview-header">
           <div><h2>Luna</h2><p>{language === 'ru' ? 'Твой тихий компаньон' : 'Your quiet companion'}</p></div>
           <button type="button" onClick={() => beginConversation()} aria-label={language === 'ru' ? 'Новый разговор' : 'New conversation'}><Plus size={20} /></button>
-        </div>
-        <section className="luna-ai-welcome">
-          <div className="luna-breathing-orb" aria-hidden="true" />
-          <h3>{language === 'ru' ? `Привет, ${firstName || 'друг'}.` : `Hello, ${firstName || 'friend'}.`}</h3>
-          <p>{language === 'ru' ? 'Напиши в своём темпе. Я рядом и слушаю.' : "Write at your own pace. I'm here and listening."}</p>
-        </section>
-        <form className="luna-live-composer luna-overview-composer" onSubmit={(event) => { event.preventDefault(); void submit(draft); }}>
-          <textarea
-            value={draft}
-            rows={1}
-            maxLength={2000}
-            disabled={thinking}
-            onChange={(event) => setDraft(event.currentTarget.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
-                event.preventDefault();
-                void submit(draft);
-              }
-            }}
-            placeholder={language === 'ru' ? 'Напишите Luna...' : 'Message Luna...'}
-          />
-          <button type="submit" disabled={!draft.trim() || thinking} aria-label={language === 'ru' ? 'Отправить' : 'Send'}><Send size={17} /></button>
-        </form>
-        <div className="luna-ai-prompts">
-          {prompts.map((prompt) => <button key={prompt} type="button" onClick={() => setDraft(prompt.replace(/^[^\p{L}\p{N}]+/u, '').trim())}>{prompt}</button>)}
         </div>
         <section className="luna-ai-recent">
           <h3>{language === 'ru' ? 'Недавние разговоры' : 'Recent Conversations'}</h3>
@@ -245,7 +226,6 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
             </button>
           )) : <p className="luna-ai-empty-history">{language === 'ru' ? 'Первый разговор начнётся, когда ты будешь готов(а).' : 'Your first conversation can begin whenever you are ready.'}</p>}
         </section>
-        <section className="luna-thought-card"><p className="luna-ai-kicker">{language === 'ru' ? 'Мысль дня' : "Today's Thought"}</p><p>{dailyThought(language)}</p></section>
         {error ? <p className="luna-ai-error">{error}</p> : null}
       </div>
     );
@@ -254,7 +234,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
   return (
     <section className="luna-live-chat" aria-busy={thinking}>
       <header className="luna-live-chat-header">
-        <button type="button" onClick={() => { setScreen('overview'); setError(''); }} aria-label={language === 'ru' ? 'Назад' : 'Back'}><ArrowLeft size={19} /></button>
+        <button type="button" onClick={() => { setScreen('overview'); setError(''); }} aria-label={language === 'ru' ? 'История разговоров' : 'Conversation history'}><History size={19} /></button>
         <div><h2>{activeTitle}</h2><p>{thinking ? (language === 'ru' ? 'Luna думает...' : 'Luna is reflecting...') : (language === 'ru' ? 'Рядом и слушает' : 'Here and listening')}</p></div>
         <button type="button" onClick={() => void removeConversation()} disabled={!activeId} aria-label={language === 'ru' ? 'Удалить разговор' : 'Delete conversation'}><Trash2 size={17} /></button>
       </header>
@@ -288,7 +268,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
                 {recommendation && localized ? (
                   <button type="button" className="luna-recommendation-message" onClick={() => onOpenMeditation(recommendation)}>
                     <img src={recommendation.cover_image} alt="" />
-                    <span><strong>{localized.title}</strong><small>{localized.subtitle} · {Math.ceil(recommendation.duration / 60)} min</small></span>
+                    <span><strong>{localized.title}</strong><small>{localized.subtitle} · {formatMeditationDuration(recommendation.duration, language)}</small></span>
                     <b>{recommendation.premium && !hasPremium ? (language === 'ru' ? 'Premium' : 'Premium') : (language === 'ru' ? 'Открыть' : 'Open')}</b>
                   </button>
                 ) : null}
@@ -303,12 +283,13 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
       {awayFromBottom ? <button type="button" className="luna-scroll-latest" onClick={() => scrollToLatest()} aria-label={language === 'ru' ? 'К последнему сообщению' : 'Scroll to latest'}><ArrowDown size={17} /></button> : null}
 
       <form className="luna-live-composer" onSubmit={(event) => { event.preventDefault(); void submit(draft); }}>
-        <textarea
+        <textarea ref={textareaRef}
           value={draft}
           rows={1}
           maxLength={2000}
           disabled={thinking}
           onChange={(event) => setDraft(event.currentTarget.value)}
+          onFocus={() => requestAnimationFrame(() => scrollToLatest(false))}
           onKeyDown={(event) => {
             if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
               event.preventDefault();
