@@ -196,11 +196,14 @@ test('builds Responses request with larger output budget and minimal reasoning',
   assert.equal(request.instructions.includes('translations'), false);
   assert.match(request.instructions, /Luna is always female/);
   assert.match(request.instructions, /VERIFIED_APP_CAPABILITIES/);
-  assert.match(request.instructions, /Default to 50-150 words/);
+  assert.match(request.instructions, /Default to 30-100 words/);
   assert.match(request.instructions, /team behind Luna Meditation created you/);
   assert.match(request.instructions, /never claim to be human, a girlfriend/);
   assert.match(request.instructions, /Never invent screens, menus, buttons/);
   assert.match(request.instructions, /Never claim to start playback/);
+  assert.match(request.instructions, /show a meditation card in this chat/);
+  assert.match(request.instructions, /Do not tell the user to open Library/);
+  assert.match(request.instructions, /In-chat guidance requests/);
 });
 
 test('normalizes plain text OpenAI output into an assistant message', () => {

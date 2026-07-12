@@ -81,8 +81,11 @@ export function enforceLunaFeminineIdentity(message: string, language: LunaLangu
 const internalDataPatterns = [
   /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi,
   /https?:\/\/\S*(?:storage|supabase|audio)\S*/gi,
-  /\b(?:recommendedMeditationId|audio_url|audioUrl|storage_path|database id|id\s*=)\b[^\n,.]*/gi,
-  /```json[\s\S]*?```/gi
+  /\b(?:recommendedMeditationId|audio_url|audioUrl|storage_path|database id)\b[^\n,.]*/gi,
+  /\bid\s*[=:]\s*[^\n,.]*/gi,
+  /\b(?:with|с)\s+id\b[^\n,.]*/gi,
+  /```json[\s\S]*?```/gi,
+  /\{[^{}]*(?:recommendedMeditationId|audio_url|audioUrl|storage_path|"id"|id\s*:)[^{}]*\}/gi
 ];
 
 const playbackClaims = [
@@ -105,6 +108,31 @@ export function sanitizeVisibleAssistantMessage(message: string, language: LunaL
   return next.replace(/\n{3,}/g, '\n\n').replace(/ {2,}/g, ' ').trim();
 }
 
+export function hasInternalDataLeak(message: string) {
+  return internalDataPatterns.some((pattern) => {
+    pattern.lastIndex = 0;
+    return pattern.test(message);
+  });
+}
+
+export function isReadyMeditationRequest(message: string) {
+  return /\b(?:recommend|suggest|send|give me|pick|choose|what should i listen|what to listen|meditation|practice from the app|audio practice)\b/i.test(message) ||
+    /(?:пришли|отправь|дай|подбери|посоветуй|выбери|можешь\s+(?:сюда\s+)?прислать|сюда\s+прислать|что\s+(?:мне\s+)?послушать|медитац|практик[ау]\s+из\s+приложения)/i.test(message);
+}
+
+export function isInChatGuidanceRequest(message: string) {
+  return /\b(?:guide me here|walk me through|do it with me|right here|in chat|i don't want to open audio|i do not want to open audio)\b/i.test(message) ||
+    /(?:проведи\s+меня\s+сейчас|сделай\s+со\s+мной|прямо\s+здесь|в\s+чате|не\s+хочу\s+открывать\s+аудио|без\s+аудио)/i.test(message);
+}
+
+export function isAmbiguousSleepyTiredContext(message: string) {
+  const sleepy = /\b(?:sleepy|tired|exhausted|drowsy)\b/i.test(message) || /(?:сонн|устал|уставш|выжат)/i.test(message);
+  if (!sleepy) return false;
+  const clearSleep = /\b(?:sleep|bed|rest|insomnia|night|go to sleep)\b/i.test(message) || /(?:спать|уснуть|сон\b|сна\b|кровать|отдых|ноч)/i.test(message);
+  const clearFocus = /\b(?:focus|awake|energy|work|code|concentrate|clarity)\b/i.test(message) || /(?:фокус|вниман|взбодр|энерг|работ|код|ясност|сосредоточ)/i.test(message);
+  return !clearSleep && !clearFocus;
+}
+
 const intentPriority: Record<string, string[]> = {
   anxiety: ['anxiety relief', 'breath reset'],
   sleep: ['deep sleep', 'let go'],
@@ -115,12 +143,12 @@ const intentPriority: Record<string, string[]> = {
 };
 
 const intentKeywords: Record<string, RegExp> = {
-  anxiety: /\b(anxious|anxiety|panic|worried|worry|stress|stressed|overwhelmed|нервнича|тревог|паник|стресс|перегруж)\b/i,
-  sleep: /\b(can't sleep|cannot sleep|insomnia|sleep|bed|night|tired|уснуть|спать|сон|бессон|ноч)\b/i,
-  self_kindness: /\b(self[- ]?criticism|hate myself|not good enough|shame|guilt|criticizing myself|самокрит|ненавижу себя|стыд|вина|недостаточно хорош)\b/i,
-  focus: /\b(overthink|thoughts won.t stop|mental noise|cannot focus|can't focus|concentrate|зацик|мысли не останавли|не могу сосредоточ|фокус)\b/i,
-  grounding: /\b(ground|grounding|dissociate|scattered|unsteady|center|balance|заземл|рассеян|неустойчив|баланс|собраться)\b/i,
-  morning: /\b(morning|start my day|wake up|routine|focus today|утро|утрен|начать день|рутин|просну)\b/i
+  anxiety: /(anxious|anxiety|panic|worried|worry|stress|stressed|overwhelmed|нервнича|тревог|паник|стресс|перегруж)/i,
+  sleep: /(can't sleep|cannot sleep|insomnia|sleep|bed|night|tired|уснуть|спать|сон\b|сна\b|бессон|ноч)/i,
+  self_kindness: /(self[- ]?criticism|hate myself|not good enough|shame|guilt|criticizing myself|самокрит|ненавижу себя|стыд|вина|недостаточно хорош)/i,
+  focus: /(overthink|thoughts won.t stop|mental noise|cannot focus|can't focus|concentrate|attention|clarity|зацик|мысли не останавли|не могу сосредоточ|фокус|вниман|ясност)/i,
+  grounding: /(ground|grounding|dissociate|scattered|unsteady|center|balance|заземл|рассеян|неустойчив|баланс|собраться)/i,
+  morning: /(morning|start my day|wake up|routine|focus today|утро|утрен|начать день|рутин|просну)/i
 };
 
 function normalize(value: unknown) {
@@ -159,26 +187,60 @@ export function semanticMeditationRecommendation(input: {
   language?: LunaLanguage;
   modelRecommendationId?: string | null;
   recentAssistantRecommendations?: Array<string | null | undefined>;
+  recentMessages?: Array<{ role?: string | null; content?: string | null }>;
 }) {
   const recentRecommendations = input.recentAssistantRecommendations ?? [];
-  const explicitlyRequested = /\b(recommend|meditation|what should i listen|send me|подбери|посоветуй|медитац|что послушать)\b/i.test(input.message);
+  const explicitlyRequested = isReadyMeditationRequest(input.message);
+  if (isInChatGuidanceRequest(input.message)) return null;
+  if (isAmbiguousSleepyTiredContext(input.message) && !explicitlyRequested) return null;
   if (!explicitlyRequested && recentRecommendations.slice(-3).some(Boolean)) return null;
 
   if (/^(?:thanks?|thank you|okay|ok|got it|спасибо|понятно|хорошо|ок)[.! ]*$/i.test(input.message.trim())) return null;
 
-  const intent = detectIntent(input.message);
-  if (!intent) return null;
+  const recentContext = (input.recentMessages ?? [])
+    .filter((message) => message.role !== 'assistant')
+    .slice(-4)
+    .map((message) => message.content ?? '')
+    .join('\n');
+  const intent = detectIntent(input.message) ?? (explicitlyRequested ? detectIntent(`${recentContext}\n${input.message}`) : null);
 
   const available = input.catalog.filter((item) => item.id && item.title && (!input.language || !item.language || item.language === input.language));
+  if (explicitlyRequested && !intent) {
+    if (input.modelRecommendationId && available.some((item) => item.id === input.modelRecommendationId)) return input.modelRecommendationId;
+    const latestRecent = [...recentRecommendations].reverse().find(Boolean);
+    if (latestRecent && available.some((item) => item.id === latestRecent)) return latestRecent;
+  }
+  if (!intent) return null;
+
   const modelItem = input.modelRecommendationId ? available.find((item) => item.id === input.modelRecommendationId) : null;
-  if (modelItem && recommendationScore(modelItem, intent) >= 16 && !recentRecommendations.includes(modelItem.id)) return modelItem.id;
+  if (modelItem && recommendationScore(modelItem, intent) >= 16 && (explicitlyRequested || !recentRecommendations.includes(modelItem.id))) return modelItem.id;
 
   const ranked = available
     .map((item) => ({ item, score: recommendationScore(item, intent) }))
-    .filter((entry) => entry.score >= 16 && !recentRecommendations.includes(entry.item.id))
+    .filter((entry) => entry.score >= 16 && (explicitlyRequested || !recentRecommendations.includes(entry.item.id)))
     .sort((a, b) => b.score - a.score);
 
   return ranked[0]?.item.id ?? null;
+}
+
+export function meditationIdMentionedInText(message: string, catalog: RecommendationCatalogItem[]) {
+  const normalizedMessage = normalize(message);
+  if (!normalizedMessage) return null;
+  const matches = catalog.filter((item) => item.id && item.title && normalizedMessage.includes(normalize(item.title)));
+  return matches.length === 1 ? matches[0]?.id ?? null : null;
+}
+
+export function meditationCardInstruction(language: LunaLanguage) {
+  return language === 'ru'
+    ? 'Открой карточку ниже, когда будешь готов(а).'
+    : 'Open the card below whenever you are ready.';
+}
+
+export function avoidLibraryInstructionWhenCardExists(message: string, language: LunaLanguage, hasRecommendation: boolean) {
+  if (!hasRecommendation) return message;
+  const libraryInstruction = /\b(?:open|go to|find it in|search(?: for)?|look in|tap)\s+(?:the\s+)?(?:library|catalog|meditation section)\b[^.!?]*(?:[.!?]|$)|(?:открой|перейди|найди|поищи|зайди)[^.!?\n]{0,72}(?:библиотек|каталог|раздел медитац)[^.!?]*(?:[.!?]|$)/gi;
+  const next = message.replace(libraryInstruction, meditationCardInstruction(language));
+  return next.replace(/\n{3,}/g, '\n\n').replace(/ {2,}/g, ' ').trim();
 }
 
 function escapeRegExp(value: string) {

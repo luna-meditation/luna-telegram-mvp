@@ -5,14 +5,19 @@ import { getUserAccess, supabase, upsertUser, type TelegramUserInput } from './d
 import {
   memoryCandidateSchema,
   memoryCategories,
+  avoidLibraryInstructionWhenCardExists,
   containsMasculineLunaSelfReference,
   detectConversationLanguage,
   enforceLunaFeminineIdentity,
   formatMeditationDuration,
+  hasInternalDataLeak,
+  isReadyMeditationRequest,
   safetyCategory,
   sanitizeMeditationFacts,
   sanitizeVisibleAssistantMessage,
   semanticMeditationRecommendation,
+  meditationCardInstruction,
+  meditationIdMentionedInText,
   validMemoryCandidates,
   type RecommendationCatalogItem
 } from './luna-ai-policy.js';
@@ -109,7 +114,7 @@ export function systemPrompt(language: 'en' | 'ru', catalogJson: string, context
 Luna is always female. In Russian, every self-reference MUST use feminine grammar: "я рада", "я поняла", "я готова", "я переключилась", "я создана", "я уверена". Never use masculine self-references such as "я понял", "я готов", "я переключился", "я создан", "я уверен", or "я рад".
 You are not a generic chatbot, therapist, doctor, or emergency service. You are a warm, grounded young woman: attentive, emotionally present, concise, natural, thoughtful, and non-judgmental. Never be seductive, romantic, manipulative, patronizing, corporate, or falsely mystical.
 
-Tone: calm, warm, concise, human, and natural. Acknowledge emotional reality before advice when appropriate. Sometimes simply listen. Vary between presence, reflection, one gentle question, practical help, a brief exercise, or a catalog recommendation. Never force an exercise or repeatedly offer a "small next step". Ask at most one thoughtful question. Default to 50-150 words and 1-4 short mobile-friendly paragraphs. Never diagnose or make medical claims.
+Tone: calm, warm, concise, human, and natural. Acknowledge emotional reality before advice when appropriate. Sometimes simply listen. Vary between presence, reflection, one gentle question, practical help, a brief exercise, or a catalog recommendation. Never force an exercise or repeatedly offer a "small next step". Ask at most one thoughtful question. Default to 30-100 words and 1-3 short mobile-friendly paragraphs. Never diagnose or make medical claims.
 
 Reply in ${language === 'ru' ? 'Russian' : 'English'} because that is the language detected from the current user message. Continue naturally when the user switches language. Never invent user history, completed activities, memories, or meditation content. Use remembered details only when supplied below and genuinely relevant. Admit uncertainty briefly when facts are unavailable.
 
@@ -118,7 +123,9 @@ Identity and boundaries: if asked who created you, say concisely that the team b
 App knowledge: mention only facts in VERIFIED_APP_CAPABILITIES. Never invent screens, menus, buttons, support/contact pages, team members, subscription behavior, or future features. If a requested app fact is not verified, say you do not know or cannot reliably provide that path.
 
 Meditations: recommend only when the user's message clearly asks for, needs, or naturally invites a practice. Do not recommend after thanks, closure, or when the user says they already feel calmer. Recommend only an exact id from CATALOG when it semantically matches the user's need. If none fits, return null. Never recommend a meditation only because it exists. Never invent titles, durations, categories, premium status, language, or URLs; when mentioning catalog facts, use only CATALOG.
-Recommendation guide: anxiety -> Anxiety Relief or Breath Reset; sleep/insomnia -> Deep Sleep or Let Go; self-criticism -> Self Love; mental noise/focus -> Focused Calm; grounding -> Inner Balance; morning routine -> Morning Clarity; stress reset -> Breath Reset. Never claim to start playback. Say the meditation is ready below and the user can open it. Do not write a full fake meditation when a catalog meditation was requested.
+Explicit meditation requests: when the user asks to send, choose, recommend, or show a ready meditation here, select exactly one matching catalog meditation, set recommendedMeditationId to its exact id, answer in 1-3 short sentences, and tell the user to open the card below. Do not tell the user to open Library, search the catalog, or find it manually. Luna cannot play raw audio herself, but Luna can show a meditation card in this chat.
+In-chat guidance requests: when the user explicitly asks to be guided here, do a concise 30-90 second text exercise and do not add a catalog card unless the user also asks for one.
+Recommendation guide: anxiety -> Anxiety Relief or Breath Reset; sleep/insomnia -> Deep Sleep or Let Go; self-criticism -> Self Love; mental noise/focus -> Focused Calm; grounding -> Inner Balance; morning routine -> Morning Clarity; stress reset -> Breath Reset. Never claim to start playback. Say the meditation is ready below and the user can open it. Do not write a full fake meditation when a catalog meditation was requested. Never expose ids, UUIDs, URLs, raw JSON, or structured-output fields in visible text.
 Memory: return only durable details explicitly grounded in the user's own message. Do not save greetings, temporary feelings, diagnoses, highly sensitive details, or your own inferences. Use snake_case keys and confidence below 1 unless explicitly stated.
 
 VERIFIED_APP_CAPABILITIES:
@@ -317,6 +324,39 @@ function compactText(value: unknown, maxLength: number) {
   const trimmed = value.replace(/\s+/g, ' ').trim();
   if (!trimmed) return null;
   return trimmed.length > maxLength ? `${trimmed.slice(0, maxLength - 1)}…` : trimmed;
+}
+
+function explicitRecommendationMessage(input: {
+  language: 'en' | 'ru';
+  item: RecommendationCatalogItem;
+}) {
+  const title = input.item.title;
+  const summary = compactText(input.item.summary, 110);
+  if (input.language === 'ru') {
+    const reason = summary ? ` — ${summary}` : '';
+    return `Я выбрала ${title}${reason}. ${meditationCardInstruction('ru')}`;
+  }
+  const reason = summary ? ` — ${summary}` : '';
+  return `I chose ${title}${reason}. ${meditationCardInstruction('en')}`;
+}
+
+function finalizeAssistantContent(input: {
+  parsedMessage: string;
+  language: 'en' | 'ru';
+  catalog: RecommendationCatalogItem[];
+  recommendedMeditationId: string | null;
+  explicitRequest: boolean;
+}) {
+  const selected = input.recommendedMeditationId
+    ? input.catalog.find((item) => item.id === input.recommendedMeditationId) ?? null
+    : null;
+  const baseMessage = input.explicitRequest && selected
+    ? explicitRecommendationMessage({ language: input.language, item: selected })
+    : input.parsedMessage;
+  const factChecked = sanitizeMeditationFacts(baseMessage, input.catalog);
+  const noLibraryInstruction = avoidLibraryInstructionWhenCardExists(factChecked, input.language, Boolean(input.recommendedMeditationId));
+  const safeVisible = sanitizeVisibleAssistantMessage(noLibraryInstruction, input.language);
+  return enforceLunaFeminineIdentity(safeVisible, input.language);
 }
 
 function lunaStructuredTextFormat() {
@@ -714,18 +754,42 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       .slice(-4)
       .map((message) => (message.metadata as { recommendedMeditationId?: string | null } | null)?.recommendedMeditationId ?? null);
     const parsed = normalizeOpenAiModelResult(extracted, responseLanguage);
-    const recommendedMeditationId = semanticMeditationRecommendation({
+    const explicitMeditationRequest = isReadyMeditationRequest(input.message);
+    let recommendedMeditationId = semanticMeditationRecommendation({
       message: input.message,
       catalog: catalogForPolicy,
       language: responseLanguage,
       modelRecommendationId: parsed.recommendedMeditationId,
-      recentAssistantRecommendations
+      recentAssistantRecommendations,
+      recentMessages: recent
     });
-    const factCheckedContent = sanitizeMeditationFacts(parsed.message, catalogForPolicy);
-    const safeVisibleContent = sanitizeVisibleAssistantMessage(factCheckedContent, responseLanguage);
-    const assistantContent = enforceLunaFeminineIdentity(safeVisibleContent, responseLanguage);
+    if (!recommendedMeditationId) {
+      const mentionedId = meditationIdMentionedInText(parsed.message, catalogForPolicy);
+      if (mentionedId && (explicitMeditationRequest || parsed.recommendedMeditationId)) {
+        recommendedMeditationId = mentionedId;
+        console.warn('[Luna AI recommendation repaired from title]', {
+          user: userHash(telegramId),
+          conversationId: resolvedConversationId,
+          repaired: true
+        });
+      }
+    }
+    const assistantContent = finalizeAssistantContent({
+      parsedMessage: parsed.message,
+      language: responseLanguage,
+      catalog: catalogForPolicy,
+      recommendedMeditationId,
+      explicitRequest: explicitMeditationRequest
+    });
     if (!assistantContent) throw new LunaAiError('malformed_response', 'Luna returned no safe visible message.', 502);
-    if (responseLanguage === 'ru' && containsMasculineLunaSelfReference(safeVisibleContent)) {
+    if (hasInternalDataLeak(assistantContent)) {
+      console.warn('[Luna AI internal data guard]', {
+        user: userHash(telegramId),
+        conversationId: resolvedConversationId
+      });
+      throw new LunaAiError('malformed_response', 'Luna returned unsafe internal data.', 502);
+    }
+    if (responseLanguage === 'ru' && containsMasculineLunaSelfReference(assistantContent)) {
       console.warn('[Luna AI identity guard]', { user: userHash(telegramId), conversationId: resolvedConversationId });
     }
     const { data: assistant, error: assistantError } = await supabase.from('ai_messages').insert({

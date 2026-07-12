@@ -24,3 +24,12 @@ test('Luna initial chat has no dashboard thought block and uses iOS-safe viewpor
   assert.match(source, /useChatViewport\(true\)/);
   assert.match(source, /ref=\{textareaRef\}/);
 });
+
+test('recommended meditation ids render as an in-chat card with an Open action', () => {
+  const source = readFileSync(componentPath, 'utf8');
+  assert.match(source, /message\.metadata\?\.recommendedMeditationId/);
+  assert.match(source, /meditations\.find\(\(item\) => item\.id === recommendationId\)/);
+  assert.match(source, /className="luna-recommendation-message"/);
+  assert.match(source, /onClick=\{\(\) => onOpenMeditation\(recommendation\)\}/);
+  assert.match(source, /language === 'ru' \? 'Открыть' : 'Open'/);
+});

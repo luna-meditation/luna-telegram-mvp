@@ -1,11 +1,17 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  avoidLibraryInstructionWhenCardExists,
   containsMasculineLunaSelfReference,
   detectConversationLanguage,
   enforceLunaFeminineIdentity,
   formatMeditationDuration,
+  hasInternalDataLeak,
+  isAmbiguousSleepyTiredContext,
+  isInChatGuidanceRequest,
+  isReadyMeditationRequest,
   isCrisisMessage,
+  meditationIdMentionedInText,
   safetyCategory,
   sanitizeMeditationFacts,
   sanitizeVisibleAssistantMessage,
@@ -22,6 +28,7 @@ const recommendationCatalog: RecommendationCatalogItem[] = [
   { id: 'let_go', title: 'Let Go', category: 'sleep', mood: 'rest', duration: 720, premium: true, language: 'en', summary: 'Release the day.' },
   { id: 'self_love', title: 'Self Love', category: 'self', mood: 'kindness', duration: 1080, premium: true, language: 'en', summary: 'Soften self criticism.' },
   { id: 'balance', title: 'Inner Balance', category: 'grounding', mood: 'grounded', duration: 900, premium: false, language: 'en', summary: 'Ground and return to center.' },
+  { id: 'focus', title: 'Focused Calm', category: 'focus', mood: 'clarity', duration: 600, premium: false, language: 'en', summary: 'Return attention gently.' },
   { id: 'morning', title: 'Morning Clarity', category: 'morning', mood: 'focus', duration: 600, premium: false, language: 'en', summary: 'Begin the day clearly.' }
 ];
 
@@ -112,13 +119,46 @@ test('recommendation cooldown suppresses promotional cards', () => {
   }), null);
 });
 
-test('recommendations reject duplicates and acknowledgements', () => {
+test('explicit meditation requests override cooldown and return one valid card id', () => {
+  assert.equal(isReadyMeditationRequest('Пришли медитацию сюда'), true);
+  assert.equal(semanticMeditationRecommendation({
+    message: 'Пришли медитацию сюда',
+    catalog: recommendationCatalog,
+    modelRecommendationId: 'anxiety',
+    recentAssistantRecommendations: [null, 'sleep', null]
+  }), 'anxiety');
   assert.equal(semanticMeditationRecommendation({
     message: 'Recommend a meditation for my anxiety.',
     catalog: recommendationCatalog,
     modelRecommendationId: 'anxiety',
     recentAssistantRecommendations: ['anxiety']
-  }), 'breath');
+  }), 'anxiety');
+});
+
+test('send it here reuses the latest selected meditation card', () => {
+  assert.equal(isReadyMeditationRequest('Можешь сюда прислать?'), true);
+  assert.equal(semanticMeditationRecommendation({
+    message: 'Можешь сюда прислать?',
+    catalog: recommendationCatalog,
+    recentAssistantRecommendations: [null, 'morning']
+  }), 'morning');
+});
+
+test('explicit ready meditation request uses recent sleep context', () => {
+  assert.equal(semanticMeditationRecommendation({
+    message: 'Send me what I need',
+    catalog: recommendationCatalog,
+    recentMessages: [{ role: 'user', content: "I can't sleep tonight and feel tired." }]
+  }), 'sleep');
+});
+
+test('recommendations reject duplicates and acknowledgements', () => {
+  assert.equal(semanticMeditationRecommendation({
+    message: 'I feel anxious again.',
+    catalog: recommendationCatalog,
+    modelRecommendationId: 'anxiety',
+    recentAssistantRecommendations: ['anxiety']
+  }), null);
   assert.equal(semanticMeditationRecommendation({
     message: 'Thanks', catalog: recommendationCatalog, modelRecommendationId: 'sleep'
   }), null);
@@ -130,6 +170,54 @@ test('sanitizes internal data, playback claims, and invented navigation', () => 
   assert.doesNotMatch(sanitizeVisibleAssistantMessage('I will start it now.', 'en'), /start it/i);
   assert.match(sanitizeVisibleAssistantMessage('Open Settings and go to Support.', 'en'), /not sure/i);
   assert.match(sanitizeVisibleAssistantMessage('Открой настройки и перейди в поддержку.', 'ru'), /не уверена/i);
+});
+
+test('never exposes ids, uuid, audio urls, or manual Library instructions when a card exists', () => {
+  const uuid = '11111111-1111-4111-8111-111111111111';
+  const unsafe = `Morning Clarity has id = ${uuid}. Open Library and search for it. https://x.supabase.co/storage/audio.mp3`;
+  const sanitized = sanitizeVisibleAssistantMessage(unsafe, 'en');
+  assert.doesNotMatch(sanitized, /11111111|supabase|id\s*=/i);
+  const noLibrary = avoidLibraryInstructionWhenCardExists(sanitized, 'en', true);
+  assert.doesNotMatch(noLibrary, /Open Library|search for/i);
+  assert.match(noLibrary, /card below/i);
+  assert.equal(hasInternalDataLeak('recommendedMeditationId: abc'), true);
+});
+
+test('repairs an unambiguous catalog title mentioned without recommendation id', () => {
+  assert.equal(meditationIdMentionedInText('Morning Clarity feels right for you.', recommendationCatalog), 'morning');
+  assert.equal(meditationIdMentionedInText('Deep Sleep or Let Go could fit.', recommendationCatalog), null);
+});
+
+test('separates in-chat guidance from ready meditation requests', () => {
+  assert.equal(isInChatGuidanceRequest('Guide me here for one minute'), true);
+  assert.equal(semanticMeditationRecommendation({
+    message: 'Guide me here for one minute because I am anxious.',
+    catalog: recommendationCatalog,
+    modelRecommendationId: 'anxiety'
+  }), null);
+  assert.equal(isReadyMeditationRequest('Дай мне медитацию из приложения'), true);
+});
+
+test('ambiguous tired context asks for clarification instead of guessing a goal', () => {
+  assert.equal(isAmbiguousSleepyTiredContext('Я сонный и устал.'), true);
+  assert.equal(semanticMeditationRecommendation({
+    message: 'Я сонный и устал.',
+    catalog: recommendationCatalog,
+    modelRecommendationId: 'sleep'
+  }), null);
+});
+
+test('clear focus and clear sleep intents select one matching meditation', () => {
+  assert.equal(semanticMeditationRecommendation({
+    message: 'Давай направим внимание, мне нужен фокус.',
+    catalog: recommendationCatalog,
+    modelRecommendationId: null
+  }), 'focus');
+  assert.equal(semanticMeditationRecommendation({
+    message: 'I want to sleep now.',
+    catalog: recommendationCatalog,
+    modelRecommendationId: null
+  }), 'sleep');
 });
 
 test('sanitizes hallucinated meditation durations using catalog values', () => {
