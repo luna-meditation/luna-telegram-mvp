@@ -26,8 +26,31 @@ export class LunaAiError extends Error {
   }
 }
 
+type OpenAiContentItem = {
+  type?: string;
+  text?: string;
+  refusal?: string;
+  parsed?: unknown;
+  content?: unknown;
+};
+
+type OpenAiOutputItem = {
+  type?: string;
+  role?: string;
+  status?: string;
+  finish_reason?: string;
+  content?: OpenAiContentItem[] | string;
+};
+
 type OpenAiResponse = {
-  output?: Array<{ type?: string; content?: Array<{ type?: string; text?: string }> }>;
+  id?: string;
+  model?: string;
+  status?: string;
+  output_text?: string;
+  output?: OpenAiOutputItem[];
+  message?: { content?: OpenAiContentItem[] | string };
+  choices?: Array<{ finish_reason?: string; message?: { content?: OpenAiContentItem[] | string } }>;
+  incomplete_details?: { reason?: string };
   usage?: { input_tokens?: number; output_tokens?: number; total_tokens?: number };
 };
 
@@ -67,13 +90,62 @@ CATALOG:
 ${catalogJson}`;
 }
 
-function extractOutputText(response: OpenAiResponse) {
-  for (const item of response.output ?? []) {
-    for (const content of item.content ?? []) {
-      if ((content.type === 'output_text' || content.type === 'text') && content.text) return content.text;
-    }
+function contentItems(content: OpenAiContentItem[] | string | undefined): OpenAiContentItem[] {
+  if (!content) return [];
+  if (typeof content === 'string') return [{ type: 'text', text: content }];
+  return Array.isArray(content) ? content : [];
+}
+
+function collectContentText(content: OpenAiContentItem[] | string | undefined) {
+  const text: string[] = [];
+  const refusals: string[] = [];
+
+  for (const item of contentItems(content)) {
+    if (typeof item.text === 'string' && item.text.trim()) text.push(item.text);
+    if (typeof item.refusal === 'string' && item.refusal.trim()) refusals.push(item.refusal);
+    if (item.parsed !== undefined) text.push(typeof item.parsed === 'string' ? item.parsed : JSON.stringify(item.parsed));
+    if (typeof item.content === 'string' && item.content.trim()) text.push(item.content);
   }
-  throw new LunaAiError('malformed_response', 'OpenAI returned no text response.', 502);
+
+  return { text: text.join('\n').trim(), refusal: refusals.join('\n').trim() };
+}
+
+export function extractOpenAiText(response: OpenAiResponse) {
+  const topLevelText = typeof response.output_text === 'string' ? response.output_text.trim() : '';
+  if (topLevelText) return { text: topLevelText, refusal: null as string | null };
+
+  const chunks: string[] = [];
+  const refusals: string[] = [];
+
+  for (const item of response.output ?? []) {
+    if (typeof item.content === 'string' && item.content.trim()) chunks.push(item.content);
+    const extracted = collectContentText(item.content);
+    if (extracted.text) chunks.push(extracted.text);
+    if (extracted.refusal) refusals.push(extracted.refusal);
+  }
+
+  const message = collectContentText(response.message?.content);
+  if (message.text) chunks.push(message.text);
+  if (message.refusal) refusals.push(message.refusal);
+
+  for (const choice of response.choices ?? []) {
+    const choiceMessage = collectContentText(choice.message?.content);
+    if (choiceMessage.text) chunks.push(choiceMessage.text);
+    if (choiceMessage.refusal) refusals.push(choiceMessage.refusal);
+  }
+
+  const text = chunks.join('\n').trim();
+  if (text) return { text, refusal: null as string | null };
+
+  const refusal = refusals.join('\n').trim();
+  if (refusal) return { text: '', refusal };
+
+  throw new LunaAiError('malformed_response', 'OpenAI returned no supported text, structured output, or refusal content.', 502);
+}
+
+function extractFinishReason(response: OpenAiResponse) {
+  const outputReason = response.output?.find((item) => item.finish_reason)?.finish_reason;
+  return outputReason ?? response.choices?.find((choice) => choice.finish_reason)?.finish_reason ?? response.incomplete_details?.reason ?? response.status ?? 'unknown';
 }
 
 async function ownedConversation(telegramId: number, conversationId: string) {
@@ -335,16 +407,53 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
         })
       });
       const body = await response.text();
+      console.info('[Luna AI OpenAI raw response]', {
+        user: userHash(telegramId),
+        conversationId: resolvedConversationId,
+        status: response.status,
+        model: env.AI_CHAT_MODEL,
+        rawResponse: body
+      });
       if (!response.ok) {
         const code = response.status === 429 ? 'openai_rate_limit' : response.status === 401 ? 'openai_auth' : 'openai_error';
         throw new LunaAiError(code, `OpenAI request failed with status ${response.status}.`, response.status === 429 ? 429 : 502);
       }
-      openAiResponse = JSON.parse(body) as OpenAiResponse;
+      try {
+        openAiResponse = JSON.parse(body) as OpenAiResponse;
+      } catch {
+        throw new LunaAiError('malformed_response', 'OpenAI returned invalid JSON.', 502);
+      }
     } finally {
       clearTimeout(timeout);
     }
 
-    const parsed = modelResultSchema.parse(JSON.parse(extractOutputText(openAiResponse)));
+    const extracted = extractOpenAiText(openAiResponse);
+    const finishReason = extractFinishReason(openAiResponse);
+    console.info('[Luna AI OpenAI parsed response]', {
+      user: userHash(telegramId),
+      conversationId: resolvedConversationId,
+      model: openAiResponse.model ?? env.AI_CHAT_MODEL,
+      finishReason,
+      parsedText: extracted.text,
+      refusal: extracted.refusal
+    });
+
+    let parsedPayload: unknown;
+    if (extracted.refusal) {
+      parsedPayload = {
+        message: extracted.refusal,
+        conversationTitle: input.language === 'ru' ? 'Нужна поддержка' : 'Need Support',
+        recommendedMeditationId: null,
+        memoryCandidates: []
+      };
+    } else {
+      try {
+        parsedPayload = JSON.parse(extracted.text);
+      } catch {
+        throw new LunaAiError('malformed_response', 'Luna returned a non-JSON response.', 502);
+      }
+    }
+    const parsed = modelResultSchema.parse(parsedPayload);
     const recommendedMeditationId = validatedMeditationId(parsed.recommendedMeditationId, catalog.map((item) => item.id));
     const { data: assistant, error: assistantError } = await supabase.from('ai_messages').insert({
       conversation_id: resolvedConversationId, telegram_id: telegramId, role: 'assistant', content: parsed.message,
