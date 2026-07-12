@@ -17,8 +17,8 @@ type V2BottomNavProps = {
 
 const items: Array<{ page: Page; key: keyof V2BottomNavProps['labels']; icon: LucideIcon }> = [
   { page: 'home', key: 'home', icon: Home },
-  { page: 'luna', key: 'luna', icon: MessageCircle },
   { page: 'library', key: 'library', icon: BookOpen },
+  { page: 'luna', key: 'luna', icon: MessageCircle },
   { page: 'progress', key: 'progress', icon: BarChart3 },
   { page: 'profile', key: 'profile', icon: User }
 ];
@@ -34,7 +34,11 @@ export function V2BottomNav({ active, onChange, labels }: V2BottomNavProps) {
             key={item.page}
             type="button"
             onClick={() => onChange(item.page)}
-            className={selected ? 'home-v2-bottom-item home-v2-bottom-item-active' : 'home-v2-bottom-item'}
+            className={[
+              'home-v2-bottom-item',
+              selected ? 'home-v2-bottom-item-active' : '',
+              selected && item.page === 'luna' ? 'home-v2-bottom-item-luna-active' : ''
+            ].filter(Boolean).join(' ')}
           >
             <Icon size={18} />
             <span>{labels[item.key]}</span>

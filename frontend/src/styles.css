@@ -372,16 +372,25 @@ input[type="range"] {
   line-height: 1.08;
 }
 
-.hero-moon-halo {
-  display: grid;
-  width: 86px;
-  height: 86px;
-  margin-right: -10px;
+.hero-artwork-glow {
+  width: 78px;
+  height: 78px;
+  margin-right: -8px;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(244, 214, 122, 0.2), rgba(244, 214, 122, 0.08) 35%, transparent 68%);
-  opacity: 0.76;
-  filter: blur(0.5px);
-  animation: lunaStreakGlow 5.5s ease-in-out infinite;
+  background: radial-gradient(circle, rgba(244, 214, 122, 0.16), rgba(244, 214, 122, 0.05) 38%, transparent 70%);
+  opacity: 0.54;
+  filter: blur(8px);
+  animation: lunaStreakGlow 6.5s ease-in-out infinite;
+}
+
+.progress-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.progress-metric-grid > article:first-child {
+  grid-column: 1 / -1;
 }
 
 .freeze-indicator {
@@ -509,9 +518,20 @@ input[type="range"] {
 }
 
 .mood-trend-row {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 6px;
+}
+
+.mood-trend-row::before {
+  content: "";
+  position: absolute;
+  left: 7%;
+  right: 7%;
+  top: 38px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(244, 214, 122, 0.18), rgba(157, 140, 255, 0.15), transparent);
 }
 
 .mood-trend-day {
@@ -529,6 +549,8 @@ input[type="range"] {
 }
 
 .mood-trend-day b {
+  position: relative;
+  z-index: 1;
   display: grid;
   width: 34px;
   height: 34px;
@@ -545,6 +567,21 @@ input[type="range"] {
   border-color: rgba(244, 214, 122, 0.22);
   background: rgba(244, 214, 122, 0.1);
   box-shadow: 0 0 20px rgba(244, 214, 122, 0.08);
+}
+
+.mood-trend-positive b {
+  border-color: rgba(126, 220, 158, 0.28);
+  background: rgba(126, 220, 158, 0.1);
+}
+
+.mood-trend-soft b {
+  border-color: rgba(157, 140, 255, 0.28);
+  background: rgba(157, 140, 255, 0.1);
+}
+
+.mood-trend-heavy b {
+  border-color: rgba(244, 190, 122, 0.3);
+  background: rgba(244, 190, 122, 0.1);
 }
 
 .mood-journey-card,

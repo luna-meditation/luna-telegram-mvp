@@ -733,7 +733,7 @@ const copy = {
     growGently: 'Grow gently',
     growGentlyBody: 'New meditations as your needs change.',
     freePlanFeature: 'Basic meditations only',
-    comingSoon: 'Coming Soon',
+    comingSoon: 'Not enabled',
     starsAvailable: 'Telegram Stars are available now for Luna Premium.',
     close: 'Close',
     openPremiumLibrary: 'Open Premium Library',
@@ -802,7 +802,7 @@ const copy = {
     pauseGardenAmbience: 'Pause ambience',
     gardenAmbience: 'Moon Garden ambience',
     gardenAmbienceUnavailable: 'Ambience unavailable',
-    developerTools: 'Admin Garden Tools',
+    developerTools: 'Developer tools',
     grant100Seeds: 'Grant 100 Seeds',
     unlockFullGarden: 'Unlock Full Garden',
     resetGarden: 'Reset Garden & Seeds',
@@ -1037,7 +1037,7 @@ const copy = {
     dailyStreak: 'Ежедневная серия',
     lockedPremium: '{title} входит в Luna Premium.',
     monthlyPremium: 'Месячный Premium',
-    lifetimePremium: 'Lifetime Premium',
+    lifetimePremium: 'Premium навсегда',
     unlimitedMeditations: 'Полная библиотека медитаций',
     premiumBreathing: 'Длинные дыхательные практики',
     sleepAnxietyFocus: 'Сон, тревога, фокус и спокойствие',
@@ -1057,7 +1057,7 @@ const copy = {
     growGently: 'Расти мягко',
     growGentlyBody: 'Новые медитации под твои меняющиеся состояния.',
     freePlanFeature: 'Только базовые медитации',
-    comingSoon: 'Скоро',
+    comingSoon: 'Не включено',
     starsAvailable: 'Telegram Stars уже доступны для Luna Premium.',
     close: 'Закрыть',
     openPremiumLibrary: 'Открыть Premium-библиотеку',
@@ -1126,7 +1126,7 @@ const copy = {
     pauseGardenAmbience: 'Пауза атмосферы',
     gardenAmbience: 'Атмосфера Лунного сада',
     gardenAmbienceUnavailable: 'Атмосфера недоступна',
-    developerTools: 'Admin Garden Tools',
+    developerTools: 'Инструменты разработчика',
     grant100Seeds: 'Добавить 100 семян',
     unlockFullGarden: 'Открыть весь сад',
     resetGarden: 'Сбросить сад и семена',
@@ -1403,6 +1403,27 @@ function practiceDaysLabel(days: number, language: AppLanguage) {
       ? 'дня'
       : 'дней';
   return `${days} ${word}`;
+}
+
+function completedWeeksLabel(count: number, language: AppLanguage) {
+  if (language === 'en') return count === 1 ? 'Completed week' : 'Completed weeks';
+  return count === 1 ? 'Завершённая неделя' : 'Завершённые недели';
+}
+
+function moodTone(mood: DailyCheckin['mood'] | null | undefined) {
+  switch (mood) {
+    case 'calm':
+    case 'focused':
+      return 'positive';
+    case 'tired':
+    case 'low_energy':
+      return 'soft';
+    case 'anxious':
+    case 'stressed':
+      return 'heavy';
+    default:
+      return 'empty';
+  }
 }
 
 function thisWeekWithLunaInsight(profile: ProfileStats | null, wellness: WellnessSummary | null, history: PlaybackHistory[], language: AppLanguage) {
@@ -3030,29 +3051,45 @@ function ProgressPage({
   const weeklyProgress = buildWeeklyProgress(history, profile, hasPremium, language);
   const weeklyStats = profile?.weeklyStats;
   const lifetimeStats = profile?.lifetimeStats;
+  const completedWeeks = lifetimeStats?.completedWeeks ?? 0;
+  const weekCompletedDays = profile?.currentWeek?.completedDays ?? weeklyProgress.days.filter((day) => day.state === 'completed').length;
   const quickStats = [
     {
-      label: language === 'en' ? 'This Week' : 'Эта неделя',
-      value: minutesCountLabel(weeklyStats?.listeningMinutes ?? profile?.weeklyPracticeMinutes ?? 0, language),
-      body: language === 'en' ? 'Listening' : 'Практика',
+      label: language === 'en' ? 'Week Progress' : 'Прогресс недели',
+      value: `${weekCompletedDays}/7`,
+      body: weeklyProgress.cleanWeek
+        ? (language === 'en' ? 'Clean week completed' : 'Неделя завершена')
+        : (language === 'en' ? 'Practice days this week' : 'Дни практики на неделе'),
       tone: 'strong'
     },
     {
       label: language === 'en' ? 'Sessions' : 'Сессии',
-      value: String(weeklyStats?.completedSessions ?? 0),
-      body: language === 'en' ? 'Completed this week' : 'На этой неделе',
+      value: String(lifetimeStats?.totalSessions ?? profile?.completedMeditations ?? profile?.completed ?? 0),
+      body: language === 'en' ? 'Completed practices' : 'Завершённые практики',
       tone: 'gold'
+    },
+    {
+      label: language === 'en' ? 'Minutes' : 'Минуты',
+      value: String(lifetimeStats?.totalListeningMinutes ?? profile?.minutesListened ?? 0),
+      body: language === 'en' ? 'Listening total' : 'Всего слушания',
+      tone: 'soft'
     },
     {
       label: language === 'en' ? 'Practice Days' : 'Дни практики',
       value: String(lifetimeStats?.practiceDays ?? 0),
-      body: language === 'en' ? 'Lifetime' : 'За всё время',
+      body: language === 'en' ? 'Real active days' : 'Реальные активные дни',
       tone: 'soft'
     },
     {
-      label: language === 'en' ? 'Longest Rhythm' : 'Лучший ритм',
+      label: language === 'en' ? 'Completed Weeks' : 'Завершённые недели',
+      value: String(completedWeeks),
+      body: completedWeeksLabel(completedWeeks, language),
+      tone: 'gold'
+    },
+    {
+      label: language === 'en' ? 'Longest Streak' : 'Лучшая серия',
       value: String(lifetimeStats?.longestStreak ?? profile?.longestStreak ?? 0),
-      body: language === 'en' ? 'Days' : 'Дней',
+      body: language === 'en' ? 'Quiet days' : 'Тихих дней',
       tone: 'soft'
     }
   ];
@@ -3066,7 +3103,13 @@ function ProgressPage({
 
       <HeroProgressCard streak={streak} weeklyProgress={weeklyProgress} language={language} />
 
-      <section className="grid grid-cols-2 gap-3">
+      <section className="progress-metric-grid">
+        <ProgressMetricCard
+          label={copy[language].currentStreak}
+          value={String(streak)}
+          body={streakLabel(streak, language)}
+          tone="hero"
+        />
         {quickStats.map((item) => (
           <ProgressMetricCard key={item.label} {...item} />
         ))}
@@ -3096,6 +3139,8 @@ function ProgressMetricCard({
 }) {
   const accent = tone === 'gold'
     ? 'from-gold/18 via-white/[0.045] to-white/[0.025]'
+    : tone === 'hero'
+      ? 'from-gold/16 via-lavender/10 to-white/[0.025]'
     : tone === 'strong'
       ? 'from-lavender/18 via-white/[0.05] to-white/[0.025]'
       : 'from-white/[0.07] via-white/[0.04] to-white/[0.02]';
@@ -3201,7 +3246,7 @@ function HeroProgressCard({ streak, weeklyProgress, language }: { streak: number
             </div>
             <p className="mt-2 text-sm text-cream/76">{language === 'en' ? 'Keep your rhythm alive.' : 'Сохраняй свой мягкий ритм.'}</p>
           </div>
-          <div className="hero-moon-halo" aria-hidden="true" />
+          <div className="hero-artwork-glow" aria-hidden="true" />
         </div>
 
         <div>
@@ -3272,6 +3317,13 @@ function moodTrendIcon(mood: DailyCheckin['mood'] | null | undefined) {
 function MoodTrendCard({ trend, currentMood, language }: { trend: ProfileStats['moodTrend']; currentMood: string; language: AppLanguage }) {
   const items = trend?.length ? trend : [];
   if (!items.some((item) => item.mood)) return <MoodJourneyEmpty language={language} />;
+  const firstMood = items.find((item) => item.mood)?.mood ?? null;
+  const lastMood = [...items].reverse().find((item) => item.mood)?.mood ?? null;
+  const summary = firstMood && lastMood && firstMood !== lastMood
+    ? (language === 'en'
+      ? `${translateMoodLabel(firstMood, language)} moved toward ${translateMoodLabel(lastMood, language)}.`
+      : `${translateMoodLabel(firstMood, language)} сменилось на ${translateMoodLabel(lastMood, language)}.`)
+    : (language === 'en' ? 'Your recent check-ins form a quiet emotional timeline.' : 'Последние чек-ины складываются в мягкую линию состояния.');
 
   return (
     <section className="mood-journey-card luna-progress-enter">
@@ -3284,16 +3336,14 @@ function MoodTrendCard({ trend, currentMood, language }: { trend: ProfileStats['
           const date = new Date(`${item.key}T12:00:00`);
           const label = date.toLocaleDateString(language === 'en' ? 'en-US' : 'ru-RU', { weekday: 'short' }).slice(0, 3);
           return (
-            <div key={item.key} className={`mood-trend-day ${item.mood ? 'mood-trend-active' : ''}`}>
+            <div key={item.key} className={`mood-trend-day ${item.mood ? 'mood-trend-active' : ''} mood-trend-${moodTone(item.mood)}`}>
               <span>{label}</span>
               <b aria-label={item.mood ? translateMoodLabel(item.mood, language) : undefined}>{moodTrendIcon(item.mood)}</b>
             </div>
           );
         })}
       </div>
-      <p className="mt-3 text-sm leading-5 text-lavender">
-        {language === 'en' ? 'Your check-ins make the week easier to understand.' : 'Чек-ины помогают увидеть неделю яснее.'}
-      </p>
+      <p className="mt-3 text-sm leading-5 text-lavender">{summary}</p>
     </section>
   );
 }
@@ -3321,6 +3371,104 @@ function WeeklySummaryCard({ lines, stats, language }: { lines: string[]; stats?
       </div>
     </section>
   );
+}
+
+type AchievementView = {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  unlocked: boolean;
+};
+
+const achievementCopy: Record<string, Record<AppLanguage, { title: string; description: string }>> = {
+  first_meditation: { en: { title: 'First Meditation', description: 'Complete your first Luna meditation.' }, ru: { title: 'Первая медитация', description: 'Заверши первую медитацию Luna.' } },
+  first_week: { en: { title: 'First Week', description: 'Complete practice days across your first week.' }, ru: { title: 'Первая неделя', description: 'Собери первые семь дней практики.' } },
+  first_month: { en: { title: 'First Month', description: 'Build a month of Luna returns.' }, ru: { title: 'Первый месяц', description: 'Создай месяц возвращений к Luna.' } },
+  three_meditations: { en: { title: 'Three Calm Returns', description: 'Complete three meditation sessions.' }, ru: { title: 'Три спокойных возвращения', description: 'Заверши три медитации.' } },
+  seven_day_rhythm: { en: { title: '7-Day Rhythm', description: 'Protect a full week of quiet rhythm.' }, ru: { title: 'Ритм 7 дней', description: 'Сохрани тихий ритм неделю.' } },
+  fourteen_day_rhythm: { en: { title: '14-Day Rhythm', description: 'Return for two gentle weeks.' }, ru: { title: 'Ритм 14 дней', description: 'Возвращайся две мягкие недели.' } },
+  thirty_day_rhythm: { en: { title: '30-Day Rhythm', description: 'Build a lasting Luna rhythm.' }, ru: { title: 'Ритм 30 дней', description: 'Создай устойчивый ритм с Luna.' } },
+  sixty_day_rhythm: { en: { title: '60-Day Rhythm', description: 'Protect your practice through many days.' }, ru: { title: 'Ритм 60 дней', description: 'Поддерживай практику долго и мягко.' } },
+  hundred_day_rhythm: { en: { title: '100-Day Rhythm', description: 'Create a rare long-term rhythm.' }, ru: { title: 'Ритм 100 дней', description: 'Создай редкий долгий ритм.' } },
+  hundred_minutes: { en: { title: '100 Listening Minutes', description: 'Spend 100 minutes with Luna.' }, ru: { title: '100 минут слушания', description: 'Проведи 100 минут с Luna.' } },
+  five_hundred_minutes: { en: { title: '500 Listening Minutes', description: 'Create a deep practice foundation.' }, ru: { title: '500 минут слушания', description: 'Создай глубокую основу практики.' } },
+  thousand_minutes: { en: { title: '1000 Listening Minutes', description: 'Return to calm again and again.' }, ru: { title: '1000 минут слушания', description: 'Возвращайся к спокойствию снова и снова.' } },
+  ten_sessions: { en: { title: '10 Sessions', description: 'Complete ten Luna practices.' }, ru: { title: '10 сессий', description: 'Заверши десять практик Luna.' } },
+  fifty_sessions: { en: { title: '50 Sessions', description: 'Complete fifty Luna practices.' }, ru: { title: '50 сессий', description: 'Заверши пятьдесят практик Luna.' } },
+  hundred_sessions: { en: { title: '100 Sessions', description: 'Complete one hundred Luna practices.' }, ru: { title: '100 сессий', description: 'Заверши сто практик Luna.' } },
+  morning_practice: { en: { title: 'Morning Practice', description: 'Start a day with Luna.' }, ru: { title: 'Утренняя практика', description: 'Начни день вместе с Luna.' } },
+  evening_practice: { en: { title: 'Evening Practice', description: 'Close a day with Luna.' }, ru: { title: 'Вечерняя практика', description: 'Мягко заверши день с Luna.' } },
+  deep_sleep_explorer: { en: { title: 'Deep Sleep Explorer', description: 'Complete sleep practices.' }, ru: { title: 'Исследователь сна', description: 'Заверши практику для сна.' } },
+  anxiety_companion: { en: { title: 'Anxiety Companion', description: 'Return to Luna during anxious moments.' }, ru: { title: 'Спутник при тревоге', description: 'Вернись к Luna в тревожный момент.' } },
+  focus_builder: { en: { title: 'Focus Builder', description: 'Complete focus practices.' }, ru: { title: 'Фокус', description: 'Заверши практику для ясности.' } },
+  first_checkin: { en: { title: 'First Check-in', description: 'Check in with your inner weather.' }, ru: { title: 'Первый чек-ин', description: 'Отметь своё внутреннее состояние.' } },
+  seven_checkins: { en: { title: 'Seven Check-ins', description: 'Build a gentle reflection habit.' }, ru: { title: 'Семь чек-инов', description: 'Создай мягкую привычку замечать себя.' } },
+  thirty_checkins: { en: { title: 'Thirty Check-ins', description: 'Create a fuller picture of your rhythm.' }, ru: { title: 'Тридцать чек-инов', description: 'Собери более полную картину ритма.' } },
+  one_hundred_checkins: { en: { title: '100 Check-ins', description: 'Build a deep reflection history.' }, ru: { title: '100 чек-инов', description: 'Создай глубокую историю самонаблюдения.' } },
+  premium_member: { en: { title: 'Premium Member', description: 'Unlock the deeper Luna experience.' }, ru: { title: 'Premium участник', description: 'Открой более глубокий опыт Luna.' } },
+  moon_garden_level_5: { en: { title: 'Moon Garden Level 5', description: 'Grow your garden into a moonlit place.' }, ru: { title: 'Лунный сад 5', description: 'Выращивай сад в лунное пространство.' } },
+  moon_garden_level_10: { en: { title: 'Moon Garden Level 10', description: 'Prepare for future garden expansions.' }, ru: { title: 'Лунный сад 10', description: 'Подготовь сад к будущему росту.' } },
+  moon_garden_level_20: { en: { title: 'Moon Garden Level 20', description: 'Expand your Moon Garden deeply.' }, ru: { title: 'Лунный сад 20', description: 'Глубоко расширь свой Лунный сад.' } },
+  seven_perfect_weeks: { en: { title: 'Seven Perfect Weeks', description: 'Complete seven full practice weeks.' }, ru: { title: 'Семь полных недель', description: 'Заверши семь полных недель практики.' } },
+  thirty_perfect_days: { en: { title: 'Thirty Perfect Days', description: 'Complete thirty practice days.' }, ru: { title: 'Тридцать дней практики', description: 'Собери тридцать дней практики.' } },
+  one_year_together: { en: { title: 'One Year Together', description: 'Return to Luna across a year of practice days.' }, ru: { title: 'Год вместе', description: 'Возвращайся к Luna на протяжении года.' } },
+  calm_explorer: { en: { title: 'Calm Explorer', description: 'Complete practices across Luna.' }, ru: { title: 'Исследователь спокойствия', description: 'Завершай практики Luna.' } }
+};
+
+function buildAchievementViews(profile: ProfileStats | null, language: AppLanguage): AchievementView[] {
+  const backendItems = profile?.achievements?.items ?? [];
+  if (backendItems.length) {
+    return backendItems.map((item) => ({
+      ...item,
+      title: achievementCopy[item.id]?.[language]?.title ?? item.title,
+      description: achievementCopy[item.id]?.[language]?.description ?? item.description
+    }));
+  }
+
+  const completedMeditations = profile?.completedMeditations ?? profile?.completed ?? 0;
+  const completed = profile?.completed ?? completedMeditations;
+  const minutes = profile?.minutesListened ?? profile?.lifetimeStats?.totalListeningMinutes ?? 0;
+  const currentStreak = profile?.currentStreak ?? 0;
+  const longestStreak = profile?.longestStreak ?? profile?.lifetimeStats?.longestStreak ?? 0;
+  const practiceDays = profile?.lifetimeStats?.practiceDays ?? 0;
+  const completedWeeks = profile?.lifetimeStats?.completedWeeks ?? 0;
+  const gardenLevel = profile?.gardenLevel ?? plantedGardenElements(profile).length;
+  const checks: Record<string, boolean> = {
+    first_meditation: completedMeditations >= 1,
+    first_week: practiceDays >= 7 || completedWeeks >= 1,
+    first_month: practiceDays >= 30,
+    three_meditations: completedMeditations >= 3,
+    seven_day_rhythm: currentStreak >= 7 || longestStreak >= 7,
+    fourteen_day_rhythm: currentStreak >= 14 || longestStreak >= 14,
+    thirty_day_rhythm: currentStreak >= 30 || longestStreak >= 30,
+    sixty_day_rhythm: currentStreak >= 60 || longestStreak >= 60,
+    hundred_day_rhythm: currentStreak >= 100 || longestStreak >= 100,
+    hundred_minutes: minutes >= 100,
+    five_hundred_minutes: minutes >= 500,
+    thousand_minutes: minutes >= 1000,
+    ten_sessions: completed >= 10,
+    fifty_sessions: completed >= 50,
+    hundred_sessions: completed >= 100,
+    first_checkin: (profile?.weeklyStats?.checkins ?? 0) > 0,
+    seven_checkins: (profile?.weeklyStats?.checkins ?? 0) >= 7,
+    premium_member: Boolean(profile?.purchasedPlan && profile.purchasedPlan.toLowerCase() !== 'free'),
+    moon_garden_level_5: gardenLevel >= 5,
+    moon_garden_level_10: gardenLevel >= 10,
+    moon_garden_level_20: gardenLevel >= 20,
+    seven_perfect_weeks: completedWeeks >= 7,
+    thirty_perfect_days: practiceDays >= 30,
+    one_year_together: practiceDays >= 365,
+    calm_explorer: completed >= 5
+  };
+
+  return Object.entries(achievementCopy).map(([id, localized]) => ({
+    id,
+    title: localized[language].title,
+    description: localized[language].description,
+    category: 'progress',
+    unlocked: Boolean(checks[id])
+  }));
 }
 
 function GardenRewardCard({
@@ -3361,16 +3509,9 @@ function GardenRewardCard({
 }
 
 function AchievementsSection({ profile, language }: { profile: ProfileStats | null; language: AppLanguage }) {
-  const fallbackItems = [
-    { id: 'first_meditation', title: language === 'en' ? 'First Meditation' : 'Первая медитация', description: language === 'en' ? 'Complete your first session.' : 'Заверши первую практику.', unlocked: (profile?.completedMeditations ?? 0) >= 1 },
-    { id: 'first_week', title: language === 'en' ? 'First Week' : 'Первая неделя', description: language === 'en' ? 'Build a seven-day rhythm.' : 'Создай ритм на семь дней.', unlocked: (profile?.longestStreak ?? 0) >= 7 },
-    { id: 'hundred_minutes', title: language === 'en' ? '100 Listening Minutes' : '100 минут практики', description: language === 'en' ? 'Spend 100 minutes with Luna.' : 'Проведи 100 минут с Luna.', unlocked: (profile?.minutesListened ?? 0) >= 100 },
-    { id: 'calm_explorer', title: language === 'en' ? 'Calm Explorer' : 'Исследователь спокойствия', description: language === 'en' ? 'Complete five practices.' : 'Заверши пять практик.', unlocked: (profile?.completed ?? 0) >= 5 }
-  ];
-  const sourceItems = profile?.achievements?.items?.length ? profile.achievements.items : fallbackItems;
-  const items = sourceItems;
-  const unlocked = profile?.achievements?.unlocked ?? sourceItems.filter((item) => item.unlocked).length;
-  const total = profile?.achievements?.total ?? 42;
+  const items = buildAchievementViews(profile, language);
+  const unlocked = profile?.achievements?.unlocked ?? items.filter((item) => item.unlocked).length;
+  const total = profile?.achievements?.total ?? items.length;
   const icons = ['🏅', '🌙', '🔥', '⭐', '🌸', '❄', '☾', '✦'];
 
   return (
@@ -4695,7 +4836,7 @@ function MoonGardenPage({
             {language === 'en' ? 'Garden Collection' : 'Коллекция сада'}
           </p>
           <h3 className="font-serif text-2xl">
-            {language === 'en' ? 'Seasons · Phase 1' : 'Сезоны · Phase 1'}
+            {language === 'en' ? 'Seasonal Gardens' : 'Сезонные сады'}
           </h3>
         </div>
         <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 luna-scrollbar-none">
@@ -4764,12 +4905,12 @@ function MoonGardenPage({
         <section className="rounded-[24px] border border-gold/20 bg-night/80 p-4 shadow-glow">
           <button onClick={() => setDevOpen((value) => !value)} className="flex w-full items-center justify-between text-left">
             <span className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].developerTools}</span>
-            <span className="text-xs text-lavender">{devOpen ? 'Hide' : 'Show'}</span>
+            <span className="text-xs text-lavender">{devOpen ? (language === 'en' ? 'Hide' : 'Скрыть') : (language === 'en' ? 'Show' : 'Показать')}</span>
           </button>
           {devOpen && (
             <>
               <div className="mt-3 rounded-2xl bg-ink/80 p-3">
-                <p className="text-xs text-lavender">Grant Moon Seeds</p>
+                <p className="text-xs text-lavender">{language === 'en' ? 'Grant Moon Seeds' : 'Добавить лунные семена'}</p>
                 <div className="mt-2 flex gap-2">
                   <input
                     type="number"
@@ -4779,7 +4920,7 @@ function MoonGardenPage({
                     className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-night px-3 py-2 text-sm text-cream outline-none focus:border-gold/50"
                   />
                   <button disabled={Boolean(devWorking)} onClick={() => void runDevAction({ action: 'grant_seeds', amount: grantAmount })} className="rounded-2xl bg-gold px-3 py-2 text-sm font-semibold text-night disabled:opacity-60">
-                    Grant
+                    {language === 'en' ? 'Grant' : 'Добавить'}
                   </button>
                 </div>
                 <div className="mt-2 grid grid-cols-5 gap-2">
@@ -4798,16 +4939,16 @@ function MoonGardenPage({
                 <button disabled={Boolean(devWorking)} onClick={() => void runDevAction({ action: 'unlock_full' })} className="rounded-2xl bg-gold/20 px-3 py-3 text-sm font-semibold text-gold disabled:opacity-60">
                   {copy[language].unlockFullGarden}
                 </button>
-                <button disabled={Boolean(devWorking)} onClick={() => window.confirm('Reset planted upgrades only?') && void runDevAction({ action: 'reset_planted' })} className="rounded-2xl bg-surface px-3 py-3 text-sm font-semibold text-lavender disabled:opacity-60">
+                <button disabled={Boolean(devWorking)} onClick={() => window.confirm(language === 'en' ? 'Reset planted upgrades only?' : 'Сбросить только посаженные улучшения?') && void runDevAction({ action: 'reset_planted' })} className="rounded-2xl bg-surface px-3 py-3 text-sm font-semibold text-lavender disabled:opacity-60">
                   {copy[language].resetPlantedGarden}
                 </button>
-                <button disabled={Boolean(devWorking)} onClick={() => window.confirm('Reset planted upgrades and seeds?') && void runDevAction({ action: 'reset_all' })} className="rounded-2xl bg-surface px-3 py-3 text-sm font-semibold text-lavender disabled:opacity-60">
+                <button disabled={Boolean(devWorking)} onClick={() => window.confirm(language === 'en' ? 'Reset planted upgrades and seeds?' : 'Сбросить улучшения и семена?') && void runDevAction({ action: 'reset_all' })} className="rounded-2xl bg-surface px-3 py-3 text-sm font-semibold text-lavender disabled:opacity-60">
                   {copy[language].resetGarden}
                 </button>
               </div>
 
               <div className="mt-3 rounded-2xl bg-ink/80 p-3">
-                <p className="text-xs text-lavender">Set exact Moon Seeds balance</p>
+                <p className="text-xs text-lavender">{language === 'en' ? 'Set exact Moon Seeds balance' : 'Точный баланс лунных семян'}</p>
                 <div className="mt-2 flex gap-2">
                   <input
                     type="number"
@@ -4817,7 +4958,7 @@ function MoonGardenPage({
                     className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-night px-3 py-2 text-sm text-cream outline-none focus:border-gold/50"
                   />
                   <button disabled={Boolean(devWorking)} onClick={() => void runDevAction({ action: 'set_balance', seedBalance: exactBalance })} className="rounded-2xl bg-gold/20 px-3 py-2 text-sm font-semibold text-gold disabled:opacity-60">
-                    Set
+                    {language === 'en' ? 'Set' : 'Задать'}
                   </button>
                 </div>
               </div>
@@ -4836,7 +4977,7 @@ function MoonGardenPage({
                 ))}
               </div>
 
-              <p className="mt-4 text-xs text-lavender">Set Garden Stage</p>
+              <p className="mt-4 text-xs text-lavender">{language === 'en' ? 'Set Garden Stage' : 'Задать уровень сада'}</p>
               <div className="mt-2 grid grid-cols-4 gap-2">
                 {gardenStages.map((stage) => (
                   <button
@@ -5007,9 +5148,13 @@ function ProfilePage({
 
   const avatarUrl = profile?.user?.avatar_url ?? null;
   const planStatus = access.hasPremium
-    ? access.plan.toLowerCase().includes('lifetime') ? 'Lifetime Premium' : access.plan.toLowerCase().includes('monthly') ? 'Monthly Premium' : copy[language].premium
+    ? access.plan.toLowerCase().includes('lifetime')
+      ? copy[language].lifetimePremium
+      : access.plan.toLowerCase().includes('monthly')
+        ? copy[language].monthlyPremium
+        : copy[language].premium
     : copy[language].premiumFree;
-  const localizedPlanStatus = language === 'ru' && planStatus === copy.en.premiumFree ? copy.ru.premiumFree : planStatus;
+  const localizedPlanStatus = planStatus;
   const goalsLabel = goalsCountLabel(goals.length, language);
   const notificationLabel = notificationStatusLabel(notificationPrefs, language);
   const companionStatus = language === 'en' ? 'Ready' : 'Готова';
@@ -5223,8 +5368,8 @@ function ProfilePage({
           </p>
           <div className="mt-4 space-y-2 text-sm text-lavender">
             {(language === 'en'
-              ? ['Full meditation library', 'Premium breathing practices', 'Mantras and soundscapes', 'Future premium content']
-              : ['Полная библиотека медитаций', 'Премиум дыхательные практики', 'Мантры и саундскейпы', 'Будущий премиум-контент']
+              ? ['Full meditation library', 'Premium breathing practices', 'Mantras and soundscapes', 'All new Luna releases']
+              : ['Полная библиотека медитаций', 'Премиум дыхательные практики', 'Мантры и саундскейпы', 'Все новые релизы Luna']
             ).map((item) => <p key={item}>• {item}</p>)}
           </div>
           <button onClick={onSubscription} className={`mt-4 w-full rounded-[18px] px-4 py-3 text-sm font-semibold ${isLifetime ? 'border border-gold/20 bg-gold/10 text-gold' : 'bg-gold text-night'}`}>
