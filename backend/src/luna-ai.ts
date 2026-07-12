@@ -65,6 +65,8 @@ type OpenAiResponse = {
   usage?: { input_tokens?: number; output_tokens?: number; total_tokens?: number };
 };
 
+type ExtractedOpenAiText = { text: string; refusal: string | null; path: string };
+
 const activeRequests = new Set<number>();
 
 function userHash(telegramId: number) {
@@ -101,57 +103,99 @@ CATALOG:
 ${catalogJson}`;
 }
 
-function contentItems(content: OpenAiContentItem[] | string | undefined): OpenAiContentItem[] {
-  if (!content) return [];
-  if (typeof content === 'string') return [{ type: 'text', text: content }];
-  return Array.isArray(content) ? content : [];
+function valueToText(value: unknown) {
+  if (typeof value === 'string') return value.trim();
+  if (value && typeof value === 'object') {
+    const serialized = JSON.stringify(value);
+    return serialized === undefined ? '' : serialized.trim();
+  }
+  return '';
 }
 
-function collectContentText(content: OpenAiContentItem[] | string | undefined) {
-  const text: string[] = [];
-  const refusals: string[] = [];
+function pathJoin(base: string, key: string | number) {
+  return typeof key === 'number' ? `${base}[${key}]` : base ? `${base}.${key}` : key;
+}
 
-  for (const item of contentItems(content)) {
-    if (typeof item.text === 'string' && item.text.trim()) text.push(item.text);
-    if (typeof item.refusal === 'string' && item.refusal.trim()) refusals.push(item.refusal);
-    if (item.parsed !== undefined) text.push(typeof item.parsed === 'string' ? item.parsed : JSON.stringify(item.parsed));
-    if (typeof item.content === 'string' && item.content.trim()) text.push(item.content);
+function firstTextFromValue(value: unknown, path: string, seen = new WeakSet<object>()): { text: string; path: string } | null {
+  if (typeof value === 'string') {
+    const text = value.trim();
+    return text ? { text, path } : null;
   }
 
-  return { text: text.join('\n').trim(), refusal: refusals.join('\n').trim() };
+  if (!value || typeof value !== 'object') return null;
+  if (seen.has(value)) return null;
+  seen.add(value);
+
+  if (Array.isArray(value)) {
+    for (let index = 0; index < value.length; index += 1) {
+      const match = firstTextFromValue(value[index], pathJoin(path, index), seen);
+      if (match) return match;
+    }
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  const priorityKeys = ['text', 'value', 'output_text', 'input_text', 'content', 'message', 'parsed', 'refusal'];
+  const skippedStringKeys = new Set(['id', 'object', 'type', 'role', 'status', 'model', 'finish_reason', 'reason', 'name']);
+
+  for (const key of priorityKeys) {
+    if (!(key in record)) continue;
+    if (key === 'parsed') {
+      const text = valueToText(record[key]);
+      if (text) return { text, path: pathJoin(path, key) };
+    }
+    const match = firstTextFromValue(record[key], pathJoin(path, key), seen);
+    if (match) return match;
+  }
+
+  for (const [key, child] of Object.entries(record)) {
+    if (priorityKeys.includes(key)) continue;
+    if (typeof child === 'string' && skippedStringKeys.has(key)) continue;
+    const match = firstTextFromValue(child, pathJoin(path, key), seen);
+    if (match) return match;
+  }
+
+  return null;
 }
 
-export function extractOpenAiText(response: OpenAiResponse) {
-  const topLevelText = typeof response.output_text === 'string' ? response.output_text.trim() : '';
-  if (topLevelText) return { text: topLevelText, refusal: null as string | null };
+function recursiveOutputText(response: OpenAiResponse) {
+  const output = response.output as unknown;
+  if (!output) return null;
+  return firstTextFromValue(output, 'output');
+}
 
-  const chunks: string[] = [];
-  const refusals: string[] = [];
+export function extractOpenAiText(response: OpenAiResponse): ExtractedOpenAiText {
+  const topLevelText = typeof response.output_text === 'string' ? response.output_text.trim() : '';
+  if (topLevelText) return { text: topLevelText, refusal: null, path: 'output_text' };
+
+  const directCandidates: Array<{ value: unknown; path: string }> = [
+    { value: response.message?.content, path: 'message.content' },
+    ...((response.choices ?? []).map((choice, index) => ({ value: choice.message?.content, path: `choices[${index}].message.content` })))
+  ];
+
+  for (const candidate of directCandidates) {
+    const text = firstTextFromValue(candidate.value, candidate.path);
+    if (text) return { text: text.text, refusal: null, path: text.path };
+  }
 
   for (const item of response.output ?? []) {
-    if (typeof item.content === 'string' && item.content.trim()) chunks.push(item.content);
-    const extracted = collectContentText(item.content);
-    if (extracted.text) chunks.push(extracted.text);
-    if (extracted.refusal) refusals.push(extracted.refusal);
+    if (item.content) {
+      const refusal = firstTextFromValue(item.content, 'output.content.refusal');
+      if (item.type === 'refusal' && refusal) return { text: '', refusal: refusal.text, path: refusal.path };
+    }
   }
 
-  const message = collectContentText(response.message?.content);
-  if (message.text) chunks.push(message.text);
-  if (message.refusal) refusals.push(message.refusal);
-
-  for (const choice of response.choices ?? []) {
-    const choiceMessage = collectContentText(choice.message?.content);
-    if (choiceMessage.text) chunks.push(choiceMessage.text);
-    if (choiceMessage.refusal) refusals.push(choiceMessage.refusal);
+  const outputText = recursiveOutputText(response);
+  if (outputText) {
+    if (outputText.path.endsWith('.refusal')) return { text: '', refusal: outputText.text, path: outputText.path };
+    return { text: outputText.text, refusal: null, path: outputText.path };
   }
 
-  const text = chunks.join('\n').trim();
-  if (text) return { text, refusal: null as string | null };
+  const refusal = firstTextFromValue(response, 'response');
+  if (refusal && refusal.path.endsWith('.refusal')) return { text: '', refusal: refusal.text, path: refusal.path };
 
-  const refusal = refusals.join('\n').trim();
-  if (refusal) return { text: '', refusal };
-
-  throw new LunaAiError('malformed_response', 'OpenAI returned no supported text, structured output, or refusal content.', 502);
+  console.error('[Luna AI OpenAI extraction failed]', { response });
+  throw new LunaAiError('malformed_response', 'OpenAI returned no assistant text anywhere in the response.', 502);
 }
 
 function stripJsonFence(text: string) {
@@ -489,6 +533,8 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       conversationId: resolvedConversationId,
       model: openAiResponse.model ?? env.AI_CHAT_MODEL,
       finishReason,
+      extractedPath: extracted.path,
+      extractedValue: extracted.text || extracted.refusal,
       parsedText: extracted.text,
       refusal: extracted.refusal
     });

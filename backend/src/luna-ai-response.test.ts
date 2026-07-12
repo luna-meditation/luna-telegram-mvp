@@ -13,7 +13,8 @@ const { extractOpenAiText, normalizeOpenAiModelResult } = await import('./luna-a
 test('extracts Responses API output_text', () => {
   assert.deepEqual(extractOpenAiText({ output_text: '{"message":"ok"}' }), {
     text: '{"message":"ok"}',
-    refusal: null
+    refusal: null,
+    path: 'output_text'
   });
 });
 
@@ -27,7 +28,8 @@ test('extracts text from output content arrays', () => {
     ]
   }), {
     text: '{"message":"from content"}',
-    refusal: null
+    refusal: null,
+    path: 'output[0].content[0].text'
   });
 });
 
@@ -44,7 +46,8 @@ test('extracts structured parsed content', () => {
     ]
   }), {
     text: '{"message":"structured","conversationTitle":null,"recommendedMeditationId":null,"memoryCandidates":[]}',
-    refusal: null
+    refusal: null,
+    path: 'output[0].content[0].parsed'
   });
 });
 
@@ -58,7 +61,66 @@ test('extracts refusals without treating them as missing text', () => {
     ]
   }), {
     text: '',
-    refusal: 'I cannot help with that.'
+    refusal: 'I cannot help with that.',
+    path: 'output[0].content[0].refusal'
+  });
+});
+
+test('extracts text.value from Responses content', () => {
+  assert.deepEqual(extractOpenAiText({
+    output: [
+      {
+        type: 'message',
+        content: [{ type: 'output_text', text: { value: 'Nested text value.' } as never }]
+      }
+    ]
+  }), {
+    text: 'Nested text value.',
+    refusal: null,
+    path: 'output[0].content[0].text.value'
+  });
+});
+
+test('extracts output_text and input_text content fields', () => {
+  assert.deepEqual(extractOpenAiText({
+    output: [
+      {
+        type: 'message',
+        content: [{ type: 'output_text', output_text: 'Direct output_text field.' } as never]
+      }
+    ]
+  }), {
+    text: 'Direct output_text field.',
+    refusal: null,
+    path: 'output[0].content[0].output_text'
+  });
+
+  assert.deepEqual(extractOpenAiText({
+    output: [
+      {
+        type: 'message',
+        content: [{ type: 'output_text', input_text: 'Input text fallback.' } as never]
+      }
+    ]
+  }), {
+    text: 'Input text fallback.',
+    refusal: null,
+    path: 'output[0].content[0].input_text'
+  });
+});
+
+test('recursively extracts any nested string inside output', () => {
+  assert.deepEqual(extractOpenAiText({
+    output: [
+      {
+        type: 'message',
+        content: [{ type: 'custom', deeply: { nested: { assistant: 'Found deep assistant text.' } } } as never]
+      }
+    ]
+  }), {
+    text: 'Found deep assistant text.',
+    refusal: null,
+    path: 'output[0].content[0].deeply.nested.assistant'
   });
 });
 
