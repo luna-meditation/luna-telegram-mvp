@@ -2,7 +2,15 @@ import crypto from 'node:crypto';
 import { z } from 'zod';
 import { env } from './config.js';
 import { getUserAccess, supabase, upsertUser, type TelegramUserInput } from './db.js';
-import { memoryCandidateSchema, memoryCategories, safetyCategory, validatedMeditationId, validMemoryCandidates } from './luna-ai-policy.js';
+import {
+  memoryCandidateSchema,
+  memoryCategories,
+  safetyCategory,
+  sanitizeMeditationFacts,
+  semanticMeditationRecommendation,
+  validMemoryCandidates,
+  type RecommendationCatalogItem
+} from './luna-ai-policy.js';
 
 const languageSchema = z.enum(['en', 'ru']);
 const modelResultSchema = z.object({
@@ -89,11 +97,12 @@ function systemPrompt(language: 'en' | 'ru', catalogJson: string, contextJson: s
   return `You are Luna, the calm, emotionally attentive mindfulness companion inside the Luna Meditation app.
 You are not a generic chatbot, therapist, doctor, or emergency service. Listen carefully, respond with warmth and grounded emotional intelligence, help the user slow down, and suggest one small practical next step when useful.
 
-Tone: calm, warm, concise, human, never patronizing, never falsely mystical, never repetitive. Do not begin every response with thanks. Do not recommend breathing every time. Ask at most one thoughtful question. Most replies are 2-6 short mobile-friendly paragraphs. Never diagnose or make medical claims.
+Tone: calm, warm, concise, human, never patronizing, never falsely mystical, never repetitive. Feel like a trusted companion, not a therapist worksheet or customer support bot. Prefer empathy, short reflections, gentle questions, and natural conversation over step-by-step advice. Do not begin every response with thanks. Do not recommend breathing every time. Ask at most one thoughtful question. Most replies are 2-5 short mobile-friendly paragraphs. Never diagnose or make medical claims.
 
 Reply in ${language === 'ru' ? 'Russian' : 'English'}, unless the user clearly asks to use another language. Never invent user history, completed activities, memories, or meditation content. Use remembered details only when supplied below and genuinely relevant.
 
-Meditations: recommend only an exact id from CATALOG. If none fits, return null. Never invent titles, durations, access, or URLs.
+Meditations: recommend only when the user's message clearly asks for, needs, or naturally invites a practice. Do not recommend after thanks, closure, or when the user says they already feel calmer. Recommend only an exact id from CATALOG when it semantically matches the user's need. If none fits, return null. Never recommend a meditation only because it exists. Never invent titles, durations, categories, premium status, language, or URLs; when mentioning catalog facts, use only CATALOG.
+Recommendation guide: anxiety -> Anxiety Relief or Breath Reset; sleep -> Deep Sleep or Let Go; self-criticism -> Self Love; grounding -> Inner Balance; morning routine -> Morning Clarity.
 Memory: return only durable details explicitly grounded in the user's own message. Do not save greetings, temporary feelings, diagnoses, highly sensitive details, or your own inferences. Use snake_case keys and confidence below 1 unless explicitly stated.
 
 USER_CONTEXT:
@@ -429,7 +438,7 @@ function relevantMemories(message: string, memories: Array<{ category: string; m
 
 async function loadContext(telegramId: number, conversationId: string, currentMessage: string) {
   const [{ data: recent }, { data: memories }, { data: user }, { data: checkin }, { data: catalog }] = await Promise.all([
-    supabase.from('ai_messages').select('role, content, created_at').eq('conversation_id', conversationId).order('created_at', { ascending: false }).limit(env.AI_RECENT_MESSAGE_LIMIT),
+    supabase.from('ai_messages').select('role, content, metadata, created_at').eq('conversation_id', conversationId).order('created_at', { ascending: false }).limit(env.AI_RECENT_MESSAGE_LIMIT),
     supabase.from('user_memories').select('category, memory_key, memory_value').eq('telegram_id', telegramId).eq('is_active', true).order('updated_at', { ascending: false }).limit(30),
     supabase.from('users').select('first_name, language_code, profile_goals, ai_memory_enabled').eq('telegram_id', telegramId).maybeSingle(),
     supabase.from('daily_checkins').select('mood, sleep_range, available_minutes, local_date').eq('telegram_id', telegramId).order('local_date', { ascending: false }).limit(1).maybeSingle(),
@@ -602,10 +611,11 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       title: item.translations?.[input.language]?.title ?? item.title,
       category: item.category,
       mood: item.mood,
+      duration: item.duration,
       language: input.language,
       premium: item.premium,
       summary: compactText(item.translations?.[input.language]?.subtitle ?? item.subtitle ?? item.description, 120)
-    }));
+    })) satisfies RecommendationCatalogItem[];
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), env.AI_REQUEST_TIMEOUT_MS);
     let openAiResponse: OpenAiResponse;
@@ -672,10 +682,20 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       refusal: extracted.refusal
     });
 
+    const recentAssistantRecommendations = recent
+      .filter((message) => message.role === 'assistant')
+      .slice(-4)
+      .map((message) => (message.metadata as { recommendedMeditationId?: string | null } | null)?.recommendedMeditationId ?? null);
     const parsed = normalizeOpenAiModelResult(extracted, input.language);
-    const recommendedMeditationId = validatedMeditationId(parsed.recommendedMeditationId, catalog.map((item) => item.id));
+    const recommendedMeditationId = semanticMeditationRecommendation({
+      message: input.message,
+      catalog: catalogForModel,
+      modelRecommendationId: parsed.recommendedMeditationId,
+      recentAssistantRecommendations
+    });
+    const assistantContent = sanitizeMeditationFacts(parsed.message, catalogForModel);
     const { data: assistant, error: assistantError } = await supabase.from('ai_messages').insert({
-      conversation_id: resolvedConversationId, telegram_id: telegramId, role: 'assistant', content: parsed.message,
+      conversation_id: resolvedConversationId, telegram_id: telegramId, role: 'assistant', content: assistantContent,
       request_id: input.requestId,
       metadata: { recommendedMeditationId, safetyState: 'none' }
     }).select().single();

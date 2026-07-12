@@ -160,6 +160,12 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
     const clean = text.trim();
     if (!clean || thinking || clean.length > 2000) return;
     const optimistic: LunaMessage = { id: requestId(), role: 'user', content: clean, created_at: new Date().toISOString() };
+    if (screen !== 'chat') {
+      setActiveId('');
+      setMessages([]);
+      setScreen('chat');
+      window.localStorage.removeItem(activeConversationKey);
+    }
     setDraft('');
     setError('');
     setRetryText('');
@@ -208,10 +214,27 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
         <section className="luna-ai-welcome">
           <div className="luna-breathing-orb" aria-hidden="true" />
           <h3>{language === 'ru' ? `Привет, ${firstName || 'друг'}.` : `Hello, ${firstName || 'friend'}.`}</h3>
-          <p>{language === 'ru' ? 'Что сейчас внутри тебя?' : "What's happening inside you right now?"}</p>
+          <p>{language === 'ru' ? 'Напиши в своём темпе. Я рядом и слушаю.' : "Write at your own pace. I'm here and listening."}</p>
         </section>
+        <form className="luna-live-composer luna-overview-composer" onSubmit={(event) => { event.preventDefault(); void submit(draft); }}>
+          <textarea
+            value={draft}
+            rows={1}
+            maxLength={2000}
+            disabled={thinking}
+            onChange={(event) => setDraft(event.currentTarget.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                event.preventDefault();
+                void submit(draft);
+              }
+            }}
+            placeholder={language === 'ru' ? 'Напишите Luna...' : 'Message Luna...'}
+          />
+          <button type="submit" disabled={!draft.trim() || thinking} aria-label={language === 'ru' ? 'Отправить' : 'Send'}><Send size={17} /></button>
+        </form>
         <div className="luna-ai-prompts">
-          {prompts.map((prompt) => <button key={prompt} type="button" onClick={() => beginConversation(prompt)}>{prompt}</button>)}
+          {prompts.map((prompt) => <button key={prompt} type="button" onClick={() => setDraft(prompt.replace(/^[^\p{L}\p{N}]+/u, '').trim())}>{prompt}</button>)}
         </div>
         <section className="luna-ai-recent">
           <h3>{language === 'ru' ? 'Недавние разговоры' : 'Recent Conversations'}</h3>
