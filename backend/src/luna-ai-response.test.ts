@@ -8,7 +8,7 @@ process.env.SUPABASE_URL = 'https://example.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
 process.env.OPENAI_API_KEY = 'test-openai-key';
 
-const { extractOpenAiText } = await import('./luna-ai.js');
+const { extractOpenAiText, normalizeOpenAiModelResult } = await import('./luna-ai.js');
 
 test('extracts Responses API output_text', () => {
   assert.deepEqual(extractOpenAiText({ output_text: '{"message":"ok"}' }), {
@@ -59,5 +59,35 @@ test('extracts refusals without treating them as missing text', () => {
   }), {
     text: '',
     refusal: 'I cannot help with that.'
+  });
+});
+
+test('normalizes plain text OpenAI output into an assistant message', () => {
+  assert.deepEqual(normalizeOpenAiModelResult({ text: 'Take one quiet breath.', refusal: null }, 'en'), {
+    message: 'Take one quiet breath.',
+    conversationTitle: null,
+    recommendedMeditationId: null,
+    memoryCandidates: []
+  });
+});
+
+test('normalizes partial JSON OpenAI output with defaults', () => {
+  assert.deepEqual(normalizeOpenAiModelResult({ text: '{"message":"A soft answer."}', refusal: null }, 'en'), {
+    message: 'A soft answer.',
+    conversationTitle: null,
+    recommendedMeditationId: null,
+    memoryCandidates: []
+  });
+});
+
+test('normalizes fenced JSON OpenAI output', () => {
+  assert.deepEqual(normalizeOpenAiModelResult({
+    text: '```json\n{"message":"Fenced answer.","conversationTitle":"Evening","recommendedMeditationId":"not-a-real-id"}\n```',
+    refusal: null
+  }, 'en'), {
+    message: 'Fenced answer.',
+    conversationTitle: 'Evening',
+    recommendedMeditationId: 'not-a-real-id',
+    memoryCandidates: []
   });
 });

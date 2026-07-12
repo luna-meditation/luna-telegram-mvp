@@ -8,9 +8,20 @@ const languageSchema = z.enum(['en', 'ru']);
 const modelResultSchema = z.object({
   message: z.string().min(1).max(5000),
   conversationTitle: z.string().min(1).max(60).nullable(),
-  recommendedMeditationId: z.string().uuid().nullable(),
+  recommendedMeditationId: z.string().min(1).nullable(),
   memoryCandidates: z.array(memoryCandidateSchema).max(3)
 });
+const tolerantModelResultSchema = z.object({
+  message: z.string().trim().min(1).max(5000),
+  conversationTitle: z.string().trim().min(1).max(60).nullable().optional(),
+  recommendedMeditationId: z.string().trim().min(1).nullable().optional(),
+  memoryCandidates: z.array(memoryCandidateSchema).max(3).optional()
+}).passthrough().transform((value) => ({
+  message: value.message,
+  conversationTitle: value.conversationTitle ?? null,
+  recommendedMeditationId: value.recommendedMeditationId ?? null,
+  memoryCandidates: value.memoryCandidates ?? []
+}));
 
 export const lunaChatInputSchema = z.object({
   conversationId: z.string().uuid().optional(),
@@ -141,6 +152,50 @@ export function extractOpenAiText(response: OpenAiResponse) {
   if (refusal) return { text: '', refusal };
 
   throw new LunaAiError('malformed_response', 'OpenAI returned no supported text, structured output, or refusal content.', 502);
+}
+
+function stripJsonFence(text: string) {
+  const trimmed = text.trim();
+  const fenced = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  return fenced?.[1]?.trim() ?? trimmed;
+}
+
+function tryParseJson(text: string) {
+  try {
+    return JSON.parse(stripJsonFence(text)) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+export function normalizeOpenAiModelResult(extracted: { text: string; refusal: string | null }, language: 'en' | 'ru') {
+  if (extracted.refusal) {
+    return modelResultSchema.parse({
+      message: extracted.refusal,
+      conversationTitle: language === 'ru' ? 'Нужна поддержка' : 'Need Support',
+      recommendedMeditationId: null,
+      memoryCandidates: []
+    });
+  }
+
+  const text = extracted.text.trim();
+  const parsedJson = text ? tryParseJson(text) : null;
+
+  if (parsedJson && typeof parsedJson === 'object') {
+    const parsed = tolerantModelResultSchema.parse(parsedJson);
+    return modelResultSchema.parse(parsed);
+  }
+
+  if (text) {
+    return modelResultSchema.parse({
+      message: text,
+      conversationTitle: null,
+      recommendedMeditationId: null,
+      memoryCandidates: []
+    });
+  }
+
+  throw new LunaAiError('malformed_response', 'OpenAI returned no usable assistant message.', 502);
 }
 
 function extractFinishReason(response: OpenAiResponse) {
@@ -438,22 +493,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       refusal: extracted.refusal
     });
 
-    let parsedPayload: unknown;
-    if (extracted.refusal) {
-      parsedPayload = {
-        message: extracted.refusal,
-        conversationTitle: input.language === 'ru' ? 'Нужна поддержка' : 'Need Support',
-        recommendedMeditationId: null,
-        memoryCandidates: []
-      };
-    } else {
-      try {
-        parsedPayload = JSON.parse(extracted.text);
-      } catch {
-        throw new LunaAiError('malformed_response', 'Luna returned a non-JSON response.', 502);
-      }
-    }
-    const parsed = modelResultSchema.parse(parsedPayload);
+    const parsed = normalizeOpenAiModelResult(extracted, input.language);
     const recommendedMeditationId = validatedMeditationId(parsed.recommendedMeditationId, catalog.map((item) => item.id));
     const { data: assistant, error: assistantError } = await supabase.from('ai_messages').insert({
       conversation_id: resolvedConversationId, telegram_id: telegramId, role: 'assistant', content: parsed.message,
@@ -473,8 +513,16 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
 
     if (memoryEnabled) await saveMemories(telegramId, resolvedConversationId, userMessage.id, parsed.memoryCandidates);
     await saveUsage({ telegramId, conversationId: resolvedConversationId, requestId: input.requestId, status: 'completed', latencyMs: Date.now() - startedAt, usage: openAiResponse.usage });
+    const responsePayload = { conversationId: resolvedConversationId, message: assistant, duplicate: false, remaining: Math.max(0, limit - used - 1) };
+    console.info('[Luna AI final response]', {
+      user: userHash(telegramId),
+      conversationId: resolvedConversationId,
+      messageId: assistant.id,
+      recommendedMeditationId,
+      responsePayload
+    });
     console.info('[Luna AI request completed]', { user: userHash(telegramId), conversationId: resolvedConversationId, model: env.AI_CHAT_MODEL, latencyMs: Date.now() - startedAt, tokens: openAiResponse.usage?.total_tokens ?? 0 });
-    return { conversationId: resolvedConversationId, message: assistant, duplicate: false, remaining: Math.max(0, limit - used - 1) };
+    return responsePayload;
   } catch (error) {
     const errorClass = error instanceof LunaAiError ? error.code : error instanceof z.ZodError ? 'malformed_response' : error instanceof Error && error.name === 'AbortError' ? 'timeout' : 'internal_error';
     await saveUsage({ telegramId, conversationId, requestId: input.requestId, status: 'failed', latencyMs: Date.now() - startedAt, errorClass });
