@@ -767,12 +767,22 @@ function buildWeeklyInsight(input: {
 }
 
 export async function upsertDailyCheckin(telegramId: number, input: DailyCheckinInput) {
+  const localDate = input.local_date ?? todayKey();
+  const { data: existing, error: existingError } = await supabase
+    .from('daily_checkins')
+    .select('sleep_range, available_minutes')
+    .eq('telegram_id', telegramId)
+    .eq('local_date', localDate)
+    .maybeSingle();
+
+  if (existingError) throw existingError;
+
   const payload = {
     telegram_id: telegramId,
     mood: input.mood,
-    local_date: input.local_date ?? todayKey(),
-    ...(input.sleep_range !== undefined ? { sleep_range: input.sleep_range } : {}),
-    ...(input.available_minutes !== undefined ? { available_minutes: input.available_minutes } : {})
+    local_date: localDate,
+    sleep_range: input.sleep_range ?? existing?.sleep_range ?? '6_8',
+    available_minutes: input.available_minutes ?? existing?.available_minutes ?? null
   };
 
   const { data, error } = await supabase

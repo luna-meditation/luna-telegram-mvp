@@ -15,6 +15,8 @@ const backendSource = sourceFiles(resolve(process.cwd(), 'src'))
   .join('\n');
 const schema = readFileSync(resolve(process.cwd(), '../database/schema.sql'), 'utf8');
 const rpcMigration = readFileSync(resolve(process.cwd(), '../database/migrations/006_luna_ai_rpc_sync.sql'), 'utf8');
+const schemaSyncMigration = readFileSync(resolve(process.cwd(), '../database/migrations/007_backend_schema_sync.sql'), 'utf8');
+const dbSource = readFileSync(resolve(process.cwd(), 'src/db.ts'), 'utf8');
 
 test('every backend RPC call has a canonical SQL function definition', () => {
   const rpcNames = [...backendSource.matchAll(/\.rpc\(\s*['"]([^'"]+)['"]/g)].map((match) => match[1]);
@@ -36,4 +38,16 @@ test('Luna reservation migration matches the deployed backend contract and is se
   assert.match(rpcMigration, /grant execute on function public\.reserve_luna_chat_request\(bigint, text, integer, uuid\) to service_role/);
   assert.match(rpcMigration, /revoke all on function public\.reserve_luna_chat_request\(bigint, text, integer, uuid\) from public/);
   assert.match(rpcMigration, /notify pgrst, 'reload schema'/);
+});
+
+test('schema sync covers the production drift fields and legacy check-in fallback', () => {
+  assert.match(schemaSyncMigration, /alter table public\.history[\s\S]*add column if not exists listened_seconds integer/);
+  assert.match(schemaSyncMigration, /add column if not exists listened_ranges jsonb/);
+  assert.match(schemaSyncMigration, /alter table public\.daily_checkins[\s\S]*alter column sleep_range set default '6_8'/);
+  assert.match(schemaSyncMigration, /alter column sleep_range drop not null/);
+  assert.match(schemaSyncMigration, /alter column available_minutes drop not null/);
+  assert.match(schemaSyncMigration, /alter table public\.playback_sessions/);
+  assert.match(schemaSyncMigration, /create or replace function public\.reserve_luna_chat_request/);
+  assert.match(schemaSyncMigration, /notify pgrst, 'reload schema'/);
+  assert.match(dbSource, /sleep_range: input\.sleep_range \?\? existing\?\.sleep_range \?\? '6_8'/);
 });

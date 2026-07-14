@@ -68,6 +68,14 @@ database/migrations/006_luna_ai_rpc_sync.sql
 
 With `RUN_MIGRATIONS=true` and a valid `DATABASE_URL`, the backend applies this migration contract during startup and sends `NOTIFY pgrst, 'reload schema'` so PostgREST refreshes its function cache. If automatic migration cannot be confirmed in Railway logs, open Supabase Dashboard -> SQL Editor, paste the complete contents of `database/migrations/006_luna_ai_rpc_sync.sql`, run it once, then redeploy the backend. Do not run destructive resets or modify existing user data.
 
+For the current production schema drift hotfix, run the complete additive migration below if Railway logs show missing columns such as `history.listened_seconds`:
+
+```text
+database/migrations/007_backend_schema_sync.sql
+```
+
+It adds missing playback/history/check-in fields, makes legacy `sleep_range` optional with a neutral `6_8` default, recreates the RPC contract, and reloads PostgREST. It is safe to rerun and does not recreate or delete existing tables/data. After startup, Railway should show `[Database migration] Backend schema synchronization applied`.
+
 ### Frontend Mini App
 
 Add these variables to Netlify or Vercel:

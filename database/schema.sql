@@ -197,7 +197,7 @@ create table if not exists public.practice_days (
 create table if not exists public.daily_checkins (
   id uuid primary key default gen_random_uuid(),
   telegram_id bigint not null references public.users(telegram_id) on delete cascade,
-  sleep_range text check (sleep_range in ('less_than_4', '4_6', '6_8', '8_plus')),
+  sleep_range text default '6_8' check (sleep_range in ('less_than_4', '4_6', '6_8', '8_plus')),
   mood text not null check (mood in ('calm', 'stressed', 'tired', 'anxious', 'focused', 'low_energy')),
   available_minutes text check (available_minutes in ('3', '5', '10', '15_plus')),
   local_date date not null,
@@ -324,6 +324,7 @@ alter table public.playback_sessions
   alter column local_date set not null;
 
 alter table public.daily_checkins
+  alter column sleep_range set default '6_8',
   alter column sleep_range drop not null,
   alter column available_minutes drop not null;
 
