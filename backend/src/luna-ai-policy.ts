@@ -173,6 +173,7 @@ export function isAmbiguousSleepyTiredContext(message: string) {
 }
 
 const intentKeywords: Record<string, RegExp> = {
+  stress_reset: /(soft reset|stress reset|gentle reset|reset|restart|перезагруз|сброс|мягк.*перезагруз)/i,
   anxiety: /(anxious|anxiety|panic|worried|worry|stress|stressed|overwhelmed|нервнича|тревог|паник|стресс|перегруж)/i,
   sleep: /(can't sleep|cannot sleep|insomnia|sleep|bed|night|tired|уснуть|спать|сон\b|сна\b|бессон|ноч)/i,
   self_kindness: /(self[- ]?criticism|hate myself|not good enough|shame|guilt|criticizing myself|самокрит|ненавижу себя|стыд|вина|недостаточно хорош)/i,
@@ -203,6 +204,10 @@ const recommendationMetadataTerms: Record<string, Partial<Record<RecommendationM
   anxiety: {
     category: ['anxiety', 'stress'], mood: ['calm', 'relief', 'settle'], title: ['anxiety', 'relief'],
     summary: ['anxiety', 'worry', 'stress', 'settle'], tags: ['anxiety', 'stress', 'calm']
+  },
+  stress_reset: {
+    category: ['breath', 'reset', 'quick'], mood: ['calm', 'relief', 'reset'], title: ['reset', 'breath'],
+    summary: ['reset', 'breath', 'calm', 'stress', 'release'], tags: ['reset', 'breath', 'calm']
   },
   sleep: {
     category: ['sleep', 'rest'], mood: ['sleep', 'rest', 'night'], title: ['sleep', 'night'],
@@ -269,7 +274,7 @@ export function semanticMeditationRecommendation(input: {
     .join('\n');
   const goalIntent: Record<string, string> = {
     sleep: 'sleep', anxiety: 'anxiety', focus: 'focus', grounding: 'grounding', self_compassion: 'self_kindness',
-    morning_clarity: 'morning', stress_reset: 'anxiety'
+    morning_clarity: 'morning', stress_reset: 'stress_reset'
   };
   const intent = detectIntent(input.message)
     ?? (explicitlyRequested ? detectIntent(`${recentContext}\n${input.message}`) : null)

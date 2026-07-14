@@ -28,10 +28,31 @@ test('unverified entitlement cannot expose purchase entry points', () => {
 
 test('payment flow validates invoice links and releases the CTA after Telegram stops responding', () => {
   assert.match(apiSource, /isValidTelegramInvoiceUrl/);
+  assert.match(apiSource, /invoice_url/);
+  assert.match(apiSource, /invoice_link/);
+  assert.match(apiSource, /payload\.slug/);
   assert.match(appSource, /openTelegramInvoiceWithTimeout/);
   assert.match(appSource, /15_000/);
   assert.match(appSource, /90_000/);
   assert.match(appSource, /paymentOperationRef\.current/);
+});
+
+test('payment instrumentation traces the complete Telegram invoice lifecycle', () => {
+  for (const stage of [
+    'button_clicked',
+    'request_started',
+    'response_received',
+    'invoice_object',
+    'openInvoice_called',
+    'openInvoice_callback',
+    'success',
+    'cancelled',
+    'failed'
+  ]) {
+    assert.match(appSource, new RegExp(stage));
+  }
+  assert.match(appSource, /originalError: error/);
+  assert.match(appSource, /WebApp\.openInvoice\(url, callback\)/);
 });
 
 test('paid payments refresh access, profile, Moon Seeds, and recent payments', () => {

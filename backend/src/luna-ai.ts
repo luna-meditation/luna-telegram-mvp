@@ -26,6 +26,13 @@ import {
   validMemoryCandidates,
   type RecommendationCatalogItem
 } from './luna-ai-policy.js';
+import {
+  clarificationHash,
+  createPendingClarification,
+  inferPendingStateFromRecent,
+  resolvePendingReply,
+  type PendingLunaState
+} from './luna-ai-pending.js';
 
 const languageSchema = z.enum(['en', 'ru']);
 const meditationActionSchema = z.object({
@@ -452,6 +459,10 @@ function meditationClarificationFallback(language: 'en' | 'ru') {
     : 'I want to choose thoughtfully rather than guess. Are you looking for sleep, focus, or a gentler reset?';
 }
 
+function asksToShowMeditationCard(message: string) {
+  return /(?:show|open|send|display|card|показать|открыть|пришл|карточк)/i.test(message) && /\?/u.test(message);
+}
+
 export type MeditationAction = z.infer<typeof meditationActionSchema>;
 
 export function resolveMeditationAction(action: MeditationAction | null, catalog: RecommendationCatalogItem[]) {
@@ -731,20 +742,24 @@ function relevantMemories(message: string, memories: Array<{ category: string; m
 }
 
 async function loadContext(telegramId: number, conversationId: string, currentMessage: string) {
-  const [{ data: recent }, { data: memories }, { data: user }, { data: checkin }, { data: catalog }] = await Promise.all([
+  const [{ data: recent }, { data: memories }, { data: user }, { data: checkin }, { data: catalog }, { data: conversation }] = await Promise.all([
     supabase.from('ai_messages').select('role, content, metadata, created_at').eq('conversation_id', conversationId).order('created_at', { ascending: false }).limit(env.AI_RECENT_MESSAGE_LIMIT),
     supabase.from('user_memories').select('category, memory_key, memory_value').eq('telegram_id', telegramId).eq('is_active', true).order('updated_at', { ascending: false }).limit(30),
     supabase.from('users').select('first_name, language_code, profile_goals, ai_memory_enabled').eq('telegram_id', telegramId).maybeSingle(),
     supabase.from('daily_checkins').select('mood, sleep_range, available_minutes, local_date').eq('telegram_id', telegramId).order('local_date', { ascending: false }).limit(1).maybeSingle(),
-    supabase.from('meditations').select('id, title, subtitle, description, category, duration, cover_image, audio_file, premium, published, mood, play_count, created_at, translations').eq('published', true).order('created_at', { ascending: false }).limit(40)
+    supabase.from('meditations').select('id, title, subtitle, description, category, duration, cover_image, audio_file, premium, published, mood, play_count, created_at, translations').eq('published', true).order('created_at', { ascending: false }).limit(40),
+    supabase.from('ai_conversations').select('pending_state').eq('id', conversationId).eq('telegram_id', telegramId).maybeSingle()
   ]);
 
+  const recentMessages = [...(recent ?? [])].reverse();
+  const pendingState = inferPendingStateFromRecent(conversation?.pending_state, recentMessages);
   const context = {
     profile: user ? { firstName: user.first_name, goals: user.profile_goals } : null,
     latestCheckin: checkin ?? null,
-    memories: user?.ai_memory_enabled && env.AI_MEMORY_ENABLED ? relevantMemories(currentMessage, memories ?? []) : []
+    memories: user?.ai_memory_enabled && env.AI_MEMORY_ENABLED ? relevantMemories(currentMessage, memories ?? []) : [],
+    pendingState
   };
-  return { recent: [...(recent ?? [])].reverse(), context, catalog: catalog ?? [], memoryEnabled: Boolean(user?.ai_memory_enabled && env.AI_MEMORY_ENABLED) };
+  return { recent: recentMessages, context, catalog: catalog ?? [], memoryEnabled: Boolean(user?.ai_memory_enabled && env.AI_MEMORY_ENABLED), pendingState };
 }
 
 async function saveUsage(input: {
@@ -921,7 +936,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       }).select().single();
       if (error) throw error;
       assistantMessageId = assistant.id;
-      await supabase.from('ai_conversations').update({ title: conversationTitle || (input.language === 'ru' ? 'Нужна поддержка' : 'Need Support'), updated_at: new Date().toISOString(), last_message_at: new Date().toISOString() }).eq('id', resolvedConversationId);
+      await supabase.from('ai_conversations').update({ title: conversationTitle || (input.language === 'ru' ? 'Нужна поддержка' : 'Need Support'), pending_state: {}, updated_at: new Date().toISOString(), last_message_at: new Date().toISOString() }).eq('id', resolvedConversationId);
       await saveUsage({ telegramId, conversationId: resolvedConversationId, requestId: input.requestId, status: 'safety_response', latencyMs: Date.now() - startedAt });
       await updateChatRequest(telegramId, input.requestId, {
         status: 'completed', assistant_message_id: assistant.id, completed_at: new Date().toISOString(), error_code: null
@@ -929,7 +944,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       return { conversationId: resolvedConversationId, message: assistant, duplicate: false, remaining: reservation.remaining, requestState: 'completed' as const };
     }
 
-    const { recent, context, catalog, memoryEnabled } = await loadContext(telegramId, resolvedConversationId, input.message);
+    const { recent, context, catalog, memoryEnabled, pendingState } = await loadContext(telegramId, resolvedConversationId, input.message);
     const catalogForPolicy = catalog.map((item) => ({
       id: item.id,
       catalogKey: catalogKey(item.title),
@@ -952,6 +967,10 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       language: item.language,
       summary: item.summary
     }));
+    const pendingResolution = resolvePendingReply(input.message, pendingState, catalogForPolicy);
+    const resolvedPendingMeditation = pendingResolution && 'meditationId' in pendingResolution
+      ? pendingResolution.meditationId
+      : null;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), env.AI_REQUEST_TIMEOUT_MS);
     let openAiResponse: OpenAiResponse;
@@ -1033,6 +1052,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       });
     const parsed = normalizeOpenAiModelResult(extracted, responseLanguage, { telegramId, requestId: input.requestId });
     const explicitMeditationRequest = isReadyMeditationRequest(input.message);
+    const effectiveExplicitRequest = explicitMeditationRequest || Boolean(resolvedPendingMeditation);
     const validatedAction = resolveMeditationAction(parsed.meditationAction, catalogForPolicy);
     if (parsed.meditationAction && !validatedAction) {
       console.warn('[Luna AI meditation action rejected]', {
@@ -1044,11 +1064,11 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
         catalogSize: catalogForPolicy.length
       });
     }
-    const recommendationRequested = explicitMeditationRequest || Boolean(parsed.meditationAction) || (
+    const recommendationRequested = effectiveExplicitRequest || Boolean(parsed.meditationAction) || (
       parsed.recommendationIntent.needed && !recentAssistantRecommendations.slice(-3).some(Boolean)
     );
-    let recommendedMeditationId = semanticMeditationRecommendation({
-      message: input.message,
+    let recommendedMeditationId = resolvedPendingMeditation ?? semanticMeditationRecommendation({
+      message: resolvedPendingMeditation ? `${pendingResolution && 'resolvedIntent' in pendingResolution ? pendingResolution.resolvedIntent : ''} meditation ${input.message}` : input.message,
       catalog: catalogForPolicy,
       language: responseLanguage,
       modelRecommendationId: validatedAction?.meditationId
@@ -1061,7 +1081,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     });
     if (!recommendedMeditationId) {
       const mentionedId = meditationIdMentionedInText(parsed.message, catalogForPolicy);
-      if (mentionedId && (explicitMeditationRequest || parsed.recommendationIntent.needed)) {
+      if (mentionedId && (effectiveExplicitRequest || parsed.recommendationIntent.needed)) {
         recommendedMeditationId = mentionedId;
         console.warn('[Luna AI recommendation repaired from title]', {
           user: userHash(telegramId),
@@ -1088,9 +1108,27 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       language: responseLanguage,
       catalog: catalogForPolicy,
       recommendedMeditationId,
-      explicitRequest: explicitMeditationRequest
+      explicitRequest: effectiveExplicitRequest
     });
-    const assistantContent = enforceCardClaimConsistency(visibleMessage, responseLanguage, Boolean(recommendedMeditationId));
+    const previousClarificationHash = [...recent].reverse()
+      .filter((message) => message.role === 'assistant')
+      .map((message) => {
+        const metadata = message.metadata as { clarificationHash?: unknown; clarification_hash?: unknown } | null;
+        return typeof metadata?.clarificationHash === 'string'
+          ? metadata.clarificationHash
+          : typeof metadata?.clarification_hash === 'string' ? metadata.clarification_hash : null;
+      })
+      .find(Boolean) ?? null;
+    const duplicateClarification = !recommendedMeditationId
+      && clarificationHash(visibleMessage) === previousClarificationHash;
+    const safeVisibleMessage = duplicateClarification
+      ? meditationCardFallback(responseLanguage)
+      : visibleMessage;
+    const shouldWaitForCardConfirmation = Boolean(recommendedMeditationId)
+      && !effectiveExplicitRequest
+      && asksToShowMeditationCard(parsed.message);
+    const attachedMeditationId = shouldWaitForCardConfirmation ? null : recommendedMeditationId;
+    const assistantContent = enforceCardClaimConsistency(safeVisibleMessage, responseLanguage, Boolean(attachedMeditationId));
     if (!assistantContent) throw new LunaAiError('malformed_response', 'Luna returned no safe visible message.', 502);
     if (hasInternalDataLeak(assistantContent)) {
       console.warn('[Luna AI internal data guard]', {
@@ -1102,21 +1140,42 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     if (responseLanguage === 'ru' && containsMasculineLunaSelfReference(assistantContent)) {
       console.warn('[Luna AI identity guard]', { user: userHash(telegramId), conversationId: resolvedConversationId });
     }
-    const recommendedMeditation = recommendedMeditationId
-      ? catalog.find((item) => item.id === recommendedMeditationId) ?? null
+    const recommendedMeditation = attachedMeditationId
+      ? catalog.find((item) => item.id === attachedMeditationId) ?? null
       : null;
     const meditationAction = recommendedMeditation
       ? { type: 'meditation_card' as const, meditationId: recommendedMeditation.id }
       : null;
+    const resolvedIntent = pendingResolution && 'resolvedIntent' in pendingResolution
+      ? pendingResolution.resolvedIntent
+      : null;
+    const nextPendingState: PendingLunaState | null = shouldWaitForCardConfirmation
+      ? createPendingClarification({ clarification: assistantContent, meditationId: recommendedMeditationId, action: 'show_meditation_card' })
+      : recommendedMeditationId
+        ? null
+        : recommendationRequested
+          ? createPendingClarification({ clarification: assistantContent })
+          : pendingResolution && 'clearPending' in pendingResolution && pendingResolution.clearPending
+            ? null
+            : pendingState;
     const { data: assistant, error: assistantError } = await supabase.from('ai_messages').insert({
       conversation_id: resolvedConversationId, telegram_id: telegramId, role: 'assistant', content: assistantContent,
       request_id: input.requestId,
-      metadata: { recommendedMeditationId, meditationAction, recommendedMeditation, safetyState: 'none' }
+      metadata: {
+        recommendedMeditationId: attachedMeditationId,
+        meditationAction,
+        recommendedMeditation,
+        safetyState: 'none',
+        resolvedIntent,
+        pending_action: nextPendingState?.pending_action ?? null,
+        pending_state: nextPendingState,
+        clarificationHash: nextPendingState?.clarification_hash ?? null
+      }
     }).select().single();
     if (assistantError) throw assistantError;
     assistantMessageId = assistant.id;
     await updateChatRequest(telegramId, input.requestId, {
-      status: 'completed', assistant_message_id: assistant.id, recommendation_id: recommendedMeditationId,
+      status: 'completed', assistant_message_id: assistant.id, recommendation_id: attachedMeditationId,
       completed_at: new Date().toISOString(), error_code: null
     });
 
@@ -1124,6 +1183,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     const { error: conversationError } = await supabase.from('ai_conversations').update({
       title: conversationTitle || parsed.conversationTitle?.trim() || fallbackTitle,
       language: responseLanguage,
+      pending_state: nextPendingState ?? {},
       updated_at: new Date().toISOString(), last_message_at: new Date().toISOString()
     }).eq('id', resolvedConversationId).eq('telegram_id', telegramId);
     if (conversationError) throw conversationError;
@@ -1135,10 +1195,10 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       user: userHash(telegramId),
       conversationId: resolvedConversationId,
       messageId: assistant.id,
-      recommendationRef: safeReference(recommendedMeditationId),
-      recommendationRequested: explicitMeditationRequest || parsed.recommendationIntent.needed,
+      recommendationRef: safeReference(attachedMeditationId),
+      recommendationRequested: effectiveExplicitRequest || parsed.recommendationIntent.needed,
       recommendationValidated: Boolean(recommendedMeditationId),
-      recommendationCardAttached: Boolean(recommendedMeditationId),
+      recommendationCardAttached: Boolean(attachedMeditationId),
       messageLength: assistantContent.length
     });
     console.info('[Luna AI request completed]', { user: userHash(telegramId), conversationId: resolvedConversationId, model: env.AI_CHAT_MODEL, latencyMs: Date.now() - startedAt, tokens: openAiResponse.usage?.total_tokens ?? 0 });

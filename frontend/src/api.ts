@@ -454,17 +454,45 @@ export async function recordSceneMoonSeed(input: {
   }, initData);
 }
 
-export async function createInvoiceLink(plan: 'monthly' | 'lifetime', initData?: string) {
-  const requestId = typeof window !== 'undefined' && window.crypto?.randomUUID
+export type InvoiceLinkResult = {
+  invoiceLink: string;
+  requestId: string;
+  amountStars?: number;
+  plan: 'monthly' | 'lifetime';
+  sourceField: string;
+  rawResponse: unknown;
+};
+
+export function createPaymentRequestId() {
+  return typeof window !== 'undefined' && window.crypto?.randomUUID
     ? window.crypto.randomUUID()
     : `payment-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function invoiceUrlFromResponse(response: unknown) {
+  if (!response || typeof response !== 'object') return null;
+  const payload = response as Record<string, unknown>;
+  const urlFields = ['invoiceLink', 'invoice_url', 'invoice_link', 'url'];
+  for (const field of urlFields) {
+    if (isValidTelegramInvoiceUrl(payload[field])) return { invoiceLink: payload[field], sourceField: field };
+  }
+  if (typeof payload.slug === 'string' && payload.slug.trim()) {
+    const slug = payload.slug.trim().replace(/^\$+/, '');
+    const invoiceLink = `https://t.me/$${slug}`;
+    if (isValidTelegramInvoiceUrl(invoiceLink)) return { invoiceLink, sourceField: 'slug' };
+  }
+  return null;
+}
+
+export async function createInvoiceLink(plan: 'monthly' | 'lifetime', initData?: string, requestId = createPaymentRequestId()): Promise<InvoiceLinkResult> {
   const response = await request<unknown>('/api/payments/invoice-link', {
     method: 'POST',
     headers: { 'x-request-id': requestId },
     body: JSON.stringify({ plan })
   }, initData);
 
-  if (!isValidTelegramInvoiceUrl((response as { invoiceLink?: unknown })?.invoiceLink)) {
+  const normalizedInvoice = invoiceUrlFromResponse(response);
+  if (!normalizedInvoice) {
     throw new ApiRequestError('The payment service returned an invalid Telegram invoice link.', `${API_URL}/api/payments/invoice-link`, 502, JSON.stringify(response), requestId);
   }
 
@@ -474,11 +502,14 @@ export async function createInvoiceLink(plan: 'monthly' | 'lifetime', initData?:
   }
 
   return {
-    invoiceLink: (response as { invoiceLink: string }).invoiceLink,
+    invoiceLink: normalizedInvoice.invoiceLink,
     requestId: typeof (response as { requestId?: unknown }).requestId === 'string'
       ? (response as { requestId: string }).requestId
       : requestId,
-    amountStars: (response as { amountStars?: number }).amountStars
+    amountStars: (response as { amountStars?: number }).amountStars,
+    plan,
+    sourceField: normalizedInvoice.sourceField,
+    rawResponse: response
   };
 }
 

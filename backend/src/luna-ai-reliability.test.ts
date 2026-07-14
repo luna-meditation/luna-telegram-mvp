@@ -45,9 +45,20 @@ test('OpenAI max-output retry remains internal to one request', () => {
 });
 
 test('recommendation metadata persists on the matching assistant message', () => {
-  assert.match(backend, /metadata: \{ recommendedMeditationId, meditationAction, recommendedMeditation, safetyState: 'none' \}/);
-  assert.match(backend, /recommendation_id: recommendedMeditationId/);
+  assert.match(backend, /recommendedMeditationId/);
+  assert.match(backend, /pending_action: nextPendingState\?\.pending_action/);
+  assert.match(backend, /clarificationHash: nextPendingState\?\.clarification_hash/);
+  assert.match(backend, /resolvedIntent/);
+  assert.match(backend, /recommendation_id: attachedMeditationId/);
   assert.match(frontend, /key=\{message\.id\}/);
   assert.match(frontend, /message\.metadata\?\.recommendedMeditationId/);
   assert.match(frontend, /message\.metadata\?\.recommendedMeditation/);
+});
+
+test('pending intent and action survive a multi-turn clarification', () => {
+  assert.match(backend, /pending_state/);
+  assert.match(backend, /resolvePendingReply/);
+  assert.match(backend, /inferPendingStateFromRecent/);
+  assert.match(backend, /effectiveExplicitRequest/);
+  assert.match(backend, /duplicateClarification/);
 });

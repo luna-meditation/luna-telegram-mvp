@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import {
   createInvoiceLink,
+  createPaymentRequestId,
   createMeditation,
   clearLunaConversations,
   clearLunaMemory,
@@ -1233,6 +1234,10 @@ function getTelegram() {
 
 type TelegramInvoiceStatus = 'paid' | 'cancelled' | 'failed' | 'pending';
 
+function logPaymentStage(stage: string, details: Record<string, unknown>) {
+  console.info('[Luna payment]', { stage, ...details });
+}
+
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
   return new Promise<T>((resolve, reject) => {
     const timeout = window.setTimeout(() => reject(new Error(message)), timeoutMs);
@@ -1252,9 +1257,16 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string)
 function openTelegramInvoiceWithTimeout(
   telegram: TelegramWebApp | undefined,
   invoiceLink: string,
+  paymentContext: { plan: 'monthly' | 'lifetime'; requestId: string; telegramId: number },
   timeoutMs = 90_000
 ) {
   if (!telegram?.openInvoice) {
+    logPaymentStage('telegram_api_unavailable', {
+      ...paymentContext,
+      reason: 'Telegram.WebApp.openInvoice is not available in this runtime.',
+      hasTelegramWebApp: Boolean(telegram),
+      hasOpenInvoice: false
+    });
     return Promise.reject(new Error('Telegram WebApp invoice API is unavailable.'));
   }
 
@@ -1267,14 +1279,28 @@ function openTelegramInvoiceWithTimeout(
       callback();
     };
     const timeout = window.setTimeout(() => {
+      logPaymentStage('openInvoice_timeout', paymentContext);
       finish(() => reject(new Error('Telegram invoice confirmation timed out.')));
     }, timeoutMs);
 
     try {
+      // Telegram Mini Apps expects the generated invoice URL here, not the invoice slug.
+      logPaymentStage('openInvoice_called', {
+        ...paymentContext,
+        invoiceLink,
+        telegramApi: 'WebApp.openInvoice(url, callback)'
+      });
       telegram.openInvoice?.(invoiceLink, (status) => {
+        logPaymentStage('openInvoice_callback', { ...paymentContext, status });
         finish(() => resolve(status));
       });
     } catch (error) {
+      logPaymentStage('openInvoice_threw', {
+        ...paymentContext,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack ?? null : null,
+        originalError: error
+      });
       finish(() => reject(error));
     }
   });
@@ -2632,17 +2658,45 @@ function App() {
     setOpeningPlan(plan);
     setPaymentMessage(copy[language].openingPayment);
     telegram?.HapticFeedback?.impactOccurred('light');
+    const clientRequestId = createPaymentRequestId();
+    const paymentContext = {
+      plan,
+      requestId: clientRequestId,
+      telegramId: user.id,
+      hasTelegramWebApp: Boolean(telegram),
+      hasOpenInvoice: Boolean(telegram?.openInvoice)
+    };
+    logPaymentStage('button_clicked', paymentContext);
     try {
-      const invoice = await withTimeout(createInvoiceLink(plan, initData), 15_000, 'Invoice creation timed out.');
+      logPaymentStage('request_started', paymentContext);
+      const invoice = await withTimeout(createInvoiceLink(plan, initData, clientRequestId), 15_000, 'Invoice creation timed out.');
+      logPaymentStage('response_received', {
+        ...paymentContext,
+        backendRequestId: invoice.requestId,
+        amountStars: invoice.amountStars,
+        responsePlan: invoice.plan
+      });
+      logPaymentStage('invoice_object', {
+        ...paymentContext,
+        invoice: invoice.rawResponse,
+        normalizedInvoiceLink: invoice.invoiceLink,
+        sourceField: invoice.sourceField,
+        fields: invoice.rawResponse && typeof invoice.rawResponse === 'object' ? Object.keys(invoice.rawResponse) : [],
+        hasUrl: invoice.rawResponse && typeof invoice.rawResponse === 'object' && typeof (invoice.rawResponse as Record<string, unknown>).url === 'string',
+        hasInvoiceUrl: invoice.rawResponse && typeof invoice.rawResponse === 'object' && typeof (invoice.rawResponse as Record<string, unknown>).invoice_url === 'string',
+        hasInvoiceLink: invoice.rawResponse && typeof invoice.rawResponse === 'object' && typeof (invoice.rawResponse as Record<string, unknown>).invoice_link === 'string',
+        hasSlug: invoice.rawResponse && typeof invoice.rawResponse === 'object' && typeof (invoice.rawResponse as Record<string, unknown>).slug === 'string'
+      });
       if (!isValidTelegramInvoiceUrl(invoice.invoiceLink) || invoice.requestId.length === 0) {
         throw new Error('The payment service returned an invalid invoice response.');
       }
       setPaymentMessage(copy[language].openingStarsPayment);
 
       if (telegram?.openInvoice) {
-        const status = await openTelegramInvoiceWithTimeout(telegram, invoice.invoiceLink);
+        const status = await openTelegramInvoiceWithTimeout(telegram, invoice.invoiceLink, paymentContext);
         setOpeningPlan(null);
         paymentOperationRef.current = false;
+        logPaymentStage(status === 'paid' ? 'success' : status === 'cancelled' ? 'cancelled' : 'failed', { ...paymentContext, status });
         if (status === 'paid') {
           setAccess((current) => ({ ...current, hasPremium: true, plan: plan === 'lifetime' ? 'Lifetime' : 'Monthly' }));
           setPaymentMessage(copy[language].paymentSuccessful);
@@ -2652,6 +2706,10 @@ function App() {
         }
         setPaymentMessage(status === 'cancelled' ? copy[language].paymentCancelled : status === 'failed' ? copy[language].paymentFailed : copy[language].paymentPending);
       } else {
+        logPaymentStage('telegram_api_unavailable', {
+          ...paymentContext,
+          reason: 'Telegram.WebApp.openInvoice is unavailable; using the /plans fallback link.'
+        });
         if (telegram?.openTelegramLink) {
           telegram.openTelegramLink(invoice.invoiceLink);
         } else {
@@ -2669,14 +2727,18 @@ function App() {
       setPaymentMessage(alreadyActive
         ? (language === 'ru' ? 'Premium уже активен. Обновляем статус…' : 'Premium is already active. Refreshing your status…')
         : copy[language].paymentFailed);
-      console.info('[Luna invoice open failed]', {
+      logPaymentStage('failed', {
+        ...paymentContext,
         plan,
         stage: error instanceof ApiRequestError && error.status === 502 ? 'invoice_response_validation' : 'invoice_open_or_create',
         telegramId: user.id,
-        requestId: error instanceof ApiRequestError ? error.requestId : null,
+        requestId: error instanceof ApiRequestError ? error.requestId ?? clientRequestId : clientRequestId,
         status: error instanceof ApiRequestError ? error.status : null,
         errorClass: error instanceof Error ? error.name : 'unknown',
-        hasTelegramInvoiceApi: Boolean(telegram?.openInvoice)
+        hasTelegramInvoiceApi: Boolean(telegram?.openInvoice),
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack ?? null : null,
+        originalError: error
       });
       if (alreadyActive) void refreshAccessAndPayments();
       else if (botUsername) telegram?.openTelegramLink(`https://t.me/${botUsername}?start=plans`);
