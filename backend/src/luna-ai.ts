@@ -620,7 +620,16 @@ async function reserveChatRequest(telegramId: number, requestId: string, limit: 
     p_daily_limit: limit,
     p_conversation_id: conversationId ?? null
   });
-  if (error) throw error;
+  if (error) {
+    logBackendError(error, {
+      endpoint: 'Supabase RPC reserve_luna_chat_request',
+      requestId,
+      telegramId,
+      rpcName: 'reserve_luna_chat_request',
+      expectedParameterContract: 'p_telegram_id bigint, p_client_request_id text, p_daily_limit integer, p_conversation_id uuid'
+    });
+    throw error;
+  }
   const reservation = (data?.[0] ?? null) as RequestReservation | null;
   if (!reservation) throw new LunaAiError('internal_error', 'Could not reserve Luna request.', 500);
   return reservation;

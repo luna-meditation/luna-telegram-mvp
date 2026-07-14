@@ -58,6 +58,16 @@ Notes:
 - Keep `RUN_MIGRATIONS=true` so the backend applies Luna database table migrations on startup.
 - Supabase Storage is not seeded during backend startup. Create the `meditations` bucket with `database/schema.sql` or `database/migrations/001_meditation_platform.sql`; files are uploaded only from the hidden admin page.
 
+### Luna AI RPC synchronization
+
+The backend calls the server-only function `public.reserve_luna_chat_request(bigint, text, integer, uuid)` and expects columns `status`, `quota_charged`, `remaining`, `attempt_count`, and `acquired`. The additive production migration is:
+
+```text
+database/migrations/006_luna_ai_rpc_sync.sql
+```
+
+With `RUN_MIGRATIONS=true` and a valid `DATABASE_URL`, the backend applies this migration contract during startup and sends `NOTIFY pgrst, 'reload schema'` so PostgREST refreshes its function cache. If automatic migration cannot be confirmed in Railway logs, open Supabase Dashboard -> SQL Editor, paste the complete contents of `database/migrations/006_luna_ai_rpc_sync.sql`, run it once, then redeploy the backend. Do not run destructive resets or modify existing user data.
+
 ### Frontend Mini App
 
 Add these variables to Netlify or Vercel:

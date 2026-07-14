@@ -382,12 +382,30 @@ create index if not exists idx_ai_chat_requests_user_daily on public.ai_chat_req
 create or replace function public.reserve_luna_chat_request(
   p_telegram_id bigint, p_client_request_id text, p_daily_limit integer, p_conversation_id uuid default null
 ) returns table(status text, quota_charged boolean, remaining integer, attempt_count integer, acquired boolean)
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = public, pg_temp as $$
 declare
   existing public.ai_chat_requests%rowtype;
   used_count integer;
   had_existing boolean := false;
 begin
+  if p_telegram_id is null then
+    raise exception using errcode = '22004', message = 'Telegram user id is required.';
+  end if;
+  if p_client_request_id is null or btrim(p_client_request_id) = '' then
+    raise exception using errcode = '22004', message = 'Client request id is required.';
+  end if;
+  if p_daily_limit is null or p_daily_limit < 0 then
+    raise exception using errcode = '22023', message = 'Daily limit must be a non-negative integer.';
+  end if;
+  if not exists (select 1 from public.users where telegram_id = p_telegram_id) then
+    raise exception using errcode = '42501', message = 'Telegram user is not recognized.';
+  end if;
+  if p_conversation_id is not null and not exists (
+    select 1 from public.ai_conversations where id = p_conversation_id and telegram_id = p_telegram_id
+  ) then
+    raise exception using errcode = '42501', message = 'Conversation ownership validation failed.';
+  end if;
+
   perform pg_advisory_xact_lock(p_telegram_id);
   select * into existing from public.ai_chat_requests
     where telegram_id = p_telegram_id and client_request_id = p_client_request_id for update;
@@ -426,12 +444,18 @@ create or replace function public.increment_meditation_play_count(meditation_uui
 returns void
 language sql
 security definer
+set search_path = public, pg_temp
 as $$
   update public.meditations
   set play_count = play_count + 1,
       updated_at = now()
   where id = meditation_uuid;
 $$;
+
+revoke all on function public.increment_meditation_play_count(uuid) from public;
+grant execute on function public.increment_meditation_play_count(uuid) to service_role;
+
+notify pgrst, 'reload schema';
 
 update public.meditations
 set translations = jsonb_strip_nulls(jsonb_build_object(

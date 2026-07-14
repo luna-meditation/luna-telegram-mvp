@@ -14,7 +14,9 @@ test('backend error logs preserve the exception and production context', () => {
     logBackendError(exception, {
       endpoint: 'GET /api/profile/me',
       requestId: 'request-123',
-      telegramId: 42
+      telegramId: 42,
+      rpcName: 'reserve_luna_chat_request',
+      expectedParameterContract: 'p_telegram_id bigint'
     });
 
     assert.equal(payload?.errorMessage, 'database connection failed');
@@ -22,9 +24,10 @@ test('backend error logs preserve the exception and production context', () => {
     assert.equal(payload?.endpoint, 'GET /api/profile/me');
     assert.equal(payload?.requestId, 'request-123');
     assert.equal(payload?.telegramId, 42);
+    assert.equal(payload?.rpcName, 'reserve_luna_chat_request');
+    assert.equal(payload?.expectedParameterContract, 'p_telegram_id bigint');
     assert.equal(payload?.originalException, exception);
   } finally {
     console.error = originalConsoleError;
   }
 });
-
