@@ -78,6 +78,18 @@ create table if not exists public.history (
   unique (telegram_id, meditation_id)
 );
 
+create table if not exists public.playback_sessions (
+  id uuid primary key default gen_random_uuid(),
+  telegram_id bigint not null references public.users(telegram_id) on delete cascade,
+  meditation_id uuid not null references public.meditations(id) on delete cascade,
+  started_at timestamptz not null default now(),
+  last_heartbeat_at timestamptz not null default now(),
+  listened_seconds integer not null default 0 check (listened_seconds >= 0),
+  last_position integer not null default 0 check (last_position >= 0),
+  completed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.streaks (
   id uuid primary key default gen_random_uuid(),
   telegram_id bigint not null unique references public.users(telegram_id) on delete cascade,
@@ -186,6 +198,7 @@ create index if not exists idx_meditations_play_count on public.meditations(play
 create index if not exists idx_favorites_telegram_id on public.favorites(telegram_id);
 create index if not exists idx_history_telegram_id on public.history(telegram_id);
 create index if not exists idx_history_last_played on public.history(last_played desc);
+create index if not exists idx_playback_sessions_user on public.playback_sessions(telegram_id, created_at desc);
 create index if not exists idx_daily_checkins_telegram_date on public.daily_checkins(telegram_id, local_date desc);
 create index if not exists idx_breath_sessions_telegram_completed on public.breath_sessions(telegram_id, completed_at desc);
 create index if not exists idx_moon_gardens_telegram_id on public.moon_gardens(telegram_id);

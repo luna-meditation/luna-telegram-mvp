@@ -24,6 +24,8 @@ import {
   plantMoonGardenElement,
   recordBreathSession,
   recordSceneMoonSeed,
+  startPlaybackSession,
+  heartbeatPlaybackSession,
   supabase,
   updateMoonGardenDevState,
   updateUserAvatar,
@@ -345,6 +347,28 @@ app.post('/api/history', requireTelegramWebApp, async (req, res, next) => {
   try {
     const authReq = req as AuthenticatedRequest;
     res.json(await upsertHistory(authReq.telegramUser.telegram_id, req.body));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/history/session', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    res.json(await startPlaybackSession(authReq.telegramUser.telegram_id, String(req.body.meditation_id ?? '')));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/history/session/heartbeat', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    res.json(await heartbeatPlaybackSession(
+      authReq.telegramUser.telegram_id,
+      String(req.body.session_id ?? ''),
+      Number(req.body.last_position ?? 0)
+    ));
   } catch (error) {
     next(error);
   }

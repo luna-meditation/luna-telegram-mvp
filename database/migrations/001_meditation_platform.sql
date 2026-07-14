@@ -86,6 +86,18 @@ create table if not exists public.history (
   unique (telegram_id, meditation_id)
 );
 
+create table if not exists public.playback_sessions (
+  id uuid primary key default gen_random_uuid(),
+  telegram_id bigint not null references public.users(telegram_id) on delete cascade,
+  meditation_id uuid not null references public.meditations(id) on delete cascade,
+  started_at timestamptz not null default now(),
+  last_heartbeat_at timestamptz not null default now(),
+  listened_seconds integer not null default 0 check (listened_seconds >= 0),
+  last_position integer not null default 0 check (last_position >= 0),
+  completed_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.streaks (
   id uuid primary key default gen_random_uuid(),
   telegram_id bigint not null unique references public.users(telegram_id) on delete cascade,
@@ -229,6 +241,7 @@ alter table public.categories enable row level security;
 alter table public.meditations enable row level security;
 alter table public.favorites enable row level security;
 alter table public.history enable row level security;
+alter table public.playback_sessions enable row level security;
 alter table public.streaks enable row level security;
 alter table public.breath_sessions enable row level security;
 alter table public.moon_gardens enable row level security;
@@ -237,6 +250,7 @@ alter table public.practice_days enable row level security;
 
 drop policy if exists "Categories are readable" on public.categories;
 drop policy if exists "Meditations are readable" on public.meditations;
+drop policy if exists "Playback sessions are server managed" on public.playback_sessions;
 drop policy if exists "Meditation storage is readable" on storage.objects;
 drop policy if exists "Avatar storage is readable" on storage.objects;
 
@@ -245,6 +259,9 @@ create policy "Categories are readable" on public.categories
 
 create policy "Meditations are readable" on public.meditations
   for select using (true);
+
+create policy "Playback sessions are server managed" on public.playback_sessions
+  for all using (false) with check (false);
 
 create policy "Meditation storage is readable" on storage.objects
   for select using (bucket_id = 'meditations');

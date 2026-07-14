@@ -7,7 +7,7 @@ type V2HeroProps = {
   firstName: string;
   headline: string;
   moods: MoodChip[];
-  activeMood: MoodChip;
+  activeMood?: MoodChip;
   moodLabel: (mood: MoodChip) => string;
   language: 'en' | 'ru';
   checkinLine: string;
@@ -61,7 +61,7 @@ export function V2Hero({
             key={mood}
             type="button"
             onClick={() => onMood(mood)}
-            className={`home-v2-mood-pill ${active.includes(activeMood) ? 'home-v2-mood-pill-active' : ''}`}
+            className={`home-v2-mood-pill ${activeMood && active.includes(activeMood) ? 'home-v2-mood-pill-active' : ''}`}
             title={moodLabel(mood)}
           >
             <span>{symbol}</span>

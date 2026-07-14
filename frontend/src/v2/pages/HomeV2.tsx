@@ -63,7 +63,7 @@ type HomeV2Labels = {
 type HomeV2Props = {
   firstName: string;
   greeting: string;
-  mood: MoodChip;
+  mood?: MoodChip;
   moods: MoodChip[];
   setMood: (mood: MoodChip) => void;
   checkinLine: string;
@@ -102,6 +102,16 @@ export function HomeV2(props: HomeV2Props) {
   const [soundExpanded, setSoundExpanded] = useState(false);
   const activeScene = props.selectedScene ?? props.scenes[0] ?? null;
   const discoveryItems = props.explore.length ? props.explore : props.recentlyPlayed;
+
+  if (props.loading && !props.daily) {
+    return (
+      <div className="home-v2-loading" aria-busy="true" aria-label={props.labels.preparingCalm}>
+        <div className="home-v2-skeleton home-v2-skeleton-hero" />
+        <div className="home-v2-skeleton home-v2-skeleton-row" />
+        <div className="home-v2-skeleton home-v2-skeleton-row home-v2-skeleton-row-short" />
+      </div>
+    );
+  }
 
   return (
     <div className="home-v2">

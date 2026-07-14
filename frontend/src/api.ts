@@ -363,6 +363,7 @@ export async function saveHistory(input: {
   last_position: number;
   duration: number;
   completed?: boolean;
+  session_id?: string;
 }, initData?: string) {
   return request<{
     completion_percent: number;
@@ -372,6 +373,20 @@ export async function saveHistory(input: {
   }>('/api/history', {
     method: 'POST',
     body: JSON.stringify(input)
+  }, initData);
+}
+
+export async function startPlaybackSession(meditationId: string, initData?: string) {
+  return request<{ id: string; meditation_id: string; listened_seconds: number }>('/api/history/session', {
+    method: 'POST',
+    body: JSON.stringify({ meditation_id: meditationId })
+  }, initData);
+}
+
+export async function heartbeatPlaybackSession(sessionId: string, lastPosition: number, initData?: string) {
+  return request<{ ok: boolean; listened_seconds: number }>('/api/history/session/heartbeat', {
+    method: 'POST',
+    body: JSON.stringify({ session_id: sessionId, last_position: lastPosition })
   }, initData);
 }
 

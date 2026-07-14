@@ -126,8 +126,10 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
     try {
       const next = await getLunaConversations(initData);
       setConversations(next);
+      setError('');
       return next;
-    } catch {
+    } catch (loadError) {
+      setError(errorDetails(loadError, language).message);
       return [];
     }
   }, [initData, language]);
@@ -292,7 +294,13 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
           setAwayFromBottom(!nearBottom);
         }}
       >
-        {!visibleMessages.length ? (
+        {loading ? (
+          <div className="space-y-3 px-2" aria-label={language === 'ru' ? 'Загрузка разговора' : 'Loading conversation'}>
+            <div className="luna-ai-loading-line" />
+            <div className="luna-ai-loading-line ml-auto max-w-[76%]" />
+            <div className="luna-ai-loading-line max-w-[86%]" />
+          </div>
+        ) : !visibleMessages.length ? (
           <div className="luna-live-empty">
             <div className="luna-breathing-orb" aria-hidden="true" />
             <h3>{language === 'ru' ? `Я рядом, ${firstName || 'друг'}.` : `I'm here, ${firstName || 'friend'}.`}</h3>
@@ -325,6 +333,12 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
         {failedTurn ? <div className={`luna-live-error luna-live-error-${failedTurn.state}`} role="status">
           <p>{failedTurn.message}</p>
           {failedTurn.retryable && failedTurn.state !== 'quota_exhausted' ? <button type="button" disabled={thinking} onClick={() => void submit(failedTurn.text, failedTurn)}><RotateCcw size={14} />{language === 'ru' ? 'Повторить' : 'Retry'}</button> : null}
+        </div> : null}
+        {error ? <div className="luna-live-error" role="status">
+          <p>{error}</p>
+          <button type="button" disabled={loading} onClick={() => void refreshConversations()}>
+            <RotateCcw size={14} />{language === 'ru' ? 'Повторить' : 'Retry'}
+          </button>
         </div> : null}
       </div>
 

@@ -46,6 +46,7 @@ export type HistoryInput = {
   last_position: number;
   duration: number;
   completed?: boolean;
+  session_id?: string;
 };
 
 const moonGardenElements = [
@@ -315,6 +316,49 @@ export async function getMeditationById(id: string) {
   return data;
 }
 
+export async function startPlaybackSession(telegramId: number, meditationId: string) {
+  const meditation = await getMeditationById(meditationId);
+  if (!meditation) throw new Error('Meditation not found.');
+
+  const { data, error } = await supabase
+    .from('playback_sessions')
+    .insert({ telegram_id: telegramId, meditation_id: meditationId })
+    .select('id, meditation_id, started_at, last_heartbeat_at, listened_seconds')
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function heartbeatPlaybackSession(telegramId: number, sessionId: string, lastPosition: number) {
+  const { data: session, error: sessionError } = await supabase
+    .from('playback_sessions')
+    .select('id, meditation_id, last_heartbeat_at, listened_seconds')
+    .eq('id', sessionId)
+    .eq('telegram_id', telegramId)
+    .maybeSingle();
+
+  if (sessionError) throw sessionError;
+  if (!session) return { ok: false, listened_seconds: 0 };
+
+  const meditation = await getMeditationById(session.meditation_id);
+  const duration = Math.max(1, Number(meditation?.duration ?? 1));
+  const lastHeartbeat = new Date(session.last_heartbeat_at).getTime();
+  const elapsed = Number.isFinite(lastHeartbeat)
+    ? Math.max(0, Math.min(30, Math.floor((Date.now() - lastHeartbeat) / 1000)))
+    : 0;
+  const listenedSeconds = Math.min(duration, Math.max(0, Number(session.listened_seconds ?? 0) + elapsed));
+
+  const { error } = await supabase
+    .from('playback_sessions')
+    .update({ listened_seconds: listenedSeconds, last_position: Math.max(0, Math.min(duration, Math.floor(lastPosition))), last_heartbeat_at: new Date().toISOString() })
+    .eq('id', sessionId)
+    .eq('telegram_id', telegramId);
+
+  if (error) throw error;
+  return { ok: true, listened_seconds: listenedSeconds };
+}
+
 export async function upsertFavorite(telegramId: number, meditationId: string, favorite: boolean) {
   if (!favorite) {
     const { error } = await supabase
@@ -346,8 +390,37 @@ export async function getFavorites(telegramId: number) {
 }
 
 export async function upsertHistory(telegramId: number, input: HistoryInput) {
-  const completion = input.duration > 0 ? Math.min(100, Math.round((input.last_position / input.duration) * 100)) : 0;
-  const completed = Boolean(input.completed || completion >= 90);
+  const meditation = await getMeditationById(input.meditation_id);
+  const duration = Math.max(1, Number(meditation?.duration ?? input.duration ?? 1));
+  const savedPosition = Math.max(0, Math.min(duration, Math.floor(Number(input.last_position) || 0)));
+  let trustedListenedSeconds = 0;
+
+  if (input.session_id) {
+    const { data: session, error: sessionError } = await supabase
+      .from('playback_sessions')
+      .select('last_heartbeat_at, listened_seconds')
+      .eq('id', input.session_id)
+      .eq('telegram_id', telegramId)
+      .eq('meditation_id', input.meditation_id)
+      .maybeSingle();
+
+    if (sessionError) throw sessionError;
+    if (session) {
+      const lastHeartbeat = new Date(session.last_heartbeat_at).getTime();
+      const elapsedSinceHeartbeat = Number.isFinite(lastHeartbeat)
+        ? Math.max(0, Math.min(30, Math.floor((Date.now() - lastHeartbeat) / 1000)))
+        : 0;
+      trustedListenedSeconds = Math.min(duration, Math.max(0, Number(session.listened_seconds ?? 0) + elapsedSinceHeartbeat));
+      await supabase
+        .from('playback_sessions')
+        .update({ listened_seconds: trustedListenedSeconds, last_position: savedPosition, last_heartbeat_at: new Date().toISOString(), completed_at: input.completed && trustedListenedSeconds >= duration * 0.9 ? new Date().toISOString() : null })
+        .eq('id', input.session_id)
+        .eq('telegram_id', telegramId);
+    }
+  }
+
+  const completion = trustedListenedSeconds > 0 ? Math.min(100, Math.round((savedPosition / duration) * 100)) : 0;
+  const completed = Boolean(input.completed && trustedListenedSeconds >= duration * 0.9);
 
   const { data: existing, error: existingError } = await supabase
     .from('history')
@@ -358,7 +431,6 @@ export async function upsertHistory(telegramId: number, input: HistoryInput) {
 
   if (existingError) throw existingError;
 
-  const savedPosition = Math.max(0, Math.floor(input.last_position));
   const previouslyAwardedPosition = Math.max(0, Number(existing?.seed_awarded_position ?? 0));
   const nextAwardedPosition = Math.floor(Math.max(previouslyAwardedPosition, savedPosition) / 60) * 60;
   const listeningSeedsAwarded = savedPosition >= 60
