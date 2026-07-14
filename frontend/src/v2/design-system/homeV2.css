@@ -967,3 +967,25 @@
     transition: none !important;
   }
 }
+.home-v2-mood-saved {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  margin: 0 14px 14px;
+  min-height: 52px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  background: rgba(18, 17, 46, 0.72);
+  backdrop-filter: blur(18px);
+}
+
+.home-v2-mood-saved > span { font-size: 21px; text-align: center; }
+.home-v2-mood-saved strong { overflow: hidden; font-size: 12px; font-weight: 600; color: rgba(245, 241, 233, 0.9); text-overflow: ellipsis; white-space: nowrap; }
+.home-v2-mood-saved button { min-height: 36px; padding: 0 10px; border-radius: 12px; color: #d9b85f; font-size: 11px; font-weight: 700; }
+.home-v2-mood-actions { display: flex; align-items: center; gap: 2px; }
+.home-v2-mood-actions button:first-child { color: rgba(245, 241, 233, 0.62); }
+.home-v2-mood-pill:disabled { pointer-events: none; opacity: 0.58; }

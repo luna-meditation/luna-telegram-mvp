@@ -44,6 +44,7 @@ import {
 } from './db.js';
 import { runMigrations } from './migrations.js';
 import { isPlanId } from './plans.js';
+import { paymentEligibility } from './payment-policy.js';
 import {
   clearLunaConversations,
   deleteLunaConversation,
@@ -53,6 +54,7 @@ import {
   listLunaConversations,
   LunaAiError,
   sendLunaMessage,
+  getLunaProviderHealth,
   setLunaMemoryEnabled
 } from './luna-ai.js';
 
@@ -355,7 +357,11 @@ app.post('/api/history', requireTelegramWebApp, async (req, res, next) => {
 app.post('/api/history/session', requireTelegramWebApp, async (req, res, next) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    res.json(await startPlaybackSession(authReq.telegramUser.telegram_id, String(req.body.meditation_id ?? '')));
+    res.json(await startPlaybackSession(
+      authReq.telegramUser.telegram_id,
+      String(req.body.meditation_id ?? ''),
+      String(req.body.local_date ?? '')
+    ));
   } catch (error) {
     next(error);
   }
@@ -409,6 +415,11 @@ app.post('/api/payments/invoice', requireTelegramWebApp, async (req, res, next) 
       return;
     }
 
+    const access = await getUserAccess(authReq.telegramUser.telegram_id);
+    if (!paymentEligibility(access.plan, plan).allowed) {
+      res.status(409).json({ error: access.plan === 'Lifetime' ? 'Lifetime Premium is already active.' : 'Monthly Premium is already active.', code: 'plan_already_active' });
+      return;
+    }
     await sendStarsInvoice(chatId, authReq.telegramUser.telegram_id, plan);
     res.json({ ok: true });
   } catch (error) {
@@ -426,7 +437,17 @@ app.post('/api/payments/invoice-link', requireTelegramWebApp, async (req, res, n
       return;
     }
 
+    const access = await getUserAccess(authReq.telegramUser.telegram_id);
+    if (!paymentEligibility(access.plan, plan).allowed) {
+      res.status(409).json({ error: access.plan === 'Lifetime' ? 'Lifetime Premium is already active.' : 'Monthly Premium is already active.', code: 'plan_already_active' });
+      return;
+    }
     const invoiceLink = await createStarsInvoiceLink(authReq.telegramUser.telegram_id, plan);
+    console.info('[Luna invoice link created]', {
+      user: crypto.createHash('sha256').update(String(authReq.telegramUser.telegram_id)).digest('hex').slice(0, 12),
+      plan,
+      amountStars: plan === 'monthly' ? 499 : 2499
+    });
     res.json({ invoiceLink });
   } catch (error) {
     next(error);
@@ -451,7 +472,7 @@ app.post('/api/progress', requireTelegramWebApp, async (req, res, next) => {
 app.get('/api/checkins/today', requireTelegramWebApp, async (req, res, next) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    res.json({ checkin: await getTodayCheckin(authReq.telegramUser.telegram_id) });
+    res.json({ checkin: await getTodayCheckin(authReq.telegramUser.telegram_id, String(req.query.local_date ?? '')) });
   } catch (error) {
     next(error);
   }
@@ -463,9 +484,9 @@ app.post('/api/checkins', requireTelegramWebApp, async (req, res, next) => {
     const input = req.body as DailyCheckinInput;
 
     if (
-      !['less_than_4', '4_6', '6_8', '8_plus'].includes(input.sleep_range) ||
       !['calm', 'stressed', 'tired', 'anxious', 'focused', 'low_energy'].includes(input.mood) ||
-      !['3', '5', '10', '15_plus'].includes(input.available_minutes)
+      (input.sleep_range != null && !['less_than_4', '4_6', '6_8', '8_plus'].includes(input.sleep_range)) ||
+      (input.available_minutes != null && !['3', '5', '10', '15_plus'].includes(input.available_minutes))
     ) {
       console.warn('[Luna check-in validation failed]', { telegramId: authReq.telegramUser.telegram_id });
       res.status(400).json({ error: 'Please complete the daily check-in.' });
@@ -486,7 +507,7 @@ app.post('/api/checkins', requireTelegramWebApp, async (req, res, next) => {
 app.get('/api/wellness/summary', requireTelegramWebApp, async (req, res, next) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    res.json(await getWellnessSummary(authReq.telegramUser.telegram_id));
+    res.json(await getWellnessSummary(authReq.telegramUser.telegram_id, String(req.query.local_date ?? '')));
   } catch (error) {
     next(error);
   }
@@ -495,7 +516,7 @@ app.get('/api/wellness/summary', requireTelegramWebApp, async (req, res, next) =
 app.get('/api/profile/me', requireTelegramWebApp, async (req, res, next) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    res.json(await getProfileStats(authReq.telegramUser.telegram_id));
+    res.json(await getProfileStats(authReq.telegramUser.telegram_id, String(req.query.local_date ?? '')));
   } catch (error) {
     next(error);
   }
@@ -505,6 +526,14 @@ app.get('/api/luna/conversations', requireTelegramWebApp, async (req, res, next)
   try {
     const authReq = req as AuthenticatedRequest;
     res.json({ conversations: await listLunaConversations(authReq.telegramUser.telegram_id) });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/luna/health', requireTelegramWebApp, async (_req, res, next) => {
+  try {
+    res.json(await getLunaProviderHealth());
   } catch (error) {
     next(error);
   }

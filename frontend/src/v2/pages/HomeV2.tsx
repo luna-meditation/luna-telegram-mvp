@@ -64,6 +64,10 @@ type HomeV2Props = {
   firstName: string;
   greeting: string;
   mood?: MoodChip;
+  moodSaved: boolean;
+  moodSaving: boolean;
+  onChangeMood: () => void;
+  onCheckinDetails: () => void;
   moods: MoodChip[];
   setMood: (mood: MoodChip) => void;
   checkinLine: string;
@@ -125,6 +129,12 @@ export function HomeV2(props: HomeV2Props) {
           moodLabel={props.moodLabel}
           language={props.language}
           checkinLine={props.checkinLine}
+          moodSaved={props.moodSaved}
+          moodSaving={props.moodSaving}
+          changeLabel={props.language === 'ru' ? 'Изменить' : 'Change'}
+          detailsLabel={props.language === 'ru' ? 'Чек-ин' : 'Check-in'}
+          onChangeMood={props.onChangeMood}
+          onCheckinDetails={props.onCheckinDetails}
           onMood={props.setMood}
         />
       ) : props.loading ? (

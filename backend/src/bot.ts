@@ -7,6 +7,7 @@ import {
   upsertUser
 } from './db.js';
 import { isPlanId, plans, type PlanId } from './plans.js';
+import { paymentEligibility } from './payment-policy.js';
 
 export const bot = new Telegraf(env.BOT_TOKEN);
 
@@ -43,6 +44,33 @@ function mainKeyboard(language: BotLanguage) {
       Markup.button.callback(botCopy[language].explorePremium, 'plans')
     ]
   ]);
+}
+
+function plansKeyboard(language: BotLanguage, plan: string) {
+  if (plan === 'Lifetime') return Markup.inlineKeyboard([[miniAppButton(language)]]);
+  if (plan === 'Monthly') {
+    return Markup.inlineKeyboard([
+      [Markup.button.callback(`Lifetime - ${plans.lifetime.amountStars} Stars`, 'buy_lifetime')],
+      [miniAppButton(language)]
+    ]);
+  }
+  return Markup.inlineKeyboard([
+    [Markup.button.callback(`Monthly - ${plans.monthly.amountStars} Stars`, 'buy_monthly')],
+    [Markup.button.callback(`Lifetime - ${plans.lifetime.amountStars} Stars`, 'buy_lifetime')],
+    [miniAppButton(language)]
+  ]);
+}
+
+function plansMessage(language: BotLanguage, plan: string) {
+  if (plan === 'Lifetime') return language === 'ru'
+    ? 'Premium навсегда уже активен. Повторная покупка не нужна.'
+    : 'Lifetime Premium is already active. No further purchase is needed.';
+  if (plan === 'Monthly') return language === 'ru'
+    ? `Месячный Premium активен. При желании можно перейти на Lifetime за ${plans.lifetime.amountStars} Stars.`
+    : `Monthly Premium is active. You can upgrade to Lifetime for ${plans.lifetime.amountStars} Stars.`;
+  return language === 'ru'
+    ? `Выбери доступ Luna:\n\nМесяц: ${plans.monthly.amountStars} Stars на 30 дней\nНавсегда: ${plans.lifetime.amountStars} Stars`
+    : `Choose your Luna access:\n\nMonthly: ${plans.monthly.amountStars} Stars for 30 days\nLifetime: ${plans.lifetime.amountStars} Stars`;
 }
 
 function invoicePayload(plan: PlanId, telegramId: number) {
@@ -122,14 +150,10 @@ bot.command('app', async (ctx) => {
 
 bot.command('plans', async (ctx) => {
   await ensureUser(ctx);
-  await ctx.reply(
-    `Choose your Luna access:\n\nFree: 1 free practice\nMonthly Access: ${plans.monthly.amountStars} Telegram Stars for 30 days\nLifetime Access: ${plans.lifetime.amountStars} Telegram Stars`,
-    Markup.inlineKeyboard([
-      [Markup.button.callback(`Monthly - ${plans.monthly.amountStars} Stars`, 'buy_monthly')],
-      [Markup.button.callback(`Lifetime - ${plans.lifetime.amountStars} Stars`, 'buy_lifetime')],
-      [miniAppButton(botLanguage(ctx.from?.language_code))]
-    ])
-  );
+  if (!ctx.from) return;
+  const language = botLanguage(ctx.from.language_code);
+  const access = await getUserAccess(ctx.from.id);
+  await ctx.reply(plansMessage(language, access.plan), plansKeyboard(language, access.plan));
 });
 
 bot.command('library', async (ctx) => {
@@ -176,13 +200,11 @@ bot.command('admin', async (ctx) => {
 
 bot.action('plans', async (ctx) => {
   await ctx.answerCbQuery();
-  await ctx.reply(
-    'Premium unlocks the full Luna library.',
-    Markup.inlineKeyboard([
-      [Markup.button.callback(`Monthly - ${plans.monthly.amountStars} Stars`, 'buy_monthly')],
-      [Markup.button.callback(`Lifetime - ${plans.lifetime.amountStars} Stars`, 'buy_lifetime')]
-    ])
-  );
+  if (!ctx.from) return;
+  await ensureUser(ctx);
+  const language = botLanguage(ctx.from.language_code);
+  const access = await getUserAccess(ctx.from.id);
+  await ctx.reply(plansMessage(language, access.plan), plansKeyboard(language, access.plan));
 });
 
 bot.action('open_free', async (ctx) => {
@@ -197,6 +219,12 @@ bot.action(/^buy_(monthly|lifetime)$/, async (ctx) => {
   await ensureUser(ctx);
   const planId = ctx.match[1];
   if (!isPlanId(planId)) return;
+  const access = await getUserAccess(ctx.from.id);
+  if (!paymentEligibility(access.plan, planId).allowed) {
+    const language = botLanguage(ctx.from.language_code);
+    await ctx.reply(plansMessage(language, access.plan), plansKeyboard(language, access.plan));
+    return;
+  }
   await sendStarsInvoice(ctx.chat.id, ctx.from.id, planId);
 });
 
@@ -206,6 +234,11 @@ bot.on('pre_checkout_query', async (ctx) => {
     const parsed = JSON.parse(payload) as { plan?: unknown; telegramId?: unknown };
     if (!isPlanId(parsed.plan) || typeof parsed.telegramId !== 'number' || !ctx.from || parsed.telegramId !== ctx.from.id) {
       await ctx.answerPreCheckoutQuery(false, 'Invalid Luna payment payload.');
+      return;
+    }
+    const access = await getUserAccess(ctx.from.id);
+    if (!paymentEligibility(access.plan, parsed.plan).allowed) {
+      await ctx.answerPreCheckoutQuery(false, access.plan === 'Lifetime' ? 'Lifetime Premium is already active.' : 'Monthly Premium is already active.');
       return;
     }
     await ctx.answerPreCheckoutQuery(true);
@@ -226,18 +259,28 @@ bot.on('successful_payment', async (ctx) => {
       return;
     }
 
-    const isNewPayment = await recordSuccessfulPayment({
+    const result = await recordSuccessfulPayment({
       telegram_id: ctx.from.id,
       plan: payload.plan,
       telegram_payment_charge_id: payment.telegram_payment_charge_id,
       provider_payment_charge_id: payment.provider_payment_charge_id
     });
 
+    const language = botLanguage(ctx.from.language_code);
+    const firstName = ctx.from.first_name || (language === 'ru' ? 'друг' : 'friend');
+    const planName = payload.plan === 'lifetime'
+      ? (language === 'ru' ? 'Premium навсегда' : 'Lifetime Premium')
+      : (language === 'ru' ? 'месячный Premium' : 'Monthly Premium');
+    const confirmation = result.isNewPayment
+      ? language === 'ru'
+        ? `Добро пожаловать в Luna Premium, ${firstName} 🌙\n\nТеперь тебе доступны вся библиотека медитаций и расширенные разговоры с Luna.${result.seedsGranted ? '\n\nЯ также добавила 40 лунных семян в твой сад.' : ''}\n\nТвой план: ${planName}. Я рядом, когда понадобится тихая минута.`
+        : `Welcome to Luna Premium, ${firstName} 🌙\n\nYour full meditation library is now open, and your Luna conversations have expanded.${result.seedsGranted ? '\n\nI also added 40 Moon Seeds to your garden.' : ''}\n\nYour plan: ${planName}. I’ll be here whenever you need a quiet moment.`
+      : language === 'ru'
+        ? 'Этот платёж уже подтверждён. Твой Premium-доступ активен.'
+        : 'This payment is already confirmed. Your Premium access is active.';
     await ctx.reply(
-      isNewPayment
-        ? 'Payment successful. Your Luna access is unlocked. 40 Moon Seeds were added to your garden.'
-        : 'Payment already confirmed. Your Luna access is active.',
-      Markup.inlineKeyboard([[Markup.button.webApp('Open Premium Library', env.MINI_APP_URL)]])
+      confirmation,
+      Markup.inlineKeyboard([[Markup.button.webApp(language === 'ru' ? 'Открыть Luna' : 'Open Luna', env.MINI_APP_URL)]])
     );
   } catch (error) {
     console.error('[Luna payment processing failed]', {

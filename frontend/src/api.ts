@@ -172,14 +172,14 @@ export type NotificationPreferences = {
 export type DailyCheckin = {
   id?: string;
   telegram_id?: number;
-  sleep_range: 'less_than_4' | '4_6' | '6_8' | '8_plus';
+  sleep_range: 'less_than_4' | '4_6' | '6_8' | '8_plus' | null;
   mood: 'calm' | 'stressed' | 'tired' | 'anxious' | 'focused' | 'low_energy';
-  available_minutes: '3' | '5' | '10' | '15_plus';
+  available_minutes: '3' | '5' | '10' | '15_plus' | null;
   local_date: string;
   created_at?: string;
 };
 
-export type DailyCheckinPayload = Pick<DailyCheckin, 'sleep_range' | 'mood' | 'available_minutes'> & {
+export type DailyCheckinPayload = Pick<DailyCheckin, 'mood'> & Partial<Pick<DailyCheckin, 'sleep_range' | 'available_minutes'>> & {
   local_date?: string;
   telegram_id?: number;
   username?: string;
@@ -364,6 +364,7 @@ export async function saveHistory(input: {
   duration: number;
   completed?: boolean;
   session_id?: string;
+  local_date?: string;
 }, initData?: string) {
   return request<{
     completion_percent: number;
@@ -376,15 +377,15 @@ export async function saveHistory(input: {
   }, initData);
 }
 
-export async function startPlaybackSession(meditationId: string, initData?: string) {
+export async function startPlaybackSession(meditationId: string, localDate: string, initData?: string) {
   return request<{ id: string; meditation_id: string; listened_seconds: number }>('/api/history/session', {
     method: 'POST',
-    body: JSON.stringify({ meditation_id: meditationId })
+    body: JSON.stringify({ meditation_id: meditationId, local_date: localDate })
   }, initData);
 }
 
 export async function heartbeatPlaybackSession(sessionId: string, lastPosition: number, initData?: string) {
-  return request<{ ok: boolean; listened_seconds: number }>('/api/history/session/heartbeat', {
+  return request<{ ok: boolean; listened_seconds: number; intervalAccepted: boolean }>('/api/history/session/heartbeat', {
     method: 'POST',
     body: JSON.stringify({ session_id: sessionId, last_position: lastPosition })
   }, initData);
@@ -394,6 +395,7 @@ export async function saveBreathSession(input: {
   mode: 'calm' | 'box' | 'reset';
   duration_seconds: number;
   breath_count: number;
+  local_date?: string;
 }, initData?: string) {
   return request('/api/breath-sessions', {
     method: 'POST',
@@ -437,6 +439,7 @@ export async function updateMoonGardenDevState(input: {
 export async function recordSceneMoonSeed(input: {
   scene_id: string;
   duration_seconds: number;
+  local_date?: string;
 }, initData?: string) {
   return request<{ awarded: boolean; moonSeeds: number }>('/api/scene-sessions/moon-seed', {
     method: 'POST',
@@ -462,8 +465,8 @@ export async function completePractice(input: {
   }, initData);
 }
 
-export async function getTodayCheckin(initData?: string): Promise<DailyCheckin | null> {
-  const response = await request<{ checkin: DailyCheckin | null }>('/api/checkins/today', undefined, initData);
+export async function getTodayCheckin(initData?: string, localDate?: string): Promise<DailyCheckin | null> {
+  const response = await request<{ checkin: DailyCheckin | null }>(`/api/checkins/today${localDate ? `?local_date=${encodeURIComponent(localDate)}` : ''}`, undefined, initData);
   return response.checkin;
 }
 
@@ -475,17 +478,21 @@ export async function saveDailyCheckin(input: DailyCheckinPayload, initData?: st
   return response.checkin;
 }
 
-export async function getWellnessSummary(initData?: string): Promise<WellnessSummary> {
-  return request('/api/wellness/summary', undefined, initData);
+export async function getWellnessSummary(initData?: string, localDate?: string): Promise<WellnessSummary> {
+  return request(`/api/wellness/summary${localDate ? `?local_date=${encodeURIComponent(localDate)}` : ''}`, undefined, initData);
 }
 
-export async function getProfile(initData?: string): Promise<ProfileStats> {
-  return request('/api/profile/me', undefined, initData);
+export async function getProfile(initData?: string, localDate?: string): Promise<ProfileStats> {
+  return request(`/api/profile/me${localDate ? `?local_date=${encodeURIComponent(localDate)}` : ''}`, undefined, initData);
 }
 
 export async function getLunaConversations(initData?: string) {
   const response = await request<{ conversations: LunaConversationSummary[] }>('/api/luna/conversations', undefined, initData);
   return response.conversations;
+}
+
+export async function getLunaHealth(initData?: string) {
+  return request<{ available: boolean; enabled: boolean; model: string; errorClass: string | null }>('/api/luna/health', undefined, initData);
 }
 
 export async function getLunaConversation(conversationId: string, initData?: string) {

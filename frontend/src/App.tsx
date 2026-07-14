@@ -41,6 +41,7 @@ import {
   getFavorites,
   getHistory,
   getLunaMemory,
+  getLunaHealth,
   getMeditations,
   getProfile,
   getWellnessSummary,
@@ -64,6 +65,7 @@ import {
   updateAdminUserAccess,
   uploadAdminAsset,
   type AccessState,
+  ApiRequestError,
   type AdminDashboardData,
   type AdminUser,
   type AppLanguage,
@@ -1480,35 +1482,15 @@ function moodTone(mood: DailyCheckin['mood'] | null | undefined) {
   }
 }
 
-function thisWeekWithLunaInsight(profile: ProfileStats | null, wellness: WellnessSummary | null, history: PlaybackHistory[], language: AppLanguage) {
-  const now = Date.now();
-  const recentHistory = history.filter((item) => {
-    const played = new Date(item.last_played);
-    return !Number.isNaN(played.getTime()) && now - played.getTime() <= 7 * 24 * 60 * 60 * 1000;
-  });
-  const practiceDates = new Set(
-    recentHistory.map((item) => new Date(item.last_played).toISOString().slice(0, 10))
-  );
-  if (profile?.lastPracticeDate) {
-    const lastPractice = new Date(`${profile.lastPracticeDate}T12:00:00`);
-    if (!Number.isNaN(lastPractice.getTime()) && now - lastPractice.getTime() <= 7 * 24 * 60 * 60 * 1000) {
-      practiceDates.add(profile.lastPracticeDate);
-    }
-  }
-
-  const fallbackMinutes = recentHistory.reduce((sum, item) => sum + Math.max(0, Math.round(Number(item.last_position ?? 0) / 60)), 0);
-  const weeklyMinutes = profile?.weeklyPracticeMinutes ?? fallbackMinutes;
-  const completedThisWeek = recentHistory.filter((item) => item.completed || Number(item.completion_percent ?? 0) >= 95).length;
-  const categoryCounts = recentHistory.reduce<Record<string, number>>((map, item) => {
-    const category = item.meditation?.category;
-    if (!category) return map;
-    map[category] = (map[category] ?? 0) + 1;
-    return map;
-  }, {});
-  const mostUsedCategory = Object.entries(categoryCounts).sort((left, right) => right[1] - left[1])[0]?.[0] ?? null;
-  const checkins = [...(wellness?.weeklyCheckins ?? [])].sort((left, right) => (left.local_date || '').localeCompare(right.local_date || ''));
-  const latestMood = wellness?.todayCheckin?.mood ?? checkins[checkins.length - 1]?.mood ?? wellness?.mostCommonMood ?? null;
-  const hasPractice = weeklyMinutes > 0 || practiceDates.size > 0 || completedThisWeek > 0;
+function thisWeekWithLunaInsight(profile: ProfileStats | null, wellness: WellnessSummary | null, language: AppLanguage) {
+  const stats = profile?.weeklyStats;
+  const weeklyMinutes = stats?.listeningMinutes ?? 0;
+  const practiceDays = stats?.completedDays ?? 0;
+  const completedThisWeek = stats?.completedSessions ?? 0;
+  const latestMood = [...(profile?.moodTrend ?? [])].reverse().find((item) => item.mood)?.mood
+    ?? wellness?.todayCheckin?.mood
+    ?? null;
+  const hasPractice = weeklyMinutes > 0 || practiceDays > 0 || completedThisWeek > 0;
 
   if (!hasPractice) {
     return language === 'en'
@@ -1518,18 +1500,14 @@ function thisWeekWithLunaInsight(profile: ProfileStats | null, wellness: Wellnes
 
   const lines = [
     language === 'en'
-      ? `${minutesCountLabel(weeklyMinutes, language)} across ${practiceDaysLabel(practiceDates.size || 1, language)} became part of your week.`
-      : `${minutesCountLabel(weeklyMinutes, language)} за ${practiceDaysLabel(practiceDates.size || 1, language)} стали частью твоей недели.`
+      ? `${minutesCountLabel(weeklyMinutes, language)} across ${practiceDaysLabel(practiceDays, language)} became part of your week.`
+      : `${minutesCountLabel(weeklyMinutes, language)} за ${practiceDaysLabel(practiceDays, language)} стали частью твоей недели.`
   ];
 
   if (completedThisWeek > 0) {
     lines.push(language === 'en'
       ? `${completedThisWeek === 1 ? 'One completed session' : `${completedThisWeek} completed sessions`} gave the rhythm a little shape.`
       : `${completedThisWeek === 1 ? 'Одна завершённая сессия' : `${completedThisWeek} завершённые сессии`} мягко поддержали ритм.`);
-  } else if (mostUsedCategory) {
-    lines.push(language === 'en'
-      ? `${translateCategory(mostUsedCategory, language)} quietly led your focus.`
-      : `${translateCategory(mostUsedCategory, language)} мягко вело твой фокус.`);
   } else if (latestMood) {
     lines.push(language === 'en'
       ? `Your latest check-in felt ${translateMoodLabel(latestMood, language)}.`
@@ -1606,7 +1584,27 @@ function planLabel(plan: string, language: AppLanguage) {
 }
 
 function todayLocalDate() {
-  return new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function optimisticWellnessSummary(checkin: DailyCheckin): WellnessSummary {
+  return {
+    todayCheckin: checkin,
+    weeklyCheckins: [checkin],
+    weeklyCheckinCount: 1,
+    averageSleepHours: 0,
+    averageSleepLabel: '',
+    mostCommonMood: checkin.mood,
+    mostCommonMoodLabel: checkin.mood,
+    weeklyInsight: '',
+    recommendedFocus: '',
+    level: { title: '', current: 1, progress: 0, next: '' },
+    achievements: []
+  };
 }
 
 function moodChipToCheckinMood(mood: MoodChip): DailyCheckin['mood'] {
@@ -1912,12 +1910,14 @@ function App() {
   const sceneMoonSeedAwardedRef = useRef(false);
   const [initialLibraryCache] = useState(() => readLibraryCache());
   const [initialAccountCache] = useState(() => readAccountCache(user.id));
-  const accountRefreshRef = useRef<Promise<void> | null>(null);
+  const accountRefreshRef = useRef<Promise<AccessState | void> | null>(null);
   const [language, setLanguage] = useState<AppLanguage>(() => initialLanguage(user));
   const [page, setPage] = useState<Page>(() => initialPageFromLaunch(launchStartParam));
   const [libraryMode, setLibraryMode] = useState<LibraryMode>('meditations');
   const [mood, setMood] = useState<MoodChip>('Calm');
   const [moodSelectedByUser, setMoodSelectedByUser] = useState(false);
+  const [editingHomeMood, setEditingHomeMood] = useState(false);
+  const [moodSaving, setMoodSaving] = useState(false);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('all');
   const [meditations, setMeditations] = useState<Meditation[]>(initialLibraryCache?.meditations ?? []);
@@ -1947,6 +1947,8 @@ function App() {
   const [adminDashboard, setAdminDashboard] = useState<AdminDashboardData | null>(null);
   const [wellness, setWellness] = useState<WellnessSummary | null>(() => initialAccountCache?.wellness ?? null);
   const [accountLoading, setAccountLoading] = useState(!initialAccountCache);
+  const [accountUnavailable, setAccountUnavailable] = useState(false);
+  const [accessVerified, setAccessVerified] = useState(Boolean(initialAccountCache?.access));
   const [appNotice, setAppNotice] = useState('');
   const [showCheckin, setShowCheckin] = useState(false);
   const [pendingMeditationId, setPendingMeditationId] = useState(() => meditationIdFromStartParam(launchStartParam));
@@ -1959,12 +1961,14 @@ function App() {
       try {
         const [accessState, profileStats, historyList, favoriteList, wellnessSummary] = await Promise.all([
           getAccess(initData),
-          getProfile(initData).catch(() => null),
+          getProfile(initData, todayLocalDate()).catch(() => null),
           getHistory(initData).catch(() => []),
           getFavorites(initData).catch(() => []),
-          getWellnessSummary(initData).catch(() => null)
+          getWellnessSummary(initData, todayLocalDate()).catch(() => null)
         ]);
         setAccess(accessState);
+        setAccessVerified(true);
+        setAccountUnavailable(false);
         setProfile(profileStats);
         const savedLanguage = profileStats?.user?.language_code ?? accessState.user?.language_code;
         if (savedLanguage === 'en' || savedLanguage === 'ru') {
@@ -1981,6 +1985,11 @@ function App() {
           favorites: favoriteList,
           wellness: wellnessSummary
         });
+        return accessState;
+      } catch (error) {
+        setAccountUnavailable(true);
+        if (!initialAccountCache?.access) setAccessVerified(false);
+        throw error;
       } finally {
         setAccountLoading(false);
         accountRefreshRef.current = null;
@@ -2048,6 +2057,8 @@ function App() {
         await refreshAccount();
       } catch (error) {
         console.info('[Luna account boot failed]', error instanceof Error ? error.message : 'Account boot failed.');
+        setAccountUnavailable(true);
+        if (!initialAccountCache?.access) setAccessVerified(false);
         setAccountLoading(false);
         setLibraryLoading(false);
       }
@@ -2088,6 +2099,7 @@ function App() {
   }, [history]);
 
   const favoriteIds = useMemo(() => new Set(favorites.map((item) => item.id)), [favorites]);
+  const effectiveHasPremium = accessVerified && access.hasPremium;
 
   const decoratedMeditations = useMemo(() => {
     return meditations.filter((meditation) => !isDemoMeditation(meditation)).map((meditation) => ({
@@ -2178,17 +2190,17 @@ function App() {
   }, [page]);
 
   useEffect(() => {
-    if (!wellness || wellness.todayCheckin) return;
-    const dismissed = window.localStorage.getItem(`luna.checkin.dismissed.${todayLocalDate()}`);
-    if (!dismissed) setShowCheckin(true);
-  }, [wellness]);
+    if (!wellness?.todayCheckin) return;
+    setMood(checkinMoodToMoodChip(wellness.todayCheckin.mood));
+    setMoodSelectedByUser(true);
+  }, [wellness?.todayCheckin?.local_date, wellness?.todayCheckin?.mood]);
 
   useEffect(() => {
     preloadCoverImages([dailyMeditation, ...homeSections.continueListening, ...homeSections.recentlyPlayed, ...homeSections.explore].filter(Boolean) as Meditation[]);
   }, [dailyMeditation, homeSections]);
 
   const openMeditation = (meditation: Meditation) => {
-    const locked = meditation.premium && !access.hasPremium;
+    const locked = meditation.premium && !effectiveHasPremium;
     telegram?.HapticFeedback?.impactOccurred('light');
     if (locked) {
       setSelectedMeditation(meditation);
@@ -2205,7 +2217,7 @@ function App() {
 
   const openScene = (scene: SceneDefinition) => {
     telegram?.HapticFeedback?.impactOccurred('light');
-    if (scene.access === 'premium' && !access.hasPremium) {
+    if (scene.access === 'premium' && !effectiveHasPremium) {
       setPaymentMessage(copy[language].scenePremiumLocked);
       setSelectedMeditation(null);
       setPage('pricing');
@@ -2236,7 +2248,7 @@ function App() {
 
   const selectHomeSoundscape = (scene: SceneDefinition) => {
     telegram?.HapticFeedback?.impactOccurred('light');
-    if (scene.access === 'premium' && !access.hasPremium) {
+    if (scene.access === 'premium' && !effectiveHasPremium) {
       setPaymentMessage(copy[language].scenePremiumLocked);
       setPage('pricing');
       return;
@@ -2308,7 +2320,7 @@ function App() {
 
   const openMantra = (mantra: MantraDefinition) => {
     telegram?.HapticFeedback?.impactOccurred('light');
-    if (mantra.access === 'premium' && !access.hasPremium) {
+    if (mantra.access === 'premium' && !effectiveHasPremium) {
       setPaymentMessage(copy[language].lockedPremium.replace('{title}', mantra.title[language]));
       setPage('pricing');
       return;
@@ -2428,7 +2440,7 @@ function App() {
 
   const completeBreathCircle = async (mode: BreathMode, durationSeconds: number, breathCount: number) => {
     try {
-      await saveBreathSession({ mode, duration_seconds: durationSeconds, breath_count: breathCount }, initData);
+      await saveBreathSession({ mode, duration_seconds: durationSeconds, breath_count: breathCount, local_date: todayLocalDate() }, initData);
       await refreshAccount();
     } catch (error) {
       console.info('[Luna breath session save failed]', error instanceof Error ? error.message : 'Breath session save failed.');
@@ -2483,31 +2495,44 @@ function App() {
   };
 
   const selectMood = async (nextMood: MoodChip) => {
+    if (moodSaving) return;
     const previousMood = mood;
     const previousMoodSelectedByUser = moodSelectedByUser;
+    const previousWellness = wellness;
+    setMoodSaving(true);
     setMood(nextMood);
     setMoodSelectedByUser(true);
+    setEditingHomeMood(false);
     telegram?.HapticFeedback?.impactOccurred('light');
 
-    if (!wellness?.todayCheckin) {
-      setShowCheckin(true);
-      return;
-    }
-
     try {
-      const checkin = await saveDailyCheckin(withCheckinAuthFallback({
-        sleep_range: wellness.todayCheckin.sleep_range,
-        available_minutes: wellness.todayCheckin.available_minutes,
+      const existing = wellness?.todayCheckin;
+      const optimisticCheckin: DailyCheckin = {
+        local_date: todayLocalDate(),
         mood: moodChipToCheckinMood(nextMood),
-        local_date: wellness.todayCheckin.local_date
+        sleep_range: existing?.sleep_range ?? null,
+        available_minutes: existing?.available_minutes ?? null
+      };
+      setWellness((current) => current
+        ? { ...current, todayCheckin: optimisticCheckin }
+        : optimisticWellnessSummary(optimisticCheckin));
+      const checkin = await saveDailyCheckin(withCheckinAuthFallback({
+        ...(existing?.sleep_range ? { sleep_range: existing.sleep_range } : {}),
+        ...(existing?.available_minutes ? { available_minutes: existing.available_minutes } : {}),
+        mood: moodChipToCheckinMood(nextMood),
+        local_date: todayLocalDate()
       }), initData);
-      const nextSummary = await getWellnessSummary(initData).catch(() => null);
+      const nextSummary = await getWellnessSummary(initData, todayLocalDate()).catch(() => null);
       setWellness((current) => nextSummary ? { ...nextSummary, todayCheckin: checkin } : current ? { ...current, todayCheckin: checkin } : current);
+      showNotice(copy[language].checkinSaved);
     } catch (error) {
       setMood(previousMood);
       setMoodSelectedByUser(previousMoodSelectedByUser);
+      setWellness(previousWellness);
       console.info('[Luna check-in mood update failed]', error instanceof Error ? error.message : 'Check-in update failed.');
       showNotice(copy[language].checkinSaveError);
+    } finally {
+      setMoodSaving(false);
     }
   };
 
@@ -2516,7 +2541,7 @@ function App() {
     setMood(checkinMoodToMoodChip(checkin.mood));
     setMoodSelectedByUser(true);
     setShowCheckin(false);
-    const nextSummary = await getWellnessSummary(initData).catch(() => null);
+    const nextSummary = await getWellnessSummary(initData, todayLocalDate()).catch(() => null);
     setWellness((current) => nextSummary ? { ...nextSummary, todayCheckin: checkin } : current ? { ...current, todayCheckin: checkin } : current);
     showNotice(copy[language].checkinSaved);
     void refreshAccount();
@@ -2531,6 +2556,14 @@ function App() {
 
   const buyPlan = async (plan: 'monthly' | 'lifetime') => {
     if (openingPlan) return;
+    if (!accessVerified) {
+      setPaymentMessage(language === 'ru' ? 'Не удалось подтвердить статус доступа. Попробуй обновить его.' : 'Your access status could not be verified. Please restore it first.');
+      return;
+    }
+    if (access.plan === 'Lifetime' || (access.plan === 'Monthly' && plan === 'monthly')) {
+      setPaymentMessage(language === 'ru' ? 'Этот план уже активен.' : 'This plan is already active.');
+      return;
+    }
 
     setOpeningPlan(plan);
     setPaymentMessage(copy[language].openingPayment);
@@ -2545,21 +2578,35 @@ function App() {
           if (status === 'paid') {
             setAccess((current) => ({ ...current, hasPremium: true, plan: plan === 'lifetime' ? 'Lifetime' : 'Monthly' }));
             setPaymentMessage(copy[language].paymentSuccessful);
-            void refreshAccount();
+            [250, 1200, 2800].forEach((delay) => window.setTimeout(() => void refreshAccount(), delay));
             return;
           }
           setPaymentMessage(status === 'cancelled' ? copy[language].paymentCancelled : copy[language].paymentPending);
         });
       } else {
-        telegram?.openTelegramLink(invoiceLink);
+        if (telegram?.openTelegramLink && /^https:\/\/t\.me\//i.test(invoiceLink)) {
+          telegram.openTelegramLink(invoiceLink);
+        } else {
+          window.location.assign(invoiceLink);
+        }
         setOpeningPlan(null);
         setPaymentMessage(copy[language].invoiceOpened);
       }
-    } catch {
+    } catch (error) {
       setOpeningPlan(null);
       const botUsername = import.meta.env.VITE_BOT_USERNAME;
-      setPaymentMessage(copy[language].paymentFailed);
-      if (botUsername) telegram?.openTelegramLink(`https://t.me/${botUsername}?start=luna`);
+      const alreadyActive = error instanceof ApiRequestError && error.status === 409;
+      setPaymentMessage(alreadyActive
+        ? (language === 'ru' ? 'Premium уже активен. Обновляем статус…' : 'Premium is already active. Refreshing your status…')
+        : copy[language].paymentFailed);
+      console.info('[Luna invoice open failed]', {
+        plan,
+        status: error instanceof ApiRequestError ? error.status : null,
+        errorClass: error instanceof Error ? error.name : 'unknown',
+        hasTelegramInvoiceApi: Boolean(telegram?.openInvoice)
+      });
+      if (alreadyActive) void refreshAccount();
+      else if (botUsername) telegram?.openTelegramLink(`https://t.me/${botUsername}?start=plans`);
     }
   };
 
@@ -2634,7 +2681,7 @@ function App() {
       if (sceneListenSecondsRef.current < 300 || sceneMoonSeedAwardedRef.current) return;
 
       sceneMoonSeedAwardedRef.current = true;
-      recordSceneMoonSeed({ scene_id: selectedScene.id, duration_seconds: sceneListenSecondsRef.current }, initData)
+      recordSceneMoonSeed({ scene_id: selectedScene.id, duration_seconds: sceneListenSecondsRef.current, local_date: todayLocalDate() }, initData)
         .then(() => refreshAccount())
         .catch((error) => {
           console.info('[Luna scene Moon Seed save failed]', error instanceof Error ? error.message : 'Scene Moon Seed save failed.');
@@ -2647,7 +2694,7 @@ function App() {
   return (
     <main className={`min-h-screen overflow-hidden bg-night text-cream ${page === 'home' ? 'home-v2-shell' : ''}`}>
       <div className="fixed inset-0 luna-bg" />
-      <section className="relative mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pb-[calc(112px+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top,0px)+14px)]">
+      <section className={`relative mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pt-[calc(env(safe-area-inset-top,0px)+14px)] ${page === 'admin' || (page === 'profile' && profileNestedActive) ? 'pb-[calc(24px+env(safe-area-inset-bottom))]' : 'pb-[calc(112px+env(safe-area-inset-bottom))]'}`}>
         {page !== 'luna' && <Header plan={access.plan} streak={profile?.currentStreak ?? 0} language={language} onLanguageChange={changeLanguage} compact={page === 'home'} />}
         {appNotice && <div className="fixed left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+12px)] z-50 mx-auto max-w-md rounded-full border border-gold/20 bg-night/90 px-4 py-3 text-center text-xs font-semibold text-cream shadow-glow backdrop-blur-xl luna-fade" role="status">{appNotice}</div>}
 
@@ -2655,7 +2702,11 @@ function App() {
           <HomeV2
             firstName={user.first_name ?? 'friend'}
             greeting={dayGreeting(language)}
-            mood={mood}
+            mood={heroMood ?? undefined}
+            moodSaved={Boolean(wellness?.todayCheckin) && !editingHomeMood}
+            moodSaving={moodSaving}
+            onChangeMood={() => setEditingHomeMood(true)}
+            onCheckinDetails={() => setShowCheckin(true)}
             moods={moods}
             setMood={selectMood}
             checkinLine={wellness?.todayCheckin ? copy[language].checkinSaved : heroMood ? moodMessage(heroMood, wellness, language) : copy[language].checkinContextHint}
@@ -2671,7 +2722,7 @@ function App() {
             scenes={scenes}
             selectedScene={selectedScene}
             scenePlaying={scenePlaying}
-            hasPremium={access.hasPremium}
+            hasPremium={effectiveHasPremium}
             onSoundToggle={() => void toggleScenePlayback()}
             onSoundSelect={selectHomeSoundscape}
             onSoundOpen={() => selectedScene ? setPage('scenePlayer') : selectHomeSoundscape(scenes[0])}
@@ -2684,7 +2735,7 @@ function App() {
             stats={[
               { label: copy[language].statStreak, value: profile ? String(profile.currentStreak ?? 0) : '—', secondary: profile ? ((profile.currentStreak ?? 0) === 1 ? copy[language].statDay : copy[language].statDays) : undefined, kind: 'streak' },
               { label: copy[language].statCheckins, value: wellness ? `${wellness.weeklyCheckinCount ?? 0}/7` : '—/7', kind: 'checkins' },
-              { label: copy[language].statMood, value: heroMood ? homeMoodLabel(heroMood, language) : copy[language].notEnoughData, kind: 'mood' },
+              { label: copy[language].statMood, value: heroMood ? homeMoodLabel(heroMood, language) : (language === 'en' ? 'No data' : 'Нет данных'), kind: 'mood' },
               { label: copy[language].statEnergy, value: heroMood ? homeEnergyLabel(heroMood, language) : '—', kind: 'energy', tone: heroMood ? homeEnergyTone(heroMood) : undefined }
             ]}
             labels={{
@@ -2730,7 +2781,7 @@ function App() {
             firstName={user.first_name ?? 'friend'}
             language={language}
             meditations={decoratedMeditations}
-            hasPremium={access.hasPremium}
+            hasPremium={effectiveHasPremium}
             initData={initData}
             onOpenMeditation={openMeditation}
           />
@@ -2747,7 +2798,7 @@ function App() {
             setMode={setLibraryMode}
             meditations={filteredMeditations}
             mantras={mantras}
-            hasPremium={access.hasPremium}
+            hasPremium={effectiveHasPremium}
             loading={libraryLoading}
             onOpen={openMeditation}
             onBreath={openBreathCircle}
@@ -2763,16 +2814,16 @@ function App() {
         )}
 
         {page === 'pricing' && (
-          <PricingPage onBuy={buyPlan} message={paymentMessage} openingPlan={openingPlan} onLibrary={() => setPage('library')} locked={selectedMeditation} language={language} />
+          <PricingPage access={access} accessVerified={accessVerified} onBuy={buyPlan} onRestore={refreshAccount} message={paymentMessage} openingPlan={openingPlan} onLibrary={() => setPage('library')} locked={selectedMeditation} language={language} />
         )}
 
         {page === 'progress' && (
           <ProgressPage
             profile={profile}
             wellness={wellness}
-            history={history}
-            hasPremium={access.hasPremium}
             loading={accountLoading}
+            unavailable={accountUnavailable}
+            onRetry={() => void refreshAccount()}
             language={language}
             onMoonGarden={() => setPage('moonGarden')}
           />
@@ -2783,6 +2834,7 @@ function App() {
             profile={profile}
             access={access}
             loading={accountLoading}
+            accessVerified={accessVerified}
             firstName={user.first_name ?? 'Luna'}
             username={user.username}
             showAdminButton={adminStatus === 'allowed'}
@@ -2830,14 +2882,14 @@ function App() {
             favorite={favoriteIds.has(selectedMeditation.id)}
             onFavorite={() => toggleFavorite(selectedMeditation)}
             onSave={(position, duration, completed, sessionId) =>
-              saveHistory({ meditation_id: selectedMeditation.id, last_position: position, duration, completed, session_id: sessionId }, initData).then(async (result) => {
+              saveHistory({ meditation_id: selectedMeditation.id, last_position: position, duration, completed, session_id: sessionId, local_date: todayLocalDate() }, initData).then(async (result) => {
                 await refreshAccount();
                 return result;
               })
             }
             onPlaybackSessionStart={async (meditationId) => {
               try {
-                const session = await startPlaybackSession(meditationId, initData);
+                const session = await startPlaybackSession(meditationId, todayLocalDate(), initData);
                 return session.id;
               } catch (error) {
                 console.info('[Luna playback session start failed]', error instanceof Error ? error.message : 'Playback session start failed.');
@@ -2846,6 +2898,7 @@ function App() {
             }}
             onPlaybackHeartbeat={(sessionId, position) => heartbeatPlaybackSession(sessionId, position, initData).catch((error) => {
               console.info('[Luna playback heartbeat failed]', error instanceof Error ? error.message : 'Playback heartbeat failed.');
+              return null;
             })}
             onHome={() => setPage('home')}
             onProgress={() => setPage('progress')}
@@ -2870,7 +2923,7 @@ function App() {
           <ScenePlayerPage
             scene={selectedScene}
             scenes={scenes}
-            hasPremium={access.hasPremium}
+            hasPremium={effectiveHasPremium}
             playing={scenePlaying}
             volume={sceneVolume}
             onVolume={setSceneVolume}
@@ -2883,7 +2936,7 @@ function App() {
 
         {page === 'breathCircle' && (
           <BreathCirclePage
-            hasPremium={access.hasPremium}
+            hasPremium={effectiveHasPremium}
             onComplete={completeBreathCircle}
             onClose={() => setPage('home')}
             onPremium={() => setPage('pricing')}
@@ -2936,7 +2989,7 @@ function App() {
           />
         )}
         {showCheckin && page !== 'admin' && (
-          <DailyCheckinSheet onClose={dismissCheckin} onSave={saveCheckin} initialMood={moodChipToCheckinMood(mood)} language={language} />
+          <DailyCheckinSheet onClose={dismissCheckin} onSave={saveCheckin} initialMood={moodChipToCheckinMood(mood)} hideMood={Boolean(wellness?.todayCheckin)} language={language} />
         )}
       </section>
     </main>
@@ -3144,31 +3197,45 @@ function LunaPage({
 function ProgressPage({
   profile,
   wellness,
-  history,
-  hasPremium,
   loading,
+  unavailable,
+  onRetry,
   language,
   onMoonGarden
 }: {
   profile: ProfileStats | null;
   wellness: WellnessSummary | null;
-  history: PlaybackHistory[];
-  hasPremium: boolean;
   loading: boolean;
+  unavailable: boolean;
+  onRetry: () => void;
   language: AppLanguage;
   onMoonGarden: () => void;
 }) {
   if (loading && !profile) {
     return <PageSkeleton rows={5} />;
   }
-  const currentMood = wellness?.mostCommonMoodLabel ? translateMoodLabel(wellness.mostCommonMoodLabel, language) : copy[language].notEnoughData;
+  if (unavailable && !profile) {
+    return (
+      <div className="luna-page space-y-4">
+        <EmptyState
+          title={language === 'en' ? 'Progress is taking a quiet pause' : 'Прогресс временно на паузе'}
+          body={language === 'en' ? 'Your saved practice is safe. Reconnect to load the latest totals.' : 'Твои практики сохранены. Подключись снова, чтобы загрузить актуальные итоги.'}
+        />
+        <button type="button" onClick={onRetry} className="w-full rounded-[18px] border border-gold/25 bg-gold/10 px-4 py-3 text-sm font-semibold text-gold">
+          {language === 'en' ? 'Try again' : 'Попробовать снова'}
+        </button>
+      </div>
+    );
+  }
+  const latestMood = [...(profile?.moodTrend ?? [])].reverse().find((item) => item.mood)?.mood ?? null;
+  const currentMood = latestMood ? translateMoodLabel(latestMood, language) : copy[language].notEnoughData;
   const planted = plantedGardenElements(profile);
   const plantedCount = planted.length;
   const seeds = availableMoonSeeds(profile);
   const stage = getCurrentGardenStage(plantedCount);
   const streak = profile?.currentStreak ?? 0;
-  const weeklyInsightLines = thisWeekWithLunaInsight(profile, wellness, history, language);
-  const weeklyProgress = buildWeeklyProgress(history, profile, hasPremium, language);
+  const weeklyInsightLines = thisWeekWithLunaInsight(profile, wellness, language);
+  const weeklyProgress = buildWeeklyProgress(profile, language);
   const weeklyStats = profile?.weeklyStats;
   const lifetimeStats = profile?.lifetimeStats;
   const completedWeeks = lifetimeStats?.completedWeeks ?? 0;
@@ -3215,7 +3282,7 @@ function ProgressPage({
   ];
 
   return (
-    <div className="luna-page luna-child-page space-y-4 pb-[calc(104px+env(safe-area-inset-bottom))]">
+    <div className="luna-page luna-child-page space-y-4">
       <div>
         <h2 className="max-w-[280px] text-[28px] font-semibold tracking-[-0.04em] text-cream">{copy[language].progressTitle}</h2>
         <p className="mt-1 max-w-[310px] text-sm leading-5 text-lavender/78">{language === 'en' ? 'Your practice story, one quiet return at a time.' : 'История твоей практики — одно мягкое возвращение за раз.'}</p>
@@ -3248,7 +3315,7 @@ function ProgressPage({
 
 function PageSkeleton({ rows = 4 }: { rows?: number }) {
   return (
-    <div className="luna-page space-y-4 pb-[calc(104px+env(safe-area-inset-bottom))]" aria-busy="true" aria-label="Loading">
+    <div className="luna-page space-y-4" aria-busy="true" aria-label="Loading">
       <div className="h-9 w-2/3 animate-pulse rounded-2xl bg-white/[0.08]" />
       <div className="h-56 animate-pulse rounded-[30px] bg-white/[0.07]" />
       <div className="grid grid-cols-2 gap-3">
@@ -3303,8 +3370,8 @@ type WeeklyProgressModel = {
   cleanWeek: boolean;
 };
 
-function buildWeeklyProgress(history: PlaybackHistory[], profile: ProfileStats | null, hasPremium: boolean, language: AppLanguage): WeeklyProgressModel {
-  const maxFreezes = Math.max(1, Number(profile?.freezeMax ?? (hasPremium ? 3 : 1)));
+function buildWeeklyProgress(profile: ProfileStats | null, language: AppLanguage): WeeklyProgressModel {
+  const maxFreezes = Math.max(1, Number(profile?.freezeMax ?? 1));
   if (profile?.currentWeek?.days?.length === 7) {
     const days = profile.currentWeek.days.map((day) => {
       const date = new Date(`${day.key}T12:00:00`);
@@ -3325,42 +3392,8 @@ function buildWeeklyProgress(history: PlaybackHistory[], profile: ProfileStats |
     };
   }
 
-  const today = new Date();
-  const todayKey = today.toISOString().slice(0, 10);
-  const monday = new Date(today);
-  const day = monday.getDay();
-  monday.setDate(monday.getDate() - ((day + 6) % 7));
-  const activityByDate = history.reduce<Record<string, number>>((map, item) => {
-    const played = new Date(item.last_played);
-    if (Number.isNaN(played.getTime())) return map;
-    const key = played.toISOString().slice(0, 10);
-    map[key] = (map[key] ?? 0) + Math.max(1, Math.round(Number(item.last_position ?? 0) / 60));
-    return map;
-  }, {});
-  if (profile?.lastPracticeDate && !activityByDate[profile.lastPracticeDate]) {
-    activityByDate[profile.lastPracticeDate] = 1;
-  }
-
-  const rawDays = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + index);
-    const key = date.toISOString().slice(0, 10);
-    const minutes = activityByDate[key] ?? 0;
-    const isFuture = key > todayKey;
-    const isToday = key === todayKey;
-    return {
-      key,
-      label: date.toLocaleDateString(language === 'en' ? 'en-US' : 'ru-RU', { weekday: 'long' }),
-      shortLabel: date.toLocaleDateString(language === 'en' ? 'en-US' : 'ru-RU', { weekday: 'short' }).slice(0, 3),
-      state: minutes > 0 ? 'completed' as WeeklyDayState : isFuture ? 'future' as WeeklyDayState : isToday ? 'current' as WeeklyDayState : 'missed' as WeeklyDayState,
-      minutes
-    };
-  });
-
   const freezeCount = Math.min(maxFreezes, Math.max(0, Number(profile?.freezeCount ?? maxFreezes)));
-  const days = rawDays;
-  const cleanWeek = rawDays.filter((item) => item.key <= todayKey).every((item) => item.minutes > 0);
-  return { days, freezeCount, maxFreezes, freezeUsedThisWeek: false, cleanWeek };
+  return { days: [], freezeCount, maxFreezes, freezeUsedThisWeek: false, cleanWeek: false };
 }
 
 function HeroProgressCard({ streak, weeklyProgress, language }: { streak: number; weeklyProgress: WeeklyProgressModel; language: AppLanguage }) {
@@ -3481,11 +3514,9 @@ function MoodTrendCard({ trend, currentMood, language }: { trend: ProfileStats['
 }
 
 function WeeklySummaryCard({ lines, stats, language }: { lines: string[]; stats?: ProfileStats['weeklyStats']; language: AppLanguage }) {
-  const minutesMatch = lines[0]?.match(/(\d+)/);
-  const dayMatch = lines[0]?.match(/across\s+(\d+)\s+day|за\s+(\d+)\s+д/iu);
-  const minutes = String(stats?.listeningMinutes ?? minutesMatch?.[1] ?? '0');
-  const days = String(stats?.completedDays ?? dayMatch?.[1] ?? dayMatch?.[2] ?? '0');
-  const supporting = lines.slice(1, 3);
+  const minutes = String(stats?.listeningMinutes ?? 0);
+  const days = String(stats?.completedDays ?? 0);
+  const supporting = lines.slice(0, 3);
 
   return (
     <section className="weekly-summary-card luna-progress-enter">
@@ -3859,7 +3890,7 @@ function ScenePlayerPage({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].scenesTitle}</p>
-            <h2 className="mt-1 font-serif text-3xl">{scene.title[language]}</h2>
+            <h2 className="mt-1 max-w-[250px] font-serif text-[25px] leading-tight">{scene.title[language]}</h2>
           </div>
           <button onClick={onClose} aria-label={copy[language].closeScene} className="luna-icon-button">
             <X size={18} />
@@ -3867,8 +3898,8 @@ function ScenePlayerPage({
         </div>
 
         <img src={scene.cover} alt="" className="mt-4 aspect-square w-full rounded-[26px] object-cover shadow-glow" />
-        <p className="mt-4 text-center text-sm text-lavender">{scene.subtitle[language]}</p>
-        <p className="mt-2 text-center text-xs uppercase tracking-[0.18em] text-gold">{copy[language].sceneLoop}</p>
+        <p className="mt-3 text-center text-[13px] leading-5 text-lavender">{scene.subtitle[language]}</p>
+        <p className="mt-1.5 text-center text-[10px] uppercase tracking-[0.14em] text-gold">{copy[language].sceneLoop}</p>
 
         <button onClick={onToggle} className="mx-auto mt-5 grid h-16 w-16 place-items-center rounded-full bg-gold text-night shadow-glow">
           {playing ? <Pause /> : <Play />}
@@ -3884,18 +3915,18 @@ function ScenePlayerPage({
       </div>
 
       <section>
-        <h3 className="luna-section-title mb-3">{copy[language].changeScene}</h3>
+        <h3 className="mb-3 text-sm font-semibold text-cream">{copy[language].changeScene}</h3>
         <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 luna-scrollbar-none">
           {scenes.map((item) => {
             const locked = item.access === 'premium' && !hasPremium;
             return (
-              <button key={item.id} onClick={() => onScene(item)} className={`w-32 shrink-0 text-left ${locked ? 'opacity-70' : ''}`}>
+              <button key={item.id} onClick={() => onScene(item)} className={`w-28 shrink-0 text-left ${locked ? 'opacity-70' : ''}`}>
                 <div className="relative">
-                  <img src={item.cover} alt="" className="h-32 w-32 rounded-3xl object-cover shadow-glow" />
+                  <img src={item.cover} alt="" className="h-28 w-28 rounded-[20px] object-cover shadow-glow" />
                   {locked && <Lock className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gold" />}
                 </div>
-                <p className="mt-2 line-clamp-1 text-sm font-semibold">{item.title[language]}</p>
-                <p className="text-xs text-lavender">{item.access === 'premium' ? copy[language].premium : copy[language].free}</p>
+                <p className="mt-2 line-clamp-2 min-h-8 text-[12px] font-semibold leading-4">{item.title[language]}</p>
+                <p className="text-[10px] leading-4 text-lavender">{item.access === 'premium' ? copy[language].premium : copy[language].free}</p>
               </button>
             );
           })}
@@ -3966,17 +3997,19 @@ function FavoritesPage({ meditations, onOpen, onFavorite, language }: { meditati
 
 function DailyCheckinSheet({
   initialMood,
+  hideMood,
   onClose,
   onSave,
   language
 }: {
   initialMood: DailyCheckin['mood'];
+  hideMood: boolean;
   onClose: () => void;
   onSave: (input: DailyCheckinPayload) => Promise<void>;
   language: AppLanguage;
 }) {
   const t = copy[language];
-  const [sleepRange, setSleepRange] = useState<DailyCheckin['sleep_range']>('6_8');
+  const [sleepRange, setSleepRange] = useState<NonNullable<DailyCheckin['sleep_range']>>('6_8');
   const [mood, setMood] = useState<DailyCheckin['mood']>(initialMood);
   const [availableMinutes] = useState<DailyCheckin['available_minutes']>('5');
   const [saving, setSaving] = useState(false);
@@ -3995,7 +4028,7 @@ function DailyCheckinSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-40 flex items-end bg-night/70 px-4 pb-[calc(16px+env(safe-area-inset-bottom))] backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-end bg-night/70 px-4 pb-[calc(16px+env(safe-area-inset-bottom))] backdrop-blur-sm">
       <section className="max-h-[min(760px,calc(100dvh-24px))] w-full overflow-y-auto rounded-[30px] border border-white/10 bg-ink p-5 pb-[calc(20px+env(safe-area-inset-bottom))] shadow-glow luna-fade">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -4014,21 +4047,23 @@ function DailyCheckinSheet({
             ['8_plus', t.sleep8Plus]
           ]}
           value={sleepRange}
-          onChange={(value) => setSleepRange(value as DailyCheckin['sleep_range'])}
+          onChange={(value) => setSleepRange(value as NonNullable<DailyCheckin['sleep_range']>)}
         />
-        <CheckinGroup
-          title={t.checkinMood}
-          options={[
-            ['calm', t.moodCalm],
-            ['stressed', t.moodStressed],
-            ['tired', t.moodTired],
-            ['anxious', t.moodAnxious],
-            ['focused', t.moodFocused],
-            ['low_energy', t.moodLowEnergy]
-          ]}
-          value={mood}
-          onChange={(value) => setMood(value as DailyCheckin['mood'])}
-        />
+        {!hideMood && (
+          <CheckinGroup
+            title={t.checkinMood}
+            options={[
+              ['calm', t.moodCalm],
+              ['stressed', t.moodStressed],
+              ['tired', t.moodTired],
+              ['anxious', t.moodAnxious],
+              ['focused', t.moodFocused],
+              ['low_energy', t.moodLowEnergy]
+            ]}
+            value={mood}
+            onChange={(value) => setMood(value as DailyCheckin['mood'])}
+          />
+        )}
         {error && <p className="mt-3 rounded-2xl bg-red-500/15 p-3 text-sm text-red-100">{error}</p>}
         <button onClick={save} disabled={saving} className="sticky bottom-0 mt-5 flex w-full items-center justify-center gap-2 rounded-[20px] bg-gold px-5 py-4 font-semibold text-night shadow-[0_-16px_24px_rgba(10,6,16,.82)] disabled:opacity-70">
           {saving && <span className="h-4 w-4 animate-spin rounded-full border-2 border-night/30 border-t-night" />}
@@ -4069,14 +4104,20 @@ function CheckinGroup({
 }
 
 function PricingPage({
+  access,
+  accessVerified,
   onBuy,
+  onRestore,
   message,
   openingPlan,
   onLibrary,
   locked,
   language
 }: {
+  access: AccessState;
+  accessVerified: boolean;
   onBuy: (plan: 'monthly' | 'lifetime') => void;
+  onRestore: () => AccessState | void | Promise<AccessState | void>;
   message: string;
   openingPlan: 'monthly' | 'lifetime' | null;
   onLibrary: () => void;
@@ -4084,55 +4125,53 @@ function PricingPage({
   language: AppLanguage;
 }) {
   const t = copy[language];
+  const isLifetime = access.plan === 'Lifetime';
+  const isMonthly = access.plan === 'Monthly';
+  const activeUntil = access.user?.active_until
+    ? new Date(access.user.active_until).toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })
+    : null;
+  const benefits = language === 'ru'
+    ? ['Вся библиотека медитаций', 'Расширенный лимит разговоров с Luna', 'Premium-дыхание и саундскейпы', 'Мантры и будущий Premium-контент', '40 лунных семян один раз после первой активации']
+    : ['Full meditation library', 'Higher Luna conversation limits', 'Premium breathwork and soundscapes', 'Mantras and future Premium content', '40 Moon Seeds once after first activation'];
+
+  if (!accessVerified) {
+    return (
+      <div className="luna-page space-y-4">
+        <EmptyState
+          title={language === 'ru' ? 'Проверяем твой Premium' : 'Checking your Premium access'}
+          body={language === 'ru' ? 'Планы появятся после подтверждения текущего доступа, чтобы не предлагать повторную покупку.' : 'Plans will appear after your current access is confirmed, so Luna never offers a duplicate purchase.'}
+        />
+        <button type="button" onClick={() => void onRestore()} className="w-full rounded-[18px] border border-gold/25 bg-gold/10 px-4 py-3 text-sm font-semibold text-gold">{t.restore}</button>
+      </div>
+    );
+  }
 
   return (
-    <div className="luna-page space-y-5">
+    <div className="luna-page space-y-4">
       <section className="relative overflow-hidden rounded-[34px] border border-gold/20 bg-[radial-gradient(circle_at_76%_18%,rgba(212,175,55,.2),transparent_26%),linear-gradient(160deg,rgba(43,26,58,.72),rgba(10,6,16,.9))] p-5 shadow-glow">
         <div className="absolute right-5 top-5 opacity-80">
           <MoonMark className="h-12 w-12 shrink-0" />
         </div>
         <p className="luna-section-kicker">{t.premiumTitle}</p>
-        <h2 className="luna-editorial-title mt-8 max-w-[260px] text-[38px] leading-[0.96]">{t.premiumHeadline}</h2>
-        <p className="mt-4 max-w-[300px] text-sm leading-6 text-beige">
-          {t.premiumBody}
-        </p>
-        <div className="mt-5 flex flex-wrap gap-2">
-          <PremiumBadge label={t.premiumLibrary} />
-          <PremiumBadge label={t.premiumLunaAi} />
-          <PremiumBadge label={t.premiumSoundscapes} />
-          <PremiumBadge label={t.premiumMoonSeeds} />
-          <PremiumBadge label={t.weeklyContent} />
-        </div>
+        <h2 className="luna-editorial-title mt-8 max-w-[280px] text-[34px] leading-[1]">{isLifetime ? (language === 'ru' ? 'Premium навсегда активен' : 'Lifetime Premium Active') : isMonthly ? (language === 'ru' ? 'Месячный Premium активен' : 'Monthly Premium Active') : t.premiumHeadline}</h2>
+        <p className="mt-3 max-w-[310px] text-sm leading-6 text-beige">{isLifetime
+          ? (language === 'ru' ? 'Твой постоянный доступ к Luna открыт. Повторная покупка не нужна.' : 'Your permanent Luna access is open. No further purchase is needed.')
+          : isMonthly
+            ? (activeUntil ? (language === 'ru' ? `Доступ активен до ${activeUntil}.` : `Access is active through ${activeUntil}.`) : (language === 'ru' ? 'Твой месячный доступ активен.' : 'Your monthly access is active.'))
+            : (language === 'ru' ? 'Открой глубокие практики, расширенные разговоры и весь мир Luna.' : 'Open deeper practices, expanded conversations, and the full Luna experience.')}</p>
       </section>
       {locked && <p className="luna-card p-4 text-sm text-cream/80">{text(language, 'lockedPremium', { title: getLocalizedMeditation(locked, language).title })}</p>}
-      <PlanCard title={t.monthlyPremium} price={`${premiumPrices.monthly} ⭐`} features={[t.unlimitedMeditations, t.premiumBreathing, t.premiumLunaAi, t.premiumSoundscapes, t.premiumMoonSeeds]} action={t.unlockMonthly} loading={openingPlan === 'monthly'} disabled={Boolean(openingPlan)} onClick={() => onBuy('monthly')} language={language} featured />
-      <PlanCard title={t.lifetimePremium} price={`${premiumPrices.lifetime} ⭐`} features={[t.premiumForever, t.allFuturePractices, t.premiumLunaAi, t.bestValue, t.instantTelegramUnlock]} action={t.getLifetime} loading={openingPlan === 'lifetime'} disabled={Boolean(openingPlan)} onClick={() => onBuy('lifetime')} language={language} />
-      <div className="grid grid-cols-2 gap-2">
-        <PremiumValue title={t.sleepDeeper} body={t.sleepDeeperBody} />
-        <PremiumValue title={t.calmFaster} body={t.calmFasterBody} />
-        <PremiumValue title={t.buildRhythm} body={t.buildRhythmBody} />
-        <PremiumValue title={t.growGently} body={t.growGentlyBody} />
-      </div>
+      <section className="grid gap-2 rounded-[26px] border border-white/10 bg-white/[0.035] p-4">
+        {benefits.map((benefit) => <div key={benefit} className="flex items-start gap-2 text-sm leading-5 text-cream/78"><CheckCircle size={16} className="mt-0.5 shrink-0 text-gold" />{benefit}</div>)}
+      </section>
+      {!isLifetime && !isMonthly && <PlanCard title={t.monthlyPremium} price={`${premiumPrices.monthly} ⭐ · 30 ${language === 'ru' ? 'дней' : 'days'}`} features={benefits.slice(0, 3)} action={t.unlockMonthly} loading={openingPlan === 'monthly'} disabled={Boolean(openingPlan)} onClick={() => onBuy('monthly')} language={language} featured />}
+      {!isLifetime && <PlanCard title={t.lifetimePremium} price={`${premiumPrices.lifetime} ⭐ · ${language === 'ru' ? 'навсегда' : 'forever'}`} features={benefits.slice(0, 4)} action={isMonthly ? (language === 'ru' ? 'Перейти на Lifetime' : 'Upgrade to Lifetime') : t.getLifetime} loading={openingPlan === 'lifetime'} disabled={Boolean(openingPlan)} onClick={() => onBuy('lifetime')} language={language} />}
+      {isLifetime && <button onClick={onLibrary} className="w-full rounded-[20px] bg-gold px-5 py-4 font-semibold text-night">{t.openPremiumLibrary}</button>}
       {message && <p className="rounded-2xl bg-lavender/15 p-4 text-sm text-cream/80">{message}</p>}
       {openingPlan && <div className="h-1 overflow-hidden rounded-full bg-cream/10"><div className="h-full w-1/2 animate-pulse rounded-full bg-gold" /></div>}
       {message === t.paymentSuccessful && <button onClick={onLibrary} className="w-full rounded-2xl bg-cream px-5 py-4 font-semibold text-night">{t.openPremiumLibrary}</button>}
+      <button type="button" onClick={() => void onRestore()} className="w-full rounded-[18px] border border-white/10 bg-white/[0.035] px-4 py-3 text-sm font-semibold text-lavender">{t.restore}</button>
     </div>
-  );
-}
-
-function PremiumBadge({ label }: { label: string }) {
-  return <span className="rounded-full border border-gold/20 bg-gold/10 px-3 py-1.5 text-[11px] font-medium text-gold">{label}</span>;
-}
-
-function PremiumValue({ title, body }: { title: string; body: string }) {
-  return (
-    <article className="min-h-[104px] border-t border-white/10 py-3">
-      <div className="flex items-center gap-2">
-        <Sparkles size={15} className="shrink-0 text-gold" />
-        <h3 className="text-sm font-semibold">{title}</h3>
-      </div>
-      <p className="mt-2 text-[11px] leading-4 text-cream/70">{body}</p>
-    </article>
   );
 }
 
@@ -4173,7 +4212,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
   onProgress: () => void;
   onPlaybackStart?: () => void;
   onPlaybackSessionStart?: (meditationId: string) => Promise<string | null>;
-  onPlaybackHeartbeat?: (sessionId: string, position: number) => void;
+  onPlaybackHeartbeat?: (sessionId: string, position: number) => Promise<unknown>;
   onContinue: () => void;
   language: AppLanguage;
 }) {
@@ -4184,6 +4223,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
   const onSaveRef = useRef(onSave);
   const playbackSessionRef = useRef<string | null>(null);
   const playbackSessionPromiseRef = useRef<Promise<string | null> | null>(null);
+  const durationRef = useRef(meditation.duration);
   const localized = getLocalizedMeditation(meditation, language);
   const nextLocalized = nextMeditation ? getLocalizedMeditation(nextMeditation, language) : null;
   const savedProgress = meditation.history?.last_position ?? 0;
@@ -4256,6 +4296,9 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
     setPlaying(false);
     setLiveTime('pausePlayback:isolation-no-save', t, audio);
     setAudioTime(audio.currentTime);
+    if (playbackSessionRef.current && onPlaybackHeartbeat) {
+      void onPlaybackHeartbeat(playbackSessionRef.current, t);
+    }
 
     if (import.meta.env.DEV) {
       console.log('[PLAYER_AFTER_PAUSE]', {
@@ -4277,6 +4320,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
     setPosition(initialPosition);
     setAudioTime(initialPosition);
     setDuration(meditation.duration);
+    durationRef.current = meditation.duration;
     setLoading(true);
     setCompleted(false);
     setMoonSeedRewardMessage('');
@@ -4313,7 +4357,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
     const timer = window.setInterval(() => {
       const audio = audioRef.current;
       const sessionId = playbackSessionRef.current;
-      if (audio && sessionId) onPlaybackHeartbeat(sessionId, audio.currentTime);
+      if (audio && sessionId) void onPlaybackHeartbeat(sessionId, audio.currentTime);
     }, 10000);
     return () => window.clearInterval(timer);
   }, [onPlaybackHeartbeat, playing]);
@@ -4336,6 +4380,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
     const audioDuration = () => (Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : meditation.duration);
     const syncProgress = () => {
       const nextDuration = audioDuration();
+      durationRef.current = nextDuration;
       const nextPosition = Math.min(audio.currentTime, nextDuration);
       setDuration(nextDuration);
       livePositionRef.current = nextPosition;
@@ -4424,6 +4469,14 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
       audio.pause();
     };
   }, [localized.audioUrl, meditation.duration, meditation.id, onPlaybackStart]);
+
+  useEffect(() => () => {
+    const sessionId = playbackSessionRef.current;
+    if (!sessionId || savedCompletionRef.current) return;
+    void onSaveRef.current(livePositionRef.current, durationRef.current, false, sessionId).catch((error) => {
+      console.info('[Luna playback checkpoint failed]', error instanceof Error ? error.message : 'Playback checkpoint failed.');
+    });
+  }, []);
 
   useEffect(() => {
     if (audioRef.current) audioRef.current.playbackRate = speed;
@@ -4922,7 +4975,7 @@ function MoonGardenPage({
   };
 
   return (
-    <div className="luna-page space-y-5 pb-[calc(120px+env(safe-area-inset-bottom))] pt-[calc(env(safe-area-inset-top,0px)+24px)]">
+    <div className="luna-page space-y-5 pt-[calc(env(safe-area-inset-top,0px)+24px)]">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="luna-editorial-title text-[34px] leading-none">{copy[language].moonGarden}</h2>
@@ -5195,7 +5248,7 @@ function resizeAvatarImage(file: File) {
   });
 }
 
-type ProfileSettingsView = 'main' | 'goals' | 'notifications' | 'language' | 'subscription' | 'memory' | 'more' | 'privacy' | 'terms' | 'disclaimer';
+type ProfileSettingsView = 'main' | 'goals' | 'notifications' | 'language' | 'subscription' | 'memory' | 'privacy' | 'terms' | 'disclaimer';
 type RestoreState = 'idle' | 'loading' | 'success' | 'empty' | 'error';
 
 const APP_VERSION = import.meta.env.VITE_APP_VERSION ?? '0.1.0';
@@ -5229,14 +5282,15 @@ function goalsCountLabel(count: number, language: AppLanguage) {
 }
 
 function notificationStatusLabel(preferences: NotificationPreferences, language: AppLanguage) {
-  if (preferences.dailyReminder) return `${language === 'en' ? 'Daily' : 'Ежедневно'} ${preferences.reminderTime}`;
-  return language === 'en' ? 'Off' : 'Выкл';
+  if (preferences.dailyReminder) return language === 'en' ? 'Preference saved' : 'Настройка сохранена';
+  return language === 'en' ? 'Not delivered yet' : 'Пока не доставляются';
 }
 
 function ProfilePage({
   profile,
   access,
   loading,
+  accessVerified,
   firstName,
   username,
   showAdminButton,
@@ -5255,13 +5309,14 @@ function ProfilePage({
   profile: ProfileStats | null;
   access: AccessState;
   loading: boolean;
+  accessVerified: boolean;
   firstName: string;
   username?: string;
   showAdminButton: boolean;
   onLuna: () => void;
   onSubscription: () => void;
   onAdmin: () => void;
-  onRestore: () => void | Promise<void>;
+  onRestore: () => AccessState | void | Promise<AccessState | void>;
   onAddHome: () => void;
   onLanguageChange: (language: AppLanguage) => void;
   onProfileUpdate: (profile: ProfileStats | null | ((current: ProfileStats | null) => ProfileStats | null)) => void;
@@ -5286,6 +5341,7 @@ function ProfilePage({
   const [memoryEnabled, setMemoryEnabled] = useState(true);
   const [memories, setMemories] = useState<LunaMemory[]>([]);
   const [memoryLoading, setMemoryLoading] = useState(false);
+  const [companionAvailable, setCompanionAvailable] = useState<boolean | null>(null);
 
   useEffect(() => {
     onNestedChange(view !== 'main');
@@ -5296,6 +5352,13 @@ function ProfilePage({
     setGoals(profile?.user?.profile_goals ?? []);
     setNotificationPrefs(defaultNotificationPreferences(profile?.user?.notification_preferences));
   }, [profile?.user?.profile_goals, profile?.user?.notification_preferences]);
+
+  useEffect(() => {
+    if (view !== 'main') return;
+    getLunaHealth(initData)
+      .then((health) => setCompanionAvailable(health.available))
+      .catch(() => setCompanionAvailable(false));
+  }, [initData, view]);
 
   useEffect(() => {
     if (view !== 'memory') return;
@@ -5311,7 +5374,9 @@ function ProfilePage({
   }, [initData, language, view]);
 
   const avatarUrl = profile?.user?.avatar_url ?? null;
-  const planStatus = access.hasPremium
+  const planStatus = !accessVerified
+    ? (language === 'en' ? 'Status unavailable' : 'Статус недоступен')
+    : access.hasPremium
     ? access.plan.toLowerCase().includes('lifetime')
       ? copy[language].lifetimePremium
       : access.plan.toLowerCase().includes('monthly')
@@ -5321,7 +5386,11 @@ function ProfilePage({
   const localizedPlanStatus = planStatus;
   const goalsLabel = goalsCountLabel(goals.length, language);
   const notificationLabel = notificationStatusLabel(notificationPrefs, language);
-  const companionStatus = language === 'en' ? 'Ready' : 'Готова';
+  const companionStatus = companionAvailable === null
+    ? (language === 'en' ? 'Checking' : 'Проверка')
+    : companionAvailable
+      ? (language === 'en' ? 'Available' : 'Доступна')
+      : (language === 'en' ? 'Temporarily unavailable' : 'Временно недоступна');
   const languageLabel = language === 'en' ? 'English' : 'Русский';
   const isLifetime = access.hasPremium && access.plan.toLowerCase().includes('lifetime');
   const isMonthly = access.hasPremium && access.plan.toLowerCase().includes('monthly');
@@ -5380,8 +5449,8 @@ function ProfilePage({
     if (restoreState === 'loading') return;
     try {
       setRestoreState('loading');
-      await onRestore();
-      setRestoreState(access.hasPremium ? 'success' : 'empty');
+      const restored = await onRestore();
+      setRestoreState(restored?.hasPremium ? 'success' : 'empty');
     } catch {
       setRestoreState('error');
     }
@@ -5473,7 +5542,7 @@ function ProfilePage({
       <ProfileChildScreen title={language === 'en' ? 'Notifications' : 'Уведомления'} onBack={() => setView('main')} language={language}>
         <section className="luna-surface rounded-[24px] p-2">
           <ProfileToggleRow
-            title={language === 'en' ? 'Daily reminder' : 'Ежедневное напоминание'}
+            title={language === 'en' ? 'Reminder preference' : 'Настройка напоминания'}
             checked={notificationPrefs.dailyReminder}
             disabled={savingSettings === 'notifications'}
             onChange={(checked) => void saveNotificationPrefs({ ...notificationPrefs, dailyReminder: checked })}
@@ -5494,7 +5563,7 @@ function ProfilePage({
         <p className="mt-3 text-xs leading-5 text-lavender">
           {notificationPrefs.dailyReminder
             ? (language === 'en' ? `Preference saved for ${notificationPrefs.reminderTime}. Telegram delivery will be enabled when reminders launch.` : `Предпочтение сохранено на ${notificationPrefs.reminderTime}. Доставка через Telegram будет включена, когда напоминания запустятся.`)
-            : (language === 'en' ? 'Luna can send gentle reminders through Telegram.' : 'Luna сможет отправлять мягкие напоминания через Telegram.')}
+            : (language === 'en' ? 'Telegram reminder delivery is not active yet.' : 'Доставка напоминаний через Telegram пока не активна.')}
         </p>
         {settingsMessage && <p className="rounded-2xl border border-gold/15 bg-gold/10 px-3 py-2 text-xs text-gold">{settingsMessage}</p>}
       </ProfileChildScreen>
@@ -5523,21 +5592,23 @@ function ProfilePage({
           <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'Current plan' : 'Текущий план'}</p>
           <h3 className="mt-2 text-[24px] font-semibold tracking-[-0.04em] text-cream">{localizedPlanStatus}</h3>
           <p className="mt-1 text-sm leading-6 text-lavender">
-            {isLifetime
+            {!accessVerified
+              ? (language === 'en' ? 'Reconnect to confirm your current access before opening any purchase options.' : 'Подключись снова, чтобы подтвердить текущий доступ перед открытием вариантов покупки.')
+              : isLifetime
               ? (language === 'en' ? 'Active forever. You have permanent access to Luna Premium.' : 'Активно навсегда. У тебя постоянный доступ к Luna Premium.')
               : isMonthly
                 ? (language === 'en' ? 'Monthly Premium is active through Telegram Stars.' : 'Месячный Premium активен через Telegram Stars.')
                 : (language === 'en' ? 'Unlock the full Luna experience when you are ready.' : 'Открой полный опыт Luna, когда будешь готов.')}
           </p>
-          <div className="mt-4 space-y-2 text-sm text-lavender">
+          {accessVerified && <div className="mt-4 space-y-2 text-sm text-lavender">
             {(language === 'en'
               ? ['Full meditation library', 'Premium breathing practices', 'Mantras and soundscapes', 'All new Luna releases']
               : ['Полная библиотека медитаций', 'Премиум дыхательные практики', 'Мантры и саундскейпы', 'Все новые релизы Luna']
             ).map((item) => <p key={item}>• {item}</p>)}
-          </div>
-          <button onClick={onSubscription} className={`mt-4 w-full rounded-[18px] px-4 py-3 text-sm font-semibold ${isLifetime ? 'border border-gold/20 bg-gold/10 text-gold' : 'bg-gold text-night'}`}>
+          </div>}
+          {accessVerified && <button onClick={onSubscription} className={`mt-4 w-full rounded-[18px] px-4 py-3 text-sm font-semibold ${isLifetime ? 'border border-gold/20 bg-gold/10 text-gold' : 'bg-gold text-night'}`}>
             {access.hasPremium ? (language === 'en' ? 'View Premium benefits' : 'Посмотреть Premium') : (language === 'en' ? 'Upgrade to Premium' : 'Перейти на Premium')}
-          </button>
+          </button>}
           <button disabled={restoreState === 'loading'} onClick={() => void restorePurchases()} className="mt-2 w-full rounded-[18px] border border-white/10 bg-white/[0.045] px-4 py-3 text-sm font-semibold text-gold disabled:opacity-60">
             {restoreState === 'loading' ? (language === 'en' ? 'Restoring...' : 'Восстановление...') : copy[language].restore}
           </button>
@@ -5595,7 +5666,7 @@ function ProfilePage({
       }
     };
     return (
-      <ProfileChildScreen title={language === 'en' ? 'Luna Memory' : 'Память Luna'} onBack={() => setView('more')} language={language}>
+      <ProfileChildScreen title={language === 'en' ? 'Luna Memory' : 'Память Luna'} onBack={() => setView('main')} language={language}>
         <p className="text-sm leading-6 text-lavender">
           {language === 'en' ? 'Memory helps Luna continue conversations with useful details you have shared. You stay in control.' : 'Память помогает Luna продолжать разговоры, используя полезные детали, которыми ты поделился или поделилась. Управление всегда у тебя.'}
         </p>
@@ -5618,42 +5689,6 @@ function ProfilePage({
     );
   }
 
-  if (view === 'more') {
-    return (
-      <ProfileChildScreen title={language === 'en' ? 'More Settings' : 'Ещё настройки'} onBack={() => setView('main')} language={language}>
-        <section className="luna-surface rounded-[24px] p-2">
-          <ProfileSettingsRow icon={Upload} title={copy[language].addHomeTitle} value={homeScreenMessage || ''} onClick={onAddHome} />
-          <ProfileSettingsRow icon={Heart} title={language === 'en' ? 'Support' : 'Поддержка'} value={language === 'en' ? 'Contact' : 'Связь'} onClick={onLuna} />
-          <ProfileSettingsRow icon={Bot} title={language === 'en' ? 'Luna Memory' : 'Память Luna'} value={language === 'en' ? 'Privacy' : 'Приватность'} onClick={() => setView('memory')} />
-          <ProfileSettingsRow icon={Lock} title={language === 'en' ? 'Privacy Policy' : 'Политика приватности'} value="" onClick={() => setView('privacy')} />
-          <ProfileSettingsRow icon={CheckCircle} title={language === 'en' ? 'Terms of Use' : 'Условия использования'} value="" onClick={() => setView('terms')} />
-          <ProfileSettingsRow icon={Heart} title={language === 'en' ? 'Meditation Disclaimer' : 'Дисклеймер медитаций'} value="" onClick={() => setView('disclaimer')} />
-          {showAdminButton && <ProfileSettingsRow icon={Settings} title="Admin" value={language === 'en' ? 'Developer' : 'Разработка'} onClick={onAdmin} />}
-        </section>
-        <button onClick={() => setLogoutOpen(true)} className="mt-4 w-full rounded-[20px] border border-white/10 bg-white/[0.035] px-4 py-3 text-left text-sm text-lavender">
-          {copy[language].logout}
-        </button>
-        <p className="mt-3 text-center text-[11px] text-cream/38">Luna Meditation · Version {APP_VERSION}</p>
-        {logoutOpen && (
-          <div className="fixed inset-0 z-40 grid place-items-end bg-night/60 p-4 backdrop-blur-sm">
-            <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#111936] p-4 shadow-glow">
-              <h3 className="text-lg font-semibold text-cream">{language === 'en' ? 'Log out of Luna?' : 'Выйти из Luna?'}</h3>
-              <p className="mt-2 text-sm leading-6 text-lavender">
-                {language === 'en' ? 'This clears local app data on this device. Your Luna account and purchases stay safe.' : 'Это очистит локальные данные приложения на этом устройстве. Аккаунт Luna и покупки сохранятся.'}
-              </p>
-              <button onClick={closeLocalSession} className="mt-4 w-full rounded-[18px] border border-gold/20 bg-gold/10 px-4 py-3 text-sm font-semibold text-gold">
-                {language === 'en' ? 'Log out' : 'Выйти'}
-              </button>
-              <button onClick={() => setLogoutOpen(false)} className="mt-2 w-full rounded-[18px] bg-white/[0.055] px-4 py-3 text-sm font-semibold text-lavender">
-                {language === 'en' ? 'Cancel' : 'Отмена'}
-              </button>
-            </div>
-          </div>
-        )}
-      </ProfileChildScreen>
-    );
-  }
-
   if (view === 'privacy' || view === 'terms' || view === 'disclaimer') {
     const title = view === 'privacy'
       ? (language === 'en' ? 'Privacy Policy' : 'Политика приватности')
@@ -5672,7 +5707,7 @@ function ProfilePage({
           ? ['By using Luna, you agree to use the app for personal wellness and relaxation.', 'Premium access, payments, and availability are handled through Telegram Stars and the Luna bot experience.']
           : ['Используя Luna, ты соглашаешься применять приложение для личного wellness и расслабления.', 'Premium-доступ, платежи и доступность обрабатываются через Telegram Stars и опыт Luna bot.']);
     return (
-      <ProfileChildScreen title={title} onBack={() => setView('more')} language={language}>
+      <ProfileChildScreen title={title} onBack={() => setView('main')} language={language}>
         <section className="luna-surface space-y-3 rounded-[24px] p-4">
           {body.map((line) => <p key={line} className="text-sm leading-6 text-lavender">{line}</p>)}
         </section>
@@ -5683,7 +5718,7 @@ function ProfilePage({
   if (loading && !profile) return <PageSkeleton rows={3} />;
 
   return (
-    <div className="luna-page space-y-4 pb-[calc(98px+env(safe-area-inset-bottom))]">
+    <div className="luna-page space-y-4">
       <div>
         <h2 className="text-[28px] font-semibold tracking-[-0.04em] text-cream">{copy[language].profile}</h2>
       </div>
@@ -5715,11 +5750,37 @@ function ProfilePage({
         <ProfileSettingsRow icon={Bot} title={language === 'en' ? 'AI Companion' : 'AI-компаньон'} value={companionStatus} onClick={onLuna} />
         <ProfileSettingsRow icon={CreditCard} title={language === 'en' ? 'Subscription' : 'Подписка'} value={localizedPlanStatus} onClick={() => setView('subscription')} />
         <ProfileSettingsRow icon={Globe2} title={copy[language].language} value={languageLabel} onClick={() => setView('language')} />
-        <ProfileSettingsRow icon={Settings} title={language === 'en' ? 'More Settings' : 'Ещё настройки'} value="" onClick={() => setView('more')} />
+        <ProfileSettingsRow icon={Bot} title={language === 'en' ? 'Luna Memory' : 'Память Luna'} value={language === 'en' ? 'Private' : 'Приватно'} onClick={() => setView('memory')} />
+        <ProfileSettingsRow icon={Lock} title={language === 'en' ? 'Privacy & Data' : 'Приватность и данные'} value="" onClick={() => setView('privacy')} />
+        <ProfileSettingsRow icon={Heart} title={language === 'en' ? 'Support' : 'Поддержка'} value={language === 'en' ? 'Talk to Luna' : 'Связаться'} onClick={onLuna} />
+        <ProfileSettingsRow icon={Upload} title={copy[language].addHomeTitle} value={homeScreenMessage || ''} onClick={onAddHome} />
+        <ProfileSettingsRow icon={CreditCard} title={copy[language].restore} value="" onClick={() => void restorePurchases()} />
       </section>
 
+      {showAdminButton && (
+        <section className="luna-surface rounded-[22px] p-2">
+          <ProfileSettingsRow icon={Settings} title="Admin" value={language === 'en' ? 'Developer tools' : 'Инструменты'} onClick={onAdmin} />
+        </section>
+      )}
+
+      <button onClick={() => setLogoutOpen(true)} className="w-full rounded-[20px] border border-white/10 bg-white/[0.035] px-4 py-3 text-left text-sm text-lavender">
+        {copy[language].logout}
+      </button>
+      <p className="text-center text-[11px] text-cream/38">Luna Meditation · Version {APP_VERSION}</p>
+
+      {logoutOpen && (
+        <div className="fixed inset-0 z-[100] grid place-items-end bg-night/60 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#111936] p-4 shadow-glow">
+            <h3 className="text-lg font-semibold text-cream">{language === 'en' ? 'Log out of Luna?' : 'Выйти из Luna?'}</h3>
+            <p className="mt-2 text-sm leading-6 text-lavender">{language === 'en' ? 'This clears local app data on this device. Your Luna account and purchases stay safe.' : 'Это очистит локальные данные приложения на этом устройстве. Аккаунт Luna и покупки сохранятся.'}</p>
+            <button onClick={closeLocalSession} className="mt-4 w-full rounded-[18px] border border-gold/20 bg-gold/10 px-4 py-3 text-sm font-semibold text-gold">{language === 'en' ? 'Log out' : 'Выйти'}</button>
+            <button onClick={() => setLogoutOpen(false)} className="mt-2 w-full rounded-[18px] bg-white/[0.055] px-4 py-3 text-sm font-semibold text-lavender">{language === 'en' ? 'Cancel' : 'Отмена'}</button>
+          </div>
+        </div>
+      )}
+
       {avatarActionsOpen && (
-        <div className="fixed inset-0 z-40 grid place-items-end bg-night/60 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] grid place-items-end bg-night/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#111936] p-3 shadow-glow">
             <button disabled={avatarBusy} onClick={() => chooseInputRef.current?.click()} className="w-full rounded-[18px] px-4 py-3 text-left text-sm font-semibold text-cream">{language === 'en' ? 'Choose photo' : 'Выбрать фото'}</button>
             <button disabled={avatarBusy} onClick={() => cameraInputRef.current?.click()} className="w-full rounded-[18px] px-4 py-3 text-left text-sm font-semibold text-cream">{language === 'en' ? 'Take photo' : 'Сделать фото'}</button>
@@ -5741,7 +5802,7 @@ function ProfileChildScreen({ title, onBack, language, children }: {
   children: React.ReactNode;
 }) {
   return (
-    <div className="luna-page space-y-3 pb-[calc(34px+env(safe-area-inset-bottom))]">
+    <div className="luna-page space-y-3">
       <button onClick={onBack} className="luna-icon-button transition active:scale-95" aria-label={language === 'en' ? 'Back' : 'Назад'}>
         ←
       </button>

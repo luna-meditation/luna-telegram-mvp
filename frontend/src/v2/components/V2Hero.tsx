@@ -11,6 +11,12 @@ type V2HeroProps = {
   moodLabel: (mood: MoodChip) => string;
   language: 'en' | 'ru';
   checkinLine: string;
+  moodSaved: boolean;
+  moodSaving: boolean;
+  changeLabel: string;
+  detailsLabel: string;
+  onChangeMood: () => void;
+  onCheckinDetails: () => void;
   onMood: (mood: MoodChip) => void;
 };
 
@@ -22,6 +28,12 @@ export function V2Hero({
   moodLabel,
   language,
   checkinLine,
+  moodSaved,
+  moodSaving,
+  changeLabel,
+  detailsLabel,
+  onChangeMood,
+  onCheckinDetails,
   onMood
 }: V2HeroProps) {
   const visualMoods: Array<{ mood: MoodChip; active: MoodChip[]; symbol: string; label: Record<'en' | 'ru', string> }> = [
@@ -55,20 +67,32 @@ export function V2Hero({
         <h1>{headline}</h1>
       </div>
 
-      <div className="home-v2-mood-row" aria-label={checkinLine}>
-        {visualMoods.map(({ mood, active, symbol, label }) => (
+      {moodSaved && activeMood ? (
+        <div className="home-v2-mood-saved" role="status">
+          <span>{visualMoods.find((item) => item.active.includes(activeMood))?.symbol ?? '◌'}</span>
+          <strong>{checkinLine}</strong>
+          <div className="home-v2-mood-actions">
+            <button type="button" onClick={onCheckinDetails}>{detailsLabel}</button>
+            <button type="button" onClick={onChangeMood}>{changeLabel}</button>
+          </div>
+        </div>
+      ) : (
+        <div className="home-v2-mood-row" aria-label={checkinLine}>
+          {visualMoods.map(({ mood, active, symbol, label }) => (
           <button
             key={mood}
             type="button"
             onClick={() => onMood(mood)}
+            disabled={moodSaving}
             className={`home-v2-mood-pill ${activeMood && active.includes(activeMood) ? 'home-v2-mood-pill-active' : ''}`}
             title={moodLabel(mood)}
           >
             <span>{symbol}</span>
             <small>{label[language]}</small>
           </button>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }

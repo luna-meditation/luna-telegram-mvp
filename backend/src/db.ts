@@ -1,7 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
 import { env } from './config.js';
-import { plans, type PlanId } from './plans.js';
+import { isPlanId, plans, type PlanId } from './plans.js';
+import {
+  applyPlaybackHeartbeat,
+  mergePlaybackRanges,
+  playbackCoverageSeconds,
+  playbackRewardDecision
+} from './playback-security.js';
+import { buildCanonicalCurrentWeek } from './progress-model.js';
 
 if (!globalThis.WebSocket) {
   globalThis.WebSocket = WebSocket as unknown as typeof globalThis.WebSocket;
@@ -47,6 +54,7 @@ export type HistoryInput = {
   duration: number;
   completed?: boolean;
   session_id?: string;
+  local_date?: string;
 };
 
 const moonGardenElements = [
@@ -134,9 +142,9 @@ const achievementDefinitions: AchievementDefinition[] = [
 ];
 
 export type DailyCheckinInput = {
-  sleep_range: 'less_than_4' | '4_6' | '6_8' | '8_plus';
+  sleep_range?: 'less_than_4' | '4_6' | '6_8' | '8_plus' | null;
   mood: 'calm' | 'stressed' | 'tired' | 'anxious' | 'focused' | 'low_energy';
-  available_minutes: '3' | '5' | '10' | '15_plus';
+  available_minutes?: '3' | '5' | '10' | '15_plus' | null;
   local_date?: string;
 };
 
@@ -316,14 +324,14 @@ export async function getMeditationById(id: string) {
   return data;
 }
 
-export async function startPlaybackSession(telegramId: number, meditationId: string) {
+export async function startPlaybackSession(telegramId: number, meditationId: string, requestedLocalDate?: string) {
   const meditation = await getMeditationById(meditationId);
   if (!meditation) throw new Error('Meditation not found.');
 
   const { data, error } = await supabase
     .from('playback_sessions')
-    .insert({ telegram_id: telegramId, meditation_id: meditationId })
-    .select('id, meditation_id, started_at, last_heartbeat_at, listened_seconds')
+    .insert({ telegram_id: telegramId, meditation_id: meditationId, local_date: todayKey(requestedLocalDate) })
+    .select('id, meditation_id, started_at, last_heartbeat_at, listened_seconds, listened_ranges, local_date')
     .single();
 
   if (error) throw error;
@@ -333,7 +341,7 @@ export async function startPlaybackSession(telegramId: number, meditationId: str
 export async function heartbeatPlaybackSession(telegramId: number, sessionId: string, lastPosition: number) {
   const { data: session, error: sessionError } = await supabase
     .from('playback_sessions')
-    .select('id, meditation_id, last_heartbeat_at, listened_seconds')
+    .select('id, meditation_id, last_heartbeat_at, listened_seconds, last_position, listened_ranges, local_date')
     .eq('id', sessionId)
     .eq('telegram_id', telegramId)
     .maybeSingle();
@@ -347,16 +355,28 @@ export async function heartbeatPlaybackSession(telegramId: number, sessionId: st
   const elapsed = Number.isFinite(lastHeartbeat)
     ? Math.max(0, Math.min(30, Math.floor((Date.now() - lastHeartbeat) / 1000)))
     : 0;
-  const listenedSeconds = Math.min(duration, Math.max(0, Number(session.listened_seconds ?? 0) + elapsed));
+  const coverage = applyPlaybackHeartbeat({
+    ranges: session.listened_ranges,
+    previousPosition: Number(session.last_position ?? 0),
+    currentPosition: lastPosition,
+    elapsedSeconds: elapsed,
+    duration
+  });
 
   const { error } = await supabase
     .from('playback_sessions')
-    .update({ listened_seconds: listenedSeconds, last_position: Math.max(0, Math.min(duration, Math.floor(lastPosition))), last_heartbeat_at: new Date().toISOString() })
+    .update({
+      listened_seconds: coverage.listenedSeconds,
+      listened_ranges: coverage.ranges,
+      last_position: coverage.currentPosition,
+      last_heartbeat_at: new Date().toISOString()
+    })
     .eq('id', sessionId)
     .eq('telegram_id', telegramId);
 
   if (error) throw error;
-  return { ok: true, listened_seconds: listenedSeconds };
+  await claimPlaybackPracticeDay(telegramId, sessionId, session.local_date, coverage.listenedSeconds);
+  return { ok: true, listened_seconds: coverage.listenedSeconds, intervalAccepted: coverage.accepted };
 }
 
 export async function upsertFavorite(telegramId: number, meditationId: string, favorite: boolean) {
@@ -393,12 +413,13 @@ export async function upsertHistory(telegramId: number, input: HistoryInput) {
   const meditation = await getMeditationById(input.meditation_id);
   const duration = Math.max(1, Number(meditation?.duration ?? input.duration ?? 1));
   const savedPosition = Math.max(0, Math.min(duration, Math.floor(Number(input.last_position) || 0)));
-  let trustedListenedSeconds = 0;
+  let sessionRanges: Array<[number, number]> = [];
+  let sessionCompletedBeforeRequest = false;
 
   if (input.session_id) {
     const { data: session, error: sessionError } = await supabase
       .from('playback_sessions')
-      .select('last_heartbeat_at, listened_seconds')
+      .select('last_heartbeat_at, listened_seconds, listened_ranges, last_position, completed_at, local_date')
       .eq('id', input.session_id)
       .eq('telegram_id', telegramId)
       .eq('meditation_id', input.meditation_id)
@@ -410,34 +431,64 @@ export async function upsertHistory(telegramId: number, input: HistoryInput) {
       const elapsedSinceHeartbeat = Number.isFinite(lastHeartbeat)
         ? Math.max(0, Math.min(30, Math.floor((Date.now() - lastHeartbeat) / 1000)))
         : 0;
-      trustedListenedSeconds = Math.min(duration, Math.max(0, Number(session.listened_seconds ?? 0) + elapsedSinceHeartbeat));
+      const finalCoverage = applyPlaybackHeartbeat({
+        ranges: session.listened_ranges,
+        previousPosition: Number(session.last_position ?? 0),
+        currentPosition: savedPosition,
+        elapsedSeconds: elapsedSinceHeartbeat,
+        duration
+      });
+      sessionRanges = finalCoverage.ranges;
+      sessionCompletedBeforeRequest = Boolean(session.completed_at);
       await supabase
         .from('playback_sessions')
-        .update({ listened_seconds: trustedListenedSeconds, last_position: savedPosition, last_heartbeat_at: new Date().toISOString(), completed_at: input.completed && trustedListenedSeconds >= duration * 0.9 ? new Date().toISOString() : null })
+        .update({
+          listened_seconds: finalCoverage.listenedSeconds,
+          listened_ranges: finalCoverage.ranges,
+          last_position: savedPosition,
+          last_heartbeat_at: new Date().toISOString()
+        })
         .eq('id', input.session_id)
         .eq('telegram_id', telegramId);
+      await claimPlaybackPracticeDay(telegramId, input.session_id, session.local_date ?? input.local_date, finalCoverage.listenedSeconds);
     }
   }
 
-  const completion = trustedListenedSeconds > 0 ? Math.min(100, Math.round((savedPosition / duration) * 100)) : 0;
-  const completed = Boolean(input.completed && trustedListenedSeconds >= duration * 0.9);
-
   const { data: existing, error: existingError } = await supabase
     .from('history')
-    .select('play_count, seed_awarded_position, completion_seed_bonus_awarded')
+    .select('play_count, seed_awarded_position, completion_seed_bonus_awarded, completed, listened_ranges, listened_seconds')
     .eq('telegram_id', telegramId)
     .eq('meditation_id', input.meditation_id)
     .maybeSingle();
 
   if (existingError) throw existingError;
 
-  const previouslyAwardedPosition = Math.max(0, Number(existing?.seed_awarded_position ?? 0));
-  const nextAwardedPosition = Math.floor(Math.max(previouslyAwardedPosition, savedPosition) / 60) * 60;
-  const listeningSeedsAwarded = savedPosition >= 60
-    ? Math.max(0, Math.floor((nextAwardedPosition - previouslyAwardedPosition) / 60))
-    : 0;
-  const completionBonusAwarded = completed && !existing?.completion_seed_bonus_awarded ? 2 : 0;
-  const moonSeedsAwarded = listeningSeedsAwarded + completionBonusAwarded;
+  const listenedRanges = mergePlaybackRanges(existing?.listened_ranges, sessionRanges, duration);
+  const trustedListenedSeconds = playbackCoverageSeconds(listenedRanges);
+  const completion = Math.min(100, Math.round((trustedListenedSeconds / duration) * 100));
+  const qualifiesForCompletion = Boolean(input.completed && completion >= 90);
+  const completed = Boolean(existing?.completed || qualifiesForCompletion);
+  let newlyCompletedSession = false;
+  if (qualifiesForCompletion && input.session_id && !sessionCompletedBeforeRequest) {
+    const { data: claimedSession, error: claimError } = await supabase
+      .from('playback_sessions')
+      .update({ completed_at: new Date().toISOString() })
+      .eq('id', input.session_id)
+      .eq('telegram_id', telegramId)
+      .is('completed_at', null)
+      .select('id')
+      .maybeSingle();
+    if (claimError) throw claimError;
+    newlyCompletedSession = Boolean(claimedSession);
+  }
+
+  const rewards = playbackRewardDecision({
+    trustedListenedSeconds,
+    previouslyAwardedPosition: Number(existing?.seed_awarded_position ?? 0),
+    newlyCompletedSession,
+    completionBonusAlreadyAwarded: Boolean(existing?.completion_seed_bonus_awarded)
+  });
+  const { nextAwardedPosition, completionBonusAwarded, moonSeedsAwarded } = rewards;
 
   const { error } = await supabase
     .from('history')
@@ -448,6 +499,8 @@ export async function upsertHistory(telegramId: number, input: HistoryInput) {
         last_position: savedPosition,
         completion_percent: completion,
         completed,
+        listened_seconds: trustedListenedSeconds,
+        listened_ranges: listenedRanges,
         last_played: new Date().toISOString(),
         play_count: (existing?.play_count ?? 0) + 1,
         seed_awarded_position: nextAwardedPosition,
@@ -473,10 +526,7 @@ export async function upsertHistory(telegramId: number, input: HistoryInput) {
   }
 
   if (completed) {
-    if (completionBonusAwarded > 0) {
-      await recordPracticeDay(telegramId, 'meditation', Math.max(1, Math.round(savedPosition / 60)));
-    }
-    await updateStreak(telegramId);
+    await updateStreak(telegramId, input.local_date);
   }
 
   return {
@@ -491,6 +541,7 @@ export async function recordBreathSession(telegramId: number, input: {
   mode: string;
   duration_seconds: number;
   breath_count: number;
+  local_date?: string;
 }) {
   const mode = ['calm', 'box', 'reset'].includes(input.mode) ? input.mode : 'calm';
   const durationSeconds = Math.max(30, Math.min(600, Math.floor(input.duration_seconds || 60)));
@@ -505,8 +556,8 @@ export async function recordBreathSession(telegramId: number, input: {
 
   if (error) throw error;
   await awardMoonSeeds(telegramId, 1);
-  await recordPracticeDay(telegramId, 'breath', Math.max(1, Math.round(durationSeconds / 60)));
-  await updateStreak(telegramId);
+  await recordPracticeDay(telegramId, 'breath', Math.max(1, Math.round(durationSeconds / 60)), input.local_date);
+  await updateStreak(telegramId, input.local_date);
 
   return {
     completed: true,
@@ -519,6 +570,7 @@ export async function recordBreathSession(telegramId: number, input: {
 export async function recordSceneMoonSeed(telegramId: number, input: {
   scene_id?: string;
   duration_seconds: number;
+  local_date?: string;
 }) {
   const durationSeconds = Math.max(0, Math.floor(input.duration_seconds || 0));
   if (durationSeconds < 300) {
@@ -526,8 +578,8 @@ export async function recordSceneMoonSeed(telegramId: number, input: {
   }
 
   await awardMoonSeeds(telegramId, 1);
-  await recordPracticeDay(telegramId, 'scene', Math.max(5, Math.round(durationSeconds / 60)));
-  await updateStreak(telegramId);
+  await recordPracticeDay(telegramId, 'scene', Math.max(5, Math.round(durationSeconds / 60)), input.local_date);
+  await updateStreak(telegramId, input.local_date);
   return {
     awarded: true,
     moonSeeds: 1,
@@ -546,12 +598,16 @@ export async function getHistory(telegramId: number) {
   return (data ?? []).map((item) => ({ ...item, meditation: item.meditations }));
 }
 
-function todayKey() {
-  return new Date().toISOString().slice(0, 10);
+function validDateKey(value?: string | null) {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
 }
 
-async function recordPracticeDay(telegramId: number, source: 'meditation' | 'breath' | 'scene', minutes: number) {
-  const localDate = todayKey();
+function todayKey(requested?: string | null) {
+  return validDateKey(requested) ?? new Date().toISOString().slice(0, 10);
+}
+
+async function recordPracticeDay(telegramId: number, source: 'meditation' | 'breath' | 'scene', minutes: number, requestedLocalDate?: string) {
+  const localDate = /^\d{4}-\d{2}-\d{2}$/.test(requestedLocalDate ?? '') ? requestedLocalDate! : todayKey();
   const { data: existing, error: readError } = await supabase
     .from('practice_days')
     .select('minutes, sessions')
@@ -584,28 +640,40 @@ async function recordPracticeDay(telegramId: number, source: 'meditation' | 'bre
   }
 }
 
+async function claimPlaybackPracticeDay(telegramId: number, sessionId: string, requestedLocalDate: string | null | undefined, listenedSeconds: number) {
+  if (listenedSeconds < 60) return false;
+
+  const { data: claimed, error } = await supabase
+    .from('playback_sessions')
+    .update({ practice_day_recorded: true })
+    .eq('id', sessionId)
+    .eq('telegram_id', telegramId)
+    .eq('practice_day_recorded', false)
+    .select('id')
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!claimed) return false;
+
+  await recordPracticeDay(telegramId, 'meditation', 1, requestedLocalDate ?? undefined);
+  await updateStreak(telegramId, requestedLocalDate ?? undefined);
+  return true;
+}
+
 function mondayKey(date: Date) {
   const monday = new Date(date);
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  monday.setUTCDate(monday.getUTCDate() - ((monday.getUTCDay() + 6) % 7));
   return monday.toISOString().slice(0, 10);
 }
 
 async function getStreakFreezeMax(telegramId: number) {
-  const [{ data: user }, { data: payments }] = await Promise.all([
-    supabase
-      .from('users')
-      .select('active_until, lifetime_access')
-      .eq('telegram_id', telegramId)
-      .maybeSingle(),
-    supabase
-      .from('payments')
-      .select('plan, created_at')
-      .eq('telegram_id', telegramId)
-      .order('created_at', { ascending: false })
-      .limit(1)
-  ]);
+  const { data: user } = await supabase
+    .from('users')
+    .select('active_until, lifetime_access')
+    .eq('telegram_id', telegramId)
+    .maybeSingle();
   const activeUntil = user?.active_until ? new Date(user.active_until).getTime() : 0;
-  const hasPremium = Boolean(user?.lifetime_access || activeUntil > Date.now() || payments?.[0]?.plan);
+  const hasPremium = Boolean(user?.lifetime_access || activeUntil > Date.now());
   return hasPremium ? 3 : 1;
 }
 
@@ -629,71 +697,6 @@ function buildPracticeDaySet(input: {
   return days;
 }
 
-function buildCurrentWeekStats(input: {
-  practiceDayKeys: Set<string>;
-  practiceDays: Array<{ local_date?: string | null; minutes?: number | null; sessions?: number | null }>;
-  history: Array<{ completed?: boolean | null; last_played?: string | null; last_position?: number | null }>;
-  breathSessions: Array<{ completed_at?: string | null; duration_seconds?: number | null }>;
-  lastFreezeUsed?: string | null;
-}) {
-  const today = new Date();
-  const todayKeyValue = today.toISOString().slice(0, 10);
-  const monday = new Date(today);
-  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
-  const weekStart = monday.toISOString().slice(0, 10);
-  const dayKeys = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + index);
-    return date.toISOString().slice(0, 10);
-  });
-  const practiceByDate = input.practiceDays.reduce<Record<string, { minutes: number; sessions: number }>>((map, item) => {
-    if (!item.local_date) return map;
-    map[item.local_date] = {
-      minutes: (map[item.local_date]?.minutes ?? 0) + Math.max(0, Number(item.minutes ?? 0)),
-      sessions: (map[item.local_date]?.sessions ?? 0) + Math.max(0, Number(item.sessions ?? 0))
-    };
-    return map;
-  }, {});
-  const fallbackMinutesByDate: Record<string, number> = {};
-  const fallbackSessionsByDate: Record<string, number> = {};
-  input.history.forEach((item) => {
-    const key = item.completed && item.last_played ? dateKey(item.last_played) : null;
-    if (!key) return;
-    fallbackMinutesByDate[key] = (fallbackMinutesByDate[key] ?? 0) + Math.max(1, Math.round(Number(item.last_position ?? 0) / 60));
-    fallbackSessionsByDate[key] = (fallbackSessionsByDate[key] ?? 0) + 1;
-  });
-  input.breathSessions.forEach((item) => {
-    const key = item.completed_at ? dateKey(item.completed_at) : null;
-    if (!key) return;
-    fallbackMinutesByDate[key] = (fallbackMinutesByDate[key] ?? 0) + Math.max(1, Math.round(Number(item.duration_seconds ?? 0) / 60));
-    fallbackSessionsByDate[key] = (fallbackSessionsByDate[key] ?? 0) + 1;
-  });
-
-  const days = dayKeys.map((key) => {
-    const completed = input.practiceDayKeys.has(key);
-    const isToday = key === todayKeyValue;
-    const isFuture = key > todayKeyValue;
-    const freezeUsed = input.lastFreezeUsed === key;
-    const minutes = practiceByDate[key]?.minutes ?? fallbackMinutesByDate[key] ?? 0;
-    const sessions = practiceByDate[key]?.sessions ?? fallbackSessionsByDate[key] ?? 0;
-    return {
-      key,
-      label: key,
-      state: completed ? 'completed' : freezeUsed ? 'freeze_used' : isFuture ? 'future' : isToday ? 'current' : 'missed',
-      minutes,
-      sessions
-    };
-  });
-
-  return {
-    weekStart,
-    days,
-    completedDays: days.filter((item) => item.state === 'completed').length,
-    completedSessions: days.reduce((sum, item) => sum + item.sessions, 0),
-    listeningMinutes: days.reduce((sum, item) => sum + item.minutes, 0)
-  };
-}
-
 function countCompletedWeeks(practiceDayKeys: Set<string>) {
   const weeks = new Map<string, Set<string>>();
   practiceDayKeys.forEach((key) => {
@@ -702,12 +705,12 @@ function countCompletedWeeks(practiceDayKeys: Set<string>) {
   return [...weeks.values()].filter((days) => days.size >= 7).length;
 }
 
-function buildMoodTrend(checkins: Array<{ local_date?: string | null; mood?: string | null }>) {
+function buildMoodTrend(checkins: Array<{ local_date?: string | null; mood?: string | null }>, localDate: string) {
   const byDate = new Map(checkins.filter((item) => item.local_date).map((item) => [item.local_date as string, item.mood ?? null]));
-  const today = new Date();
+  const today = new Date(`${todayKey(localDate)}T12:00:00Z`);
   return Array.from({ length: 7 }, (_, index) => {
     const date = new Date(today);
-    date.setDate(today.getDate() - (6 - index));
+    date.setUTCDate(today.getUTCDate() - (6 - index));
     const key = date.toISOString().slice(0, 10);
     return {
       key,
@@ -722,6 +725,7 @@ function mostCommonValue<T extends string>(values: T[]) {
 }
 
 function sleepScore(value: DailyCheckinInput['sleep_range']) {
+  if (!value) return 0;
   if (value === 'less_than_4') return 3;
   if (value === '4_6') return 5;
   if (value === '6_8') return 7;
@@ -751,7 +755,7 @@ function buildWeeklyInsight(input: {
     return 'Start with one short practice today. Luna will build your weekly insight as you check in and listen.';
   }
 
-  const tiredDays = input.weeklyCheckins.filter((item) => ['less_than_4', '4_6'].includes(item.sleep_range)).length;
+  const tiredDays = input.weeklyCheckins.filter((item) => item.sleep_range != null && ['less_than_4', '4_6'].includes(item.sleep_range)).length;
   const commonMood = mostCommonValue(input.weeklyCheckins.map((item) => item.mood));
 
   if (tiredDays >= 3) return 'Your week shows lower sleep. Choose gentler evening sessions and keep practices short.';
@@ -764,10 +768,10 @@ function buildWeeklyInsight(input: {
 export async function upsertDailyCheckin(telegramId: number, input: DailyCheckinInput) {
   const payload = {
     telegram_id: telegramId,
-    sleep_range: input.sleep_range,
     mood: input.mood,
-    available_minutes: input.available_minutes,
-    local_date: input.local_date ?? todayKey()
+    local_date: input.local_date ?? todayKey(),
+    ...(input.sleep_range !== undefined ? { sleep_range: input.sleep_range } : {}),
+    ...(input.available_minutes !== undefined ? { available_minutes: input.available_minutes } : {})
   };
 
   const { data, error } = await supabase
@@ -792,8 +796,11 @@ export async function getTodayCheckin(telegramId: number, localDate = todayKey()
   return data;
 }
 
-export async function getWellnessSummary(telegramId: number) {
-  const weekStart = daysAgo(6).toISOString().slice(0, 10);
+export async function getWellnessSummary(telegramId: number, localDate = todayKey()) {
+  const requestedDate = todayKey(localDate);
+  const requested = new Date(`${requestedDate}T12:00:00Z`);
+  requested.setUTCDate(requested.getUTCDate() - 6);
+  const weekStart = requested.toISOString().slice(0, 10);
   const [{ data: checkins, error: checkinsError }, profile] = await Promise.all([
     supabase
       .from('daily_checkins')
@@ -801,16 +808,17 @@ export async function getWellnessSummary(telegramId: number) {
       .eq('telegram_id', telegramId)
       .gte('local_date', weekStart)
       .order('local_date', { ascending: false }),
-    getProfileStats(telegramId)
+    getProfileStats(telegramId, requestedDate)
   ]);
 
   if (checkinsError) throw checkinsError;
 
   const weeklyCheckins = (checkins ?? []) as Array<DailyCheckinInput & { local_date: string; created_at?: string }>;
-  const todayCheckin = weeklyCheckins.find((item) => item.local_date === todayKey()) ?? null;
+  const todayCheckin = weeklyCheckins.find((item) => item.local_date === requestedDate) ?? null;
   const mostCommonMood = mostCommonValue(weeklyCheckins.map((item) => item.mood));
-  const averageSleep = weeklyCheckins.length
-    ? Math.round(weeklyCheckins.reduce((sum, item) => sum + sleepScore(item.sleep_range), 0) / weeklyCheckins.length)
+  const sleepCheckins = weeklyCheckins.filter((item) => Boolean(item.sleep_range));
+  const averageSleep = sleepCheckins.length
+    ? Math.round(sleepCheckins.reduce((sum, item) => sum + sleepScore(item.sleep_range), 0) / sleepCheckins.length)
     : 0;
   const level = Math.max(1, Math.floor((profile.completed + profile.currentStreak + weeklyCheckins.length) / 5) + 1);
   const levelProgress = Math.min(100, ((profile.completed + weeklyCheckins.length) % 5) * 20);
@@ -820,7 +828,7 @@ export async function getWellnessSummary(telegramId: number) {
     weeklyCheckins,
     weeklyCheckinCount: weeklyCheckins.length,
     averageSleepHours: averageSleep,
-    averageSleepLabel: sleepLabel(mostCommonValue(weeklyCheckins.map((item) => item.sleep_range))),
+    averageSleepLabel: sleepLabel(mostCommonValue(sleepCheckins.map((item) => item.sleep_range).filter((value): value is NonNullable<typeof value> => value != null))),
     mostCommonMood,
     mostCommonMoodLabel: moodLabel(mostCommonMood),
     weeklyInsight: buildWeeklyInsight({
@@ -872,10 +880,15 @@ export async function getWellnessSummary(telegramId: number) {
   };
 }
 
-export async function updateStreak(telegramId: number) {
-  const today = new Date().toISOString().slice(0, 10);
-  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-  const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+export async function updateStreak(telegramId: number, requestedLocalDate?: string) {
+  const today = todayKey(requestedLocalDate);
+  const todayDate = new Date(`${today}T12:00:00Z`);
+  const yesterdayDate = new Date(todayDate);
+  yesterdayDate.setUTCDate(todayDate.getUTCDate() - 1);
+  const twoDaysAgoDate = new Date(todayDate);
+  twoDaysAgoDate.setUTCDate(todayDate.getUTCDate() - 2);
+  const yesterday = yesterdayDate.toISOString().slice(0, 10);
+  const twoDaysAgo = twoDaysAgoDate.toISOString().slice(0, 10);
   const freezeMax = await getStreakFreezeMax(telegramId);
 
   const { data: current, error: currentError } = await supabase
@@ -901,11 +914,10 @@ export async function updateStreak(telegramId: number) {
     nextStreak = (current.current_streak ?? 0) + 1;
   }
 
-  const monday = mondayKey(new Date());
-  const yesterdayDate = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const monday = mondayKey(todayDate);
   const freezeUsedThisWeek = Boolean(current?.last_freeze_used && current.last_freeze_used >= monday);
   const completedCleanPreviousWeek = current?.last_completed_date === yesterday
-    && yesterdayDate.getDay() === 0
+    && yesterdayDate.getUTCDay() === 0
     && !freezeUsedThisWeek
     && current?.last_clean_week_awarded !== monday;
 
@@ -1263,7 +1275,7 @@ async function getMoonGardenState(telegramId: number, input: {
   };
 }
 
-export async function getProfileStats(telegramId: number) {
+export async function getProfileStats(telegramId: number, localDate = todayKey()) {
   const { data: user, error: userError } = await supabase
     .from('users')
     .select('first_name, username, language_code, active_until, lifetime_access, avatar_url, profile_goals, notification_preferences')
@@ -1274,24 +1286,27 @@ export async function getProfileStats(telegramId: number) {
   const [
     { data: history, error: historyError },
     { data: streak, error: streakError },
-    { data: payments, error: paymentsError },
     { data: checkins, error: checkinsError },
-    { data: practiceDays, error: practiceDaysError }
+    { data: practiceDays, error: practiceDaysError },
+    { data: playbackSessions, error: playbackSessionsError }
   ] =
     await Promise.all([
-      supabase.from('history').select('completion_percent, last_position, completed, last_played, meditations(category)').eq('telegram_id', telegramId),
+      supabase.from('history').select('completion_percent, last_position, listened_seconds, completed, last_played, meditations(category)').eq('telegram_id', telegramId),
       supabase.from('streaks').select('*').eq('telegram_id', telegramId).maybeSingle(),
-      supabase.from('payments').select('plan, created_at').eq('telegram_id', telegramId).order('created_at', { ascending: false }),
       supabase.from('daily_checkins').select('local_date, mood').eq('telegram_id', telegramId),
-      supabase.from('practice_days').select('local_date, source, minutes, sessions').eq('telegram_id', telegramId).order('local_date', { ascending: false })
+      supabase.from('practice_days').select('local_date, source, minutes, sessions').eq('telegram_id', telegramId).order('local_date', { ascending: false }),
+      supabase.from('playback_sessions').select('listened_seconds, completed_at, created_at, local_date').eq('telegram_id', telegramId)
     ]);
   if (historyError) throw historyError;
   if (streakError) throw streakError;
-  if (paymentsError) throw paymentsError;
   if (checkinsError) throw checkinsError;
   const safePracticeDays = practiceDaysError ? [] : (practiceDays ?? []);
+  const safePlaybackSessions = playbackSessionsError ? [] : (playbackSessions ?? []);
   if (practiceDaysError) {
     console.warn('Practice day stats unavailable; using history fallback.', practiceDaysError.message);
+  }
+  if (playbackSessionsError) {
+    console.warn('Verified playback stats unavailable; using history fallback.', playbackSessionsError.message);
   }
 
   const { data: legacyProgress, error: progressError } = await supabase
@@ -1312,20 +1327,16 @@ export async function getProfileStats(telegramId: number) {
     console.warn('Breath session stats unavailable; continuing with meditation stats only.', breathError.message);
   }
 
-  const completedMeditations = (history ?? []).filter((item) => item.completed).length + (legacyProgress?.length ?? 0);
+  const verifiedCompletedSessions = safePlaybackSessions.filter((item) => item.completed_at).length;
+  const legacyCompletedMeditations = (history ?? []).filter((item) => item.completed).length;
+  const completedMeditations = Math.max(verifiedCompletedSessions, legacyCompletedMeditations) + (legacyProgress?.length ?? 0);
   const completedBreathSessions = safeBreathSessions.length;
   const completed = completedMeditations + completedBreathSessions;
-  const meditationMinutes = Math.round((history ?? []).reduce((sum, item) => sum + (item.last_position ?? 0), 0) / 60);
+  const verifiedMeditationSeconds = safePlaybackSessions.reduce((sum, item) => sum + Number(item.listened_seconds ?? 0), 0);
+  const legacyMeditationSeconds = (history ?? []).reduce((sum, item) => sum + Number(item.listened_seconds ?? item.last_position ?? 0), 0);
+  const meditationMinutes = Math.round(Math.max(verifiedMeditationSeconds, legacyMeditationSeconds) / 60);
   const breathMinutes = Math.round(safeBreathSessions.reduce((sum, item) => sum + (item.duration_seconds ?? 0), 0) / 60);
   const minutesListened = meditationMinutes + breathMinutes;
-  const weekStart = daysAgo(6).toISOString();
-  const weeklyMeditationMinutes = Math.round((history ?? [])
-    .filter((item) => item.last_played && new Date(item.last_played).toISOString() >= weekStart)
-    .reduce((sum, item) => sum + (item.last_position ?? 0), 0) / 60);
-  const weeklyBreathMinutes = Math.round(safeBreathSessions
-    .filter((item) => item.completed_at && new Date(item.completed_at).toISOString() >= weekStart)
-    .reduce((sum, item) => sum + (item.duration_seconds ?? 0), 0) / 60);
-  const weeklyPracticeMinutes = weeklyMeditationMinutes + weeklyBreathMinutes;
   const calmScore = Math.min(100, 42 + completed * 7);
   const lastMeditationDate = (history ?? [])
     .map((item) => item.last_played)
@@ -1333,7 +1344,8 @@ export async function getProfileStats(telegramId: number) {
     .sort()
     .at(-1);
   const lastBreathDate = safeBreathSessions[0]?.completed_at;
-  const lastPracticeDate = [lastMeditationDate, lastBreathDate].filter(Boolean).sort().at(-1) ?? null;
+  const lastPlaybackDate = safePlaybackSessions.map((item) => item.completed_at ?? item.created_at).filter(Boolean).sort().at(-1);
+  const lastPracticeDate = [lastMeditationDate, lastBreathDate, lastPlaybackDate].filter(Boolean).sort().at(-1) ?? null;
   const gardenLevel = minutesListened >= 150 ? 5 : minutesListened >= 60 ? 4 : minutesListened >= 30 ? 3 : minutesListened >= 10 ? 2 : 1;
   const moonGarden = await getMoonGardenState(telegramId, {
     completedMeditations,
@@ -1343,7 +1355,7 @@ export async function getProfileStats(telegramId: number) {
     gardenLevel
   });
   const activeUntil = user?.active_until ? new Date(user.active_until).getTime() : 0;
-  const hasPremiumAccess = Boolean(user?.lifetime_access || activeUntil > Date.now() || payments?.[0]?.plan);
+  const hasPremiumAccess = Boolean(user?.lifetime_access || activeUntil > Date.now());
   const hasMorningPractice = (history ?? []).some((item) => {
     const hour = item.last_played ? new Date(item.last_played).getHours() : -1;
     return hour >= 5 && hour < 12;
@@ -1364,12 +1376,14 @@ export async function getProfileStats(telegramId: number) {
     breathSessions: safeBreathSessions,
     practiceDays: safePracticeDays
   });
-  const currentWeek = buildCurrentWeekStats({
-    practiceDayKeys,
+  const currentWeek = buildCanonicalCurrentWeek({
     practiceDays: safePracticeDays,
-    history: history ?? [],
-    breathSessions: safeBreathSessions,
-    lastFreezeUsed: streak?.last_freeze_used ?? null
+    playbackSessions: safePlaybackSessions.map((item) => ({
+      ...item,
+      local_date: item.local_date ?? (item.created_at ? dateKey(item.created_at) : null)
+    })),
+    lastFreezeUsed: streak?.last_freeze_used ?? null,
+    localDate: todayKey(localDate)
   });
   const lifetimeStats = {
     totalListeningMinutes: minutesListened,
@@ -1378,7 +1392,7 @@ export async function getProfileStats(telegramId: number) {
     practiceDays: practiceDayKeys.size,
     completedWeeks: countCompletedWeeks(practiceDayKeys)
   };
-  const moodTrend = buildMoodTrend(checkins ?? []);
+  const moodTrend = buildMoodTrend(checkins ?? [], todayKey(localDate));
   const achievements = await syncAchievements(telegramId, {
     completedMeditations,
     completedBreathSessions,
@@ -1420,11 +1434,11 @@ export async function getProfileStats(telegramId: number) {
       100: Boolean(streak?.reward_100)
     },
     minutesListened,
-    weeklyPracticeMinutes,
+    weeklyPracticeMinutes: currentWeek.listeningMinutes,
     weeklyStats: {
       listeningMinutes: currentWeek.listeningMinutes,
       completedSessions: currentWeek.completedSessions,
-      checkins: (checkins ?? []).filter((item) => item.local_date && item.local_date >= currentWeek.weekStart).length,
+      checkins: (checkins ?? []).filter((item) => item.local_date && item.local_date >= currentWeek.weekStart && item.local_date <= todayKey(localDate)).length,
       completedDays: currentWeek.completedDays
     },
     lifetimeStats,
@@ -1441,7 +1455,7 @@ export async function getProfileStats(telegramId: number) {
     gardenLevel: moonGarden.gardenLevel,
     streakDays: streak?.current_streak ?? 0,
     lastPracticeDate,
-    purchasedPlan: payments?.[0]?.plan ?? 'free',
+    purchasedPlan: user?.lifetime_access ? 'lifetime' : activeUntil > Date.now() ? 'monthly' : 'free',
     calmScore,
     achievements
   };
@@ -1606,28 +1620,52 @@ export async function updateMoonGardenDevState(
   };
 }
 
+async function applySuccessfulPaymentEntitlement(telegramId: number, planId: PlanId) {
+  const now = new Date();
+  const activeUntil = planId === 'monthly'
+    ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    : null;
+  const currentAccess = await getUserAccess(telegramId);
+  const updates = currentAccess.plan === 'Lifetime'
+    ? { lifetime_access: true, active_until: null }
+    : planId === 'lifetime'
+      ? { lifetime_access: true, active_until: null }
+      : { lifetime_access: false, active_until: activeUntil };
+
+  const { error: userError } = await supabase
+    .from('users')
+    .update(updates)
+    .eq('telegram_id', telegramId);
+
+  if (userError) throw userError;
+
+  const seedsGranted = await grantPremiumMoonSeedsBonus(telegramId);
+  return { seedsGranted, access: await getUserAccess(telegramId) };
+}
+
 export async function recordSuccessfulPayment(input: {
   telegram_id: number;
   plan: PlanId;
   telegram_payment_charge_id?: string;
   provider_payment_charge_id?: string;
-}): Promise<boolean> {
+}) {
   const plan = plans[input.plan];
-  const now = new Date();
-  const activeUntil =
-    input.plan === 'monthly'
-      ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
-      : null;
 
   if (input.telegram_payment_charge_id) {
     const { data: existingPayment, error: existingPaymentError } = await supabase
       .from('payments')
-      .select('id')
+      .select('id, telegram_id, plan')
       .eq('telegram_payment_charge_id', input.telegram_payment_charge_id)
       .maybeSingle();
 
     if (existingPaymentError) throw existingPaymentError;
-    if (existingPayment) return false;
+    if (existingPayment) {
+      if (Number(existingPayment.telegram_id) !== input.telegram_id || !isPlanId(existingPayment.plan)) {
+        throw new Error('Telegram payment charge does not match the Luna account.');
+      }
+      const recovered = await applySuccessfulPaymentEntitlement(input.telegram_id, existingPayment.plan);
+      return { isNewPayment: false, ...recovered };
+    }
   }
 
   const { error: paymentError } = await supabase.from('payments').insert({
@@ -1641,24 +1679,18 @@ export async function recordSuccessfulPayment(input: {
   });
 
   if (paymentError) {
-    if ('code' in paymentError && paymentError.code === '23505') return false;
+    if ('code' in paymentError && paymentError.code === '23505') {
+      const recovered = await applySuccessfulPaymentEntitlement(input.telegram_id, input.plan);
+      return { isNewPayment: false, ...recovered };
+    }
     throw paymentError;
   }
 
-  const updates =
-    input.plan === 'lifetime'
-      ? { lifetime_access: true, active_until: null }
-      : { lifetime_access: false, active_until: activeUntil };
-
-  const { error: userError } = await supabase
-    .from('users')
-    .update(updates)
-    .eq('telegram_id', input.telegram_id);
-
-  if (userError) throw userError;
-
-  await grantPremiumMoonSeedsBonus(input.telegram_id);
-  return true;
+  const applied = await applySuccessfulPaymentEntitlement(input.telegram_id, input.plan);
+  return {
+    isNewPayment: true,
+    ...applied
+  };
 }
 
 export async function getAdminStats() {

@@ -128,6 +128,8 @@ create table if not exists public.history (
   play_count integer not null default 0,
   completion_percent numeric(5,2) not null default 0 check (completion_percent >= 0 and completion_percent <= 100),
   last_position integer not null default 0 check (last_position >= 0),
+  listened_seconds integer not null default 0 check (listened_seconds >= 0),
+  listened_ranges jsonb not null default '[]'::jsonb,
   seed_awarded_position integer not null default 0 check (seed_awarded_position >= 0),
   completion_seed_bonus_awarded boolean not null default false,
   completed boolean not null default false,
@@ -141,6 +143,9 @@ create table if not exists public.playback_sessions (
   started_at timestamptz not null default now(),
   last_heartbeat_at timestamptz not null default now(),
   listened_seconds integer not null default 0 check (listened_seconds >= 0),
+  listened_ranges jsonb not null default '[]'::jsonb,
+  local_date date not null default current_date,
+  practice_day_recorded boolean not null default false,
   last_position integer not null default 0 check (last_position >= 0),
   completed_at timestamptz,
   created_at timestamptz not null default now()
@@ -192,9 +197,9 @@ create table if not exists public.practice_days (
 create table if not exists public.daily_checkins (
   id uuid primary key default gen_random_uuid(),
   telegram_id bigint not null references public.users(telegram_id) on delete cascade,
-  sleep_range text not null check (sleep_range in ('less_than_4', '4_6', '6_8', '8_plus')),
+  sleep_range text check (sleep_range in ('less_than_4', '4_6', '6_8', '8_plus')),
   mood text not null check (mood in ('calm', 'stressed', 'tired', 'anxious', 'focused', 'low_energy')),
-  available_minutes text not null check (available_minutes in ('3', '5', '10', '15_plus')),
+  available_minutes text check (available_minutes in ('3', '5', '10', '15_plus')),
   local_date date not null,
   created_at timestamptz not null default now(),
   unique (telegram_id, local_date)
@@ -301,7 +306,26 @@ alter table public.ai_usage add column if not exists estimated_cost numeric(12,6
 
 alter table public.history
   add column if not exists seed_awarded_position integer not null default 0 check (seed_awarded_position >= 0),
-  add column if not exists completion_seed_bonus_awarded boolean not null default false;
+  add column if not exists completion_seed_bonus_awarded boolean not null default false,
+  add column if not exists listened_seconds integer not null default 0 check (listened_seconds >= 0),
+  add column if not exists listened_ranges jsonb not null default '[]'::jsonb;
+
+alter table public.playback_sessions
+  add column if not exists listened_ranges jsonb not null default '[]'::jsonb,
+  add column if not exists local_date date,
+  add column if not exists practice_day_recorded boolean not null default false;
+
+update public.playback_sessions
+set local_date = (created_at at time zone 'UTC')::date
+where local_date is null;
+
+alter table public.playback_sessions
+  alter column local_date set default current_date,
+  alter column local_date set not null;
+
+alter table public.daily_checkins
+  alter column sleep_range drop not null,
+  alter column available_minutes drop not null;
 
 alter table public.moon_gardens
   add column if not exists premium_bonus_granted_at timestamptz;

@@ -129,7 +129,8 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
       setError('');
       return next;
     } catch (loadError) {
-      setError(errorDetails(loadError, language).message);
+      console.info('[Luna conversation history load failed]', loadError instanceof Error ? loadError.name : 'unknown');
+      setError(language === 'ru' ? 'Не удалось загрузить историю разговоров. Можно начать новый разговор или обновить историю.' : 'Conversation history could not load. You can start a new conversation or reload the history.');
       return [];
     }
   }, [initData, language]);
@@ -148,7 +149,8 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
         if (list) list.scrollTop = list.scrollHeight;
       });
     } catch (loadError) {
-      setError(errorDetails(loadError, language).message);
+      console.info('[Luna conversation load failed]', loadError instanceof Error ? loadError.name : 'unknown');
+      setError(language === 'ru' ? 'Не удалось открыть этот разговор. Обнови историю и попробуй снова.' : 'This conversation could not open. Reload the history and try again.');
     } finally {
       setLoading(false);
     }
@@ -337,7 +339,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
         {error ? <div className="luna-live-error" role="status">
           <p>{error}</p>
           <button type="button" disabled={loading} onClick={() => void refreshConversations()}>
-            <RotateCcw size={14} />{language === 'ru' ? 'Повторить' : 'Retry'}
+            <RotateCcw size={14} />{language === 'ru' ? 'Обновить историю' : 'Reload history'}
           </button>
         </div> : null}
       </div>

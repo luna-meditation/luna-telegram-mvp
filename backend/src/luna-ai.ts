@@ -108,6 +108,7 @@ type OpenAiResponse = {
   choices?: Array<{ finish_reason?: string; message?: { content?: OpenAiContentItem[] | string } }>;
   incomplete_details?: { reason?: string };
   usage?: { input_tokens?: number; output_tokens?: number; total_tokens?: number };
+  _requestId?: string | null;
 };
 
 type ExtractedOpenAiText = { text: string; refusal: string | null; path: string };
@@ -315,6 +316,71 @@ function extractFinishReason(response: OpenAiResponse) {
   return outputReason ?? response.choices?.find((choice) => choice.finish_reason)?.finish_reason ?? response.incomplete_details?.reason ?? response.status ?? 'unknown';
 }
 
+function openAiOutputTypes(response: OpenAiResponse) {
+  return (response.output ?? []).map((item) => ({
+    type: item.type ?? 'unknown',
+    status: item.status ?? null,
+    contentTypes: Array.isArray(item.content)
+      ? item.content.map((content) => content.type ?? 'unknown')
+      : typeof item.content
+  }));
+}
+
+function classifyOpenAiHttpError(status: number, body: string) {
+  let apiCode = '';
+  let apiType = '';
+  try {
+    const parsed = JSON.parse(body) as { error?: { code?: unknown; type?: unknown } };
+    apiCode = typeof parsed.error?.code === 'string' ? parsed.error.code : '';
+    apiType = typeof parsed.error?.type === 'string' ? parsed.error.type : '';
+  } catch {
+    // The status remains enough to classify a non-JSON upstream failure.
+  }
+  if (status === 401 || status === 403) return { code: 'openai_auth', retryable: false, apiCode, apiType };
+  if (status === 429 && (apiCode === 'insufficient_quota' || apiType === 'insufficient_quota')) return { code: 'openai_quota', retryable: false, apiCode, apiType };
+  if (status === 429) return { code: 'openai_rate_limit', retryable: true, apiCode, apiType };
+  if (status === 404 || apiCode === 'model_not_found') return { code: 'openai_model', retryable: false, apiCode, apiType };
+  if (status === 400 || status === 422) return { code: 'openai_validation', retryable: false, apiCode, apiType };
+  if (status === 408) return { code: 'timeout', retryable: true, apiCode, apiType };
+  if (status >= 500) return { code: 'temporary_upstream', retryable: true, apiCode, apiType };
+  return { code: 'openai_error', retryable: false, apiCode, apiType };
+}
+
+let providerHealthCache: { expiresAt: number; value: { available: boolean; enabled: boolean; model: string; errorClass: string | null } } | null = null;
+
+export async function getLunaProviderHealth() {
+  const base = { enabled: env.AI_CHAT_ENABLED, model: env.AI_CHAT_MODEL };
+  if (!env.AI_CHAT_ENABLED) return { ...base, available: false, errorClass: 'disabled' };
+  if (!env.OPENAI_API_KEY) return { ...base, available: false, errorClass: 'missing_api_key' };
+  if (providerHealthCache && providerHealthCache.expiresAt > Date.now()) return providerHealthCache.value;
+
+  try {
+    const response = await fetch(`https://api.openai.com/v1/models/${encodeURIComponent(env.AI_CHAT_MODEL)}`, {
+      headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}` },
+      signal: AbortSignal.timeout(5000)
+    });
+    const requestId = response.headers.get('x-request-id');
+    const value = response.ok
+      ? { ...base, available: true, errorClass: null }
+      : { ...base, available: false, errorClass: classifyOpenAiHttpError(response.status, '').code };
+    console.info('[Luna AI health]', {
+      requestId,
+      status: response.status,
+      model: env.AI_CHAT_MODEL,
+      available: value.available,
+      errorClass: value.errorClass
+    });
+    providerHealthCache = { expiresAt: Date.now() + 60_000, value };
+    return value;
+  } catch (error) {
+    const errorClass = error instanceof Error && error.name === 'TimeoutError' ? 'timeout' : 'temporary_upstream';
+    const value = { ...base, available: false, errorClass };
+    console.warn('[Luna AI health failed]', { model: env.AI_CHAT_MODEL, errorClass });
+    providerHealthCache = { expiresAt: Date.now() + 15_000, value };
+    return value;
+  }
+}
+
 export function shouldRetryOpenAiResponse(response: OpenAiResponse, extracted: ExtractedOpenAiText | null) {
   return !extracted && response.incomplete_details?.reason === 'max_output_tokens';
 }
@@ -446,29 +512,58 @@ async function callOpenAiResponses(input: {
     maxOutputTokens: input.requestBody.max_output_tokens
   });
 
-  const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    signal: input.signal,
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${env.OPENAI_API_KEY}` },
-    body: JSON.stringify(input.requestBody)
-  });
+  let response: Response;
+  try {
+    response = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      signal: input.signal,
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${env.OPENAI_API_KEY}` },
+      body: JSON.stringify(input.requestBody)
+    });
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') throw error;
+    throw new LunaAiError('temporary_upstream', 'OpenAI could not be reached.', 502, true);
+  }
   const body = await response.text();
+  const openAiRequestId = response.headers.get('x-request-id');
   console.info('[Luna AI OpenAI response]', {
     user: userHash(input.telegramId),
     conversationId: input.conversationId,
     attempt: input.attempt,
     status: response.status,
+    openAiRequestId,
     model: env.AI_CHAT_MODEL,
     responseBytes: body.length
   });
 
   if (!response.ok) {
-    const code = response.status === 429 ? 'openai_rate_limit' : response.status === 401 ? 'openai_auth' : 'openai_error';
-    throw new LunaAiError(code, `OpenAI request failed with status ${response.status}.`, response.status === 429 ? 429 : 502, response.status !== 401);
+    const failure = classifyOpenAiHttpError(response.status, body);
+    console.error('[Luna AI OpenAI API error]', {
+      user: userHash(input.telegramId),
+      conversationId: input.conversationId,
+      openAiRequestId,
+      httpStatus: response.status,
+      model: input.requestBody.model,
+      apiCode: failure.apiCode || null,
+      apiType: failure.apiType || null,
+      internalErrorClass: failure.code
+    });
+    throw new LunaAiError(failure.code, `OpenAI request failed with status ${response.status}.`, response.status === 429 ? 429 : 502, failure.retryable);
   }
 
   try {
     const parsed = JSON.parse(body) as OpenAiResponse;
+    parsed._requestId = openAiRequestId;
+    console.info('[Luna AI OpenAI response shape]', {
+      user: userHash(input.telegramId),
+      conversationId: input.conversationId,
+      openAiRequestId,
+      httpStatus: response.status,
+      model: parsed.model ?? input.requestBody.model,
+      responseStatus: parsed.status ?? 'unknown',
+      outputItemTypes: openAiOutputTypes(parsed),
+      finishReason: extractFinishReason(parsed)
+    });
     return parsed;
   } catch {
     throw new LunaAiError('malformed_response', 'OpenAI returned invalid JSON.', 502);
@@ -540,7 +635,7 @@ async function existingCompletedResponse(telegramId: number, requestId: string, 
 
 export function classifyLunaFailure(error: unknown) {
   if (error instanceof LunaAiError) {
-    const retryableCodes = new Set(['timeout', 'rate_limit', 'openai_rate_limit', 'malformed_response', 'max_output_tokens', 'temporary_upstream', 'openai_error', 'request_in_progress']);
+    const retryableCodes = new Set(['timeout', 'rate_limit', 'openai_rate_limit', 'malformed_response', 'max_output_tokens', 'temporary_upstream', 'request_in_progress']);
     return { code: error.code, retryable: error.retryable || retryableCodes.has(error.code) };
   }
   if (error instanceof z.ZodError) return { code: 'permanent_validation', retryable: false };
@@ -845,8 +940,12 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       user: userHash(telegramId),
       conversationId: resolvedConversationId,
       model: openAiResponse.model ?? env.AI_CHAT_MODEL,
+      openAiRequestId: openAiResponse._requestId ?? null,
+      responseStatus: openAiResponse.status ?? 'unknown',
+      outputItemTypes: openAiOutputTypes(openAiResponse),
       finishReason,
       extractedPath: extracted.path,
+      parsedResultType: extracted.refusal ? 'refusal' : extracted.text.trim().startsWith('{') ? 'structured_or_json_text' : 'plain_text',
       hasText: Boolean(extracted.text),
       hasRefusal: Boolean(extracted.refusal)
     });

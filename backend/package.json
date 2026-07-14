@@ -11,7 +11,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test": "tsx --test src/auth.test.ts src/luna-ai-policy.test.ts src/luna-ai-response.test.ts src/luna-ai-reliability.test.ts src/luna-ai-ui.test.ts",
+    "test": "tsx --test src/auth.test.ts src/luna-ai-policy.test.ts src/luna-ai-response.test.ts src/luna-ai-reliability.test.ts src/luna-ai-ui.test.ts src/playback-security.test.ts src/progress-model.test.ts src/payment-policy.test.ts",
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit"
   },
