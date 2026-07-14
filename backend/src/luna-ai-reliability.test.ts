@@ -6,6 +6,7 @@ import test from 'node:test';
 const migration = readFileSync(resolve(process.cwd(), '../database/migrations/003_luna_ai_reliability.sql'), 'utf8');
 const backend = readFileSync(resolve(process.cwd(), 'src/luna-ai.ts'), 'utf8');
 const frontend = readFileSync(resolve(process.cwd(), '../frontend/src/components/LunaChat.tsx'), 'utf8');
+const server = readFileSync(resolve(process.cwd(), 'src/server.ts'), 'utf8');
 
 test('database enforces one logical request and one message per role', () => {
   assert.match(migration, /unique \(telegram_id, client_request_id\)/);
@@ -61,4 +62,14 @@ test('pending intent and action survive a multi-turn clarification', () => {
   assert.match(backend, /inferPendingStateFromRecent/);
   assert.match(backend, /effectiveExplicitRequest/);
   assert.match(backend, /duplicateClarification/);
+});
+
+test('production truth telemetry and admin version diagnostics are server-protected', () => {
+  assert.match(server, /app\.get\('\/api\/version', requireTelegramWebApp/);
+  assert.match(server, /if \(!assertAdmin\(req, res\)\) return;/);
+  assert.match(server, /app\.post\('\/api\/client-events', requireTelegramWebApp/);
+  assert.match(server, /backendSha: getBackendVersion\(\)\.commitSha/);
+  assert.match(backend, /\[Luna AI pending state loaded\]/);
+  assert.match(backend, /\[Luna AI pending state resolved\]/);
+  assert.match(backend, /\[Luna AI card action generated\]/);
 });

@@ -48,6 +48,7 @@ import { isPlanId, isValidTelegramInvoiceUrl } from './plans.js';
 import { paymentEligibility } from './payment-policy.js';
 import { logBackendError, type RequestWithId } from './error-logging.js';
 import { PlaybackInputError } from './playback-security.js';
+import { getBackendVersion } from './version.js';
 import {
   clearLunaConversations,
   deleteLunaConversation,
@@ -177,6 +178,7 @@ function storagePathFromPublicUrl(publicUrl?: string | null, bucket = 'avatars')
 app.use('/api/admin', rateLimit({ windowMs: 60_000, max: 120 }));
 app.use('/api/payments', rateLimit({ windowMs: 60_000, max: 30 }));
 app.use('/api/luna', rateLimit({ windowMs: 60_000, max: 30 }));
+app.use('/api/client-events', rateLimit({ windowMs: 60_000, max: 120 }));
 
 app.post(
   '/api/admin/storage/:kind',
@@ -288,6 +290,72 @@ app.get('/api/debug/admin', requireTelegramWebApp, (req, res) => {
     authenticationStatus: 'authenticated_admin',
     authenticationError: null
   });
+});
+
+app.get('/api/version', requireTelegramWebApp, (req, res) => {
+  if (!assertAdmin(req, res)) return;
+  res.json(getBackendVersion());
+});
+
+const clientEventNames = new Set([
+  'payment_button_clicked', 'invoice_request_started', 'invoice_response_received', 'invoice_url_validated',
+  'open_invoice_available', 'open_invoice_called', 'open_invoice_callback', 'open_invoice_exception',
+  'payment_timeout', 'payment_failed', 'entitlement_refresh_started', 'entitlement_refresh_completed',
+  'luna_message_sent', 'pending_state_loaded', 'pending_state_value', 'model_request_started',
+  'model_result_received', 'resolved_intent', 'resolved_meditation_id', 'card_action_generated',
+  'card_render_attempted', 'card_render_success', 'card_render_failed', 'duplicate_reply_blocked'
+]);
+
+function safeClientUrlHost(value: unknown) {
+  if (typeof value !== 'string' || !value) return null;
+  try {
+    return new URL(value.includes('://') ? value : `https://${value}`).host || null;
+  } catch {
+    return null;
+  }
+}
+
+app.post('/api/client-events', requireTelegramWebApp, (req, res) => {
+  const authReq = req as AuthenticatedRequest;
+  const body = req.body && typeof req.body === 'object' ? req.body as Record<string, unknown> : {};
+  const event = typeof body.event === 'string' ? body.event.slice(0, 80) : '';
+
+  if (!clientEventNames.has(event)) {
+    res.status(400).json({ error: 'Unsupported client event.' });
+    return;
+  }
+
+  const errorName = typeof body.errorName === 'string' ? body.errorName.slice(0, 120) : null;
+  const errorMessage = typeof body.errorMessage === 'string' ? body.errorMessage.slice(0, 500) : null;
+  const payload = {
+    event,
+    requestId: typeof body.requestId === 'string' ? body.requestId.slice(0, 128) : null,
+    telegramId: authReq.telegramUser.telegram_id,
+    plan: body.plan === 'monthly' || body.plan === 'lifetime' ? body.plan : null,
+    frontendSha: typeof body.frontendSha === 'string' ? body.frontendSha.slice(0, 160) : 'unknown',
+    backendSha: getBackendVersion().commitSha,
+    platform: typeof body.platform === 'string' ? body.platform.slice(0, 40) : null,
+    webAppVersion: typeof body.webAppVersion === 'string' ? body.webAppVersion.slice(0, 40) : null,
+    urlHost: safeClientUrlHost(body.urlHost),
+    hasTelegramWebApp: body.hasTelegramWebApp === true,
+    hasOpenInvoice: body.hasOpenInvoice === true,
+    callbackStatus: typeof body.callbackStatus === 'string' ? body.callbackStatus.slice(0, 40) : null,
+    invoiceHost: safeClientUrlHost(body.invoiceHost),
+    intent: typeof body.intent === 'string' ? body.intent.slice(0, 80) : null,
+    meditationId: typeof body.meditationId === 'string' ? body.meditationId.slice(0, 120) : null,
+    pendingIntent: typeof body.pendingIntent === 'string' ? body.pendingIntent.slice(0, 80) : null,
+    pendingMeditationId: typeof body.pendingMeditationId === 'string' ? body.pendingMeditationId.slice(0, 120) : null,
+    pendingAction: typeof body.pendingAction === 'string' ? body.pendingAction.slice(0, 80) : null,
+    pendingStatePresent: body.pendingStatePresent === true,
+    hasAssistantMessage: body.hasAssistantMessage === true,
+    reason: typeof body.reason === 'string' ? body.reason.slice(0, 180) : null,
+    errorName,
+    errorMessage,
+    serverRequestId: (req as RequestWithId).requestId ?? null
+  };
+
+  console.info('[Luna client telemetry]', payload);
+  res.status(202).json({ ok: true });
 });
 
 app.post('/api/users/sync', requireTelegramWebApp, async (req, res, next) => {

@@ -12,6 +12,7 @@ import {
   type Meditation
 } from '../api';
 import { useChatViewport } from '../hooks/useChatViewport';
+import { recordLunaStage } from '../runtime-diagnostics';
 import { formatMeditationDuration } from '../utils/duration';
 
 type LunaChatProps = {
@@ -113,6 +114,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
   const listRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const nearBottomRef = useRef(true);
+  const renderedCardsRef = useRef(new Set<string>());
   useChatViewport(true);
 
   const prompts = language === 'ru'
@@ -229,8 +231,24 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
     if (!retry) setMessages((current) => [...current, optimistic]);
     setThinking(true);
     nearBottomRef.current = true;
+    recordLunaStage('luna_message_sent', { requestId: clientRequestId }, initData);
+    recordLunaStage('model_request_started', { requestId: clientRequestId }, initData);
     try {
       const result = await sendLunaMessage({ conversationId: activeId || undefined, message: clean, language, requestId: clientRequestId }, initData);
+      const recommendationId = result.message.metadata?.meditationAction?.meditationId ?? result.message.metadata?.recommendedMeditationId ?? null;
+      const pendingState = result.message.metadata?.pending_state;
+      recordLunaStage('model_result_received', { requestId: clientRequestId, hasAssistantMessage: Boolean(result.message.content) }, initData);
+      recordLunaStage('pending_state_loaded', { requestId: clientRequestId, pendingStatePresent: Boolean(pendingState || result.message.metadata?.pending_action) }, initData);
+      recordLunaStage('pending_state_value', {
+        requestId: clientRequestId,
+        pendingIntent: pendingState?.pending_intent ?? null,
+        pendingMeditationId: pendingState?.pending_meditation_id ?? null,
+        pendingAction: result.message.metadata?.pending_action ?? pendingState?.pending_action ?? null
+      }, initData);
+      recordLunaStage('resolved_intent', { requestId: clientRequestId, intent: result.message.metadata?.resolvedIntent ?? null }, initData);
+      if (recommendationId) recordLunaStage('resolved_meditation_id', { requestId: clientRequestId, meditationId: recommendationId }, initData);
+      if (result.message.metadata?.meditationAction) recordLunaStage('card_action_generated', { requestId: clientRequestId, meditationId: recommendationId }, initData);
+      if (result.message.metadata?.duplicateClarificationBlocked) recordLunaStage('duplicate_reply_blocked', { requestId: clientRequestId }, initData);
       setActiveId(result.conversationId);
       window.localStorage.setItem(activeConversationKey, result.conversationId);
       setMessages((current) => [...current, result.message]);
@@ -260,6 +278,22 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
 
   const activeTitle = conversations.find((conversation) => conversation.id === activeId)?.title || 'Luna';
   const visibleMessages = useMemo(() => messages.filter((message) => message.role === 'user' || message.role === 'assistant'), [messages]);
+
+  useEffect(() => {
+    visibleMessages.forEach((message) => {
+      if (message.role !== 'assistant' || renderedCardsRef.current.has(message.id)) return;
+      const recommendationId = message.metadata?.meditationAction?.meditationId ?? message.metadata?.recommendedMeditationId;
+      if (!recommendationId) return;
+      renderedCardsRef.current.add(message.id);
+      recordLunaStage('card_render_attempted', { requestId: message.request_id ?? null, meditationId: recommendationId }, initData);
+      const recommendation = meditations.find((item) => item.id === recommendationId);
+      recordLunaStage(recommendation ? 'card_render_success' : 'card_render_failed', {
+        requestId: message.request_id ?? null,
+        meditationId: recommendationId,
+        reason: recommendation ? null : 'published meditation was not present in the frontend catalog'
+      }, initData);
+    });
+  }, [initData, meditations, visibleMessages]);
 
   if (screen === 'overview') {
     return (

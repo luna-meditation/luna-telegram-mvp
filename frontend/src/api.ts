@@ -252,6 +252,15 @@ export type LunaMessage = {
     } | null;
     recommendedMeditation?: Meditation | null;
     safetyState?: string;
+    resolvedIntent?: string | null;
+    pending_action?: string | null;
+    pending_state?: {
+      pending_intent?: string;
+      pending_meditation_id?: string | null;
+      pending_action?: string;
+      clarification_hash?: string | null;
+    } | null;
+    duplicateClarificationBlocked?: boolean;
   };
   created_at: string;
 };
@@ -663,6 +672,53 @@ export type AdminDebugInfo = {
 
 export async function getAdminDebug(initData?: string) {
   return request<AdminDebugInfo>('/api/debug/admin', undefined, initData);
+}
+
+export type BackendVersion = {
+  commitSha: string;
+  buildTimestamp: string;
+  environment: string;
+  serviceName: string;
+  apiVersion: string;
+  aiChatEnabled: boolean;
+  aiModel: string;
+};
+
+export async function getBackendVersion(initData?: string) {
+  return request<BackendVersion>('/api/version', undefined, initData);
+}
+
+export type ClientEventName =
+  | 'payment_button_clicked'
+  | 'invoice_request_started'
+  | 'invoice_response_received'
+  | 'invoice_url_validated'
+  | 'open_invoice_available'
+  | 'open_invoice_called'
+  | 'open_invoice_callback'
+  | 'open_invoice_exception'
+  | 'payment_timeout'
+  | 'payment_failed'
+  | 'entitlement_refresh_started'
+  | 'entitlement_refresh_completed'
+  | 'luna_message_sent'
+  | 'pending_state_loaded'
+  | 'pending_state_value'
+  | 'model_request_started'
+  | 'model_result_received'
+  | 'resolved_intent'
+  | 'resolved_meditation_id'
+  | 'card_action_generated'
+  | 'card_render_attempted'
+  | 'card_render_success'
+  | 'card_render_failed'
+  | 'duplicate_reply_blocked';
+
+export async function sendClientEvent(event: ClientEventName, details: Record<string, unknown>, initData?: string) {
+  return request<{ ok: true }>('/api/client-events', {
+    method: 'POST',
+    body: JSON.stringify({ event, ...details })
+  }, initData);
 }
 
 export type AdminUser = {

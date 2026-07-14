@@ -36,6 +36,7 @@ import {
   deleteMeditation,
   getAccess,
   checkAdmin,
+  getBackendVersion,
   getAdminDashboard,
   getCategories,
   getAdminMeditations,
@@ -67,6 +68,7 @@ import {
   updateMeditation,
   updateAdminUserAccess,
   uploadAdminAsset,
+  apiDebugConfig,
   type AccessState,
   ApiRequestError,
   type AdminDashboardData,
@@ -82,12 +84,15 @@ import {
   type NotificationPreferences,
   type PlaybackHistory,
   type ProfileStats,
-  type WellnessSummary
+  type WellnessSummary,
+  type BackendVersion,
+  type InvoiceLinkResult
 } from './api';
 import { MoonGardenScene as AnimatedMoonGardenScene } from './components/moon-garden/MoonGardenScene';
 import { LunaChat } from './components/LunaChat';
 import { V2BottomNav } from './v2/components/V2BottomNav';
 import { HomeV2 } from './v2/pages/HomeV2';
+import { frontendBuildMetadata, recordPaymentStage, useRuntimeDiagnostics, type RuntimeDiagnostics } from './runtime-diagnostics';
 
 type Page = 'home' | 'luna' | 'library' | 'progress' | 'favorites' | 'profile' | 'pricing' | 'player' | 'scenePlayer' | 'mantraPlayer' | 'breathCircle' | 'moonGarden' | 'admin';
 type Mood = 'Calm' | 'Stressed' | 'Tired' | 'Anxious' | 'Focused';
@@ -1234,8 +1239,9 @@ function getTelegram() {
 
 type TelegramInvoiceStatus = 'paid' | 'cancelled' | 'failed' | 'pending';
 
-function logPaymentStage(stage: string, details: Record<string, unknown>) {
+function logPaymentStage(stage: string, details: Record<string, unknown>, initData?: string) {
   console.info('[Luna payment]', { stage, ...details });
+  recordPaymentStage(stage, details, initData);
 }
 
 function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
@@ -1258,6 +1264,8 @@ function openTelegramInvoiceWithTimeout(
   telegram: TelegramWebApp | undefined,
   invoiceLink: string,
   paymentContext: { plan: 'monthly' | 'lifetime'; requestId: string; telegramId: number },
+  initData?: string,
+  userGesture = false,
   timeoutMs = 90_000
 ) {
   if (!telegram?.openInvoice) {
@@ -1266,9 +1274,15 @@ function openTelegramInvoiceWithTimeout(
       reason: 'Telegram.WebApp.openInvoice is not available in this runtime.',
       hasTelegramWebApp: Boolean(telegram),
       hasOpenInvoice: false
-    });
+    }, initData);
     return Promise.reject(new Error('Telegram WebApp invoice API is unavailable.'));
   }
+
+  logPaymentStage('open_invoice_available', {
+    ...paymentContext,
+    hasTelegramWebApp: true,
+    hasOpenInvoice: true
+  }, initData);
 
   return new Promise<TelegramInvoiceStatus>((resolve, reject) => {
     let settled = false;
@@ -1279,7 +1293,7 @@ function openTelegramInvoiceWithTimeout(
       callback();
     };
     const timeout = window.setTimeout(() => {
-      logPaymentStage('openInvoice_timeout', paymentContext);
+      logPaymentStage('openInvoice_timeout', paymentContext, initData);
       finish(() => reject(new Error('Telegram invoice confirmation timed out.')));
     }, timeoutMs);
 
@@ -1288,10 +1302,12 @@ function openTelegramInvoiceWithTimeout(
       logPaymentStage('openInvoice_called', {
         ...paymentContext,
         invoiceLink,
-        telegramApi: 'WebApp.openInvoice(url, callback)'
-      });
+        telegramApi: 'WebApp.openInvoice(url, callback)',
+        invokedAfterNetworkAwait: !userGesture,
+        directUserGesture: userGesture
+      }, initData);
       telegram.openInvoice?.(invoiceLink, (status) => {
-        logPaymentStage('openInvoice_callback', { ...paymentContext, status });
+        logPaymentStage('openInvoice_callback', { ...paymentContext, status }, initData);
         finish(() => resolve(status));
       });
     } catch (error) {
@@ -1300,7 +1316,7 @@ function openTelegramInvoiceWithTimeout(
         errorMessage: error instanceof Error ? error.message : String(error),
         errorStack: error instanceof Error ? error.stack ?? null : null,
         originalError: error
-      });
+      }, initData);
       finish(() => reject(error));
     }
   });
@@ -1978,6 +1994,7 @@ function MoonMark({ className = '' }: { className?: string }) {
 
 function App() {
   const telegram = getTelegram();
+  const runtimeDiagnostics = useRuntimeDiagnostics();
   const user = telegram?.initDataUnsafe.user ?? fallbackUser;
   const initData = telegram?.initData;
   const launchStartParam = miniAppStartParam();
@@ -2020,9 +2037,11 @@ function App() {
   const [moonGardenAmbienceError, setMoonGardenAmbienceError] = useState(false);
   const [paymentMessage, setPaymentMessage] = useState('');
   const [openingPlan, setOpeningPlan] = useState<'monthly' | 'lifetime' | null>(null);
+  const [pendingInvoice, setPendingInvoice] = useState<{ plan: 'monthly' | 'lifetime'; invoiceLink: string; requestId: string } | null>(null);
   const [adminStatus, setAdminStatus] = useState<'checking' | 'allowed' | 'denied'>('checking');
   const [adminMeditations, setAdminMeditations] = useState<Meditation[]>([]);
   const [adminDashboard, setAdminDashboard] = useState<AdminDashboardData | null>(null);
+  const [backendVersion, setBackendVersion] = useState<BackendVersion | null>(null);
   const [wellness, setWellness] = useState<WellnessSummary | null>(() => initialAccountCache?.wellness ?? null);
   const [accountLoading, setAccountLoading] = useState(!initialAccountCache);
   const [accountUnavailable, setAccountUnavailable] = useState(false);
@@ -2078,15 +2097,32 @@ function App() {
     return refresh;
   };
 
-  const refreshAccessAndPayments = async () => {
-    const accessState = await refreshAccount();
-    await getRecentSuccessfulPayments(initData).catch((error) => {
-      console.info('[Luna payment history refresh failed]', {
-        errorClass: error instanceof Error ? error.name : 'unknown',
-        status: error instanceof ApiRequestError ? error.status : null
+  const refreshAccessAndPayments = async (telemetryRequestId = createPaymentRequestId()) => {
+    logPaymentStage('entitlement_refresh_started', { requestId: telemetryRequestId }, initData);
+    try {
+      const accessState = await refreshAccount();
+      const payments = await getRecentSuccessfulPayments(initData).catch((error) => {
+        console.info('[Luna payment history refresh failed]', {
+          errorClass: error instanceof Error ? error.name : 'unknown',
+          status: error instanceof ApiRequestError ? error.status : null
+        });
+        return [];
       });
-    });
-    return accessState;
+      logPaymentStage('entitlement_refresh_completed', {
+        requestId: telemetryRequestId,
+        status: 'success',
+        paymentsCount: payments.length
+      }, initData);
+      return accessState;
+    } catch (error) {
+      logPaymentStage('entitlement_refresh_completed', {
+        requestId: telemetryRequestId,
+        status: 'failed',
+        errorName: error instanceof Error ? error.name : 'UnknownError',
+        errorMessage: error instanceof Error ? error.message : String(error)
+      }, initData);
+      throw error;
+    }
   };
 
   const showNotice = (message: string) => {
@@ -2114,6 +2150,18 @@ function App() {
     ]);
     setAdminMeditations(meditationList);
     setAdminDashboard(dashboard);
+  };
+
+  const refreshProductionDiagnostics = async () => {
+    if (adminStatus !== 'allowed') return;
+    try {
+      setBackendVersion(await getBackendVersion(initData));
+    } catch (error) {
+      console.info('[Luna production diagnostics version fetch failed]', {
+        errorClass: error instanceof Error ? error.name : 'unknown',
+        status: error instanceof ApiRequestError ? error.status : null
+      });
+    }
   };
 
   useEffect(() => {
@@ -2155,6 +2203,11 @@ function App() {
       try {
         await checkAdmin(initData);
         setAdminStatus('allowed');
+        try {
+          setBackendVersion(await getBackendVersion(initData));
+        } catch (error) {
+          console.info('[Luna production diagnostics version fetch failed]', error instanceof Error ? error.message : 'Version fetch failed.');
+        }
       } catch (error) {
         console.info('[Luna admin check failed]', error instanceof Error ? error.message : 'Admin check failed.');
         setAdminStatus('denied');
@@ -2173,6 +2226,11 @@ function App() {
       try {
         await checkAdmin(initData);
         setAdminStatus('allowed');
+        try {
+          setBackendVersion(await getBackendVersion(initData));
+        } catch (error) {
+          console.info('[Luna production diagnostics version fetch failed]', error instanceof Error ? error.message : 'Version fetch failed.');
+        }
         await Promise.all([refreshLibrary(), refreshAdmin()]);
       } catch (error) {
         console.info('[Luna admin check failed]', error instanceof Error ? error.message : 'Admin check failed.');
@@ -2666,16 +2724,18 @@ function App() {
       hasTelegramWebApp: Boolean(telegram),
       hasOpenInvoice: Boolean(telegram?.openInvoice)
     };
-    logPaymentStage('button_clicked', paymentContext);
+    let preparedInvoice: Pick<InvoiceLinkResult, 'invoiceLink' | 'requestId'> | null = null;
+    logPaymentStage('button_clicked', paymentContext, initData);
     try {
-      logPaymentStage('request_started', paymentContext);
+      logPaymentStage('request_started', paymentContext, initData);
       const invoice = await withTimeout(createInvoiceLink(plan, initData, clientRequestId), 15_000, 'Invoice creation timed out.');
+      preparedInvoice = invoice;
       logPaymentStage('response_received', {
         ...paymentContext,
         backendRequestId: invoice.requestId,
         amountStars: invoice.amountStars,
         responsePlan: invoice.plan
-      });
+      }, initData);
       logPaymentStage('invoice_object', {
         ...paymentContext,
         invoice: invoice.rawResponse,
@@ -2686,35 +2746,35 @@ function App() {
         hasInvoiceUrl: invoice.rawResponse && typeof invoice.rawResponse === 'object' && typeof (invoice.rawResponse as Record<string, unknown>).invoice_url === 'string',
         hasInvoiceLink: invoice.rawResponse && typeof invoice.rawResponse === 'object' && typeof (invoice.rawResponse as Record<string, unknown>).invoice_link === 'string',
         hasSlug: invoice.rawResponse && typeof invoice.rawResponse === 'object' && typeof (invoice.rawResponse as Record<string, unknown>).slug === 'string'
-      });
+      }, initData);
       if (!isValidTelegramInvoiceUrl(invoice.invoiceLink) || invoice.requestId.length === 0) {
         throw new Error('The payment service returned an invalid invoice response.');
       }
-      setPaymentMessage(copy[language].openingStarsPayment);
-
+      logPaymentStage('invoice_url_validated', {
+        ...paymentContext,
+        sourceField: invoice.sourceField,
+        invoiceHost: new URL(invoice.invoiceLink).host,
+        invoicePath: new URL(invoice.invoiceLink).pathname
+      }, initData);
+      setPendingInvoice({ plan, invoiceLink: invoice.invoiceLink, requestId: invoice.requestId });
       if (telegram?.openInvoice) {
-        const status = await openTelegramInvoiceWithTimeout(telegram, invoice.invoiceLink, paymentContext);
+        // Telegram requires openInvoice to remain inside a user interaction. The
+        // invoice is created asynchronously, so the user opens this ready invoice
+        // with a second explicit tap in openPendingInvoice below.
         setOpeningPlan(null);
         paymentOperationRef.current = false;
-        logPaymentStage(status === 'paid' ? 'success' : status === 'cancelled' ? 'cancelled' : 'failed', { ...paymentContext, status });
-        if (status === 'paid') {
-          setAccess((current) => ({ ...current, hasPremium: true, plan: plan === 'lifetime' ? 'Lifetime' : 'Monthly' }));
-          setPaymentMessage(copy[language].paymentSuccessful);
-          void refreshAccessAndPayments();
-          [1200, 2800].forEach((delay) => window.setTimeout(() => void refreshAccessAndPayments(), delay));
-          return;
-        }
-        setPaymentMessage(status === 'cancelled' ? copy[language].paymentCancelled : status === 'failed' ? copy[language].paymentFailed : copy[language].paymentPending);
+        setPaymentMessage(language === 'ru' ? 'Счёт готов. Нажми «Открыть оплату».' : 'The invoice is ready. Tap “Open payment”.');
       } else {
         logPaymentStage('telegram_api_unavailable', {
           ...paymentContext,
           reason: 'Telegram.WebApp.openInvoice is unavailable; using the /plans fallback link.'
-        });
+        }, initData);
         if (telegram?.openTelegramLink) {
           telegram.openTelegramLink(invoice.invoiceLink);
         } else {
           window.location.assign(invoice.invoiceLink);
         }
+        setPendingInvoice(null);
         setOpeningPlan(null);
         paymentOperationRef.current = false;
         setPaymentMessage(copy[language].invoiceOpened);
@@ -2739,9 +2799,49 @@ function App() {
         errorMessage: error instanceof Error ? error.message : String(error),
         errorStack: error instanceof Error ? error.stack ?? null : null,
         originalError: error
-      });
-      if (alreadyActive) void refreshAccessAndPayments();
+      }, initData);
+      if (preparedInvoice && telegram?.openInvoice) {
+        setPendingInvoice({ plan, invoiceLink: preparedInvoice.invoiceLink, requestId: preparedInvoice.requestId });
+        setPaymentMessage(language === 'ru' ? 'Счёт готов. Нажми «Открыть оплату».' : 'The invoice is ready. Tap “Open payment”.');
+        return;
+      }
+      if (alreadyActive) void refreshAccessAndPayments(clientRequestId).catch(() => undefined);
       else if (botUsername) telegram?.openTelegramLink(`https://t.me/${botUsername}?start=plans`);
+    }
+  };
+
+  const openPendingInvoice = async () => {
+    const invoice = pendingInvoice;
+    if (!invoice || !telegram?.openInvoice || paymentOperationRef.current) return;
+    paymentOperationRef.current = true;
+    setOpeningPlan(invoice.plan);
+    setPaymentMessage(copy[language].openingStarsPayment);
+    const paymentContext = { plan: invoice.plan, requestId: invoice.requestId, telegramId: user.id };
+    try {
+      const status = await openTelegramInvoiceWithTimeout(telegram, invoice.invoiceLink, paymentContext, initData, true);
+      logPaymentStage(status === 'paid' ? 'success' : status === 'cancelled' ? 'cancelled' : 'failed', { ...paymentContext, status }, initData);
+      setPendingInvoice(null);
+      setOpeningPlan(null);
+      paymentOperationRef.current = false;
+      if (status === 'paid') {
+        setAccess((current) => ({ ...current, hasPremium: true, plan: invoice.plan === 'lifetime' ? 'Lifetime' : 'Monthly' }));
+        setPaymentMessage(copy[language].paymentSuccessful);
+        void refreshAccessAndPayments(invoice.requestId).catch(() => undefined);
+        return;
+      }
+      setPaymentMessage(status === 'cancelled' ? copy[language].paymentCancelled : copy[language].paymentFailed);
+    } catch (error) {
+      setOpeningPlan(null);
+      paymentOperationRef.current = false;
+      logPaymentStage('failed', {
+        ...paymentContext,
+        stage: 'pending_invoice_open',
+        errorName: error instanceof Error ? error.name : 'UnknownError',
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorStack: error instanceof Error ? error.stack ?? null : null,
+        originalError: error
+      }, initData);
+      setPaymentMessage(copy[language].paymentFailed);
     }
   };
 
@@ -2949,7 +3049,7 @@ function App() {
         )}
 
         {page === 'pricing' && (
-          <PricingPage access={access} accessVerified={accessVerified} onBuy={buyPlan} onRestore={refreshAccessAndPayments} message={paymentMessage} openingPlan={openingPlan} onLibrary={() => setPage('library')} locked={selectedMeditation} language={language} />
+          <PricingPage access={access} accessVerified={accessVerified} onBuy={buyPlan} onRestore={refreshAccessAndPayments} onOpenInvoice={openPendingInvoice} pendingInvoice={pendingInvoice} message={paymentMessage} openingPlan={openingPlan} onLibrary={() => setPage('library')} locked={selectedMeditation} language={language} />
         )}
 
         {page === 'progress' && (
@@ -2987,6 +3087,10 @@ function App() {
             homeScreenMessage={homeScreenMessage}
             initData={initData}
             language={language}
+            backendVersion={backendVersion}
+            runtimeDiagnostics={runtimeDiagnostics}
+            telegramUserId={user.id}
+            onRefreshDiagnostics={refreshProductionDiagnostics}
           />
         )}
 
@@ -4243,6 +4347,8 @@ function PricingPage({
   accessVerified,
   onBuy,
   onRestore,
+  onOpenInvoice,
+  pendingInvoice,
   message,
   openingPlan,
   onLibrary,
@@ -4253,6 +4359,8 @@ function PricingPage({
   accessVerified: boolean;
   onBuy: (plan: 'monthly' | 'lifetime') => void;
   onRestore: () => AccessState | void | Promise<AccessState | void>;
+  onOpenInvoice: () => void;
+  pendingInvoice: { plan: 'monthly' | 'lifetime'; invoiceLink: string; requestId: string } | null;
   message: string;
   openingPlan: 'monthly' | 'lifetime' | null;
   onLibrary: () => void;
@@ -4304,10 +4412,11 @@ function PricingPage({
         </div>
       </section>
       {locked && <p className="luna-card p-4 text-sm text-cream/80">{text(language, 'lockedPremium', { title: getLocalizedMeditation(locked, language).title })}</p>}
-      {!isLifetime && !isMonthly && <PlanCard title={t.monthlyPremium} price={`${premiumPrices.monthly} ⭐ · 30 ${language === 'ru' ? 'дней' : 'days'}`} features={monthlyBenefits} action={t.unlockMonthly} loading={openingPlan === 'monthly'} disabled={Boolean(openingPlan)} onClick={() => onBuy('monthly')} language={language} featured />}
-      {!isLifetime && <PlanCard title={t.lifetimePremium} price={`${premiumPrices.lifetime} ⭐ · ${language === 'ru' ? 'навсегда' : 'forever'}`} features={lifetimeBenefits} action={isMonthly ? (language === 'ru' ? 'Перейти на Lifetime' : 'Upgrade to Lifetime') : t.getLifetime} loading={openingPlan === 'lifetime'} disabled={Boolean(openingPlan)} onClick={() => onBuy('lifetime')} language={language} />}
+      {!isLifetime && !isMonthly && <PlanCard title={t.monthlyPremium} price={`${premiumPrices.monthly} ⭐ · 30 ${language === 'ru' ? 'дней' : 'days'}`} features={monthlyBenefits} action={t.unlockMonthly} loading={openingPlan === 'monthly'} disabled={Boolean(openingPlan) || Boolean(pendingInvoice)} onClick={() => onBuy('monthly')} language={language} featured />}
+      {!isLifetime && <PlanCard title={t.lifetimePremium} price={`${premiumPrices.lifetime} ⭐ · ${language === 'ru' ? 'навсегда' : 'forever'}`} features={lifetimeBenefits} action={isMonthly ? (language === 'ru' ? 'Перейти на Lifetime' : 'Upgrade to Lifetime') : t.getLifetime} loading={openingPlan === 'lifetime'} disabled={Boolean(openingPlan) || Boolean(pendingInvoice)} onClick={() => onBuy('lifetime')} language={language} />}
       {isLifetime && <button onClick={onLibrary} className="w-full rounded-[20px] bg-gold px-5 py-4 font-semibold text-night">{t.openPremiumLibrary}</button>}
       {message && <p className="rounded-2xl bg-lavender/15 p-4 text-sm text-cream/80">{message}</p>}
+      {pendingInvoice && !openingPlan && <button type="button" onClick={onOpenInvoice} className="luna-button-primary w-full">{language === 'ru' ? 'Открыть оплату' : 'Open payment'}</button>}
       {openingPlan && <div className="h-1 overflow-hidden rounded-full bg-cream/10"><div className="h-full w-1/2 animate-pulse rounded-full bg-gold" /></div>}
       {message === t.paymentSuccessful && <button onClick={onLibrary} className="w-full rounded-2xl bg-cream px-5 py-4 font-semibold text-night">{t.openPremiumLibrary}</button>}
       <button type="button" onClick={() => void onRestore()} className="w-full rounded-[18px] border border-white/10 bg-white/[0.035] px-4 py-3 text-sm font-semibold text-lavender">{t.restore}</button>
@@ -5444,7 +5553,11 @@ function ProfilePage({
   onNestedChange,
   homeScreenMessage,
   initData,
-  language
+  language,
+  backendVersion,
+  runtimeDiagnostics,
+  telegramUserId,
+  onRefreshDiagnostics
 }: {
   profile: ProfileStats | null;
   access: AccessState;
@@ -5464,6 +5577,10 @@ function ProfilePage({
   homeScreenMessage: string;
   initData?: string;
   language: AppLanguage;
+  backendVersion: BackendVersion | null;
+  runtimeDiagnostics: RuntimeDiagnostics;
+  telegramUserId: number;
+  onRefreshDiagnostics: () => void | Promise<void>;
 }) {
   const [view, setView] = useState<ProfileSettingsView>('main');
   const [avatarActionsOpen, setAvatarActionsOpen] = useState(false);
@@ -5903,6 +6020,14 @@ function ProfilePage({
         </section>
       )}
 
+      {showAdminButton && <ProductionDiagnostics
+        backendVersion={backendVersion}
+        runtimeDiagnostics={runtimeDiagnostics}
+        telegramUserId={telegramUserId}
+        onRefresh={onRefreshDiagnostics}
+        language={language}
+      />}
+
       <button onClick={() => setLogoutOpen(true)} className="w-full rounded-[20px] border border-white/10 bg-white/[0.035] px-4 py-3 text-left text-sm text-lavender">
         {copy[language].logout}
       </button>
@@ -5932,6 +6057,64 @@ function ProfilePage({
       <input ref={chooseInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => void handleAvatarFile(event.currentTarget.files?.[0])} />
       <input ref={cameraInputRef} type="file" accept="image/jpeg,image/png,image/webp" capture="user" className="hidden" onChange={(event) => void handleAvatarFile(event.currentTarget.files?.[0])} />
     </div>
+  );
+}
+
+function ProductionDiagnostics({
+  backendVersion,
+  runtimeDiagnostics,
+  telegramUserId,
+  onRefresh,
+  language
+}: {
+  backendVersion: BackendVersion | null;
+  runtimeDiagnostics: RuntimeDiagnostics;
+  telegramUserId: number;
+  onRefresh: () => void | Promise<void>;
+  language: AppLanguage;
+}) {
+  const telegram = getTelegram();
+  const currentMiniAppUrl = `${window.location.origin}${window.location.pathname}${window.location.hash}`;
+  const rows: Array<[string, string]> = [
+    ['Frontend SHA', frontendBuildMetadata.commitSha],
+    ['Frontend build', frontendBuildMetadata.buildTimestamp],
+    ['Frontend environment', frontendBuildMetadata.deployEnvironment],
+    ['Backend SHA', backendVersion?.commitSha ?? 'not loaded'],
+    ['Backend build', backendVersion?.buildTimestamp ?? 'not loaded'],
+    ['Backend environment', backendVersion?.environment ?? 'not loaded'],
+    ['Backend service', backendVersion?.serviceName ?? 'not loaded'],
+    ['API version', backendVersion?.apiVersion ?? 'not loaded'],
+    ['API URL', apiDebugConfig.apiBaseUrl],
+    ['Mini App URL', currentMiniAppUrl],
+    ['Telegram ID', String(telegramUserId)],
+    ['Telegram platform', telegram?.platform ?? 'unavailable'],
+    ['WebApp version', telegram?.version ?? 'unavailable'],
+    ['Telegram.WebApp', telegram ? 'yes' : 'no'],
+    ['Telegram initData', telegram?.initData ? 'present' : 'missing'],
+    ['openInvoice', typeof telegram?.openInvoice === 'function' ? 'function' : 'unavailable'],
+    ['AI_CHAT_ENABLED', backendVersion ? String(backendVersion.aiChatEnabled) : 'not loaded'],
+    ['AI model', backendVersion?.aiModel ?? 'not loaded'],
+    ['Last payment stage', runtimeDiagnostics.lastPaymentStage ?? 'none'],
+    ['Last Luna stage', runtimeDiagnostics.lastLunaStage ?? 'none'],
+    ['Last Luna intent', runtimeDiagnostics.lastLunaIntent ?? 'none'],
+    ['Last Luna meditation', runtimeDiagnostics.lastLunaMeditationId ?? 'none']
+  ];
+
+  return (
+    <section className="luna-surface rounded-[22px] p-4" aria-label="Production diagnostics">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-gold">Production Diagnostics</p>
+          <p className="mt-1 text-xs text-lavender">Admin only · runtime identity and last client stages</p>
+        </div>
+        <button type="button" onClick={() => void onRefresh()} className="rounded-full border border-gold/20 bg-gold/10 px-3 py-2 text-xs font-semibold text-gold">
+          {language === 'ru' ? 'Обновить' : 'Refresh'}
+        </button>
+      </div>
+      <dl className="mt-4 grid gap-2 text-xs">
+        {rows.map(([label, value]) => <div key={label} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)] gap-3 border-t border-white/[0.06] pt-2 first:border-0 first:pt-0"><dt className="text-lavender/70">{label}</dt><dd className="break-words text-right text-cream/90">{value}</dd></div>)}
+      </dl>
+    </section>
   );
 }
 

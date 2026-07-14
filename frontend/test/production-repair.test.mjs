@@ -67,3 +67,22 @@ test('premium copy uses refresh access instead of App Store restoration language
   assert.doesNotMatch(appSource, /Restore purchases/);
   assert.doesNotMatch(appSource, /Восстановить покупки/);
 });
+
+test('production diagnostics and authenticated client telemetry are wired without initData leakage', () => {
+  assert.match(apiSource, /getBackendVersion/);
+  assert.match(apiSource, /\/api\/client-events/);
+  assert.match(appSource, /ProductionDiagnostics/);
+  assert.match(appSource, /frontendBuildMetadata/);
+  assert.match(appSource, /apiDebugConfig\.apiBaseUrl/);
+  assert.match(appSource, /setBackendVersion\(await getBackendVersion\(initData\)\)/);
+  assert.match(resolve(process.cwd(), 'src/runtime-diagnostics.ts') ? readFileSync(resolve(process.cwd(), 'src/runtime-diagnostics.ts'), 'utf8') : '', /sendClientEvent/);
+  assert.doesNotMatch(appSource, /sendClientEvent\([^\n]*initData/);
+});
+
+test('invoice opening has an explicit user-gesture retry when the first post-network call is rejected', () => {
+  assert.match(appSource, /pendingInvoice/);
+  assert.match(appSource, /openPendingInvoice/);
+  assert.match(appSource, /Open payment/);
+  assert.match(appSource, /invokedAfterNetworkAwait: !userGesture/);
+  assert.match(appSource, /directUserGesture: userGesture/);
+});

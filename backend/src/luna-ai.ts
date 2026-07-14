@@ -945,6 +945,19 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     }
 
     const { recent, context, catalog, memoryEnabled, pendingState } = await loadContext(telegramId, resolvedConversationId, input.message);
+    console.info('[Luna AI pending state loaded]', {
+      user: userHash(telegramId),
+      requestId: input.requestId,
+      conversationId: resolvedConversationId,
+      pendingStatePresent: Boolean(pendingState),
+      pendingState: pendingState ? {
+        pending_intent: pendingState.pending_intent,
+        pending_meditation_id: pendingState.pending_meditation_id,
+        pending_action: pendingState.pending_action,
+        clarification_hash: pendingState.clarification_hash,
+        expires_at: pendingState.expires_at
+      } : null
+    });
     const catalogForPolicy = catalog.map((item) => ({
       id: item.id,
       catalogKey: catalogKey(item.title),
@@ -971,16 +984,38 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     const resolvedPendingMeditation = pendingResolution && 'meditationId' in pendingResolution
       ? pendingResolution.meditationId
       : null;
+    console.info('[Luna AI pending state resolved]', {
+      user: userHash(telegramId),
+      requestId: input.requestId,
+      conversationId: resolvedConversationId,
+      wasPending: Boolean(pendingState),
+      resolvedIntent: pendingResolution && 'resolvedIntent' in pendingResolution ? pendingResolution.resolvedIntent : null,
+      resolvedMeditationId: resolvedPendingMeditation,
+      clearPending: Boolean(pendingResolution && 'clearPending' in pendingResolution && pendingResolution.clearPending)
+    });
+    const modelContext = {
+      ...context,
+      pendingResolution: pendingResolution && 'resolvedIntent' in pendingResolution
+        ? { resolvedIntent: pendingResolution.resolvedIntent, meditationId: resolvedPendingMeditation, action: 'show_meditation_card' }
+        : null
+    };
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), env.AI_REQUEST_TIMEOUT_MS);
     let openAiResponse: OpenAiResponse;
     let extracted: ExtractedOpenAiText | null = null;
     try {
+      console.info('[Luna AI model request started]', {
+        user: userHash(telegramId),
+        requestId: input.requestId,
+        conversationId: resolvedConversationId,
+        pendingActionEnforced: Boolean(resolvedPendingMeditation),
+        model: env.AI_CHAT_MODEL
+      });
       openAiResponse = await callOpenAiResponses({
         requestBody: buildLunaOpenAiRequest({
           language: responseLanguage,
           catalog: catalogForModel,
-          context,
+          context: modelContext,
           recent,
           maxOutputTokens: env.AI_MAX_OUTPUT_TOKENS
         }),
@@ -989,6 +1024,13 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
         requestId: input.requestId,
         conversationId: resolvedConversationId,
         attempt: 1
+      });
+      console.info('[Luna AI model result received]', {
+        user: userHash(telegramId),
+        requestId: input.requestId,
+        conversationId: resolvedConversationId,
+        model: openAiResponse.model ?? env.AI_CHAT_MODEL,
+        status: openAiResponse.status ?? null
       });
       try {
         extracted = extractOpenAiText(openAiResponse);
@@ -1011,7 +1053,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
           requestBody: buildLunaOpenAiRequest({
             language: responseLanguage,
             catalog: catalogForModel,
-            context,
+            context: modelContext,
             recent,
             maxOutputTokens: retryTokens
           }),
@@ -1101,6 +1143,16 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       });
     }
     const actionFailed = Boolean(parsed.meditationAction) && !validatedAction;
+    console.info('[Luna AI resolved meditation]', {
+      user: userHash(telegramId),
+      requestId: input.requestId,
+      conversationId: resolvedConversationId,
+      recommendationRequested,
+      selectedPublishedMeditationId: recommendedMeditationId,
+      noCardReason: !recommendedMeditationId
+        ? (recommendationRequested ? (actionFailed ? 'model_action_failed_or_no_catalog_match' : 'no_semantic_catalog_match') : 'recommendation_not_requested')
+        : null
+    });
     const visibleMessage = recommendationRequested && !recommendedMeditationId
       ? actionFailed ? meditationCardFallback(responseLanguage) : meditationClarificationFallback(responseLanguage)
       : finalizeAssistantContent({
@@ -1121,6 +1173,14 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       .find(Boolean) ?? null;
     const duplicateClarification = !recommendedMeditationId
       && clarificationHash(visibleMessage) === previousClarificationHash;
+    if (duplicateClarification) {
+      console.warn('[Luna AI duplicate clarification blocked]', {
+        user: userHash(telegramId),
+        requestId: input.requestId,
+        conversationId: resolvedConversationId,
+        clarificationHash: clarificationHash(visibleMessage)
+      });
+    }
     const safeVisibleMessage = duplicateClarification
       ? meditationCardFallback(responseLanguage)
       : visibleMessage;
@@ -1146,6 +1206,13 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     const meditationAction = recommendedMeditation
       ? { type: 'meditation_card' as const, meditationId: recommendedMeditation.id }
       : null;
+    console.info('[Luna AI card action generated]', {
+      user: userHash(telegramId),
+      requestId: input.requestId,
+      conversationId: resolvedConversationId,
+      meditationId: meditationAction?.meditationId ?? null,
+      generated: Boolean(meditationAction)
+    });
     const resolvedIntent = pendingResolution && 'resolvedIntent' in pendingResolution
       ? pendingResolution.resolvedIntent
       : null;
@@ -1169,7 +1236,8 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
         resolvedIntent,
         pending_action: nextPendingState?.pending_action ?? null,
         pending_state: nextPendingState,
-        clarificationHash: nextPendingState?.clarification_hash ?? null
+        clarificationHash: nextPendingState?.clarification_hash ?? null,
+        duplicateClarificationBlocked: duplicateClarification
       }
     }).select().single();
     if (assistantError) throw assistantError;
