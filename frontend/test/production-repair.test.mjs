@@ -79,10 +79,38 @@ test('production diagnostics and authenticated client telemetry are wired withou
   assert.doesNotMatch(appSource, /sendClientEvent\([^\n]*initData/);
 });
 
-test('invoice opening has an explicit user-gesture retry when the first post-network call is rejected', () => {
-  assert.match(appSource, /pendingInvoice/);
-  assert.match(appSource, /openPendingInvoice/);
+test('invoice opens automatically after the tariff tap and exposes fallback only after an open failure', () => {
+  const buyPlanSource = appSource.slice(appSource.indexOf('const buyPlan = async'), appSource.indexOf('const openFallbackInvoice = async'));
+  assert.match(buyPlanSource, /createInvoiceLink\(plan/);
+  assert.match(buyPlanSource, /await openTelegramInvoiceWithTimeout/);
+  assert.doesNotMatch(buyPlanSource, /setFallbackInvoice\(\{ plan, invoiceLink: invoice\.invoiceLink/);
+  assert.match(buyPlanSource, /preparedInvoice && invoiceOpenAttempted/);
+  assert.match(appSource, /fallbackInvoice/);
+  assert.match(appSource, /openFallbackInvoice/);
   assert.match(appSource, /Open payment/);
   assert.match(appSource, /invokedAfterNetworkAwait: !userGesture/);
   assert.match(appSource, /directUserGesture: userGesture/);
+});
+
+test('Monthly and Lifetime plan CTAs both enter the same direct invoice pipeline', () => {
+  const pricingSource = appSource.slice(appSource.indexOf('function PricingPage'), appSource.indexOf('function PlanCard'));
+  assert.match(pricingSource, /onBuy\('monthly'\)/);
+  assert.match(pricingSource, /onBuy\('lifetime'\)/);
+  assert.match(pricingSource, /premiumPrices\.monthly/);
+  assert.match(pricingSource, /premiumPrices\.lifetime/);
+});
+
+test('all Telegram invoice callback statuses restore the primary CTA and paid refreshes account data', () => {
+  for (const status of ['paid', 'cancelled', 'failed', 'pending']) {
+    assert.match(appSource, new RegExp(`status === '${status}'`));
+  }
+  assert.match(appSource, /setOpeningPlan\(null\)/);
+  assert.match(appSource, /paymentOperationRef\.current = false/);
+  assert.match(appSource, /refreshAccessAndPayments\(invoice\.requestId\)/);
+});
+
+test('invoice URLs and slugs are never rendered by the Premium page', () => {
+  const pricingSource = appSource.slice(appSource.indexOf('function PricingPage'), appSource.indexOf('function PlanCard'));
+  assert.doesNotMatch(pricingSource, /\{fallbackInvoice\.invoiceLink\}/);
+  assert.doesNotMatch(pricingSource, />\s*\{?[^<]*(invoice_url|invoice_link|slug)[^<]*</i);
 });

@@ -764,11 +764,12 @@ const copy = {
     starsAvailable: 'Telegram Stars are available now for Luna Premium.',
     close: 'Close',
     openPremiumLibrary: 'Open Premium Library',
-    openingPayment: 'Opening payment...',
+    openingPayment: 'Opening payment…',
     openingStarsPayment: 'Opening Telegram Stars payment...',
     paymentSuccessful: 'Payment successful. Your Luna access is unlocked.',
     paymentCancelled: 'Payment cancelled. You can restart checkout anytime.',
     paymentPending: 'Payment is pending. Telegram will confirm it shortly.',
+    paymentOpenFallback: 'Payment could not open automatically. Try the payment button below.',
     invoiceOpened: 'Invoice opened in Telegram. Complete payment there to unlock access.',
     paymentFailed: 'Payment could not open. Please try again.',
     sessionComplete: 'Session Complete',
@@ -1094,11 +1095,12 @@ const copy = {
     starsAvailable: 'Telegram Stars уже доступны для Luna Premium.',
     close: 'Закрыть',
     openPremiumLibrary: 'Открыть Premium-библиотеку',
-    openingPayment: 'Открываем оплату...',
+    openingPayment: 'Открываем оплату…',
     openingStarsPayment: 'Открываем оплату Telegram Stars...',
     paymentSuccessful: 'Оплата прошла. Доступ Luna открыт.',
     paymentCancelled: 'Оплата отменена. Можно начать снова в любой момент.',
     paymentPending: 'Оплата ожидает подтверждения. Telegram скоро подтвердит её.',
+    paymentOpenFallback: 'Не удалось открыть оплату автоматически. Попробуй кнопку ниже.',
     invoiceOpened: 'Счёт открыт в Telegram. Заверши оплату там, чтобы открыть доступ.',
     paymentFailed: 'Не удалось открыть оплату. Попробуй ещё раз.',
     sessionComplete: 'Сессия завершена',
@@ -2037,7 +2039,7 @@ function App() {
   const [moonGardenAmbienceError, setMoonGardenAmbienceError] = useState(false);
   const [paymentMessage, setPaymentMessage] = useState('');
   const [openingPlan, setOpeningPlan] = useState<'monthly' | 'lifetime' | null>(null);
-  const [pendingInvoice, setPendingInvoice] = useState<{ plan: 'monthly' | 'lifetime'; invoiceLink: string; requestId: string } | null>(null);
+  const [fallbackInvoice, setFallbackInvoice] = useState<{ plan: 'monthly' | 'lifetime'; invoiceLink: string; requestId: string } | null>(null);
   const [adminStatus, setAdminStatus] = useState<'checking' | 'allowed' | 'denied'>('checking');
   const [adminMeditations, setAdminMeditations] = useState<Meditation[]>([]);
   const [adminDashboard, setAdminDashboard] = useState<AdminDashboardData | null>(null);
@@ -2713,6 +2715,7 @@ function App() {
     }
 
     paymentOperationRef.current = true;
+    setFallbackInvoice(null);
     setOpeningPlan(plan);
     setPaymentMessage(copy[language].openingPayment);
     telegram?.HapticFeedback?.impactOccurred('light');
@@ -2725,6 +2728,7 @@ function App() {
       hasOpenInvoice: Boolean(telegram?.openInvoice)
     };
     let preparedInvoice: Pick<InvoiceLinkResult, 'invoiceLink' | 'requestId'> | null = null;
+    let invoiceOpenAttempted = false;
     logPaymentStage('button_clicked', paymentContext, initData);
     try {
       logPaymentStage('request_started', paymentContext, initData);
@@ -2756,33 +2760,40 @@ function App() {
         invoiceHost: new URL(invoice.invoiceLink).host,
         invoicePath: new URL(invoice.invoiceLink).pathname
       }, initData);
-      setPendingInvoice({ plan, invoiceLink: invoice.invoiceLink, requestId: invoice.requestId });
-      if (telegram?.openInvoice) {
-        // Telegram requires openInvoice to remain inside a user interaction. The
-        // invoice is created asynchronously, so the user opens this ready invoice
-        // with a second explicit tap in openPendingInvoice below.
-        setOpeningPlan(null);
-        paymentOperationRef.current = false;
-        setPaymentMessage(language === 'ru' ? 'Счёт готов. Нажми «Открыть оплату».' : 'The invoice is ready. Tap “Open payment”.');
-      } else {
-        logPaymentStage('telegram_api_unavailable', {
-          ...paymentContext,
-          reason: 'Telegram.WebApp.openInvoice is unavailable; using the /plans fallback link.'
-        }, initData);
-        if (telegram?.openTelegramLink) {
-          telegram.openTelegramLink(invoice.invoiceLink);
-        } else {
-          window.location.assign(invoice.invoiceLink);
-        }
-        setPendingInvoice(null);
-        setOpeningPlan(null);
-        paymentOperationRef.current = false;
-        setPaymentMessage(copy[language].invoiceOpened);
+      invoiceOpenAttempted = true;
+      const status = await openTelegramInvoiceWithTimeout(telegram, invoice.invoiceLink, paymentContext, initData);
+      logPaymentStage(status === 'paid' ? 'success' : status === 'cancelled' ? 'cancelled' : status === 'pending' ? 'pending' : 'failed', {
+        ...paymentContext,
+        status
+      }, initData);
+      setOpeningPlan(null);
+      paymentOperationRef.current = false;
+
+      if (status === 'paid') {
+        setAccess((current) => ({ ...current, hasPremium: true, plan: plan === 'lifetime' ? 'Lifetime' : 'Monthly' }));
+        setPaymentMessage(copy[language].paymentSuccessful);
+        void refreshAccessAndPayments(invoice.requestId).catch(() => undefined);
+        return;
+      }
+
+      if (status === 'pending') {
+        setPaymentMessage(copy[language].paymentPending);
+        void refreshAccessAndPayments(invoice.requestId).catch(() => undefined);
+        window.setTimeout(() => void refreshAccessAndPayments(invoice.requestId).catch(() => undefined), 4_000);
+        return;
+      }
+
+      if (status === 'cancelled') {
+        setPaymentMessage(copy[language].paymentCancelled);
+        return;
+      }
+
+      if (status === 'failed') {
+        setPaymentMessage(copy[language].paymentFailed);
       }
     } catch (error) {
       setOpeningPlan(null);
       paymentOperationRef.current = false;
-      const botUsername = import.meta.env.VITE_BOT_USERNAME;
       const alreadyActive = error instanceof ApiRequestError && error.status === 409;
       setPaymentMessage(alreadyActive
         ? (language === 'ru' ? 'Premium уже активен. Обновляем статус…' : 'Premium is already active. Refreshing your status…')
@@ -2800,27 +2811,40 @@ function App() {
         errorStack: error instanceof Error ? error.stack ?? null : null,
         originalError: error
       }, initData);
-      if (preparedInvoice && telegram?.openInvoice) {
-        setPendingInvoice({ plan, invoiceLink: preparedInvoice.invoiceLink, requestId: preparedInvoice.requestId });
-        setPaymentMessage(language === 'ru' ? 'Счёт готов. Нажми «Открыть оплату».' : 'The invoice is ready. Tap “Open payment”.');
+      if (preparedInvoice && invoiceOpenAttempted) {
+        setFallbackInvoice({ plan, invoiceLink: preparedInvoice.invoiceLink, requestId: preparedInvoice.requestId });
+        setPaymentMessage(copy[language].paymentOpenFallback);
         return;
       }
       if (alreadyActive) void refreshAccessAndPayments(clientRequestId).catch(() => undefined);
-      else if (botUsername) telegram?.openTelegramLink(`https://t.me/${botUsername}?start=plans`);
     }
   };
 
-  const openPendingInvoice = async () => {
-    const invoice = pendingInvoice;
-    if (!invoice || !telegram?.openInvoice || paymentOperationRef.current) return;
+  const openFallbackInvoice = async () => {
+    const invoice = fallbackInvoice;
+    if (!invoice || paymentOperationRef.current) return;
     paymentOperationRef.current = true;
     setOpeningPlan(invoice.plan);
     setPaymentMessage(copy[language].openingStarsPayment);
     const paymentContext = { plan: invoice.plan, requestId: invoice.requestId, telegramId: user.id };
     try {
+      if (!telegram?.openInvoice) {
+        logPaymentStage('fallback_link_called', {
+          ...paymentContext,
+          hasOpenTelegramLink: Boolean(telegram?.openTelegramLink)
+        }, initData);
+        if (telegram?.openTelegramLink) telegram.openTelegramLink(invoice.invoiceLink);
+        else window.location.assign(invoice.invoiceLink);
+        setFallbackInvoice(null);
+        setOpeningPlan(null);
+        paymentOperationRef.current = false;
+        setPaymentMessage(copy[language].invoiceOpened);
+        return;
+      }
+
       const status = await openTelegramInvoiceWithTimeout(telegram, invoice.invoiceLink, paymentContext, initData, true);
-      logPaymentStage(status === 'paid' ? 'success' : status === 'cancelled' ? 'cancelled' : 'failed', { ...paymentContext, status }, initData);
-      setPendingInvoice(null);
+      logPaymentStage(status === 'paid' ? 'success' : status === 'cancelled' ? 'cancelled' : status === 'pending' ? 'pending' : 'failed', { ...paymentContext, status }, initData);
+      setFallbackInvoice(null);
       setOpeningPlan(null);
       paymentOperationRef.current = false;
       if (status === 'paid') {
@@ -2829,19 +2853,32 @@ function App() {
         void refreshAccessAndPayments(invoice.requestId).catch(() => undefined);
         return;
       }
-      setPaymentMessage(status === 'cancelled' ? copy[language].paymentCancelled : copy[language].paymentFailed);
+      if (status === 'pending') {
+        setPaymentMessage(copy[language].paymentPending);
+        void refreshAccessAndPayments(invoice.requestId).catch(() => undefined);
+        window.setTimeout(() => void refreshAccessAndPayments(invoice.requestId).catch(() => undefined), 4_000);
+        return;
+      }
+      if (status === 'cancelled') {
+        setPaymentMessage(copy[language].paymentCancelled);
+        return;
+      }
+
+      if (status === 'failed') {
+        setPaymentMessage(copy[language].paymentFailed);
+      }
     } catch (error) {
       setOpeningPlan(null);
       paymentOperationRef.current = false;
       logPaymentStage('failed', {
         ...paymentContext,
-        stage: 'pending_invoice_open',
+        stage: 'fallback_invoice_open',
         errorName: error instanceof Error ? error.name : 'UnknownError',
         errorMessage: error instanceof Error ? error.message : String(error),
         errorStack: error instanceof Error ? error.stack ?? null : null,
         originalError: error
       }, initData);
-      setPaymentMessage(copy[language].paymentFailed);
+      setPaymentMessage(copy[language].paymentOpenFallback);
     }
   };
 
@@ -3049,7 +3086,7 @@ function App() {
         )}
 
         {page === 'pricing' && (
-          <PricingPage access={access} accessVerified={accessVerified} onBuy={buyPlan} onRestore={refreshAccessAndPayments} onOpenInvoice={openPendingInvoice} pendingInvoice={pendingInvoice} message={paymentMessage} openingPlan={openingPlan} onLibrary={() => setPage('library')} locked={selectedMeditation} language={language} />
+          <PricingPage access={access} accessVerified={accessVerified} onBuy={buyPlan} onRestore={refreshAccessAndPayments} onOpenFallbackInvoice={openFallbackInvoice} fallbackInvoice={fallbackInvoice} message={paymentMessage} openingPlan={openingPlan} onLibrary={() => setPage('library')} locked={selectedMeditation} language={language} />
         )}
 
         {page === 'progress' && (
@@ -4347,8 +4384,8 @@ function PricingPage({
   accessVerified,
   onBuy,
   onRestore,
-  onOpenInvoice,
-  pendingInvoice,
+  onOpenFallbackInvoice,
+  fallbackInvoice,
   message,
   openingPlan,
   onLibrary,
@@ -4359,8 +4396,8 @@ function PricingPage({
   accessVerified: boolean;
   onBuy: (plan: 'monthly' | 'lifetime') => void;
   onRestore: () => AccessState | void | Promise<AccessState | void>;
-  onOpenInvoice: () => void;
-  pendingInvoice: { plan: 'monthly' | 'lifetime'; invoiceLink: string; requestId: string } | null;
+  onOpenFallbackInvoice: () => void;
+  fallbackInvoice: { plan: 'monthly' | 'lifetime'; invoiceLink: string; requestId: string } | null;
   message: string;
   openingPlan: 'monthly' | 'lifetime' | null;
   onLibrary: () => void;
@@ -4412,11 +4449,11 @@ function PricingPage({
         </div>
       </section>
       {locked && <p className="luna-card p-4 text-sm text-cream/80">{text(language, 'lockedPremium', { title: getLocalizedMeditation(locked, language).title })}</p>}
-      {!isLifetime && !isMonthly && <PlanCard title={t.monthlyPremium} price={`${premiumPrices.monthly} ⭐ · 30 ${language === 'ru' ? 'дней' : 'days'}`} features={monthlyBenefits} action={t.unlockMonthly} loading={openingPlan === 'monthly'} disabled={Boolean(openingPlan) || Boolean(pendingInvoice)} onClick={() => onBuy('monthly')} language={language} featured />}
-      {!isLifetime && <PlanCard title={t.lifetimePremium} price={`${premiumPrices.lifetime} ⭐ · ${language === 'ru' ? 'навсегда' : 'forever'}`} features={lifetimeBenefits} action={isMonthly ? (language === 'ru' ? 'Перейти на Lifetime' : 'Upgrade to Lifetime') : t.getLifetime} loading={openingPlan === 'lifetime'} disabled={Boolean(openingPlan) || Boolean(pendingInvoice)} onClick={() => onBuy('lifetime')} language={language} />}
+      {!isLifetime && !isMonthly && <PlanCard title={t.monthlyPremium} price={`${premiumPrices.monthly} ⭐ · 30 ${language === 'ru' ? 'дней' : 'days'}`} features={monthlyBenefits} action={t.unlockMonthly} loading={openingPlan === 'monthly'} disabled={Boolean(openingPlan)} onClick={() => onBuy('monthly')} language={language} featured />}
+      {!isLifetime && <PlanCard title={t.lifetimePremium} price={`${premiumPrices.lifetime} ⭐ · ${language === 'ru' ? 'навсегда' : 'forever'}`} features={lifetimeBenefits} action={isMonthly ? (language === 'ru' ? 'Перейти на Lifetime' : 'Upgrade to Lifetime') : t.getLifetime} loading={openingPlan === 'lifetime'} disabled={Boolean(openingPlan)} onClick={() => onBuy('lifetime')} language={language} />}
       {isLifetime && <button onClick={onLibrary} className="w-full rounded-[20px] bg-gold px-5 py-4 font-semibold text-night">{t.openPremiumLibrary}</button>}
       {message && <p className="rounded-2xl bg-lavender/15 p-4 text-sm text-cream/80">{message}</p>}
-      {pendingInvoice && !openingPlan && <button type="button" onClick={onOpenInvoice} className="luna-button-primary w-full">{language === 'ru' ? 'Открыть оплату' : 'Open payment'}</button>}
+      {fallbackInvoice && !openingPlan && <button type="button" onClick={onOpenFallbackInvoice} className="luna-button-primary w-full">{language === 'ru' ? 'Открыть оплату' : 'Open payment'}</button>}
       {openingPlan && <div className="h-1 overflow-hidden rounded-full bg-cream/10"><div className="h-full w-1/2 animate-pulse rounded-full bg-gold" /></div>}
       {message === t.paymentSuccessful && <button onClick={onLibrary} className="w-full rounded-2xl bg-cream px-5 py-4 font-semibold text-night">{t.openPremiumLibrary}</button>}
       <button type="button" onClick={() => void onRestore()} className="w-full rounded-[18px] border border-white/10 bg-white/[0.035] px-4 py-3 text-sm font-semibold text-lavender">{t.restore}</button>
