@@ -45,6 +45,7 @@ import {
 import { runMigrations } from './migrations.js';
 import { isPlanId } from './plans.js';
 import { paymentEligibility } from './payment-policy.js';
+import { logBackendError, type RequestWithId } from './error-logging.js';
 import {
   clearLunaConversations,
   deleteLunaConversation,
@@ -77,10 +78,21 @@ function isAllowedFrontendOrigin(origin: string) {
       protocol === 'https:' &&
       (hostname.endsWith('.netlify.app') || hostname.endsWith('.vercel.app'))
     );
-  } catch {
+  } catch (error) {
+    logBackendError(error, { endpoint: 'CORS origin validation' });
     return false;
   }
 }
+
+app.use((req, res, next) => {
+  const incomingRequestId = req.header('x-request-id');
+  const requestId = incomingRequestId && /^[A-Za-z0-9._:-]{1,128}$/.test(incomingRequestId)
+    ? incomingRequestId
+    : crypto.randomUUID();
+  (req as RequestWithId).requestId = requestId;
+  res.setHeader('X-Request-Id', requestId);
+  next();
+});
 
 app.use(cors({
   origin(origin, callback) {
@@ -242,7 +254,10 @@ app.post(
       const user = await updateUserAvatar(authReq.telegramUser.telegram_id, data.publicUrl);
 
       if (previousPath && previousPath !== storagePath) {
-        await supabase.storage.from('avatars').remove([previousPath]).catch(() => undefined);
+        await supabase.storage.from('avatars').remove([previousPath]).catch((error) => {
+          logBackendError(error, { req: req as RequestWithId, endpoint: 'POST /api/profile/avatar cleanup' });
+          return undefined;
+        });
       }
 
       res.json({ avatarUrl: data.publicUrl, user });
@@ -385,10 +400,7 @@ app.post('/api/breath-sessions', requireTelegramWebApp, async (req, res, next) =
     const authReq = req as AuthenticatedRequest;
     res.json(await recordBreathSession(authReq.telegramUser.telegram_id, req.body));
   } catch (error) {
-    console.error('[Luna breath session save failed]', {
-      telegramId: (req as Partial<AuthenticatedRequest>).telegramUser?.telegram_id ?? null,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    logBackendError(error, { req: req as RequestWithId, endpoint: 'POST /api/breath-sessions' });
     next(error);
   }
 });
@@ -496,10 +508,7 @@ app.post('/api/checkins', requireTelegramWebApp, async (req, res, next) => {
     await upsertUser(authReq.telegramUser);
     res.json({ checkin: await upsertDailyCheckin(authReq.telegramUser.telegram_id, input) });
   } catch (error) {
-    console.error('[Luna check-in save failed]', {
-      telegramId: (req as Partial<AuthenticatedRequest>).telegramUser?.telegram_id ?? null,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    logBackendError(error, { req: req as RequestWithId, endpoint: 'POST /api/checkins' });
     next(error);
   }
 });
@@ -531,9 +540,13 @@ app.get('/api/luna/conversations', requireTelegramWebApp, async (req, res, next)
   }
 });
 
-app.get('/api/luna/health', requireTelegramWebApp, async (_req, res, next) => {
+app.get('/api/luna/health', requireTelegramWebApp, async (req, res, next) => {
   try {
-    res.json(await getLunaProviderHealth());
+    const authReq = req as AuthenticatedRequest;
+    res.json(await getLunaProviderHealth({
+      requestId: (req as RequestWithId).requestId,
+      telegramId: authReq.telegramUser.telegram_id
+    }));
   } catch (error) {
     next(error);
   }
@@ -699,7 +712,10 @@ app.delete('/api/profile/avatar', requireTelegramWebApp, async (req, res, next) 
     const user = await updateUserAvatar(authReq.telegramUser.telegram_id, null);
 
     if (previousPath) {
-      await supabase.storage.from('avatars').remove([previousPath]).catch(() => undefined);
+      await supabase.storage.from('avatars').remove([previousPath]).catch((error) => {
+        logBackendError(error, { req: req as RequestWithId, endpoint: 'DELETE /api/profile/avatar cleanup' });
+        return undefined;
+      });
     }
 
     res.json({ user });
@@ -810,11 +826,7 @@ app.use(bot.webhookCallback('/telegram/webhook'));
 
 app.use((error: unknown, req: express.Request, res: express.Response, next: express.NextFunction) => {
   void next;
-  console.error('[Luna API error]', {
-    method: req.method,
-    path: req.path,
-    error: error instanceof Error ? error.message : 'Unknown error'
-  });
+  logBackendError(error, { req: req as RequestWithId });
   if (error instanceof LunaAiError) {
     res.status(error.status).json({
       error: error.message,

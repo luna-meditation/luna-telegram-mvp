@@ -9,6 +9,7 @@ import {
   playbackRewardDecision
 } from './playback-security.js';
 import { buildCanonicalCurrentWeek } from './progress-model.js';
+import { logBackendError } from './error-logging.js';
 
 if (!globalThis.WebSocket) {
   globalThis.WebSocket = WebSocket as unknown as typeof globalThis.WebSocket;
@@ -617,7 +618,7 @@ async function recordPracticeDay(telegramId: number, source: 'meditation' | 'bre
     .maybeSingle();
 
   if (readError) {
-    console.warn('Practice day could not be read; migration may be pending.', readError.message);
+    logBackendError(readError, { endpoint: 'database practice day read', telegramId });
     return;
   }
 
@@ -636,7 +637,7 @@ async function recordPracticeDay(telegramId: number, source: 'meditation' | 'bre
     );
 
   if (error) {
-    console.warn('Practice day could not be saved.', error.message);
+    logBackendError(error, { endpoint: 'database practice day save', telegramId });
   }
 }
 
@@ -1104,7 +1105,7 @@ async function syncAchievements(telegramId: number, stats: AchievementStats) {
       items
     };
   } catch (error) {
-    console.warn('Achievements unavailable; returning computed fallback.', error instanceof Error ? error.message : error);
+    logBackendError(error, { endpoint: 'database achievements lookup', telegramId });
     const items = achievementDefinitions.map((definition) => {
       const unlocked = definition.unlocked(stats);
       return {
@@ -1135,7 +1136,7 @@ async function awardMoonSeeds(telegramId: number, amount: number) {
     .maybeSingle();
 
   if (readError) {
-    console.warn('Moon Seeds could not be awarded yet; Moon Garden table may be pending migration.', readError.message);
+    logBackendError(readError, { endpoint: 'database Moon Seeds read', telegramId });
     return;
   }
 
@@ -1162,7 +1163,7 @@ async function awardMoonSeeds(telegramId: number, amount: number) {
     );
 
   if (error) {
-    console.warn('Moon Seeds award could not be saved.', error.message);
+    logBackendError(error, { endpoint: 'database Moon Seeds save', telegramId });
   }
 }
 
@@ -1174,7 +1175,7 @@ async function grantPremiumMoonSeedsBonus(telegramId: number) {
     .maybeSingle();
 
   if (readError) {
-    console.warn('Premium Moon Seeds bonus could not be checked.', readError.message);
+    logBackendError(readError, { endpoint: 'database Premium Moon Seeds bonus read', telegramId });
     return false;
   }
 
@@ -1222,7 +1223,7 @@ async function getMoonGardenState(telegramId: number, input: {
     .maybeSingle();
 
   if (error) {
-    console.warn('Moon Garden state unavailable; using safe fallback.', error.message);
+    logBackendError(error, { endpoint: 'database Moon Garden state read', telegramId });
     return {
       moonSeedsAvailable: earnedFromPractice,
       moonSeedsEarnedTotal: earnedFromPractice,
@@ -1262,7 +1263,7 @@ async function getMoonGardenState(telegramId: number, input: {
     .upsert(payload, { onConflict: 'telegram_id' });
 
   if (upsertError) {
-    console.warn('Moon Garden state could not be synced; using computed state.', upsertError.message);
+    logBackendError(upsertError, { endpoint: 'database Moon Garden state sync', telegramId });
   }
 
   return {
@@ -1303,10 +1304,10 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
   const safePracticeDays = practiceDaysError ? [] : (practiceDays ?? []);
   const safePlaybackSessions = playbackSessionsError ? [] : (playbackSessions ?? []);
   if (practiceDaysError) {
-    console.warn('Practice day stats unavailable; using history fallback.', practiceDaysError.message);
+    logBackendError(practiceDaysError, { endpoint: 'database practice day stats', telegramId });
   }
   if (playbackSessionsError) {
-    console.warn('Verified playback stats unavailable; using history fallback.', playbackSessionsError.message);
+    logBackendError(playbackSessionsError, { endpoint: 'database verified playback stats', telegramId });
   }
 
   const { data: legacyProgress, error: progressError } = await supabase
@@ -1324,7 +1325,7 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
 
   const safeBreathSessions = breathError ? [] : (breathSessions ?? []);
   if (breathError) {
-    console.warn('Breath session stats unavailable; continuing with meditation stats only.', breathError.message);
+    logBackendError(breathError, { endpoint: 'database breath session stats', telegramId });
   }
 
   const verifiedCompletedSessions = safePlaybackSessions.filter((item) => item.completed_at).length;

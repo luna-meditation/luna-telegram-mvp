@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
 import { env } from './config.js';
 import type { TelegramUserInput } from './db.js';
+import { logBackendError, type RequestWithId } from './error-logging.js';
 
 export type AuthenticatedRequest = Request & {
   telegramUser: TelegramUserInput;
@@ -93,6 +94,7 @@ export function requireTelegramWebApp(req: Request, res: Response, next: NextFun
 
     res.status(401).json({ error: 'Telegram WebApp initData is required.' });
   } catch (error) {
+    logBackendError(error, { req: req as RequestWithId, endpoint: 'Telegram WebApp authentication' });
     res.status(401).json({ error: error instanceof Error ? error.message : 'Invalid Telegram WebApp auth data.' });
   }
 }

@@ -8,6 +8,7 @@ import {
 } from './db.js';
 import { isPlanId, plans, type PlanId } from './plans.js';
 import { paymentEligibility } from './payment-policy.js';
+import { logBackendError } from './error-logging.js';
 
 export const bot = new Telegraf(env.BOT_TOKEN);
 
@@ -242,7 +243,8 @@ bot.on('pre_checkout_query', async (ctx) => {
       return;
     }
     await ctx.answerPreCheckoutQuery(true);
-  } catch {
+  } catch (error) {
+    logBackendError(error, { endpoint: 'Telegram pre_checkout_query', telegramId: ctx.from?.id ?? null });
     await ctx.answerPreCheckoutQuery(false, 'Invalid Luna payment payload.');
   }
 });
@@ -283,9 +285,6 @@ bot.on('successful_payment', async (ctx) => {
       Markup.inlineKeyboard([[Markup.button.webApp(language === 'ru' ? 'Открыть Luna' : 'Open Luna', env.MINI_APP_URL)]])
     );
   } catch (error) {
-    console.error('[Luna payment processing failed]', {
-      telegramId: ctx.from.id,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
+    logBackendError(error, { endpoint: 'Telegram successful_payment', telegramId: ctx.from.id });
   }
 });

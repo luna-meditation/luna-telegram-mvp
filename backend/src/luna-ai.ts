@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import { z } from 'zod';
 import { env } from './config.js';
 import { getUserAccess, supabase, upsertUser, type TelegramUserInput } from './db.js';
+import { logBackendError } from './error-logging.js';
 import { buildLunaSystemPrompt, detectedIntents, recommendationGoals } from './luna/prompts/index.js';
 import {
   memoryCandidateSchema,
@@ -271,15 +272,26 @@ function stripJsonFence(text: string) {
   return fenced?.[1]?.trim() ?? trimmed;
 }
 
-function tryParseJson(text: string) {
+function tryParseJson(text: string, context?: { telegramId?: number; requestId?: string }) {
   try {
     return JSON.parse(stripJsonFence(text)) as unknown;
-  } catch {
+  } catch (error) {
+    logBackendError(error, {
+      endpoint: 'Luna OpenAI response JSON parse',
+      telegramId: context?.telegramId,
+      requestId: context?.requestId,
+      level: 'info',
+      expected: true
+    });
     return null;
   }
 }
 
-export function normalizeOpenAiModelResult(extracted: { text: string; refusal: string | null }, language: 'en' | 'ru') {
+export function normalizeOpenAiModelResult(
+  extracted: { text: string; refusal: string | null },
+  language: 'en' | 'ru',
+  context?: { telegramId?: number; requestId?: string }
+) {
   if (extracted.refusal) {
     return modelResultSchema.parse({
       message: extracted.refusal,
@@ -291,7 +303,7 @@ export function normalizeOpenAiModelResult(extracted: { text: string; refusal: s
   }
 
   const text = extracted.text.trim();
-  const parsedJson = text ? tryParseJson(text) : null;
+  const parsedJson = text ? tryParseJson(text, context) : null;
 
   if (parsedJson && typeof parsedJson === 'object') {
     const parsed = tolerantModelResultSchema.parse(parsedJson);
@@ -326,14 +338,15 @@ function openAiOutputTypes(response: OpenAiResponse) {
   }));
 }
 
-function classifyOpenAiHttpError(status: number, body: string) {
+function classifyOpenAiHttpError(status: number, body: string, context?: { telegramId?: number; requestId?: string }) {
   let apiCode = '';
   let apiType = '';
   try {
     const parsed = JSON.parse(body) as { error?: { code?: unknown; type?: unknown } };
     apiCode = typeof parsed.error?.code === 'string' ? parsed.error.code : '';
     apiType = typeof parsed.error?.type === 'string' ? parsed.error.type : '';
-  } catch {
+  } catch (error) {
+    logBackendError(error, { endpoint: 'Luna OpenAI error response JSON parse', telegramId: context?.telegramId, requestId: context?.requestId });
     // The status remains enough to classify a non-JSON upstream failure.
   }
   if (status === 401 || status === 403) return { code: 'openai_auth', retryable: false, apiCode, apiType };
@@ -348,7 +361,7 @@ function classifyOpenAiHttpError(status: number, body: string) {
 
 let providerHealthCache: { expiresAt: number; value: { available: boolean; enabled: boolean; model: string; errorClass: string | null } } | null = null;
 
-export async function getLunaProviderHealth() {
+export async function getLunaProviderHealth(context: { requestId?: string; telegramId?: number } = {}) {
   const base = { enabled: env.AI_CHAT_ENABLED, model: env.AI_CHAT_MODEL };
   if (!env.AI_CHAT_ENABLED) return { ...base, available: false, errorClass: 'disabled' };
   if (!env.OPENAI_API_KEY) return { ...base, available: false, errorClass: 'missing_api_key' };
@@ -375,7 +388,7 @@ export async function getLunaProviderHealth() {
   } catch (error) {
     const errorClass = error instanceof Error && error.name === 'TimeoutError' ? 'timeout' : 'temporary_upstream';
     const value = { ...base, available: false, errorClass };
-    console.warn('[Luna AI health failed]', { model: env.AI_CHAT_MODEL, errorClass });
+    logBackendError(error, { endpoint: 'GET OpenAI provider health', requestId: context.requestId, telegramId: context.telegramId });
     providerHealthCache = { expiresAt: Date.now() + 15_000, value };
     return value;
   }
@@ -500,6 +513,7 @@ async function callOpenAiResponses(input: {
   requestBody: ReturnType<typeof buildLunaOpenAiRequest>;
   signal: AbortSignal;
   telegramId: number;
+  requestId?: string;
   conversationId: string;
   attempt: number;
 }) {
@@ -521,6 +535,7 @@ async function callOpenAiResponses(input: {
       body: JSON.stringify(input.requestBody)
     });
   } catch (error) {
+    logBackendError(error, { endpoint: 'POST https://api.openai.com/v1/responses', telegramId: input.telegramId, requestId: input.requestId });
     if (error instanceof Error && error.name === 'AbortError') throw error;
     throw new LunaAiError('temporary_upstream', 'OpenAI could not be reached.', 502, true);
   }
@@ -537,7 +552,7 @@ async function callOpenAiResponses(input: {
   });
 
   if (!response.ok) {
-    const failure = classifyOpenAiHttpError(response.status, body);
+    const failure = classifyOpenAiHttpError(response.status, body, { telegramId: input.telegramId, requestId: input.requestId });
     console.error('[Luna AI OpenAI API error]', {
       user: userHash(input.telegramId),
       conversationId: input.conversationId,
@@ -565,7 +580,8 @@ async function callOpenAiResponses(input: {
       finishReason: extractFinishReason(parsed)
     });
     return parsed;
-  } catch {
+  } catch (error) {
+    logBackendError(error, { endpoint: 'POST https://api.openai.com/v1/responses JSON parse', telegramId: input.telegramId, requestId: input.requestId });
     throw new LunaAiError('malformed_response', 'OpenAI returned invalid JSON.', 502);
   }
 }
@@ -896,12 +912,14 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
         }),
         signal: controller.signal,
         telegramId,
+        requestId: input.requestId,
         conversationId: resolvedConversationId,
         attempt: 1
       });
       try {
         extracted = extractOpenAiText(openAiResponse);
       } catch (error) {
+        logBackendError(error, { endpoint: 'Luna OpenAI response extraction', telegramId, requestId: input.requestId });
         if (!shouldRetryOpenAiResponse(openAiResponse, extracted)) throw error;
       }
 
@@ -925,6 +943,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
           }),
           signal: controller.signal,
           telegramId,
+          requestId: input.requestId,
           conversationId: resolvedConversationId,
           attempt: 2
         });
@@ -954,7 +973,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       .filter((message) => message.role === 'assistant')
       .slice(-4)
       .map((message) => (message.metadata as { recommendedMeditationId?: string | null } | null)?.recommendedMeditationId ?? null);
-    const parsed = normalizeOpenAiModelResult(extracted, responseLanguage);
+    const parsed = normalizeOpenAiModelResult(extracted, responseLanguage, { telegramId, requestId: input.requestId });
     const explicitMeditationRequest = isReadyMeditationRequest(input.message);
     let recommendedMeditationId = semanticMeditationRecommendation({
       message: input.message,
@@ -1040,11 +1059,10 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     await updateChatRequest(telegramId, input.requestId, {
       status: requestState, error_code: errorClass, quota_charged: false,
       user_message_id: userMessageId ?? null, assistant_message_id: assistantMessageId ?? null
-    }).catch((updateError) => console.warn('[Luna AI request state save failed]', { user: userHash(telegramId), error: updateError instanceof Error ? updateError.message : 'unknown' }));
-    console.error('[Luna AI request failed]', {
-      user: userHash(telegramId), clientRequestId: input.requestId, conversationId, requestState,
-      errorClass, quotaRefunded: true, latencyMs: Date.now() - startedAt
-    });
+      }).catch((updateError) => {
+        logBackendError(updateError, { endpoint: 'Luna request state save', telegramId, requestId: input.requestId });
+      });
+    logBackendError(error, { endpoint: 'POST /api/luna/chat', telegramId, requestId: input.requestId });
     if (error instanceof LunaAiError) throw new LunaAiError(error.code, error.message, error.status, failure.retryable, requestState);
     if (error instanceof z.ZodError) throw new LunaAiError('permanent_validation', 'Luna returned an invalid response.', 422, false, requestState);
     if (error instanceof Error && error.name === 'AbortError') throw new LunaAiError('timeout', 'Luna response timed out.', 504, true, requestState);
