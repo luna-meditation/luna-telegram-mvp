@@ -76,6 +76,14 @@ database/migrations/007_backend_schema_sync.sql
 
 It adds missing playback/history/check-in fields, makes legacy `sleep_range` optional with a neutral `6_8` default, recreates the RPC contract, and reloads PostgREST. It is safe to rerun and does not recreate or delete existing tables/data. After startup, Railway should show `[Database migration] Backend schema synchronization applied`.
 
+If Railway reports `42702 column reference "quota_charged" is ambiguous`, apply the next additive migration:
+
+```text
+database/migrations/008_fix_luna_rpc_ambiguous_quota.sql
+```
+
+This keeps the public RPC signature unchanged while qualifying all quota/request columns. The backend applies it automatically after migrations 006 and 007 and logs `[Database migration] Luna RPC ambiguity fix applied`.
+
 ### Frontend Mini App
 
 Add these variables to Netlify or Vercel:

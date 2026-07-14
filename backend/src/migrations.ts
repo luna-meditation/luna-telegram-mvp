@@ -2,6 +2,7 @@ import { Client } from 'pg';
 import { backendSchemaSyncMigration } from './backend-schema-sync-migration.js';
 import { env } from './config.js';
 import { lunaAiMigration } from './luna-ai-migration.js';
+import { lunaAiRpcAmbiguityFixMigration } from './luna-ai-rpc-ambiguity-fix-migration.js';
 import { lunaAiRpcMigration } from './luna-ai-rpc-migration.js';
 
 const meditationPlatformMigration = `
@@ -332,6 +333,7 @@ export async function runMigrations() {
     await client.query(lunaAiMigration);
     await client.query(lunaAiRpcMigration);
     await client.query(backendSchemaSyncMigration);
+    await client.query(lunaAiRpcAmbiguityFixMigration);
     console.log('[Database migration] Luna AI RPC synchronization applied', {
       migration: '006_luna_ai_rpc_sync',
       functions: ['reserve_luna_chat_request', 'increment_meditation_play_count'],
@@ -340,6 +342,10 @@ export async function runMigrations() {
     console.log('[Database migration] Backend schema synchronization applied', {
       migration: '007_backend_schema_sync',
       columns: ['history.listened_seconds', 'history.listened_ranges', 'daily_checkins.sleep_range', 'daily_checkins.available_minutes']
+    });
+    console.log('[Database migration] Luna RPC ambiguity fix applied', {
+      migration: '008_fix_luna_rpc_ambiguous_quota',
+      function: 'reserve_luna_chat_request'
     });
     console.log('Database migrations applied.');
   } finally {

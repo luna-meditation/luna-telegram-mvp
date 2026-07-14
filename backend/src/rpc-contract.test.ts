@@ -16,6 +16,7 @@ const backendSource = sourceFiles(resolve(process.cwd(), 'src'))
 const schema = readFileSync(resolve(process.cwd(), '../database/schema.sql'), 'utf8');
 const rpcMigration = readFileSync(resolve(process.cwd(), '../database/migrations/006_luna_ai_rpc_sync.sql'), 'utf8');
 const schemaSyncMigration = readFileSync(resolve(process.cwd(), '../database/migrations/007_backend_schema_sync.sql'), 'utf8');
+const ambiguityFixMigration = readFileSync(resolve(process.cwd(), '../database/migrations/008_fix_luna_rpc_ambiguous_quota.sql'), 'utf8');
 const dbSource = readFileSync(resolve(process.cwd(), 'src/db.ts'), 'utf8');
 
 test('every backend RPC call has a canonical SQL function definition', () => {
@@ -50,4 +51,13 @@ test('schema sync covers the production drift fields and legacy check-in fallbac
   assert.match(schemaSyncMigration, /create or replace function public\.reserve_luna_chat_request/);
   assert.match(schemaSyncMigration, /notify pgrst, 'reload schema'/);
   assert.match(dbSource, /sleep_range: input\.sleep_range \?\? existing\?\.sleep_range \?\? '6_8'/);
+});
+
+test('ambiguity fix qualifies every quota usage and preserves the RPC result contract', () => {
+  assert.match(ambiguityFixMigration, /v_request public\.ai_chat_requests%rowtype/);
+  assert.match(ambiguityFixMigration, /v_used_count integer/);
+  assert.match(ambiguityFixMigration, /usage_row\.quota_charged/);
+  assert.doesNotMatch(ambiguityFixMigration, /where[^;]*\band quota_charged\b/);
+  assert.match(ambiguityFixMigration, /returns table\(status text, quota_charged boolean, remaining integer, attempt_count integer, acquired boolean\)/);
+  assert.match(ambiguityFixMigration, /notify pgrst, 'reload schema'/);
 });
