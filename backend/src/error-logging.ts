@@ -10,6 +10,9 @@ type ErrorContext = {
   endpoint?: string;
   requestId?: string | null;
   telegramId?: number | string | null;
+  plan?: string | null;
+  stage?: string | null;
+  telegramApiError?: unknown;
   rpcName?: string;
   expectedParameterContract?: string;
   level?: 'error' | 'warn' | 'info';
@@ -97,6 +100,9 @@ export function logBackendError(error: unknown, context: ErrorContext = {}) {
     endpoint,
     requestId,
     telegramId: context.telegramId ?? telegramIdFrom(req),
+    plan: context.plan ?? null,
+    stage: context.stage ?? null,
+    telegramApiError: context.telegramApiError ?? null,
     rpcName: context.rpcName ?? null,
     expectedParameterContract: context.expectedParameterContract ?? null,
     supabaseError: supabaseErrorFrom(error),

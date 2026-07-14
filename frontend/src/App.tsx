@@ -40,6 +40,7 @@ import {
   getAdminMeditations,
   getFavorites,
   getHistory,
+  getRecentSuccessfulPayments,
   getLunaMemory,
   getLunaHealth,
   getMeditations,
@@ -58,6 +59,7 @@ import {
   syncUser,
   uploadProfileAvatar,
   updateNotificationPreferences,
+  isValidTelegramInvoiceUrl,
   updateProfileGoals,
   updateMoonGardenDevState,
   updateUserLanguage,
@@ -633,7 +635,7 @@ const copy = {
     popularToday: 'Popular today',
     profile: 'Profile',
     member: 'Luna member',
-    restore: 'Restore purchases',
+    restore: 'Refresh access',
     checkinKicker: 'DAILY CHECK-IN',
     checkinTitle: 'How is your inner weather?',
     checkinContextHint: 'One small check-in helps Luna meet you where you are today.',
@@ -721,12 +723,12 @@ const copy = {
     savedSubtitle: 'Practices you saved to return to.',
     savedEmptyTitle: 'Your saved calm will live here.',
     savedEmptyBody: 'Tap the heart on any meditation to build a small refuge you can return to anytime.',
-    premiumTitle: 'Luna Premium',
-    premiumHeadline: 'A deeper Luna, whenever you need calm.',
-    premiumBody: 'Unlock the full meditation library, premium breathwork, soundscapes, mantras, and gentle Moon Garden growth.',
-    premiumLibrary: 'Premium Library',
-    premiumLunaAi: 'Luna AI companion',
-    premiumMoonSeeds: 'Moon Seeds and garden growth',
+    premiumTitle: 'LUNA PREMIUM',
+    premiumHeadline: 'Unlock the complete Luna experience.',
+    premiumBody: 'Full meditation library, expanded Luna conversations, premium soundscapes, and 40 Moon Seeds.',
+    premiumLibrary: 'All meditations',
+    premiumLunaAi: 'More Luna messages',
+    premiumMoonSeeds: '40 Moon Seeds',
     premiumSoundscapes: 'Premium soundscapes',
     weeklyContent: 'Weekly Content',
     dailyStreak: 'Daily Streak',
@@ -762,7 +764,7 @@ const copy = {
     paymentCancelled: 'Payment cancelled. You can restart checkout anytime.',
     paymentPending: 'Payment is pending. Telegram will confirm it shortly.',
     invoiceOpened: 'Invoice opened in Telegram. Complete payment there to unlock access.',
-    paymentFailed: 'Payment could not open. Please try again, or open the bot and use /plans.',
+    paymentFailed: 'Payment could not open. Please try again.',
     sessionComplete: 'Session Complete',
     sessionCompleteBody: 'You gave yourself a moment of calm.',
     sessionCompleteAlt: 'You returned to yourself for a few minutes.',
@@ -963,7 +965,7 @@ const copy = {
     popularToday: 'Популярно сегодня',
     profile: 'Профиль',
     member: 'Участник Luna',
-    restore: 'Восстановить покупки',
+    restore: 'Обновить доступ',
     checkinKicker: 'ЕЖЕДНЕВНЫЙ ЧЕК-ИН',
     checkinTitle: 'Как ты чувствуешь себя внутри?',
     checkinContextHint: 'Один короткий чек-ин помогает Luna быть рядом с тобой сегодня.',
@@ -1051,12 +1053,12 @@ const copy = {
     savedSubtitle: 'Практики, к которым ты хочешь вернуться.',
     savedEmptyTitle: 'Здесь будет твоё сохранённое спокойствие.',
     savedEmptyBody: 'Нажми сердечко на любой медитации, чтобы собрать практики для возвращения.',
-    premiumTitle: 'Luna Premium',
-    premiumHeadline: 'Больше Luna, когда тебе нужно спокойствие.',
-    premiumBody: 'Открой полную библиотеку медитаций, премиальное дыхание, саундскейпы, мантры и мягкий рост Лунного сада.',
-    premiumLibrary: 'Премиум-библиотека',
-    premiumLunaAi: 'AI-компаньон Luna',
-    premiumMoonSeeds: 'Лунные семена и рост сада',
+    premiumTitle: 'LUNA PREMIUM',
+    premiumHeadline: 'Открой полный опыт Luna.',
+    premiumBody: 'Вся библиотека медитаций, больше разговоров с Luna, премиальные саундскейпы и 40 лунных семян.',
+    premiumLibrary: 'Все медитации',
+    premiumLunaAi: 'Больше сообщений Luna',
+    premiumMoonSeeds: '40 лунных семян',
     premiumSoundscapes: 'Премиум-саундскейпы',
     weeklyContent: 'Новый контент каждую неделю',
     dailyStreak: 'Ежедневная серия',
@@ -1092,7 +1094,7 @@ const copy = {
     paymentCancelled: 'Оплата отменена. Можно начать снова в любой момент.',
     paymentPending: 'Оплата ожидает подтверждения. Telegram скоро подтвердит её.',
     invoiceOpened: 'Счёт открыт в Telegram. Заверши оплату там, чтобы открыть доступ.',
-    paymentFailed: 'Не удалось открыть оплату. Попробуй ещё раз или открой бота и используй /plans.',
+    paymentFailed: 'Не удалось открыть оплату. Попробуй ещё раз.',
     sessionComplete: 'Сессия завершена',
     sessionCompleteBody: 'Ты подарил(а) себе момент спокойствия.',
     sessionCompleteAlt: 'Ты вернулся(ась) к себе на несколько минут.',
@@ -1227,6 +1229,55 @@ const fallbackUser: TelegramWebAppUser = {
 
 function getTelegram() {
   return window.Telegram?.WebApp;
+}
+
+type TelegramInvoiceStatus = 'paid' | 'cancelled' | 'failed' | 'pending';
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string) {
+  return new Promise<T>((resolve, reject) => {
+    const timeout = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+    promise.then(
+      (value) => {
+        window.clearTimeout(timeout);
+        resolve(value);
+      },
+      (error) => {
+        window.clearTimeout(timeout);
+        reject(error);
+      }
+    );
+  });
+}
+
+function openTelegramInvoiceWithTimeout(
+  telegram: TelegramWebApp | undefined,
+  invoiceLink: string,
+  timeoutMs = 90_000
+) {
+  if (!telegram?.openInvoice) {
+    return Promise.reject(new Error('Telegram WebApp invoice API is unavailable.'));
+  }
+
+  return new Promise<TelegramInvoiceStatus>((resolve, reject) => {
+    let settled = false;
+    const finish = (callback: () => void) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      callback();
+    };
+    const timeout = window.setTimeout(() => {
+      finish(() => reject(new Error('Telegram invoice confirmation timed out.')));
+    }, timeoutMs);
+
+    try {
+      telegram.openInvoice?.(invoiceLink, (status) => {
+        finish(() => resolve(status));
+      });
+    } catch (error) {
+      finish(() => reject(error));
+    }
+  });
 }
 
 function readLibraryCache() {
@@ -1911,6 +1962,7 @@ function App() {
   const [initialLibraryCache] = useState(() => readLibraryCache());
   const [initialAccountCache] = useState(() => readAccountCache(user.id));
   const accountRefreshRef = useRef<Promise<AccessState | void> | null>(null);
+  const paymentOperationRef = useRef(false);
   const [language, setLanguage] = useState<AppLanguage>(() => initialLanguage(user));
   const [page, setPage] = useState<Page>(() => initialPageFromLaunch(launchStartParam));
   const [libraryMode, setLibraryMode] = useState<LibraryMode>('meditations');
@@ -1998,6 +2050,17 @@ function App() {
 
     accountRefreshRef.current = refresh;
     return refresh;
+  };
+
+  const refreshAccessAndPayments = async () => {
+    const accessState = await refreshAccount();
+    await getRecentSuccessfulPayments(initData).catch((error) => {
+      console.info('[Luna payment history refresh failed]', {
+        errorClass: error instanceof Error ? error.name : 'unknown',
+        status: error instanceof ApiRequestError ? error.status : null
+      });
+    });
+    return accessState;
   };
 
   const showNotice = (message: string) => {
@@ -2555,7 +2618,7 @@ function App() {
   };
 
   const buyPlan = async (plan: 'monthly' | 'lifetime') => {
-    if (openingPlan) return;
+    if (openingPlan || paymentOperationRef.current) return;
     if (!accessVerified) {
       setPaymentMessage(language === 'ru' ? 'Не удалось подтвердить статус доступа. Попробуй обновить его.' : 'Your access status could not be verified. Please restore it first.');
       return;
@@ -2565,35 +2628,42 @@ function App() {
       return;
     }
 
+    paymentOperationRef.current = true;
     setOpeningPlan(plan);
     setPaymentMessage(copy[language].openingPayment);
     telegram?.HapticFeedback?.impactOccurred('light');
     try {
-      const { invoiceLink } = await createInvoiceLink(plan, initData);
+      const invoice = await withTimeout(createInvoiceLink(plan, initData), 15_000, 'Invoice creation timed out.');
+      if (!isValidTelegramInvoiceUrl(invoice.invoiceLink) || invoice.requestId.length === 0) {
+        throw new Error('The payment service returned an invalid invoice response.');
+      }
       setPaymentMessage(copy[language].openingStarsPayment);
 
       if (telegram?.openInvoice) {
-        telegram.openInvoice(invoiceLink, (status) => {
-          setOpeningPlan(null);
-          if (status === 'paid') {
-            setAccess((current) => ({ ...current, hasPremium: true, plan: plan === 'lifetime' ? 'Lifetime' : 'Monthly' }));
-            setPaymentMessage(copy[language].paymentSuccessful);
-            [250, 1200, 2800].forEach((delay) => window.setTimeout(() => void refreshAccount(), delay));
-            return;
-          }
-          setPaymentMessage(status === 'cancelled' ? copy[language].paymentCancelled : copy[language].paymentPending);
-        });
+        const status = await openTelegramInvoiceWithTimeout(telegram, invoice.invoiceLink);
+        setOpeningPlan(null);
+        paymentOperationRef.current = false;
+        if (status === 'paid') {
+          setAccess((current) => ({ ...current, hasPremium: true, plan: plan === 'lifetime' ? 'Lifetime' : 'Monthly' }));
+          setPaymentMessage(copy[language].paymentSuccessful);
+          void refreshAccessAndPayments();
+          [1200, 2800].forEach((delay) => window.setTimeout(() => void refreshAccessAndPayments(), delay));
+          return;
+        }
+        setPaymentMessage(status === 'cancelled' ? copy[language].paymentCancelled : status === 'failed' ? copy[language].paymentFailed : copy[language].paymentPending);
       } else {
-        if (telegram?.openTelegramLink && /^https:\/\/t\.me\//i.test(invoiceLink)) {
-          telegram.openTelegramLink(invoiceLink);
+        if (telegram?.openTelegramLink) {
+          telegram.openTelegramLink(invoice.invoiceLink);
         } else {
-          window.location.assign(invoiceLink);
+          window.location.assign(invoice.invoiceLink);
         }
         setOpeningPlan(null);
+        paymentOperationRef.current = false;
         setPaymentMessage(copy[language].invoiceOpened);
       }
     } catch (error) {
       setOpeningPlan(null);
+      paymentOperationRef.current = false;
       const botUsername = import.meta.env.VITE_BOT_USERNAME;
       const alreadyActive = error instanceof ApiRequestError && error.status === 409;
       setPaymentMessage(alreadyActive
@@ -2601,11 +2671,14 @@ function App() {
         : copy[language].paymentFailed);
       console.info('[Luna invoice open failed]', {
         plan,
+        stage: error instanceof ApiRequestError && error.status === 502 ? 'invoice_response_validation' : 'invoice_open_or_create',
+        telegramId: user.id,
+        requestId: error instanceof ApiRequestError ? error.requestId : null,
         status: error instanceof ApiRequestError ? error.status : null,
         errorClass: error instanceof Error ? error.name : 'unknown',
         hasTelegramInvoiceApi: Boolean(telegram?.openInvoice)
       });
-      if (alreadyActive) void refreshAccount();
+      if (alreadyActive) void refreshAccessAndPayments();
       else if (botUsername) telegram?.openTelegramLink(`https://t.me/${botUsername}?start=plans`);
     }
   };
@@ -2814,7 +2887,7 @@ function App() {
         )}
 
         {page === 'pricing' && (
-          <PricingPage access={access} accessVerified={accessVerified} onBuy={buyPlan} onRestore={refreshAccount} message={paymentMessage} openingPlan={openingPlan} onLibrary={() => setPage('library')} locked={selectedMeditation} language={language} />
+          <PricingPage access={access} accessVerified={accessVerified} onBuy={buyPlan} onRestore={refreshAccessAndPayments} message={paymentMessage} openingPlan={openingPlan} onLibrary={() => setPage('library')} locked={selectedMeditation} language={language} />
         )}
 
         {page === 'progress' && (
@@ -2844,7 +2917,7 @@ function App() {
               window.history.pushState({}, '', '/admin');
               setPage('admin');
             }}
-            onRestore={refreshAccount}
+            onRestore={refreshAccessAndPayments}
             onAddHome={addLunaToHomeScreen}
             onLanguageChange={changeLanguage}
             onProfileUpdate={setProfile}
@@ -4131,8 +4204,14 @@ function PricingPage({
     ? new Date(access.user.active_until).toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })
     : null;
   const benefits = language === 'ru'
-    ? ['Вся библиотека медитаций', 'Расширенный лимит разговоров с Luna', 'Premium-дыхание и саундскейпы', 'Мантры и будущий Premium-контент', '40 лунных семян один раз после первой активации']
-    : ['Full meditation library', 'Higher Luna conversation limits', 'Premium breathwork and soundscapes', 'Mantras and future Premium content', '40 Moon Seeds once after first activation'];
+    ? ['Все медитации', 'Больше сообщений Luna', '40 лунных семян']
+    : ['All meditations', 'More Luna messages', '40 Moon Seeds'];
+  const monthlyBenefits = language === 'ru'
+    ? ['Вся библиотека медитаций', 'Больше разговоров с Luna', 'Премиальные дыхание и саундскейпы', '40 семян после первой активации']
+    : ['Full meditation library', 'Higher Luna conversation limit', 'Premium breathwork and soundscapes', '40 Moon Seeds after first activation'];
+  const lifetimeBenefits = language === 'ru'
+    ? ['Доступ навсегда', 'Вся библиотека медитаций', 'Больше разговоров с Luna', 'Весь текущий и будущий Premium-контент']
+    : ['Lifetime access', 'Full meditation library', 'Higher Luna conversation limit', 'All current and future Premium content'];
 
   if (!accessVerified) {
     return (
@@ -4148,24 +4227,23 @@ function PricingPage({
 
   return (
     <div className="luna-page space-y-4">
-      <section className="relative overflow-hidden rounded-[34px] border border-gold/20 bg-[radial-gradient(circle_at_76%_18%,rgba(212,175,55,.2),transparent_26%),linear-gradient(160deg,rgba(43,26,58,.72),rgba(10,6,16,.9))] p-5 shadow-glow">
-        <div className="absolute right-5 top-5 opacity-80">
-          <MoonMark className="h-12 w-12 shrink-0" />
-        </div>
-        <p className="luna-section-kicker">{t.premiumTitle}</p>
-        <h2 className="luna-editorial-title mt-8 max-w-[280px] text-[34px] leading-[1]">{isLifetime ? (language === 'ru' ? 'Premium навсегда активен' : 'Lifetime Premium Active') : isMonthly ? (language === 'ru' ? 'Месячный Premium активен' : 'Monthly Premium Active') : t.premiumHeadline}</h2>
-        <p className="mt-3 max-w-[310px] text-sm leading-6 text-beige">{isLifetime
+      <section className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_100%_0%,rgba(124,93,214,.18),transparent_34%),linear-gradient(145deg,rgba(29,24,70,.92),rgba(9,8,25,.96))] p-5 shadow-[0_20px_45px_rgba(4,3,18,.26)]">
+        <div className="relative z-10">
+          <p className="luna-section-kicker">{t.premiumTitle}</p>
+          <h2 className="luna-editorial-title mt-3 max-w-[310px] text-[30px] leading-[1.05]">{isLifetime ? (language === 'ru' ? 'Premium навсегда активен' : 'Lifetime Premium active') : isMonthly ? (language === 'ru' ? 'Месячный Premium активен' : 'Monthly Premium active') : t.premiumHeadline}</h2>
+          <p className="mt-3 max-w-[330px] text-sm leading-6 text-lavender">{isLifetime
           ? (language === 'ru' ? 'Твой постоянный доступ к Luna открыт. Повторная покупка не нужна.' : 'Your permanent Luna access is open. No further purchase is needed.')
           : isMonthly
             ? (activeUntil ? (language === 'ru' ? `Доступ активен до ${activeUntil}.` : `Access is active through ${activeUntil}.`) : (language === 'ru' ? 'Твой месячный доступ активен.' : 'Your monthly access is active.'))
-            : (language === 'ru' ? 'Открой глубокие практики, расширенные разговоры и весь мир Luna.' : 'Open deeper practices, expanded conversations, and the full Luna experience.')}</p>
+            : t.premiumBody}</p>
+          {!isLifetime && !isMonthly && <div className="mt-5 grid grid-cols-3 gap-2">
+            {benefits.map((benefit) => <span key={benefit} className="rounded-[16px] border border-white/10 bg-white/[0.06] px-2.5 py-2 text-[11px] leading-4 text-cream/85">{benefit}</span>)}
+          </div>}
+        </div>
       </section>
       {locked && <p className="luna-card p-4 text-sm text-cream/80">{text(language, 'lockedPremium', { title: getLocalizedMeditation(locked, language).title })}</p>}
-      <section className="grid gap-2 rounded-[26px] border border-white/10 bg-white/[0.035] p-4">
-        {benefits.map((benefit) => <div key={benefit} className="flex items-start gap-2 text-sm leading-5 text-cream/78"><CheckCircle size={16} className="mt-0.5 shrink-0 text-gold" />{benefit}</div>)}
-      </section>
-      {!isLifetime && !isMonthly && <PlanCard title={t.monthlyPremium} price={`${premiumPrices.monthly} ⭐ · 30 ${language === 'ru' ? 'дней' : 'days'}`} features={benefits.slice(0, 3)} action={t.unlockMonthly} loading={openingPlan === 'monthly'} disabled={Boolean(openingPlan)} onClick={() => onBuy('monthly')} language={language} featured />}
-      {!isLifetime && <PlanCard title={t.lifetimePremium} price={`${premiumPrices.lifetime} ⭐ · ${language === 'ru' ? 'навсегда' : 'forever'}`} features={benefits.slice(0, 4)} action={isMonthly ? (language === 'ru' ? 'Перейти на Lifetime' : 'Upgrade to Lifetime') : t.getLifetime} loading={openingPlan === 'lifetime'} disabled={Boolean(openingPlan)} onClick={() => onBuy('lifetime')} language={language} />}
+      {!isLifetime && !isMonthly && <PlanCard title={t.monthlyPremium} price={`${premiumPrices.monthly} ⭐ · 30 ${language === 'ru' ? 'дней' : 'days'}`} features={monthlyBenefits} action={t.unlockMonthly} loading={openingPlan === 'monthly'} disabled={Boolean(openingPlan)} onClick={() => onBuy('monthly')} language={language} featured />}
+      {!isLifetime && <PlanCard title={t.lifetimePremium} price={`${premiumPrices.lifetime} ⭐ · ${language === 'ru' ? 'навсегда' : 'forever'}`} features={lifetimeBenefits} action={isMonthly ? (language === 'ru' ? 'Перейти на Lifetime' : 'Upgrade to Lifetime') : t.getLifetime} loading={openingPlan === 'lifetime'} disabled={Boolean(openingPlan)} onClick={() => onBuy('lifetime')} language={language} />}
       {isLifetime && <button onClick={onLibrary} className="w-full rounded-[20px] bg-gold px-5 py-4 font-semibold text-night">{t.openPremiumLibrary}</button>}
       {message && <p className="rounded-2xl bg-lavender/15 p-4 text-sm text-cream/80">{message}</p>}
       {openingPlan && <div className="h-1 overflow-hidden rounded-full bg-cream/10"><div className="h-full w-1/2 animate-pulse rounded-full bg-gold" /></div>}
@@ -5610,15 +5688,15 @@ function ProfilePage({
             {access.hasPremium ? (language === 'en' ? 'View Premium benefits' : 'Посмотреть Premium') : (language === 'en' ? 'Upgrade to Premium' : 'Перейти на Premium')}
           </button>}
           <button disabled={restoreState === 'loading'} onClick={() => void restorePurchases()} className="mt-2 w-full rounded-[18px] border border-white/10 bg-white/[0.045] px-4 py-3 text-sm font-semibold text-gold disabled:opacity-60">
-            {restoreState === 'loading' ? (language === 'en' ? 'Restoring...' : 'Восстановление...') : copy[language].restore}
+            {restoreState === 'loading' ? (language === 'en' ? 'Refreshing...' : 'Обновляю...') : copy[language].restore}
           </button>
           {restoreState !== 'idle' && restoreState !== 'loading' && (
             <p className="mt-3 text-xs text-lavender">
               {restoreState === 'success'
-                ? (language === 'en' ? 'Purchases restored.' : 'Покупки восстановлены.')
+                ? (language === 'en' ? 'Access refreshed.' : 'Доступ обновлён.')
                 : restoreState === 'empty'
                   ? (language === 'en' ? 'No purchases found for this account.' : 'Покупки для этого аккаунта не найдены.')
-                  : (language === 'en' ? 'Could not restore purchases. Please try again.' : 'Не удалось восстановить покупки. Попробуй ещё раз.')}
+                  : (language === 'en' ? 'Could not refresh access. Please try again.' : 'Не удалось обновить доступ. Попробуй ещё раз.')}
             </p>
           )}
         </section>

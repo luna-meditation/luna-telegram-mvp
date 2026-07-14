@@ -6,7 +6,7 @@ import {
   recordSuccessfulPayment,
   upsertUser
 } from './db.js';
-import { isPlanId, plans, type PlanId } from './plans.js';
+import { isPlanId, isValidTelegramInvoiceUrl, plans, type PlanId } from './plans.js';
 import { paymentEligibility } from './payment-policy.js';
 import { logBackendError } from './error-logging.js';
 
@@ -74,8 +74,8 @@ function plansMessage(language: BotLanguage, plan: string) {
     : `Choose your Luna access:\n\nMonthly: ${plans.monthly.amountStars} Stars for 30 days\nLifetime: ${plans.lifetime.amountStars} Stars`;
 }
 
-function invoicePayload(plan: PlanId, telegramId: number) {
-  return JSON.stringify({ plan, telegramId, source: 'luna' });
+function invoicePayload(plan: PlanId, telegramId: number, requestId?: string) {
+  return JSON.stringify({ plan, telegramId, source: 'luna', ...(requestId ? { requestId } : {}) });
 }
 
 async function ensureUser(ctx: Context) {
@@ -91,38 +91,92 @@ async function ensureUser(ctx: Context) {
   });
 }
 
-export async function sendStarsInvoice(chatId: number, telegramId: number, planId: PlanId) {
+export async function sendStarsInvoice(chatId: number, telegramId: number, planId: PlanId, requestId?: string) {
   const plan = plans[planId];
 
-  await bot.telegram.callApi('sendInvoice', {
-    chat_id: chatId,
-    title: `Luna ${plan.title}`,
-    description:
-      planId === 'monthly'
-        ? 'Unlock Luna premium meditations and breathing practices for 30 days.'
-        : 'Unlock Luna premium meditations and breathing practices forever.',
-    payload: invoicePayload(planId, telegramId),
-    provider_token: '',
-    currency: 'XTR',
-    prices: [{ label: plan.title, amount: plan.amountStars }],
-    start_parameter: `luna_${planId}`
-  });
+  try {
+    await bot.telegram.callApi('sendInvoice', {
+      chat_id: chatId,
+      title: `Luna ${plan.title}`,
+      description:
+        planId === 'monthly'
+          ? 'Unlock Luna premium meditations and breathing practices for 30 days.'
+          : 'Unlock Luna premium meditations and breathing practices forever.',
+      payload: invoicePayload(planId, telegramId, requestId),
+      provider_token: '',
+      currency: 'XTR',
+      prices: [{ label: plan.title, amount: plan.amountStars }],
+      start_parameter: `luna_${planId}`
+    });
+  } catch (error) {
+    logBackendError(error, {
+      endpoint: 'Telegram Bot API sendInvoice',
+      requestId,
+      telegramId,
+      plan: planId,
+      stage: 'telegram_invoice_create',
+      telegramApiError: error,
+      level: 'error'
+    });
+    throw error;
+  }
 }
 
-export async function createStarsInvoiceLink(telegramId: number, planId: PlanId) {
-  const plan = plans[planId];
+const inFlightInvoiceLinks = new Map<string, Promise<string>>();
 
-  return bot.telegram.createInvoiceLink({
+export async function createStarsInvoiceLink(telegramId: number, planId: PlanId, requestId?: string) {
+  const key = `${telegramId}:${planId}`;
+  const existing = inFlightInvoiceLinks.get(key);
+  if (existing) return existing;
+
+  const plan = plans[planId];
+  let invoiceRequest: Promise<string>;
+  invoiceRequest = bot.telegram.createInvoiceLink({
     title: `Luna ${plan.title}`,
     description:
       planId === 'monthly'
         ? 'Unlock Luna premium meditations and breathing practices for 30 days.'
         : 'Unlock Luna premium meditations and breathing practices forever.',
-    payload: invoicePayload(planId, telegramId),
+    payload: invoicePayload(planId, telegramId, requestId),
     provider_token: '',
     currency: 'XTR',
     prices: [{ label: plan.title, amount: plan.amountStars }]
+  }).then((invoiceLink) => {
+    if (!isValidTelegramInvoiceUrl(invoiceLink)) {
+      const error = new Error('Telegram returned an invalid invoice URL.');
+      logBackendError(error, {
+        endpoint: 'Telegram Bot API createInvoiceLink response',
+        requestId,
+        telegramId,
+        plan: planId,
+        stage: 'invoice_link_response_validation',
+        telegramApiError: error,
+        level: 'error'
+      });
+      throw error;
+    }
+    return invoiceLink;
+  }).then((invoiceLink) => {
+    setTimeout(() => {
+      if (inFlightInvoiceLinks.get(key) === invoiceRequest) inFlightInvoiceLinks.delete(key);
+    }, 30_000);
+    return invoiceLink;
+  }).catch((error) => {
+    if (inFlightInvoiceLinks.get(key) === invoiceRequest) inFlightInvoiceLinks.delete(key);
+    logBackendError(error, {
+      endpoint: 'Telegram Bot API createInvoiceLink',
+      requestId,
+      telegramId,
+      plan: planId,
+      stage: 'telegram_invoice_create',
+      telegramApiError: error,
+      level: 'error'
+    });
+    throw error;
   });
+
+  inFlightInvoiceLinks.set(key, invoiceRequest);
+  return invoiceRequest;
 }
 
 export async function configureTelegramBot() {
@@ -232,7 +286,7 @@ bot.action(/^buy_(monthly|lifetime)$/, async (ctx) => {
 bot.on('pre_checkout_query', async (ctx) => {
   const payload = ctx.preCheckoutQuery.invoice_payload;
   try {
-    const parsed = JSON.parse(payload) as { plan?: unknown; telegramId?: unknown };
+    const parsed = JSON.parse(payload) as { plan?: unknown; telegramId?: unknown; requestId?: unknown };
     if (!isPlanId(parsed.plan) || typeof parsed.telegramId !== 'number' || !ctx.from || parsed.telegramId !== ctx.from.id) {
       await ctx.answerPreCheckoutQuery(false, 'Invalid Luna payment payload.');
       return;
@@ -244,7 +298,12 @@ bot.on('pre_checkout_query', async (ctx) => {
     }
     await ctx.answerPreCheckoutQuery(true);
   } catch (error) {
-    logBackendError(error, { endpoint: 'Telegram pre_checkout_query', telegramId: ctx.from?.id ?? null });
+    logBackendError(error, {
+      endpoint: 'Telegram pre_checkout_query',
+      telegramId: ctx.from?.id ?? null,
+      stage: 'pre_checkout_validation',
+      level: 'error'
+    });
     await ctx.answerPreCheckoutQuery(false, 'Invalid Luna payment payload.');
   }
 });
@@ -252,9 +311,10 @@ bot.on('pre_checkout_query', async (ctx) => {
 bot.on('successful_payment', async (ctx) => {
   if (!ctx.from) return;
   const payment = ctx.message.successful_payment;
+  let payload: { plan?: unknown; telegramId?: unknown; requestId?: unknown } | null = null;
 
   try {
-    const payload = JSON.parse(payment.invoice_payload) as { plan?: unknown; telegramId?: unknown };
+    payload = JSON.parse(payment.invoice_payload) as { plan?: unknown; telegramId?: unknown; requestId?: unknown };
 
     if (!isPlanId(payload.plan) || typeof payload.telegramId !== 'number' || payload.telegramId !== ctx.from.id) {
       console.warn('[Luna payment rejected]', { telegramId: ctx.from.id, reason: 'invalid_payload' });
@@ -266,6 +326,13 @@ bot.on('successful_payment', async (ctx) => {
       plan: payload.plan,
       telegram_payment_charge_id: payment.telegram_payment_charge_id,
       provider_payment_charge_id: payment.provider_payment_charge_id
+    });
+    console.info('[Luna successful payment recorded]', {
+      telegramId: ctx.from.id,
+      plan: payload.plan,
+      requestId: typeof payload.requestId === 'string' ? payload.requestId : null,
+      isNewPayment: result.isNewPayment,
+      seedsGranted: result.seedsGranted
     });
 
     const language = botLanguage(ctx.from.language_code);
@@ -285,6 +352,13 @@ bot.on('successful_payment', async (ctx) => {
       Markup.inlineKeyboard([[Markup.button.webApp(language === 'ru' ? 'Открыть Luna' : 'Open Luna', env.MINI_APP_URL)]])
     );
   } catch (error) {
-    logBackendError(error, { endpoint: 'Telegram successful_payment', telegramId: ctx.from.id });
+    logBackendError(error, {
+      endpoint: 'Telegram successful_payment',
+      telegramId: ctx.from.id,
+      plan: isPlanId(payload?.plan) ? payload.plan : null,
+      requestId: typeof payload?.requestId === 'string' ? payload.requestId : null,
+      stage: 'successful_payment_callback',
+      level: 'error'
+    });
   }
 });

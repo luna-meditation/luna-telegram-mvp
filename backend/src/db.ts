@@ -1751,6 +1751,19 @@ export async function recordSuccessfulPayment(input: {
   };
 }
 
+export async function getRecentSuccessfulPayments(telegramId: number) {
+  const { data, error } = await supabase
+    .from('payments')
+    .select('plan, amount_stars, currency, status, created_at')
+    .eq('telegram_id', telegramId)
+    .eq('status', 'paid')
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function getAdminStats() {
   const [{ count: totalUsers }, { data: users }, { data: payments }] = await Promise.all([
     supabase.from('users').select('*', { count: 'exact', head: true }),

@@ -12,13 +12,15 @@ export class ApiRequestError extends Error {
   status: number | null;
   responseBody: string | null;
   requestUrl: string;
+  requestId: string | null;
 
-  constructor(message: string, requestUrl: string, status: number | null = null, responseBody: string | null = null) {
+  constructor(message: string, requestUrl: string, status: number | null = null, responseBody: string | null = null, requestId: string | null = null) {
     super(message);
     this.name = 'ApiRequestError';
     this.status = status;
     this.responseBody = responseBody;
     this.requestUrl = requestUrl;
+    this.requestId = requestId;
   }
 }
 
@@ -296,6 +298,7 @@ async function request<T>(path: string, options?: RequestInit, initData?: string
 }
 
 async function executeRequest<T>(requestUrl: string, options?: RequestInit, initData?: string): Promise<T> {
+  const clientRequestId = new Headers(options?.headers).get('x-request-id');
   let response: Response;
   try {
     response = await fetch(requestUrl, {
@@ -303,18 +306,18 @@ async function executeRequest<T>(requestUrl: string, options?: RequestInit, init
       headers: { 'Content-Type': 'application/json', ...telegramHeaders(initData), ...options?.headers }
     });
   } catch (error) {
-    throw new ApiRequestError(error instanceof Error ? error.message : 'Network request failed.', requestUrl);
+    throw new ApiRequestError(error instanceof Error ? error.message : 'Network request failed.', requestUrl, null, null, clientRequestId);
   }
 
   const responseBody = await response.text();
   if (!response.ok) {
-    throw new ApiRequestError(`Request failed: ${response.status}`, requestUrl, response.status, responseBody);
+    throw new ApiRequestError(`Request failed: ${response.status}`, requestUrl, response.status, responseBody, response.headers.get('x-request-id') ?? clientRequestId);
   }
 
   try {
     return JSON.parse(responseBody) as T;
   } catch {
-    throw new ApiRequestError('API response was not valid JSON.', requestUrl, response.status, responseBody);
+    throw new ApiRequestError('API response was not valid JSON.', requestUrl, response.status, responseBody, response.headers.get('x-request-id') ?? clientRequestId);
   }
 }
 
@@ -452,10 +455,56 @@ export async function recordSceneMoonSeed(input: {
 }
 
 export async function createInvoiceLink(plan: 'monthly' | 'lifetime', initData?: string) {
-  return request<{ invoiceLink: string }>('/api/payments/invoice-link', {
+  const requestId = typeof window !== 'undefined' && window.crypto?.randomUUID
+    ? window.crypto.randomUUID()
+    : `payment-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const response = await request<unknown>('/api/payments/invoice-link', {
     method: 'POST',
+    headers: { 'x-request-id': requestId },
     body: JSON.stringify({ plan })
   }, initData);
+
+  if (!isValidTelegramInvoiceUrl((response as { invoiceLink?: unknown })?.invoiceLink)) {
+    throw new ApiRequestError('The payment service returned an invalid Telegram invoice link.', `${API_URL}/api/payments/invoice-link`, 502, JSON.stringify(response), requestId);
+  }
+
+  const responsePlan = (response as { plan?: unknown })?.plan;
+  if (responsePlan !== plan) {
+    throw new ApiRequestError('The payment service returned the wrong plan.', `${API_URL}/api/payments/invoice-link`, 502, JSON.stringify(response), requestId);
+  }
+
+  return {
+    invoiceLink: (response as { invoiceLink: string }).invoiceLink,
+    requestId: typeof (response as { requestId?: unknown }).requestId === 'string'
+      ? (response as { requestId: string }).requestId
+      : requestId,
+    amountStars: (response as { amountStars?: number }).amountStars
+  };
+}
+
+export type RecentPayment = {
+  plan: 'monthly' | 'lifetime';
+  amount_stars: number;
+  currency: string;
+  status: string;
+  created_at: string;
+};
+
+export async function getRecentSuccessfulPayments(initData?: string) {
+  const response = await request<{ payments: RecentPayment[] }>('/api/payments/recent', undefined, initData);
+  return response.payments;
+}
+
+export function isValidTelegramInvoiceUrl(value: unknown): value is string {
+  if (typeof value !== 'string' || value.length > 2048) return false;
+
+  try {
+    const url = new URL(value);
+    if (url.protocol !== 'https:' || !['t.me', 'telegram.me'].includes(url.hostname.toLowerCase())) return false;
+    return /^\/\$(?!$)[^/]+$/.test(url.pathname) || /^\/invoice\/(?!$)[^/]+$/.test(url.pathname);
+  } catch {
+    return false;
+  }
 }
 
 export async function completePractice(input: {

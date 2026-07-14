@@ -16,6 +16,7 @@ import {
   getMeditationById,
   getMeditations,
   getPractices,
+  getRecentSuccessfulPayments,
   getProfileStats,
   getTodayCheckin,
   getUserAccess,
@@ -43,7 +44,7 @@ import {
   type MeditationInput
 } from './db.js';
 import { runMigrations } from './migrations.js';
-import { isPlanId } from './plans.js';
+import { isPlanId, isValidTelegramInvoiceUrl } from './plans.js';
 import { paymentEligibility } from './payment-policy.js';
 import { logBackendError, type RequestWithId } from './error-logging.js';
 import { PlaybackInputError } from './playback-security.js';
@@ -418,6 +419,7 @@ app.post('/api/scene-sessions/moon-seed', requireTelegramWebApp, async (req, res
 app.post('/api/payments/invoice', requireTelegramWebApp, async (req, res, next) => {
   try {
     const authReq = req as AuthenticatedRequest;
+    const requestId = (req as RequestWithId).requestId;
     const { chatId, plan } = req.body as {
       chatId?: number;
       plan?: unknown;
@@ -433,9 +435,17 @@ app.post('/api/payments/invoice', requireTelegramWebApp, async (req, res, next) 
       res.status(409).json({ error: access.plan === 'Lifetime' ? 'Lifetime Premium is already active.' : 'Monthly Premium is already active.', code: 'plan_already_active' });
       return;
     }
-    await sendStarsInvoice(chatId, authReq.telegramUser.telegram_id, plan);
-    res.json({ ok: true });
+    await sendStarsInvoice(chatId, authReq.telegramUser.telegram_id, plan, requestId);
+    res.json({ ok: true, requestId, plan, amountStars: plan === 'monthly' ? 499 : 2499 });
   } catch (error) {
+    logBackendError(error, {
+      req: req as RequestWithId,
+      endpoint: 'POST /api/payments/invoice',
+      telegramId: (req as AuthenticatedRequest).telegramUser?.telegram_id,
+      plan: typeof req.body?.plan === 'string' ? req.body.plan : null,
+      stage: 'invoice_endpoint',
+      level: 'error'
+    });
     next(error);
   }
 });
@@ -443,6 +453,7 @@ app.post('/api/payments/invoice', requireTelegramWebApp, async (req, res, next) 
 app.post('/api/payments/invoice-link', requireTelegramWebApp, async (req, res, next) => {
   try {
     const authReq = req as AuthenticatedRequest;
+    const requestId = (req as RequestWithId).requestId;
     const { plan } = req.body as { plan?: unknown };
 
     if (!isPlanId(plan)) {
@@ -455,14 +466,50 @@ app.post('/api/payments/invoice-link', requireTelegramWebApp, async (req, res, n
       res.status(409).json({ error: access.plan === 'Lifetime' ? 'Lifetime Premium is already active.' : 'Monthly Premium is already active.', code: 'plan_already_active' });
       return;
     }
-    const invoiceLink = await createStarsInvoiceLink(authReq.telegramUser.telegram_id, plan);
+    const invoiceLink = await createStarsInvoiceLink(authReq.telegramUser.telegram_id, plan, requestId);
+    if (!isValidTelegramInvoiceUrl(invoiceLink)) {
+      const error = new Error('Telegram invoice link failed server validation.');
+      logBackendError(error, {
+        req: req as RequestWithId,
+        endpoint: 'POST /api/payments/invoice-link response validation',
+        telegramId: authReq.telegramUser.telegram_id,
+        level: 'error'
+      });
+      res.status(502).json({ error: 'Telegram returned an invalid invoice link.', code: 'invalid_invoice_link', requestId });
+      return;
+    }
     console.info('[Luna invoice link created]', {
       user: crypto.createHash('sha256').update(String(authReq.telegramUser.telegram_id)).digest('hex').slice(0, 12),
       plan,
-      amountStars: plan === 'monthly' ? 499 : 2499
+      amountStars: plan === 'monthly' ? 499 : 2499,
+      requestId,
+      invoiceHost: new URL(invoiceLink).hostname
     });
-    res.json({ invoiceLink });
+    res.json({ invoiceLink, requestId, plan, amountStars: plan === 'monthly' ? 499 : 2499 });
   } catch (error) {
+    logBackendError(error, {
+      req: req as RequestWithId,
+      endpoint: 'POST /api/payments/invoice-link',
+      telegramId: (req as AuthenticatedRequest).telegramUser?.telegram_id,
+      plan: typeof req.body?.plan === 'string' ? req.body.plan : null,
+      stage: 'invoice_link_endpoint',
+      level: 'error'
+    });
+    next(error);
+  }
+});
+
+app.get('/api/payments/recent', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    res.json({ payments: await getRecentSuccessfulPayments(authReq.telegramUser.telegram_id) });
+  } catch (error) {
+    logBackendError(error, {
+      req: req as RequestWithId,
+      endpoint: 'GET /api/payments/recent',
+      telegramId: (req as AuthenticatedRequest).telegramUser?.telegram_id,
+      level: 'error'
+    });
     next(error);
   }
 });
