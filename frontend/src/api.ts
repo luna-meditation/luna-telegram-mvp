@@ -134,7 +134,17 @@ export type ProfileStats = {
   moodTrend?: Array<{
     key: string;
     mood: DailyCheckin['mood'] | null;
+    sleepRange?: DailyCheckin['sleep_range'];
   }>;
+  progressInsights?: {
+    favoriteCategory: string | null;
+    favoriteMeditationTitle: string | null;
+    favoritePracticeTime: 'morning' | 'afternoon' | 'evening' | 'night' | null;
+    averageSessionMinutes: number;
+    monthlyPracticeDays: number;
+    monthlyConsistency: number;
+    bestPracticeWeekday: number | null;
+  };
   totalPracticeMinutes?: number;
   calmPoints?: number;
   moonSeeds?: number;

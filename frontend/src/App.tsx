@@ -90,6 +90,7 @@ import {
 } from './api';
 import { MoonGardenScene as AnimatedMoonGardenScene } from './components/moon-garden/MoonGardenScene';
 import { LunaChat } from './components/LunaChat';
+import { ProgressExperience } from './components/progress/ProgressExperience';
 import { V2BottomNav } from './v2/components/V2BottomNav';
 import { HomeV2 } from './v2/pages/HomeV2';
 import { frontendBuildMetadata, recordPaymentStage, useRuntimeDiagnostics, type RuntimeDiagnostics } from './runtime-diagnostics';
@@ -425,8 +426,6 @@ const gardenStages = [
     subtitle: { en: 'Your Moon Garden is flourishing.', ru: 'Твой Лунный сад расцветает.' }
   }
 ];
-
-type GardenStage = typeof gardenStages[number];
 
 const gardenCollections = [
   {
@@ -1449,10 +1448,6 @@ function streakLabel(count: number, language: AppLanguage) {
   return `${count} тихих дней с Luna`;
 }
 
-function minutesCountLabel(minutes: number, language: AppLanguage) {
-  return `${minutes} ${language === 'en' ? 'min' : 'мин'}`;
-}
-
 function availableMoonSeeds(profile: ProfileStats | null) {
   const value = Number(profile?.moonSeedsAvailable ?? 0);
   return Number.isFinite(value) ? Math.max(0, value) : 0;
@@ -1542,78 +1537,6 @@ function GardenUpgradeIcon({ visual, active }: { visual: GardenVisual; active: b
       {visual === 'twinBloom' && <span className={`absolute right-2 top-4 h-3 w-3 rounded-full ${active ? 'bg-gold/70' : 'bg-lavender/35'}`} />}
     </span>
   );
-}
-
-function practiceDaysLabel(days: number, language: AppLanguage) {
-  if (language === 'en') return days === 1 ? '1 day' : `${days} days`;
-  const lastDigit = days % 10;
-  const lastTwoDigits = days % 100;
-  const word = lastDigit === 1 && lastTwoDigits !== 11
-    ? 'день'
-    : lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14)
-      ? 'дня'
-      : 'дней';
-  return `${days} ${word}`;
-}
-
-function completedWeeksLabel(count: number, language: AppLanguage) {
-  if (language === 'en') return count === 1 ? 'Completed week' : 'Completed weeks';
-  return count === 1 ? 'Завершённая неделя' : 'Завершённые недели';
-}
-
-function moodTone(mood: DailyCheckin['mood'] | null | undefined) {
-  switch (mood) {
-    case 'calm':
-    case 'focused':
-      return 'positive';
-    case 'tired':
-    case 'low_energy':
-      return 'soft';
-    case 'anxious':
-    case 'stressed':
-      return 'heavy';
-    default:
-      return 'empty';
-  }
-}
-
-function thisWeekWithLunaInsight(profile: ProfileStats | null, wellness: WellnessSummary | null, language: AppLanguage) {
-  const stats = profile?.weeklyStats;
-  const weeklyMinutes = stats?.listeningMinutes ?? 0;
-  const practiceDays = stats?.completedDays ?? 0;
-  const completedThisWeek = stats?.completedSessions ?? 0;
-  const latestMood = [...(profile?.moodTrend ?? [])].reverse().find((item) => item.mood)?.mood
-    ?? wellness?.todayCheckin?.mood
-    ?? null;
-  const hasPractice = weeklyMinutes > 0 || practiceDays > 0 || completedThisWeek > 0;
-
-  if (!hasPractice) {
-    return language === 'en'
-      ? ['You’re just beginning.', 'Complete one practice and Luna will have more to reflect on.']
-      : ['Ты только начинаешь.', 'Заверши одну практику, и Luna сможет мягче отразить твою неделю.'];
-  }
-
-  const lines = [
-    language === 'en'
-      ? `${minutesCountLabel(weeklyMinutes, language)} across ${practiceDaysLabel(practiceDays, language)} became part of your week.`
-      : `${minutesCountLabel(weeklyMinutes, language)} за ${practiceDaysLabel(practiceDays, language)} стали частью твоей недели.`
-  ];
-
-  if (completedThisWeek > 0) {
-    lines.push(language === 'en'
-      ? `${completedThisWeek === 1 ? 'One completed session' : `${completedThisWeek} completed sessions`} gave the rhythm a little shape.`
-      : `${completedThisWeek === 1 ? 'Одна завершённая сессия' : `${completedThisWeek} завершённые сессии`} мягко поддержали ритм.`);
-  } else if (latestMood) {
-    lines.push(language === 'en'
-      ? `Your latest check-in felt ${translateMoodLabel(latestMood, language)}.`
-      : `Последний чек-ин: ${translateMoodLabel(latestMood, language)}.`);
-  }
-
-  lines.push(language === 'en'
-    ? (profile?.currentStreak ? 'Come back tomorrow and keep the rhythm soft.' : 'One quiet return is enough for tomorrow.')
-    : (profile?.currentStreak ? 'Вернись завтра и сохрани мягкий ритм.' : 'Одного тихого возвращения завтра достаточно.'));
-
-  return lines.slice(0, 3);
 }
 
 function normalizeSlug(value?: string | null) {
@@ -3098,6 +3021,7 @@ function App() {
             onRetry={() => void refreshAccount()}
             language={language}
             onMoonGarden={() => setPage('moonGarden')}
+            onLibrary={() => setPage('library')}
           />
         )}
 
@@ -3477,7 +3401,8 @@ function ProgressPage({
   unavailable,
   onRetry,
   language,
-  onMoonGarden
+  onMoonGarden,
+  onLibrary
 }: {
   profile: ProfileStats | null;
   wellness: WellnessSummary | null;
@@ -3486,6 +3411,7 @@ function ProgressPage({
   onRetry: () => void;
   language: AppLanguage;
   onMoonGarden: () => void;
+  onLibrary: () => void;
 }) {
   if (loading && !profile) {
     return <PageSkeleton rows={5} />;
@@ -3503,89 +3429,27 @@ function ProgressPage({
       </div>
     );
   }
-  const latestMood = [...(profile?.moodTrend ?? [])].reverse().find((item) => item.mood)?.mood ?? null;
-  const currentMood = latestMood ? translateMoodLabel(latestMood, language) : copy[language].notEnoughData;
   const planted = plantedGardenElements(profile);
   const plantedCount = planted.length;
   const seeds = availableMoonSeeds(profile);
   const stage = getCurrentGardenStage(plantedCount);
-  const streak = profile?.currentStreak ?? 0;
-  const weeklyInsightLines = thisWeekWithLunaInsight(profile, wellness, language);
-  const weeklyProgress = buildWeeklyProgress(profile, language);
-  const weeklyStats = profile?.weeklyStats;
-  const lifetimeStats = profile?.lifetimeStats;
-  const completedWeeks = lifetimeStats?.completedWeeks ?? 0;
-  const weekCompletedDays = profile?.currentWeek?.completedDays ?? weeklyProgress.days.filter((day) => day.state === 'completed').length;
-  const quickStats = [
-    {
-      label: language === 'en' ? 'Week Progress' : 'Прогресс недели',
-      value: `${weekCompletedDays}/7`,
-      body: weeklyProgress.cleanWeek
-        ? (language === 'en' ? 'Clean week completed' : 'Неделя завершена')
-        : (language === 'en' ? 'Practice days this week' : 'Дни практики на неделе'),
-      tone: 'strong'
-    },
-    {
-      label: language === 'en' ? 'Sessions' : 'Сессии',
-      value: String(lifetimeStats?.totalSessions ?? profile?.completedMeditations ?? profile?.completed ?? 0),
-      body: language === 'en' ? 'Completed practices' : 'Завершённые практики',
-      tone: 'gold'
-    },
-    {
-      label: language === 'en' ? 'Minutes' : 'Минуты',
-      value: String(lifetimeStats?.totalListeningMinutes ?? profile?.minutesListened ?? 0),
-      body: language === 'en' ? 'Listening total' : 'Всего слушания',
-      tone: 'soft'
-    },
-    {
-      label: language === 'en' ? 'Practice Days' : 'Дни практики',
-      value: String(lifetimeStats?.practiceDays ?? 0),
-      body: language === 'en' ? 'Real active days' : 'Реальные активные дни',
-      tone: 'soft'
-    },
-    {
-      label: language === 'en' ? 'Completed Weeks' : 'Завершённые недели',
-      value: String(completedWeeks),
-      body: completedWeeksLabel(completedWeeks, language),
-      tone: 'gold'
-    },
-    {
-      label: language === 'en' ? 'Longest Streak' : 'Лучшая серия',
-      value: String(lifetimeStats?.longestStreak ?? profile?.longestStreak ?? 0),
-      body: language === 'en' ? 'Quiet days' : 'Тихих дней',
-      tone: 'soft'
-    }
-  ];
-
   return (
-    <div className="luna-page luna-child-page space-y-4">
-      <div>
-        <h2 className="max-w-[280px] text-[28px] font-semibold tracking-[-0.04em] text-cream">{copy[language].progressTitle}</h2>
-        <p className="mt-1 max-w-[310px] text-sm leading-5 text-lavender/78">{language === 'en' ? 'Your practice story, one quiet return at a time.' : 'История твоей практики — одно мягкое возвращение за раз.'}</p>
-      </div>
-
-      <HeroProgressCard streak={streak} weeklyProgress={weeklyProgress} language={language} />
-
-      <section className="progress-metric-grid">
-        <ProgressMetricCard
-          label={copy[language].currentStreak}
-          value={String(streak)}
-          body={streakLabel(streak, language)}
-          tone="hero"
-        />
-        {quickStats.map((item) => (
-          <ProgressMetricCard key={item.label} {...item} />
-        ))}
-      </section>
-
-      <MoodTrendCard trend={profile?.moodTrend ?? []} currentMood={currentMood} language={language} />
-
-      <WeeklySummaryCard lines={weeklyInsightLines} stats={weeklyStats} language={language} />
-
-      <GardenRewardCard stage={stage} plantedCount={plantedCount} seeds={seeds} language={language} onOpen={onMoonGarden} />
-
-      <AchievementsSection profile={profile} language={language} />
-    </div>
+    <ProgressExperience
+      profile={profile}
+      wellness={wellness}
+      language={language}
+      garden={{
+        level: stage.level,
+        title: stage.title[language],
+        image: stage.path,
+        seeds,
+        plantedCount,
+        totalElements: gardenElements.length
+      }}
+      achievements={buildAchievementViews(profile, language)}
+      onMoonGarden={onMoonGarden}
+      onLibrary={onLibrary}
+    />
   );
 }
 
@@ -3598,217 +3462,6 @@ function PageSkeleton({ rows = 4 }: { rows?: number }) {
         {Array.from({ length: rows }, (_, index) => <div key={index} className="h-24 animate-pulse rounded-[24px] bg-white/[0.06]" />)}
       </div>
     </div>
-  );
-}
-
-function ProgressMetricCard({
-  label,
-  value,
-  body,
-  tone
-}: {
-  label: string;
-  value: string;
-  body: string;
-  tone: string;
-}) {
-  const accent = tone === 'gold'
-    ? 'from-gold/18 via-white/[0.045] to-white/[0.025]'
-    : tone === 'hero'
-      ? 'from-gold/16 via-lavender/10 to-white/[0.025]'
-    : tone === 'strong'
-      ? 'from-lavender/18 via-white/[0.05] to-white/[0.025]'
-      : 'from-white/[0.07] via-white/[0.04] to-white/[0.02]';
-
-  return (
-    <article className={`luna-progress-enter relative overflow-hidden rounded-[24px] border border-white/10 bg-gradient-to-br ${accent} p-3.5 shadow-glow backdrop-blur`}>
-      <div className="absolute -right-8 -top-8 h-20 w-20 rounded-full bg-gold/10 blur-2xl" />
-      <p className="relative text-[11px] leading-4 text-lavender">{label}</p>
-      <p className="relative mt-2.5 truncate text-2xl font-semibold tracking-[-0.04em] text-cream">{value}</p>
-      <p className="relative mt-1 text-[11px] leading-4 text-cream/58">{body}</p>
-    </article>
-  );
-}
-
-type WeeklyDayState = 'completed' | 'current' | 'missed' | 'future' | 'freeze_used' | 'premium_freeze';
-type WeeklyProgressDay = {
-  key: string;
-  label: string;
-  shortLabel: string;
-  state: WeeklyDayState;
-  minutes: number;
-};
-type WeeklyProgressModel = {
-  days: WeeklyProgressDay[];
-  freezeCount: number;
-  maxFreezes: number;
-  freezeUsedThisWeek: boolean;
-  cleanWeek: boolean;
-};
-
-function buildWeeklyProgress(profile: ProfileStats | null, language: AppLanguage): WeeklyProgressModel {
-  const maxFreezes = Math.max(1, Number(profile?.freezeMax ?? 1));
-  if (profile?.currentWeek?.days?.length === 7) {
-    const days = profile.currentWeek.days.map((day) => {
-      const date = new Date(`${day.key}T12:00:00`);
-      return {
-        key: day.key,
-        label: date.toLocaleDateString(language === 'en' ? 'en-US' : 'ru-RU', { weekday: 'long' }),
-        shortLabel: date.toLocaleDateString(language === 'en' ? 'en-US' : 'ru-RU', { weekday: 'short' }).slice(0, 3),
-        state: day.state,
-        minutes: day.minutes
-      };
-    });
-    return {
-      days,
-      freezeCount: Math.min(maxFreezes, Math.max(0, Number(profile.freezeCount ?? maxFreezes))),
-      maxFreezes,
-      freezeUsedThisWeek: days.some((day) => day.state === 'freeze_used' || day.state === 'premium_freeze'),
-      cleanWeek: profile.currentWeek.completedDays >= 7
-    };
-  }
-
-  const freezeCount = Math.min(maxFreezes, Math.max(0, Number(profile?.freezeCount ?? maxFreezes)));
-  return { days: [], freezeCount, maxFreezes, freezeUsedThisWeek: false, cleanWeek: false };
-}
-
-function HeroProgressCard({ streak, weeklyProgress, language }: { streak: number; weeklyProgress: WeeklyProgressModel; language: AppLanguage }) {
-  return (
-    <section className="hero-progress-card luna-progress-enter">
-      <img src="/images/progress/progress-bg-01.webp" alt="" className="hero-progress-bg" loading="lazy" />
-      <div className="hero-progress-overlay" />
-      <div className="relative z-10 flex min-h-[260px] flex-col justify-between p-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="hero-rhythm-lockup">
-            <p className="text-xs uppercase tracking-[0.18em] text-gold/92">{language === 'en' ? 'Current Rhythm' : 'Текущий ритм'}</p>
-            <div className="mt-3 flex items-end gap-3">
-              <strong>{streak}</strong>
-              <span>{language === 'en' ? 'Day Streak' : streak === 1 ? 'день подряд' : 'дней подряд'}</span>
-            </div>
-            <p className="mt-2 text-sm text-cream/76">{language === 'en' ? 'Keep your rhythm alive.' : 'Сохраняй свой мягкий ритм.'}</p>
-          </div>
-          <div className="hero-artwork-glow" aria-hidden="true" />
-        </div>
-
-        <div>
-          <FreezeIndicator model={weeklyProgress} language={language} />
-          <WeeklyTracker days={weeklyProgress.days} language={language} />
-        </div>
-      </div>
-    </section>
-  );
-}
-
-function FreezeIndicator({ model, language }: { model: WeeklyProgressModel; language: AppLanguage }) {
-  return (
-    <div className="freeze-indicator">
-      <span aria-hidden="true">❄</span>
-      <span>{language === 'en' ? 'Freeze' : 'Заморозка'}</span>
-      <strong>{model.freezeCount} / {model.maxFreezes}</strong>
-      <em>{model.freezeUsedThisWeek ? (language === 'en' ? 'Rhythm Protected' : 'Ритм защищён') : (language === 'en' ? 'Ready' : 'Готово')}</em>
-    </div>
-  );
-}
-
-function WeeklyTracker({ days, language }: { days: WeeklyProgressDay[]; language: AppLanguage }) {
-  return (
-    <div className="weekly-tracker" aria-label={language === 'en' ? 'Weekly tracker' : 'Недельный трекер'}>
-      {days.map((day) => (
-        <div key={day.key} className="weekly-day">
-          <span className="weekly-day-label">{day.shortLabel}</span>
-          <span className={`weekly-day-mark weekly-day-${day.state}`} title={`${day.label}: ${day.state}`}>
-            {day.state === 'completed' ? '✓' : day.state === 'current' ? '•' : day.state === 'freeze_used' || day.state === 'premium_freeze' ? '❄' : ''}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function MoodJourneyEmpty({ language }: { language: AppLanguage }) {
-  return (
-    <section className="mood-journey-card luna-progress-enter">
-      <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'Mood Journey' : 'Путь настроения'}</p>
-      <p className="mt-2 text-sm leading-5 text-lavender">
-        {language === 'en' ? 'Complete more check-ins to see how your state changes over time.' : 'Сделай ещё несколько чек-инов, чтобы увидеть изменения состояния.'}
-      </p>
-    </section>
-  );
-}
-
-function moodTrendIcon(mood: DailyCheckin['mood'] | null | undefined) {
-  switch (mood) {
-    case 'calm':
-      return '😌';
-    case 'focused':
-      return '😊';
-    case 'tired':
-      return '😴';
-    case 'anxious':
-      return '😰';
-    case 'stressed':
-      return '😔';
-    case 'low_energy':
-      return '😐';
-    default:
-      return '·';
-  }
-}
-
-function MoodTrendCard({ trend, currentMood, language }: { trend: ProfileStats['moodTrend']; currentMood: string; language: AppLanguage }) {
-  const items = trend?.length ? trend : [];
-  if (!items.some((item) => item.mood)) return <MoodJourneyEmpty language={language} />;
-  const firstMood = items.find((item) => item.mood)?.mood ?? null;
-  const lastMood = [...items].reverse().find((item) => item.mood)?.mood ?? null;
-  const summary = firstMood && lastMood && firstMood !== lastMood
-    ? (language === 'en'
-      ? `${translateMoodLabel(firstMood, language)} moved toward ${translateMoodLabel(lastMood, language)}.`
-      : `${translateMoodLabel(firstMood, language)} сменилось на ${translateMoodLabel(lastMood, language)}.`)
-    : (language === 'en' ? 'Your recent check-ins form a quiet emotional timeline.' : 'Последние чек-ины складываются в мягкую линию состояния.');
-
-  return (
-    <section className="mood-journey-card luna-progress-enter">
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'Mood Journey' : 'Путь настроения'}</p>
-        <span className="text-[11px] text-lavender/64">{currentMood}</span>
-      </div>
-      <div className="mood-trend-row">
-        {items.map((item) => {
-          const date = new Date(`${item.key}T12:00:00`);
-          const label = date.toLocaleDateString(language === 'en' ? 'en-US' : 'ru-RU', { weekday: 'short' }).slice(0, 3);
-          return (
-            <div key={item.key} className={`mood-trend-day ${item.mood ? 'mood-trend-active' : ''} mood-trend-${moodTone(item.mood)}`}>
-              <span>{label}</span>
-              <b aria-label={item.mood ? translateMoodLabel(item.mood, language) : undefined}>{moodTrendIcon(item.mood)}</b>
-            </div>
-          );
-        })}
-      </div>
-      <p className="mt-3 text-sm leading-5 text-lavender">{summary}</p>
-    </section>
-  );
-}
-
-function WeeklySummaryCard({ lines, stats, language }: { lines: string[]; stats?: ProfileStats['weeklyStats']; language: AppLanguage }) {
-  const minutes = String(stats?.listeningMinutes ?? 0);
-  const days = String(stats?.completedDays ?? 0);
-  const supporting = lines.slice(0, 3);
-
-  return (
-    <section className="weekly-summary-card luna-progress-enter">
-      <p className="text-xs uppercase tracking-[0.16em] text-gold">{copy[language].weeklyTitle}</p>
-      <div className="weekly-summary-meter">
-        <strong>{minutes} {language === 'en' ? 'min' : 'мин'}</strong>
-        <span>{language === 'en' ? 'across' : 'за'}</span>
-        <strong>{days} {language === 'en' ? (days === '1' ? 'day' : 'days') : 'дн.'}</strong>
-      </div>
-      <div className="mt-4 space-y-3">
-        {supporting.map((line) => (
-          <p key={line} className="text-sm leading-5 text-lavender">{line}</p>
-        ))}
-        <p className="text-xs font-semibold uppercase tracking-[0.14em] text-gold/80">{language === 'en' ? 'Next gentle step' : 'Мягкий следующий шаг'}</p>
-      </div>
-    </section>
   );
 }
 
@@ -3908,85 +3561,6 @@ function buildAchievementViews(profile: ProfileStats | null, language: AppLangua
     category: 'progress',
     unlocked: Boolean(checks[id])
   }));
-}
-
-function GardenRewardCard({
-  stage,
-  plantedCount,
-  seeds,
-  language,
-  onOpen
-}: {
-  stage: GardenStage;
-  plantedCount: number;
-  seeds: number;
-  language: AppLanguage;
-  onOpen: () => void;
-}) {
-  return (
-    <button onClick={onOpen} className="garden-reward-card luna-progress-enter">
-      <div className="garden-reward-image">
-        <img src={stage.path} alt="" className="luna-garden-thumb h-full w-full object-cover" loading="lazy" />
-        <span className="luna-garden-firefly left-[24%] top-[28%]" />
-        <span className="luna-garden-firefly left-[66%] top-[42%]" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-xs uppercase tracking-[0.16em] text-gold">{copy[language].moonGarden}</p>
-        <h3 className="mt-1 text-lg font-semibold tracking-[-0.035em] text-cream">{stage.title[language]}</h3>
-        <p className="mt-1.5 text-sm leading-5 text-lavender">
-          {language === 'en' ? 'Your reward for returning to calm.' : 'Твоя награда за возвращение к спокойствию.'}
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-cream/70">
-          <span className="garden-reward-pill">{language === 'en' ? 'Level' : 'Уровень'} {stage.level}</span>
-          <span className="garden-reward-pill">{seeds} {copy[language].moonSeeds}</span>
-          <span className="garden-reward-pill">{plantedCount} {language === 'en' ? 'planted' : 'посажено'}</span>
-        </div>
-        <p className="mt-3 text-xs font-semibold text-gold">{copy[language].openMoonGarden} →</p>
-      </div>
-    </button>
-  );
-}
-
-function AchievementsSection({ profile, language }: { profile: ProfileStats | null; language: AppLanguage }) {
-  const items = buildAchievementViews(profile, language);
-  const [showAll, setShowAll] = useState(false);
-  const unlocked = profile?.achievements?.unlocked ?? items.filter((item) => item.unlocked).length;
-  const total = profile?.achievements?.total ?? items.length;
-  const icons = ['🏅', '🌙', '🔥', '⭐', '🌸', '❄', '☾', '✦'];
-  const visibleItems = showAll ? items : items.slice(0, 6);
-
-  return (
-    <section className="achievements-section luna-progress-enter">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.16em] text-gold">{language === 'en' ? 'Your Achievements' : 'Твои достижения'}</p>
-          <h3 className="mt-1 text-xl font-semibold tracking-[-0.04em] text-cream">{unlocked} / {total}</h3>
-        </div>
-        <p className="max-w-[140px] text-right text-[11px] leading-4 text-lavender">
-          {language === 'en' ? 'Unlocked badges glow as your rhythm grows.' : 'Открытые значки светятся по мере роста ритма.'}
-        </p>
-      </div>
-      <div className="mt-4 grid grid-cols-2 gap-2.5">
-        {visibleItems.map((item, index) => (
-          <article key={item.id} className={`achievement-badge ${item.unlocked ? 'achievement-unlocked' : 'achievement-locked'}`}>
-            <span aria-hidden="true">{icons[index % icons.length]}</span>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-cream">{item.title}</p>
-              <p className="line-clamp-1 text-[11px] leading-4 text-lavender">{item.description}</p>
-            </div>
-          </article>
-        ))}
-      </div>
-      {items.length > 6 && <button type="button" onClick={() => setShowAll((value) => !value)} className="mt-3 w-full rounded-full border border-white/10 bg-white/[0.04] px-4 py-2.5 text-xs font-semibold text-gold">
-        {showAll
-          ? (language === 'en' ? 'Show preview' : 'Свернуть')
-          : (language === 'en' ? `View all ${total} achievements` : `Посмотреть все достижения (${total})`)}
-      </button>}
-      <p className="mt-3 text-center text-xs text-cream/52">
-        {language === 'en' ? `${unlocked} / ${total} achievements unlocked` : `${unlocked} / ${total} достижений открыто`}
-      </p>
-    </section>
-  );
 }
 
 function MeditationCard({ meditation, locked, showPopular, onOpen, onFavorite, onUnlock, language }: {

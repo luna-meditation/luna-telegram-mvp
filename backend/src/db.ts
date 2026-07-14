@@ -11,6 +11,7 @@ import {
   PlaybackInputError
 } from './playback-security.js';
 import { buildCanonicalCurrentWeek } from './progress-model.js';
+import { buildProgressInsights } from './progress-insights.js';
 import { logBackendError } from './error-logging.js';
 
 if (!globalThis.WebSocket) {
@@ -753,8 +754,10 @@ function countCompletedWeeks(practiceDayKeys: Set<string>) {
   return [...weeks.values()].filter((days) => days.size >= 7).length;
 }
 
-function buildMoodTrend(checkins: Array<{ local_date?: string | null; mood?: string | null }>, localDate: string) {
-  const byDate = new Map(checkins.filter((item) => item.local_date).map((item) => [item.local_date as string, item.mood ?? null]));
+function buildMoodTrend(checkins: Array<{ local_date?: string | null; mood?: string | null; sleep_range?: string | null }>, localDate: string) {
+  const byDate = new Map(checkins
+    .filter((item) => item.local_date)
+    .map((item) => [item.local_date as string, { mood: item.mood ?? null, sleepRange: item.sleep_range ?? null }]));
   const today = new Date(`${todayKey(localDate)}T12:00:00Z`);
   return Array.from({ length: 7 }, (_, index) => {
     const date = new Date(today);
@@ -762,7 +765,8 @@ function buildMoodTrend(checkins: Array<{ local_date?: string | null; mood?: str
     const key = date.toISOString().slice(0, 10);
     return {
       key,
-      mood: byDate.get(key) ?? null
+      mood: byDate.get(key)?.mood ?? null,
+      sleepRange: byDate.get(key)?.sleepRange ?? null
     };
   });
 }
@@ -1349,9 +1353,9 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     { data: playbackSessions, error: playbackSessionsError }
   ] =
     await Promise.all([
-      supabase.from('history').select('completion_percent, last_position, listened_seconds, completed, last_played, meditations(category)').eq('telegram_id', telegramId),
+      supabase.from('history').select('completion_percent, last_position, listened_seconds, completed, last_played, meditations(category, title)').eq('telegram_id', telegramId),
       supabase.from('streaks').select('*').eq('telegram_id', telegramId).maybeSingle(),
-      supabase.from('daily_checkins').select('local_date, mood').eq('telegram_id', telegramId),
+      supabase.from('daily_checkins').select('local_date, mood, sleep_range').eq('telegram_id', telegramId),
       supabase.from('practice_days').select('local_date, source, minutes, sessions').eq('telegram_id', telegramId).order('local_date', { ascending: false }),
       supabase.from('playback_sessions').select('listened_seconds, completed_at, created_at, local_date').eq('telegram_id', telegramId)
     ]);
@@ -1451,6 +1455,16 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     completedWeeks: countCompletedWeeks(practiceDayKeys)
   };
   const moodTrend = buildMoodTrend(checkins ?? [], todayKey(localDate));
+  const progressInsights = buildProgressInsights({
+    history: history ?? [],
+    breathSessions: safeBreathSessions,
+    practiceDays: safePracticeDays,
+    practiceDayKeys: [...practiceDayKeys],
+    totalListeningMinutes: minutesListened,
+    totalSessions: completed,
+    localDate: todayKey(localDate),
+    timeZone: normalizeNotificationPreferences(user?.notification_preferences ?? {}).timezone
+  });
   const achievements = await syncAchievements(telegramId, {
     completedMeditations,
     completedBreathSessions,
@@ -1502,6 +1516,7 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     lifetimeStats,
     currentWeek,
     moodTrend,
+    progressInsights,
     totalPracticeMinutes: minutesListened,
     calmPoints: completed,
     moonSeeds: moonGarden.moonSeedsAvailable,
