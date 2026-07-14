@@ -5,8 +5,10 @@ import { isPlanId, plans, type PlanId } from './plans.js';
 import {
   applyPlaybackHeartbeat,
   mergePlaybackRanges,
+  normalizePlaybackSeconds,
   playbackCoverageSeconds,
-  playbackRewardDecision
+  playbackRewardDecision,
+  PlaybackInputError
 } from './playback-security.js';
 import { buildCanonicalCurrentWeek } from './progress-model.js';
 import { logBackendError } from './error-logging.js';
@@ -51,8 +53,8 @@ export type MeditationInput = {
 
 export type HistoryInput = {
   meditation_id: string;
-  last_position: number;
-  duration: number;
+  last_position?: unknown;
+  duration?: unknown;
   completed?: boolean;
   session_id?: string;
   local_date?: string;
@@ -339,7 +341,12 @@ export async function startPlaybackSession(telegramId: number, meditationId: str
   return data;
 }
 
-export async function heartbeatPlaybackSession(telegramId: number, sessionId: string, lastPosition: number) {
+export async function heartbeatPlaybackSession(telegramId: number, sessionId: string, lastPosition: unknown) {
+  const requestedPosition = normalizePlaybackSeconds(lastPosition, {
+    field: 'last_position',
+    fallback: 0
+  });
+
   const { data: session, error: sessionError } = await supabase
     .from('playback_sessions')
     .select('id, meditation_id, last_heartbeat_at, listened_seconds, last_position, listened_ranges, local_date')
@@ -351,15 +358,23 @@ export async function heartbeatPlaybackSession(telegramId: number, sessionId: st
   if (!session) return { ok: false, listened_seconds: 0 };
 
   const meditation = await getMeditationById(session.meditation_id);
-  const duration = Math.max(1, Number(meditation?.duration ?? 1));
+  const duration = Math.max(1, normalizePlaybackSeconds(meditation?.duration, {
+    field: 'meditation.duration',
+    fallback: 1
+  }));
+  const currentPosition = Math.min(requestedPosition, duration);
   const lastHeartbeat = new Date(session.last_heartbeat_at).getTime();
   const elapsed = Number.isFinite(lastHeartbeat)
     ? Math.max(0, Math.min(30, Math.floor((Date.now() - lastHeartbeat) / 1000)))
     : 0;
   const coverage = applyPlaybackHeartbeat({
     ranges: session.listened_ranges,
-    previousPosition: Number(session.last_position ?? 0),
-    currentPosition: lastPosition,
+    previousPosition: normalizePlaybackSeconds(session.last_position, {
+      field: 'stored last_position',
+      duration,
+      fallback: 0
+    }),
+    currentPosition,
     elapsedSeconds: elapsed,
     duration
   });
@@ -411,9 +426,20 @@ export async function getFavorites(telegramId: number) {
 }
 
 export async function upsertHistory(telegramId: number, input: HistoryInput) {
+  const requestedPosition = normalizePlaybackSeconds(input.last_position, {
+    field: 'last_position',
+    fallback: 0
+  });
+  if (input.duration !== undefined && input.duration !== null) {
+    normalizePlaybackSeconds(input.duration, { field: 'duration' });
+  }
+
   const meditation = await getMeditationById(input.meditation_id);
-  const duration = Math.max(1, Number(meditation?.duration ?? input.duration ?? 1));
-  const savedPosition = Math.max(0, Math.min(duration, Math.floor(Number(input.last_position) || 0)));
+  const duration = Math.max(1, normalizePlaybackSeconds(meditation?.duration, {
+    field: 'meditation.duration',
+    fallback: 1
+  }));
+  const savedPosition = Math.min(requestedPosition, duration);
   let sessionRanges: Array<[number, number]> = [];
   let sessionCompletedBeforeRequest = false;
 
@@ -434,7 +460,11 @@ export async function upsertHistory(telegramId: number, input: HistoryInput) {
         : 0;
       const finalCoverage = applyPlaybackHeartbeat({
         ranges: session.listened_ranges,
-        previousPosition: Number(session.last_position ?? 0),
+        previousPosition: normalizePlaybackSeconds(session.last_position, {
+          field: 'stored last_position',
+          duration,
+          fallback: 0
+        }),
         currentPosition: savedPosition,
         elapsedSeconds: elapsedSinceHeartbeat,
         duration
@@ -540,13 +570,27 @@ export async function upsertHistory(telegramId: number, input: HistoryInput) {
 
 export async function recordBreathSession(telegramId: number, input: {
   mode: string;
-  duration_seconds: number;
-  breath_count: number;
+  duration_seconds: unknown;
+  breath_count: unknown;
   local_date?: string;
 }) {
   const mode = ['calm', 'box', 'reset'].includes(input.mode) ? input.mode : 'calm';
-  const durationSeconds = Math.max(30, Math.min(600, Math.floor(input.duration_seconds || 60)));
-  const breathCount = Math.max(1, Math.min(120, Math.floor(input.breath_count || 1)));
+  const requestedDurationSeconds = normalizePlaybackSeconds(input.duration_seconds, {
+    field: 'duration_seconds',
+    fallback: 60
+  });
+  const requestedBreathCount = normalizePlaybackSeconds(input.breath_count, {
+    field: 'breath_count',
+    fallback: 1
+  });
+  if (requestedDurationSeconds === 0) {
+    throw new PlaybackInputError('duration_seconds', 'must be greater than zero.');
+  }
+  if (requestedBreathCount === 0) {
+    throw new PlaybackInputError('breath_count', 'must be greater than zero.');
+  }
+  const durationSeconds = Math.max(30, Math.min(600, requestedDurationSeconds));
+  const breathCount = Math.max(1, Math.min(120, requestedBreathCount));
 
   const { error } = await supabase.from('breath_sessions').insert({
     telegram_id: telegramId,
@@ -570,10 +614,13 @@ export async function recordBreathSession(telegramId: number, input: {
 
 export async function recordSceneMoonSeed(telegramId: number, input: {
   scene_id?: string;
-  duration_seconds: number;
+  duration_seconds: unknown;
   local_date?: string;
 }) {
-  const durationSeconds = Math.max(0, Math.floor(input.duration_seconds || 0));
+  const durationSeconds = normalizePlaybackSeconds(input.duration_seconds, {
+    field: 'duration_seconds',
+    fallback: 0
+  });
   if (durationSeconds < 300) {
     return { awarded: false, moonSeeds: 0 };
   }

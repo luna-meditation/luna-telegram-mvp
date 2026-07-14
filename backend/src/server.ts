@@ -46,6 +46,7 @@ import { runMigrations } from './migrations.js';
 import { isPlanId } from './plans.js';
 import { paymentEligibility } from './payment-policy.js';
 import { logBackendError, type RequestWithId } from './error-logging.js';
+import { PlaybackInputError } from './playback-security.js';
 import {
   clearLunaConversations,
   deleteLunaConversation,
@@ -388,7 +389,7 @@ app.post('/api/history/session/heartbeat', requireTelegramWebApp, async (req, re
     res.json(await heartbeatPlaybackSession(
       authReq.telegramUser.telegram_id,
       String(req.body.session_id ?? ''),
-      Number(req.body.last_position ?? 0)
+      req.body?.last_position
     ));
   } catch (error) {
     next(error);
@@ -835,6 +836,10 @@ app.use((error: unknown, req: express.Request, res: express.Response, next: expr
       retryable: error.retryable,
       resetAt: error.resetAt
     });
+    return;
+  }
+  if (error instanceof PlaybackInputError) {
+    res.status(400).json({ error: error.message, code: error.code });
     return;
   }
   if (error instanceof ZodError) {
