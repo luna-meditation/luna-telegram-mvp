@@ -5,6 +5,7 @@ import { lunaAiMigration } from './luna-ai-migration.js';
 import { lunaAiRpcAmbiguityFixMigration } from './luna-ai-rpc-ambiguity-fix-migration.js';
 import { lunaAiRpcMigration } from './luna-ai-rpc-migration.js';
 import { lunaAiPendingStateMigration } from './luna-ai-pending-state-migration.js';
+import { lunaAiConversationStateMigration } from './luna-ai-conversation-state-migration.js';
 
 const meditationPlatformMigration = `
 create extension if not exists pgcrypto;
@@ -336,6 +337,7 @@ export async function runMigrations() {
     await client.query(backendSchemaSyncMigration);
     await client.query(lunaAiRpcAmbiguityFixMigration);
     await client.query(lunaAiPendingStateMigration);
+    await client.query(lunaAiConversationStateMigration);
     console.log('[Database migration] Luna AI RPC synchronization applied', {
       migration: '006_luna_ai_rpc_sync',
       functions: ['reserve_luna_chat_request', 'increment_meditation_play_count'],

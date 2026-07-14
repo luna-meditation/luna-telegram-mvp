@@ -231,9 +231,9 @@ const recommendationMetadataTerms: Record<string, Partial<Record<RecommendationM
   }
 };
 
-function recommendationScore(item: RecommendationCatalogItem, intent: string) {
+function recommendationScoreDetails(item: RecommendationCatalogItem, intent: string) {
   const profile = recommendationMetadataTerms[intent];
-  if (!profile) return 0;
+  if (!profile) return { score: 0, matchedFields: [] as RecommendationMetadataField[] };
   const fields: Record<RecommendationMetadataField, string> = {
     title: item.title ?? '',
     category: item.category ?? '',
@@ -242,30 +242,50 @@ function recommendationScore(item: RecommendationCatalogItem, intent: string) {
     tags: item.tags?.join(' ') ?? ''
   };
 
-  return (Object.entries(profile) as Array<[RecommendationMetadataField, string[]]>).reduce((score, [field, terms]) => {
+  return (Object.entries(profile) as Array<[RecommendationMetadataField, string[]]>).reduce((result, [field, terms]) => {
     const haystack = normalize(fields[field]);
     const matched = terms.some((term) => haystack.includes(normalize(term)));
-    return matched ? score + recommendationMetadataWeights[field] : score;
-  }, 0);
+    if (matched) {
+      result.score += recommendationMetadataWeights[field];
+      result.matchedFields.push(field);
+    }
+    return result;
+  }, { score: 0, matchedFields: [] as RecommendationMetadataField[] });
 }
 
-export function semanticMeditationRecommendation(input: {
+export type MeditationRecommendationDecision = {
+  meditationId: string | null;
+  intent: string | null;
+  score: number;
+  runnerUpScore: number;
+  ambiguous: boolean;
+  reason: string;
+};
+
+export function rankMeditationRecommendation(input: {
   message: string;
   catalog: RecommendationCatalogItem[];
   language?: LunaLanguage;
   modelRecommendationId?: string | null;
   modelRecommendationGoal?: string | null;
+  intentOverride?: string | null;
+  emotionalState?: string | null;
+  contextSignals?: string[];
+  forceRecommendation?: boolean;
   recentAssistantRecommendations?: Array<string | null | undefined>;
   recentMessages?: Array<{ role?: string | null; content?: string | null }>;
   vulnerable?: boolean;
-}) {
+}): MeditationRecommendationDecision {
   const recentRecommendations = input.recentAssistantRecommendations ?? [];
-  const explicitlyRequested = isReadyMeditationRequest(input.message);
-  if (isInChatGuidanceRequest(input.message) && !explicitlyRequested) return null;
-  if (isAmbiguousSleepyTiredContext(input.message) && !explicitlyRequested) return null;
-  if (!explicitlyRequested && recentRecommendations.slice(-3).some(Boolean)) return null;
+  const explicitlyRequested = isReadyMeditationRequest(input.message) || Boolean(input.forceRecommendation);
+  const noMatch = (reason: string, intent: string | null = null): MeditationRecommendationDecision => ({
+    meditationId: null, intent, score: 0, runnerUpScore: 0, ambiguous: false, reason
+  });
+  if (isInChatGuidanceRequest(input.message) && !explicitlyRequested) return noMatch('in_chat_guidance_requested');
+  if (isAmbiguousSleepyTiredContext(input.message) && !explicitlyRequested) return noMatch('sleep_or_focus_context_is_ambiguous');
+  if (!explicitlyRequested && recentRecommendations.slice(-3).some(Boolean)) return noMatch('recommendation_cooldown');
 
-  if (/^(?:thanks?|thank you|okay|ok|got it|спасибо|понятно|хорошо|ок)[.! ]*$/i.test(input.message.trim())) return null;
+  if (/^(?:thanks?|thank you|okay|ok|got it|спасибо|понятно|хорошо|ок)[.! ]*$/i.test(input.message.trim())) return noMatch('conversation_closure');
 
   const recentContext = (input.recentMessages ?? [])
     .filter((message) => message.role !== 'assistant')
@@ -276,8 +296,14 @@ export function semanticMeditationRecommendation(input: {
     sleep: 'sleep', anxiety: 'anxiety', focus: 'focus', grounding: 'grounding', self_compassion: 'self_kindness',
     morning_clarity: 'morning', stress_reset: 'stress_reset'
   };
+  const normalizedOverride = input.intentOverride === 'reset' || input.intentOverride === 'breathing'
+    ? 'stress_reset'
+    : input.intentOverride;
   const intent = detectIntent(input.message)
+    ?? (normalizedOverride && recommendationMetadataTerms[normalizedOverride] ? normalizedOverride : null)
     ?? (explicitlyRequested ? detectIntent(`${recentContext}\n${input.message}`) : null)
+    ?? (input.emotionalState ? detectIntent(input.emotionalState) : null)
+    ?? (input.contextSignals?.length ? detectIntent(input.contextSignals.join('\n')) : null)
     ?? (input.modelRecommendationGoal ? goalIntent[input.modelRecommendationGoal] ?? null : null);
 
   const avoidPremium = Boolean(input.vulnerable ?? isVulnerableMessage(input.message)) && !isExplicitPremiumRequest(input.message);
@@ -287,20 +313,24 @@ export function semanticMeditationRecommendation(input: {
     !(avoidPremium && item.premium)
   ));
   if (explicitlyRequested && !intent) {
-    if (input.modelRecommendationId && available.some((item) => item.id === input.modelRecommendationId)) return input.modelRecommendationId;
+    if (input.modelRecommendationId && available.some((item) => item.id === input.modelRecommendationId)) {
+      return { meditationId: input.modelRecommendationId, intent: null, score: 100, runnerUpScore: 0, ambiguous: false, reason: 'validated_explicit_catalog_selection' };
+    }
     const latestRecent = [...recentRecommendations].reverse().find(Boolean);
-    if (latestRecent && available.some((item) => item.id === latestRecent)) return latestRecent;
+    if (latestRecent && available.some((item) => item.id === latestRecent)) {
+      return { meditationId: latestRecent, intent: null, score: 80, runnerUpScore: 0, ambiguous: false, reason: 'continued_recent_recommendation' };
+    }
   }
-  if (!intent) return null;
+  if (!intent) return noMatch('no_resolved_recommendation_intent');
 
   const ranked = available
-    .map((item) => ({ item, score: recommendationScore(item, intent) }))
+    .map((item) => ({ item, ...recommendationScoreDetails(item, intent) }))
     .filter((entry) => entry.score >= 16 && (explicitlyRequested || !recentRecommendations.includes(entry.item.id)))
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => b.score - a.score || a.item.title.localeCompare(b.item.title));
 
   const best = ranked[0];
   const runnerUp = ranked[1];
-  if (!best) return null;
+  if (!best) return noMatch('no_catalog_item_reached_semantic_threshold', intent);
   if (runnerUp && runnerUp.score === best.score) {
     const normalizedMessage = normalize(input.message);
     const modelItemWasNamed = input.modelRecommendationId
@@ -309,14 +339,51 @@ export function semanticMeditationRecommendation(input: {
         Boolean(item.catalogKey && normalizedMessage.includes(normalize(item.catalogKey)))
       ))
       : false;
-    return modelItemWasNamed ? input.modelRecommendationId ?? null : null;
+    if (modelItemWasNamed && input.modelRecommendationId) {
+      return {
+        meditationId: input.modelRecommendationId,
+        intent,
+        score: best.score,
+        runnerUpScore: runnerUp.score,
+        ambiguous: false,
+        reason: 'explicit_catalog_title_resolved_tie'
+      };
+    }
+    return {
+      meditationId: null,
+      intent,
+      score: best.score,
+      runnerUpScore: runnerUp.score,
+      ambiguous: true,
+      reason: 'equally_ranked_catalog_matches'
+    };
   }
 
   const modelItem = input.modelRecommendationId ? available.find((item) => item.id === input.modelRecommendationId) : null;
-  const modelScore = modelItem ? recommendationScore(modelItem, intent) : 0;
-  if (modelItem && modelScore >= 16 && modelScore >= best.score && (explicitlyRequested || !recentRecommendations.includes(modelItem.id))) return modelItem.id;
+  const modelScore = modelItem ? recommendationScoreDetails(modelItem, intent).score : 0;
+  if (modelItem && modelScore >= 16 && modelScore >= best.score && (explicitlyRequested || !recentRecommendations.includes(modelItem.id))) {
+    return {
+      meditationId: modelItem.id,
+      intent,
+      score: modelScore,
+      runnerUpScore: best.item.id === modelItem.id ? runnerUp?.score ?? 0 : best.score,
+      ambiguous: false,
+      reason: `model_selection_validated_by_${intent}_metadata`
+    };
+  }
 
-  return best.item.id;
+  return {
+    meditationId: best.item.id,
+    intent,
+    score: best.score,
+    runnerUpScore: runnerUp?.score ?? 0,
+    ambiguous: false,
+    reason: `${intent}_matched_${best.matchedFields.join('_')}`
+  };
+}
+
+export function semanticMeditationRecommendation(input: Parameters<typeof rankMeditationRecommendation>[0]) {
+  return rankMeditationRecommendation(input).meditationId;
 }
 
 export function meditationIdMentionedInText(message: string, catalog: RecommendationCatalogItem[]) {

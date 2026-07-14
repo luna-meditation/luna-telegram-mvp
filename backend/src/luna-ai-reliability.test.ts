@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 
 const migration = readFileSync(resolve(process.cwd(), '../database/migrations/003_luna_ai_reliability.sql'), 'utf8');
+const conversationStateMigration = readFileSync(resolve(process.cwd(), '../database/migrations/010_luna_conversation_state.sql'), 'utf8');
 const backend = readFileSync(resolve(process.cwd(), 'src/luna-ai.ts'), 'utf8');
 const frontend = readFileSync(resolve(process.cwd(), '../frontend/src/components/LunaChat.tsx'), 'utf8');
 const server = readFileSync(resolve(process.cwd(), 'src/server.ts'), 'utf8');
@@ -62,6 +63,17 @@ test('pending intent and action survive a multi-turn clarification', () => {
   assert.match(backend, /inferPendingStateFromRecent/);
   assert.match(backend, /effectiveExplicitRequest/);
   assert.match(backend, /duplicateClarification/);
+});
+
+test('persistent conversation decisions survive beyond one pending clarification', () => {
+  assert.match(conversationStateMigration, /add column if not exists conversation_state jsonb not null default '\{\}'::jsonb/);
+  assert.doesNotMatch(conversationStateMigration, /drop table|truncate|delete from/i);
+  assert.match(backend, /conversation_state/);
+  assert.match(backend, /resolveLunaIntent/);
+  assert.match(backend, /rankMeditationRecommendation/);
+  assert.match(backend, /directActionMeditationId/);
+  assert.match(backend, /\[Luna AI runtime decision\]/);
+  assert.match(backend, /\[Luna AI response review\]/);
 });
 
 test('production truth telemetry and admin version diagnostics are server-protected', () => {

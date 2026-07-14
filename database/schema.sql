@@ -238,8 +238,13 @@ create table if not exists public.ai_conversations (
   updated_at timestamptz not null default now(),
   last_message_at timestamptz not null default now(),
   archived_at timestamptz,
-  pending_state jsonb not null default '{}'::jsonb
+  pending_state jsonb not null default '{}'::jsonb,
+  conversation_state jsonb not null default '{}'::jsonb
 );
+
+alter table public.ai_conversations
+  add column if not exists pending_state jsonb not null default '{}'::jsonb,
+  add column if not exists conversation_state jsonb not null default '{}'::jsonb;
 
 create table if not exists public.ai_messages (
   id uuid primary key default gen_random_uuid(),
