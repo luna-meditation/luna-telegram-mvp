@@ -12,10 +12,21 @@ export const memoryCandidateSchema = z.object({
   confidence: z.number().min(0).max(1)
 });
 
-export function validMemoryCandidates(candidates: unknown[]) {
+function memoryCandidateIsGrounded(candidate: z.infer<typeof memoryCandidateSchema>, sourceMessage: string) {
+  const source = normalize(sourceMessage);
+  const genericTokens = new Set(['user', 'person', 'prefers', 'preference', 'likes', 'like', 'usually', 'often', 'тебе', 'пользователь', 'любит', 'предпочитает']);
+  const meaningfulTokens = normalize(`${candidate.key.replace(/_/g, ' ')} ${candidate.value}`)
+    .split(' ')
+    .filter((token) => token.length >= 4 && !genericTokens.has(token));
+  return meaningfulTokens.some((token) => source.includes(token));
+}
+
+export function validMemoryCandidates(candidates: unknown[], sourceMessage?: string) {
   return candidates.flatMap((candidate) => {
     const parsed = memoryCandidateSchema.safeParse(candidate);
-    return parsed.success && parsed.data.confidence >= 0.78 ? [parsed.data] : [];
+    if (!parsed.success || parsed.data.confidence < 0.78) return [];
+    if (sourceMessage && !memoryCandidateIsGrounded(parsed.data, sourceMessage)) return [];
+    return [parsed.data];
   }).slice(0, 3);
 }
 
@@ -47,6 +58,7 @@ export type RecommendationCatalogItem = {
   published?: boolean | null;
   language?: string | null;
   summary?: string | null;
+  tags?: string[] | null;
 };
 
 const cardClaimPatterns = [
@@ -138,6 +150,15 @@ export function isReadyMeditationRequest(message: string) {
     /(?:пришли|отправь|дай|подбери|посоветуй|выбери|покажи|можешь\s+(?:сюда\s+)?прислать|сюда\s+прислать|можно\s+(?:её\s+)?увидеть|увидеть\s+(?:её\s+)?(?:здесь|в\s+чате)|что\s+(?:мне\s+)?послушать|медитац|практик[ау]\s+из\s+приложения)/i.test(message);
 }
 
+export function isVulnerableMessage(message: string) {
+  return /\b(?:anxious|anxiety|panic|overwhelmed|lonely|grief|grieving|loss|lost someone|bereaved|mourning|heartbroken|burned out|burnt out|exhausted|scared|afraid|hopeless)\b/i.test(message) ||
+    /(?:тревог|паник|перегруж|одинок|утрат|умер|сконч|похорон|гор(?:е|ю)|разбит|выгор|истощ|страшно|боюсь|безнад)/i.test(message);
+}
+
+function isExplicitPremiumRequest(message: string) {
+  return /\b(?:premium|paid|subscription|пре?миум|платн|подписк)\b/i.test(message);
+}
+
 export function isInChatGuidanceRequest(message: string) {
   return /\b(?:guide me here|walk me through|do it with me|right here|in chat|i don't want to open audio|i do not want to open audio)\b/i.test(message) ||
     /(?:проведи\s+меня\s+сейчас|сделай\s+со\s+мной|прямо\s+здесь|в\s+чате|не\s+хочу\s+открывать\s+аудио|без\s+аудио)/i.test(message);
@@ -150,15 +171,6 @@ export function isAmbiguousSleepyTiredContext(message: string) {
   const clearFocus = /\b(?:focus|awake|energy|work|code|concentrate|clarity)\b/i.test(message) || /(?:фокус|вниман|взбодр|энерг|работ|код|ясност|сосредоточ)/i.test(message);
   return !clearSleep && !clearFocus;
 }
-
-const intentPriority: Record<string, string[]> = {
-  anxiety: ['anxiety relief', 'breath reset'],
-  sleep: ['deep sleep', 'let go'],
-  self_kindness: ['self love'],
-  focus: ['focused calm'],
-  grounding: ['inner balance', 'breath reset'],
-  morning: ['morning clarity']
-};
 
 const intentKeywords: Record<string, RegExp> = {
   anxiety: /(anxious|anxiety|panic|worried|worry|stress|stressed|overwhelmed|нервнича|тревог|паник|стресс|перегруж)/i,
@@ -177,26 +189,59 @@ function detectIntent(message: string) {
   return Object.entries(intentKeywords).find(([, pattern]) => pattern.test(message))?.[0] ?? null;
 }
 
-function recommendationScore(item: RecommendationCatalogItem, intent: string) {
-  const haystack = normalize(`${item.title} ${item.category ?? ''} ${item.mood ?? ''} ${item.summary ?? ''}`);
-  const priority = intentPriority[intent] ?? [];
-  const priorityIndex = priority.findIndex((title) => normalize(item.title).includes(title));
-  let score = priorityIndex >= 0 ? 100 - priorityIndex * 10 : 0;
+type RecommendationMetadataField = 'title' | 'category' | 'mood' | 'summary' | 'tags';
 
-  const intentTerms: Record<string, string[]> = {
-    anxiety: ['anxiety', 'relief', 'breath', 'stress', 'calm', 'тревог', 'стресс'],
-    sleep: ['sleep', 'deep', 'night', 'let go', 'rest', 'сон'],
-    self_kindness: ['self love', 'love', 'compassion', 'kindness', 'само'],
-    focus: ['focused calm', 'focus', 'clarity', 'mental noise'],
-    grounding: ['inner balance', 'balance', 'ground', 'breath', 'center'],
-    morning: ['morning', 'clarity', 'focus', 'energy']
+const recommendationMetadataWeights: Record<RecommendationMetadataField, number> = {
+  category: 12,
+  mood: 10,
+  title: 8,
+  summary: 6,
+  tags: 6
+};
+
+const recommendationMetadataTerms: Record<string, Partial<Record<RecommendationMetadataField, string[]>>> = {
+  anxiety: {
+    category: ['anxiety', 'stress'], mood: ['calm', 'relief', 'settle'], title: ['anxiety', 'relief'],
+    summary: ['anxiety', 'worry', 'stress', 'settle'], tags: ['anxiety', 'stress', 'calm']
+  },
+  sleep: {
+    category: ['sleep', 'rest'], mood: ['sleep', 'rest', 'night'], title: ['sleep', 'night'],
+    summary: ['sleep', 'rest', 'night', 'release'], tags: ['sleep', 'rest', 'night']
+  },
+  self_kindness: {
+    category: ['self', 'compassion', 'kindness'], mood: ['kindness', 'compassion', 'soft'], title: ['self', 'love'],
+    summary: ['self', 'kindness', 'compassion', 'criticism', 'shame'], tags: ['self', 'compassion']
+  },
+  focus: {
+    category: ['focus', 'clarity'], mood: ['focus', 'clarity', 'attention'], title: ['focus', 'clarity'],
+    summary: ['focus', 'clarity', 'attention', 'mental noise'], tags: ['focus', 'clarity']
+  },
+  grounding: {
+    category: ['grounding', 'balance'], mood: ['grounded', 'balance', 'center'], title: ['ground', 'balance', 'center'],
+    summary: ['ground', 'balance', 'center', 'scattered'], tags: ['grounding', 'balance']
+  },
+  morning: {
+    category: ['morning', 'focus'], mood: ['morning', 'focus', 'energy'], title: ['morning', 'clarity'],
+    summary: ['morning', 'start', 'clarity', 'energy'], tags: ['morning', 'focus']
+  }
+};
+
+function recommendationScore(item: RecommendationCatalogItem, intent: string) {
+  const profile = recommendationMetadataTerms[intent];
+  if (!profile) return 0;
+  const fields: Record<RecommendationMetadataField, string> = {
+    title: item.title ?? '',
+    category: item.category ?? '',
+    mood: item.mood ?? '',
+    summary: item.summary ?? '',
+    tags: item.tags?.join(' ') ?? ''
   };
 
-  for (const term of intentTerms[intent] ?? []) {
-    if (haystack.includes(normalize(term))) score += 8;
-  }
-
-  return score;
+  return (Object.entries(profile) as Array<[RecommendationMetadataField, string[]]>).reduce((score, [field, terms]) => {
+    const haystack = normalize(fields[field]);
+    const matched = terms.some((term) => haystack.includes(normalize(term)));
+    return matched ? score + recommendationMetadataWeights[field] : score;
+  }, 0);
 }
 
 export function semanticMeditationRecommendation(input: {
@@ -207,6 +252,7 @@ export function semanticMeditationRecommendation(input: {
   modelRecommendationGoal?: string | null;
   recentAssistantRecommendations?: Array<string | null | undefined>;
   recentMessages?: Array<{ role?: string | null; content?: string | null }>;
+  vulnerable?: boolean;
 }) {
   const recentRecommendations = input.recentAssistantRecommendations ?? [];
   const explicitlyRequested = isReadyMeditationRequest(input.message);
@@ -229,7 +275,12 @@ export function semanticMeditationRecommendation(input: {
     ?? (explicitlyRequested ? detectIntent(`${recentContext}\n${input.message}`) : null)
     ?? (input.modelRecommendationGoal ? goalIntent[input.modelRecommendationGoal] ?? null : null);
 
-  const available = input.catalog.filter((item) => item.id && item.title && (!input.language || !item.language || item.language === input.language));
+  const avoidPremium = Boolean(input.vulnerable ?? isVulnerableMessage(input.message)) && !isExplicitPremiumRequest(input.message);
+  const available = input.catalog.filter((item) => (
+    item.id && item.title && item.published !== false &&
+    (!input.language || !item.language || item.language === input.language) &&
+    !(avoidPremium && item.premium)
+  ));
   if (explicitlyRequested && !intent) {
     if (input.modelRecommendationId && available.some((item) => item.id === input.modelRecommendationId)) return input.modelRecommendationId;
     const latestRecent = [...recentRecommendations].reverse().find(Boolean);
@@ -237,15 +288,30 @@ export function semanticMeditationRecommendation(input: {
   }
   if (!intent) return null;
 
-  const modelItem = input.modelRecommendationId ? available.find((item) => item.id === input.modelRecommendationId) : null;
-  if (modelItem && recommendationScore(modelItem, intent) >= 16 && (explicitlyRequested || !recentRecommendations.includes(modelItem.id))) return modelItem.id;
-
   const ranked = available
     .map((item) => ({ item, score: recommendationScore(item, intent) }))
     .filter((entry) => entry.score >= 16 && (explicitlyRequested || !recentRecommendations.includes(entry.item.id)))
     .sort((a, b) => b.score - a.score);
 
-  return ranked[0]?.item.id ?? null;
+  const best = ranked[0];
+  const runnerUp = ranked[1];
+  if (!best) return null;
+  if (runnerUp && runnerUp.score === best.score) {
+    const normalizedMessage = normalize(input.message);
+    const modelItemWasNamed = input.modelRecommendationId
+      ? available.some((item) => item.id === input.modelRecommendationId && (
+        normalizedMessage.includes(normalize(item.title)) ||
+        Boolean(item.catalogKey && normalizedMessage.includes(normalize(item.catalogKey)))
+      ))
+      : false;
+    return modelItemWasNamed ? input.modelRecommendationId ?? null : null;
+  }
+
+  const modelItem = input.modelRecommendationId ? available.find((item) => item.id === input.modelRecommendationId) : null;
+  const modelScore = modelItem ? recommendationScore(modelItem, intent) : 0;
+  if (modelItem && modelScore >= 16 && modelScore >= best.score && (explicitlyRequested || !recentRecommendations.includes(modelItem.id))) return modelItem.id;
+
+  return best.item.id;
 }
 
 export function meditationIdMentionedInText(message: string, catalog: RecommendationCatalogItem[]) {
@@ -272,17 +338,18 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-export function sanitizeMeditationFacts(message: string, catalog: RecommendationCatalogItem[]) {
+export function sanitizeMeditationFacts(message: string, catalog: RecommendationCatalogItem[], language: LunaLanguage = 'en') {
   let next = message;
   for (const item of catalog) {
     if (!item.title || !item.duration) continue;
-    const minutes = meditationDurationMinutes(item.duration);
+    const duration = formatMeditationDuration(item.duration, language);
     const title = escapeRegExp(item.title);
-    const titleThenDuration = new RegExp(`(${title}[^.!?\\n]{0,80}?)(\\b\\d+\\s*(?:minute|minutes|min|минут|мин)\\b)`, 'gi');
-    const durationThenTitle = new RegExp(`(\\b\\d+\\s*(?:minute|minutes|min|минут|мин)\\b)([^.!?\\n]{0,80}?${title})`, 'gi');
+    const durationPattern = '(\\d+\\s*(?:minute|minutes|min|минут|мин))(?![A-Za-zА-Яа-я])';
+    const titleThenDuration = new RegExp(`(${title}[^.!?\\n]{0,80}?)${durationPattern}`, 'giu');
+    const durationThenTitle = new RegExp(`${durationPattern}([^.!?\\n]{0,80}?${title})`, 'giu');
     next = next
-      .replace(titleThenDuration, (_match, before: string) => `${before}${minutes} min`)
-      .replace(durationThenTitle, (_match, _duration: string, after: string) => `${minutes} min${after}`);
+      .replace(titleThenDuration, (_match, before: string) => `${before}${duration}`)
+      .replace(durationThenTitle, (_match, _duration: string, after: string) => `${duration}${after}`);
   }
   return next;
 }

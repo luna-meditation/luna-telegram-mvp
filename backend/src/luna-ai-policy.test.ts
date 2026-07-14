@@ -12,6 +12,7 @@ import {
   isAmbiguousSleepyTiredContext,
   isInChatGuidanceRequest,
   isReadyMeditationRequest,
+  isVulnerableMessage,
   isCrisisMessage,
   meditationIdMentionedInText,
   safetyCategory,
@@ -46,6 +47,14 @@ test('accepts grounded high-confidence memory and rejects invalid candidates', (
   assert.equal(valid[0]?.key, 'preferred_sleep_time');
 });
 
+test('memory candidates must be grounded in the source message when runtime context is available', () => {
+  const grounded = validMemoryCandidates([
+    { category: 'routine', key: 'evening_routine', value: 'User prefers evening practices.', confidence: 0.95 },
+    { category: 'ongoing_context', key: 'has_dog', value: 'User has a dog.', confidence: 0.99 }
+  ], 'Evenings are the hardest time for me.');
+  assert.deepEqual(grounded.map((candidate) => candidate.key), ['evening_routine']);
+});
+
 test('detects English and Russian crisis language without flagging ordinary stress', () => {
   assert.equal(isCrisisMessage('I want to kill myself'), true);
   assert.equal(isCrisisMessage('Я хочу навредить себе'), true);
@@ -77,6 +86,41 @@ test('semantic recommendations match anxiety, sleep, and self criticism', () => 
     catalog: recommendationCatalog,
     modelRecommendationId: null
   }), 'self_love');
+});
+
+test('recommendations use catalog metadata rather than hardcoded meditation titles', () => {
+  const metadataOnlyCatalog: RecommendationCatalogItem[] = [
+    { id: 'meta-anxiety', title: 'Quiet River', category: 'breath', mood: 'calm', duration: 300, premium: false, language: 'en', summary: 'Soft breathing for worry and stress.' },
+    { id: 'meta-sleep', title: 'Night Room', category: 'focus', mood: 'clarity', duration: 600, premium: false, language: 'en', summary: 'A steady practice for attention.' }
+  ];
+  assert.equal(semanticMeditationRecommendation({
+    message: 'I feel anxious and need help settling down.',
+    catalog: metadataOnlyCatalog
+  }), 'meta-anxiety');
+});
+
+test('equally good catalog matches ask for one clarification instead of guessing', () => {
+  const tiedCatalog: RecommendationCatalogItem[] = [
+    { id: 'tie-a', title: 'Quiet One', category: 'sleep', mood: 'rest', duration: 600, premium: false, language: 'en', summary: 'Sleep and rest.' },
+    { id: 'tie-b', title: 'Quiet Two', category: 'sleep', mood: 'rest', duration: 900, premium: false, language: 'en', summary: 'Sleep and rest.' }
+  ];
+  assert.equal(semanticMeditationRecommendation({
+    message: 'Recommend something for sleep.',
+    catalog: tiedCatalog
+  }), null);
+});
+
+test('vulnerable moments prefer a suitable free catalog item over Premium', () => {
+  const mixedAccessCatalog: RecommendationCatalogItem[] = [
+    { id: 'free-reset', title: 'Soft Reset', category: 'breath', mood: 'calm', duration: 300, premium: false, language: 'en', summary: 'A calm reset for stress.' },
+    { id: 'premium-anxiety', title: 'Private Quiet', category: 'anxiety', mood: 'calm', duration: 900, premium: true, language: 'en', summary: 'Relief for anxious thoughts.' }
+  ];
+  assert.equal(isVulnerableMessage('I am overwhelmed and anxious.'), true);
+  assert.equal(semanticMeditationRecommendation({
+    message: 'I am overwhelmed and anxious. Please recommend something.',
+    catalog: mixedAccessCatalog,
+    vulnerable: true
+  }), 'free-reset');
 });
 
 test('detects the current message language, including language switches and mixed text', () => {
@@ -257,6 +301,10 @@ test('sanitizes hallucinated meditation durations using catalog values', () => {
   assert.equal(
     sanitizeMeditationFacts('A 10 minute meditation like Deep Sleep may help.', recommendationCatalog),
     'A 20 min meditation like Deep Sleep may help.'
+  );
+  assert.equal(
+    sanitizeMeditationFacts('Попробуй Anxiety Relief, это 10 минут.', recommendationCatalog, 'ru'),
+    'Попробуй Anxiety Relief, это 15 мин.'
   );
 });
 

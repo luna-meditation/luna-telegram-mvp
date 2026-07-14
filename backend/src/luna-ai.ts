@@ -15,6 +15,7 @@ import {
   hasInternalDataLeak,
   enforceCardClaimConsistency,
   isReadyMeditationRequest,
+  isVulnerableMessage,
   safetyCategory,
   sanitizeMeditationFacts,
   sanitizeMeditationCatalogKeys,
@@ -445,6 +446,12 @@ function meditationCardFallback(language: 'en' | 'ru') {
     : 'I found this practice, but I could not open its card right now. Please try again.';
 }
 
+function meditationClarificationFallback(language: 'en' | 'ru') {
+  return language === 'ru'
+    ? 'Я хочу выбрать практику точно, а не угадывать. Тебе сейчас больше нужны сон, фокус или мягкая перезагрузка?'
+    : 'I want to choose thoughtfully rather than guess. Are you looking for sleep, focus, or a gentler reset?';
+}
+
 export type MeditationAction = z.infer<typeof meditationActionSchema>;
 
 export function resolveMeditationAction(action: MeditationAction | null, catalog: RecommendationCatalogItem[]) {
@@ -469,7 +476,7 @@ function finalizeAssistantContent(input: {
   const baseMessage = input.explicitRequest && selected
     ? explicitRecommendationMessage({ language: input.language, item: selected })
     : input.parsedMessage;
-  const factChecked = sanitizeMeditationCatalogKeys(sanitizeMeditationFacts(baseMessage, input.catalog), input.catalog);
+  const factChecked = sanitizeMeditationCatalogKeys(sanitizeMeditationFacts(baseMessage, input.catalog, input.language), input.catalog);
   const noLibraryInstruction = avoidLibraryInstructionWhenCardExists(factChecked, input.language, Boolean(input.recommendedMeditationId));
   const safeVisible = sanitizeVisibleAssistantMessage(noLibraryInstruction, input.language);
   return enforceLunaFeminineIdentity(safeVisible, input.language);
@@ -759,8 +766,8 @@ async function saveUsage(input: {
   if (error) console.warn('[Luna AI usage save failed]', { user: userHash(input.telegramId), error: error.message });
 }
 
-async function saveMemories(telegramId: number, conversationId: string, sourceMessageId: string, candidates: z.infer<typeof memoryCandidateSchema>[]) {
-  const valid = validMemoryCandidates(candidates);
+async function saveMemories(telegramId: number, conversationId: string, sourceMessageId: string, candidates: z.infer<typeof memoryCandidateSchema>[], sourceMessage: string) {
+  const valid = validMemoryCandidates(candidates, sourceMessage);
   if (!valid.length) return;
   const rows = valid.map((candidate) => ({
     telegram_id: telegramId,
@@ -1037,7 +1044,9 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
         catalogSize: catalogForPolicy.length
       });
     }
-    const recommendationRequested = explicitMeditationRequest || parsed.recommendationIntent.needed || Boolean(parsed.meditationAction);
+    const recommendationRequested = explicitMeditationRequest || Boolean(parsed.meditationAction) || (
+      parsed.recommendationIntent.needed && !recentAssistantRecommendations.slice(-3).some(Boolean)
+    );
     let recommendedMeditationId = semanticMeditationRecommendation({
       message: input.message,
       catalog: catalogForPolicy,
@@ -1047,7 +1056,8 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
         ?? null,
       modelRecommendationGoal: parsed.recommendationIntent.goal,
       recentAssistantRecommendations,
-      recentMessages: recent
+      recentMessages: recent,
+      vulnerable: isVulnerableMessage(input.message)
     });
     if (!recommendedMeditationId) {
       const mentionedId = meditationIdMentionedInText(parsed.message, catalogForPolicy);
@@ -1070,8 +1080,9 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
         recommendationRequested: true
       });
     }
+    const actionFailed = Boolean(parsed.meditationAction) && !validatedAction;
     const visibleMessage = recommendationRequested && !recommendedMeditationId
-      ? meditationCardFallback(responseLanguage)
+      ? actionFailed ? meditationCardFallback(responseLanguage) : meditationClarificationFallback(responseLanguage)
       : finalizeAssistantContent({
       parsedMessage: parsed.message,
       language: responseLanguage,
@@ -1117,7 +1128,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     }).eq('id', resolvedConversationId).eq('telegram_id', telegramId);
     if (conversationError) throw conversationError;
 
-    if (memoryEnabled && userMessage?.id) await saveMemories(telegramId, resolvedConversationId, userMessage.id, parsed.memoryCandidates);
+    if (memoryEnabled && userMessage?.id) await saveMemories(telegramId, resolvedConversationId, userMessage.id, parsed.memoryCandidates, input.message);
     await saveUsage({ telegramId, conversationId: resolvedConversationId, requestId: input.requestId, status: 'completed', latencyMs: Date.now() - startedAt, usage: openAiResponse.usage });
     const responsePayload = { conversationId: resolvedConversationId, message: assistant, duplicate: false, remaining: reservation.remaining, requestState: 'completed' as const };
     console.info('[Luna AI final response]', {

@@ -212,6 +212,12 @@ test('builds Responses request with larger output budget and minimal reasoning',
   assert.match(request.instructions, /Never claim that a card was rendered or playback started/);
   assert.match(request.instructions, /Product copy is added by the backend only after validation/);
   assert.match(request.instructions, /guidance is requested directly in chat/);
+  assert.match(request.instructions, /docs\/01_LUNA_BRAIN\.md/);
+  assert.match(request.instructions, /Act immediately when intent is clear/);
+  assert.match(request.instructions, /Never create a confirmation loop/);
+  assert.match(request.instructions, /known user identity fields may be used only as provided/i);
+  assert.match(request.instructions, /Acknowledge difficult emotion before advice/);
+  assert.match(request.instructions, /Do not interrupt vulnerable moments with unrelated Premium/);
   assert.equal(request.instructions.includes('"id":"m1"'), false);
 });
 
