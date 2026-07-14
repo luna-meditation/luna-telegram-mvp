@@ -1188,11 +1188,14 @@ input[type="range"] {
 
 .luna-recommendation-message b {
   flex: 0 0 auto;
+  max-width: 96px;
   border-radius: 999px;
   padding: 6px 8px;
   background: var(--luna-gold-soft);
   color: #11152d;
   font-size: 10px;
+  line-height: 1.15;
+  text-align: center;
 }
 
 .luna-live-error {
@@ -1472,10 +1475,27 @@ input[type="range"] {
   white-space: nowrap;
 }
 
+.luna-recommendation-message-copy {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
 .luna-recommendation-message small {
   margin-top: 3px;
   color: var(--luna-text-secondary);
   font-size: 11px;
+}
+
+.luna-recommendation-message em {
+  display: -webkit-box;
+  overflow: hidden;
+  margin-top: 4px;
+  color: var(--luna-text-secondary);
+  font-size: 11px;
+  font-style: normal;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .luna-conversation-tool {

@@ -45,7 +45,7 @@ test('OpenAI max-output retry remains internal to one request', () => {
 });
 
 test('recommendation metadata persists on the matching assistant message', () => {
-  assert.match(backend, /metadata: \{ recommendedMeditationId, recommendedMeditation, safetyState: 'none' \}/);
+  assert.match(backend, /metadata: \{ recommendedMeditationId, meditationAction, recommendedMeditation, safetyState: 'none' \}/);
   assert.match(backend, /recommendation_id: recommendedMeditationId/);
   assert.match(frontend, /key=\{message\.id\}/);
   assert.match(frontend, /message\.metadata\?\.recommendedMeditationId/);

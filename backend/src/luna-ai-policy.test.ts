@@ -15,6 +15,7 @@ import {
   isCrisisMessage,
   meditationIdMentionedInText,
   safetyCategory,
+  sanitizeMeditationCatalogKeys,
   sanitizeMeditationFacts,
   sanitizeVisibleAssistantMessage,
   semanticMeditationRecommendation,
@@ -188,9 +189,13 @@ test('never exposes ids, uuid, audio urls, or manual Library instructions when a
   const unsafe = `Morning Clarity has id = ${uuid}. Open Library and search for it. https://x.supabase.co/storage/audio.mp3`;
   const sanitized = sanitizeVisibleAssistantMessage(unsafe, 'en');
   assert.doesNotMatch(sanitized, /11111111|supabase|id\s*=/i);
+  assert.equal(
+    sanitizeMeditationCatalogKeys('Try focused-calm when you need clarity.', [{ id: 'focus', catalogKey: 'focused-calm', title: 'Focused Calm' }]),
+    'Try Focused Calm when you need clarity.'
+  );
   const noLibrary = avoidLibraryInstructionWhenCardExists(sanitized, 'en', true);
   assert.doesNotMatch(noLibrary, /Open Library|search for/i);
-  assert.match(noLibrary, /card below/i);
+  assert.match(noLibrary, /practice is ready here/i);
   assert.equal(hasInternalDataLeak('recommendedMeditationId: abc'), true);
 });
 
@@ -213,6 +218,13 @@ test('separates in-chat guidance from ready meditation requests', () => {
     modelRecommendationId: 'anxiety'
   }), null);
   assert.equal(isReadyMeditationRequest('Дай мне медитацию из приложения'), true);
+  assert.equal(isReadyMeditationRequest('Я могу её увидеть здесь в чате?'), true);
+  assert.equal(semanticMeditationRecommendation({
+    message: 'Я могу её увидеть здесь в чате?',
+    catalog: recommendationCatalog,
+    recentAssistantRecommendations: ['sleep'],
+    recentMessages: [{ role: 'user', content: 'Пришли мне медитацию для сна.' }]
+  }), 'sleep');
 });
 
 test('ambiguous tired context asks for clarification instead of guessing a goal', () => {

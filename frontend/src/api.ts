@@ -244,6 +244,10 @@ export type LunaMessage = {
   content: string;
   metadata?: {
     recommendedMeditationId?: string | null;
+    meditationAction?: {
+      type: 'meditation_card';
+      meditationId: string;
+    } | null;
     recommendedMeditation?: Meditation | null;
     safetyState?: string;
   };

@@ -84,7 +84,11 @@ function errorDetails(error: unknown, language: AppLanguage): Omit<FailedTurn, '
 
 function localizeMeditation(meditation: Meditation, language: AppLanguage) {
   const translation = meditation.translations?.[language];
-  return { title: translation?.title || meditation.title, subtitle: translation?.subtitle || meditation.subtitle };
+  return {
+    title: translation?.title || meditation.title,
+    subtitle: translation?.subtitle || meditation.subtitle,
+    description: translation?.description || meditation.description
+  };
 }
 
 function dateLabel(value: string, language: AppLanguage) {
@@ -310,21 +314,33 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
             <div>{prompts.slice(0, 4).map((prompt) => <button key={prompt} type="button" onClick={() => setDraft(prompt.replace(/^[^\p{L}\p{N}]+/u, '').trim())}>{prompt}</button>)}</div>
           </div>
         ) : visibleMessages.map((message) => {
-          const recommendationId = message.metadata?.recommendedMeditationId;
+          const recommendationId = message.metadata?.meditationAction?.meditationId ?? message.metadata?.recommendedMeditationId;
           const recommendation = recommendationId
             ? meditations.find((item) => item.id === recommendationId) ?? message.metadata?.recommendedMeditation ?? undefined
             : undefined;
           const localized = recommendation ? localizeMeditation(recommendation, language) : null;
+          const isPremium = Boolean(recommendation?.premium);
           return (
             <div key={message.id} className={`luna-live-message-row luna-live-message-${message.role}`}>
               {message.role === 'assistant' ? <span className="luna-message-orb" aria-hidden="true" /> : null}
               <div className="luna-live-message-content">
                 <div className="luna-message-bubble"><p>{message.content}</p></div>
                 {recommendation && localized ? (
-                  <button type="button" className="luna-recommendation-message" onClick={() => onOpenMeditation(recommendation)}>
+                  <button
+                    type="button"
+                    className="luna-recommendation-message"
+                    aria-label={isPremium && !hasPremium
+                      ? (language === 'ru' ? `Открыть Premium: ${localized.title}` : `Open Premium: ${localized.title}`)
+                      : (language === 'ru' ? `Начать практику: ${localized.title}` : `Start practice: ${localized.title}`)}
+                    onClick={() => onOpenMeditation(recommendation)}
+                  >
                     <img src={recommendation.cover_image} alt="" />
-                    <span><strong>{localized.title}</strong><small>{localized.subtitle} · {formatMeditationDuration(recommendation.duration, language)}</small></span>
-                    <b>{recommendation.premium && !hasPremium ? (language === 'ru' ? 'Premium' : 'Premium') : (language === 'ru' ? 'Открыть' : 'Open')}</b>
+                    <span className="luna-recommendation-message-copy">
+                      <strong>{localized.title}</strong>
+                      <small>{localized.subtitle} · {formatMeditationDuration(recommendation.duration, language)} · {isPremium ? 'Premium' : (language === 'ru' ? 'Бесплатно' : 'Free')}</small>
+                      <em>{localized.description}</em>
+                    </span>
+                    <b>{language === 'ru' ? 'Начать практику' : 'Start practice'}</b>
                   </button>
                 ) : null}
               </div>

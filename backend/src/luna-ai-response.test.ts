@@ -14,6 +14,7 @@ const {
   extractOpenAiText,
   LunaAiError,
   normalizeOpenAiModelResult,
+  resolveMeditationAction,
   retryMaxOutputTokens,
   shouldRetryOpenAiResponse
 } = await import('./luna-ai.js');
@@ -198,6 +199,7 @@ test('builds Responses request with larger output budget and minimal reasoning',
   assert.equal(request.max_output_tokens, 2000);
   assert.deepEqual(request.reasoning, { effort: 'minimal' });
   assert.equal(request.text.format.type, 'json_schema');
+  assert.match(request.instructions, /meditationAction/);
   assert.equal(request.input[0]?.content, 'I need rest');
   assert.ok(request.instructions.includes('"summary":"Short"'));
   assert.equal(request.instructions.includes('audio_url'), false);
@@ -218,6 +220,7 @@ test('normalizes plain text OpenAI output into an assistant message', () => {
     message: 'Take one quiet breath.',
     detectedIntent: 'chat',
     recommendationIntent: { needed: false, goal: null, preferredCatalogKey: null },
+    meditationAction: null,
     conversationTitle: null,
     memoryCandidates: []
   });
@@ -228,6 +231,7 @@ test('normalizes partial JSON OpenAI output with defaults', () => {
     message: 'A soft answer.',
     detectedIntent: 'chat',
     recommendationIntent: { needed: false, goal: null, preferredCatalogKey: null },
+    meditationAction: null,
     conversationTitle: null,
     memoryCandidates: []
   });
@@ -241,7 +245,29 @@ test('normalizes fenced JSON OpenAI output', () => {
     message: 'Fenced answer.',
     detectedIntent: 'chat',
     recommendationIntent: { needed: true, goal: null, preferredCatalogKey: 'not-a-real-id' },
+    meditationAction: null,
     conversationTitle: 'Evening',
     memoryCandidates: []
   });
+});
+
+test('normalizes a structured meditation action and validates it against published catalog', () => {
+  const normalized = normalizeOpenAiModelResult({
+    text: JSON.stringify({
+      message: 'A focused practice is ready.',
+      meditationAction: { type: 'meditation_card', meditationId: 'focused-calm' }
+    }),
+    refusal: null
+  }, 'en');
+  assert.deepEqual(normalized.meditationAction, { type: 'meditation_card', meditationId: 'focused-calm' });
+
+  assert.deepEqual(resolveMeditationAction(normalized.meditationAction, [
+    { id: 'db-focus', catalogKey: 'focused-calm', title: 'Focused Calm', published: true }
+  ]), { type: 'meditation_card', meditationId: 'db-focus' });
+  assert.equal(resolveMeditationAction(normalized.meditationAction, [
+    { id: 'db-sleep', catalogKey: 'deep-sleep', title: 'Deep Sleep', published: true }
+  ]), null);
+  assert.equal(resolveMeditationAction({ type: 'meditation_card', meditationId: 'draft-focus' }, [
+    { id: 'draft-focus', catalogKey: 'focused-calm', title: 'Focused Calm', published: false }
+  ]), null);
 });

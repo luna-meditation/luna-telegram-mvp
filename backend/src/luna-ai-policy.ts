@@ -44,6 +44,7 @@ export type RecommendationCatalogItem = {
   mood?: string | null;
   duration?: number | string | null;
   premium?: boolean | null;
+  published?: boolean | null;
   language?: string | null;
   summary?: string | null;
 };
@@ -134,7 +135,7 @@ export function hasInternalDataLeak(message: string) {
 
 export function isReadyMeditationRequest(message: string) {
   return /\b(?:recommend|suggest|send|give me|pick|choose|what should i listen|what to listen|meditation|practice from the app|audio practice)\b/i.test(message) ||
-    /(?:пришли|отправь|дай|подбери|посоветуй|выбери|можешь\s+(?:сюда\s+)?прислать|сюда\s+прислать|что\s+(?:мне\s+)?послушать|медитац|практик[ау]\s+из\s+приложения)/i.test(message);
+    /(?:пришли|отправь|дай|подбери|посоветуй|выбери|покажи|можешь\s+(?:сюда\s+)?прислать|сюда\s+прислать|можно\s+(?:её\s+)?увидеть|увидеть\s+(?:её\s+)?(?:здесь|в\s+чате)|что\s+(?:мне\s+)?послушать|медитац|практик[ау]\s+из\s+приложения)/i.test(message);
 }
 
 export function isInChatGuidanceRequest(message: string) {
@@ -209,7 +210,7 @@ export function semanticMeditationRecommendation(input: {
 }) {
   const recentRecommendations = input.recentAssistantRecommendations ?? [];
   const explicitlyRequested = isReadyMeditationRequest(input.message);
-  if (isInChatGuidanceRequest(input.message)) return null;
+  if (isInChatGuidanceRequest(input.message) && !explicitlyRequested) return null;
   if (isAmbiguousSleepyTiredContext(input.message) && !explicitlyRequested) return null;
   if (!explicitlyRequested && recentRecommendations.slice(-3).some(Boolean)) return null;
 
@@ -256,8 +257,8 @@ export function meditationIdMentionedInText(message: string, catalog: Recommenda
 
 export function meditationCardInstruction(language: LunaLanguage) {
   return language === 'ru'
-    ? 'Открой карточку ниже, когда будешь готов(а).'
-    : 'Open the card below whenever you are ready.';
+    ? 'Карточка практики уже здесь — начни, когда захочешь.'
+    : 'The practice is ready here whenever you want to begin.';
 }
 
 export function avoidLibraryInstructionWhenCardExists(message: string, language: LunaLanguage, hasRecommendation: boolean) {
@@ -282,6 +283,16 @@ export function sanitizeMeditationFacts(message: string, catalog: Recommendation
     next = next
       .replace(titleThenDuration, (_match, before: string) => `${before}${minutes} min`)
       .replace(durationThenTitle, (_match, _duration: string, after: string) => `${minutes} min${after}`);
+  }
+  return next;
+}
+
+export function sanitizeMeditationCatalogKeys(message: string, catalog: RecommendationCatalogItem[]) {
+  let next = message;
+  for (const item of catalog) {
+    const key = item.catalogKey?.trim();
+    if (!key || !item.title || !key.includes('-')) continue;
+    next = next.replace(new RegExp(`\\b${escapeRegExp(key)}\\b`, 'gi'), item.title);
   }
   return next;
 }

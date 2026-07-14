@@ -17,6 +17,7 @@ import {
   isReadyMeditationRequest,
   safetyCategory,
   sanitizeMeditationFacts,
+  sanitizeMeditationCatalogKeys,
   sanitizeVisibleAssistantMessage,
   semanticMeditationRecommendation,
   meditationCardInstruction,
@@ -26,6 +27,10 @@ import {
 } from './luna-ai-policy.js';
 
 const languageSchema = z.enum(['en', 'ru']);
+const meditationActionSchema = z.object({
+  type: z.literal('meditation_card'),
+  meditationId: z.string().trim().min(1).max(100)
+});
 const modelResultSchema = z.object({
   message: z.string().min(1).max(5000),
   detectedIntent: z.enum(detectedIntents),
@@ -34,6 +39,7 @@ const modelResultSchema = z.object({
     goal: z.enum(recommendationGoals).nullable(),
     preferredCatalogKey: z.string().min(1).max(100).nullable()
   }),
+  meditationAction: meditationActionSchema.nullable(),
   conversationTitle: z.string().min(1).max(60).nullable(),
   memoryCandidates: z.array(memoryCandidateSchema).max(3)
 });
@@ -46,19 +52,26 @@ const tolerantModelResultSchema = z.object({
     preferredCatalogKey: z.string().trim().min(1).max(100).nullable().optional()
   }).optional(),
   conversationTitle: z.string().trim().min(1).max(60).nullable().optional(),
+  meditationAction: z.unknown().optional(),
+  action: z.unknown().optional(),
   recommendedMeditationId: z.string().trim().min(1).nullable().optional(),
   memoryCandidates: z.array(memoryCandidateSchema).max(3).optional()
-}).passthrough().transform((value) => ({
-  message: value.message,
-  detectedIntent: value.detectedIntent ?? 'chat',
-  recommendationIntent: {
-    needed: value.recommendationIntent?.needed ?? Boolean(value.recommendedMeditationId),
-    goal: value.recommendationIntent?.goal ?? null,
-    preferredCatalogKey: value.recommendationIntent?.preferredCatalogKey ?? value.recommendedMeditationId ?? null
-  },
-  conversationTitle: value.conversationTitle ?? null,
-  memoryCandidates: value.memoryCandidates ?? []
-}));
+}).passthrough().transform((value) => {
+  const actionCandidate = value.meditationAction ?? value.action ?? null;
+  const action = meditationActionSchema.safeParse(actionCandidate);
+  return {
+    message: value.message,
+    detectedIntent: value.detectedIntent ?? 'chat',
+    recommendationIntent: {
+      needed: value.recommendationIntent?.needed ?? Boolean(value.recommendedMeditationId || action.success),
+      goal: value.recommendationIntent?.goal ?? null,
+      preferredCatalogKey: value.recommendationIntent?.preferredCatalogKey ?? value.recommendedMeditationId ?? (action.success ? action.data.meditationId : null)
+    },
+    meditationAction: action.success ? action.data : null,
+    conversationTitle: value.conversationTitle ?? null,
+    memoryCandidates: value.memoryCandidates ?? []
+  };
+});
 
 export const lunaChatInputSchema = z.object({
   conversationId: z.string().uuid().optional(),
@@ -297,6 +310,7 @@ export function normalizeOpenAiModelResult(
       message: extracted.refusal,
       detectedIntent: 'other',
       recommendationIntent: { needed: false, goal: null, preferredCatalogKey: null },
+      meditationAction: null,
       conversationTitle: language === 'ru' ? 'Нужна поддержка' : 'Need Support',
       memoryCandidates: []
     });
@@ -315,6 +329,7 @@ export function normalizeOpenAiModelResult(
       message: text,
       detectedIntent: 'chat',
       recommendationIntent: { needed: false, goal: null, preferredCatalogKey: null },
+      meditationAction: null,
       conversationTitle: null,
       memoryCandidates: []
     });
@@ -418,13 +433,27 @@ function explicitRecommendationMessage(input: {
   item: RecommendationCatalogItem;
 }) {
   const title = input.item.title;
-  const summary = compactText(input.item.summary, 110);
   if (input.language === 'ru') {
-    const reason = summary ? ` — ${summary}` : '';
-    return `Я выбрала ${title}${reason}. ${meditationCardInstruction('ru')}`;
+    return `Для этого лучше всего подойдёт ${title}. ${meditationCardInstruction('ru')}`;
   }
-  const reason = summary ? ` — ${summary}` : '';
-  return `I chose ${title}${reason}. ${meditationCardInstruction('en')}`;
+  return `For this, I'd recommend ${title}. ${meditationCardInstruction('en')}`;
+}
+
+function meditationCardFallback(language: 'en' | 'ru') {
+  return language === 'ru'
+    ? 'Я нашла эту практику, но сейчас не смогла открыть карточку. Попробуй ещё раз.'
+    : 'I found this practice, but I could not open its card right now. Please try again.';
+}
+
+export type MeditationAction = z.infer<typeof meditationActionSchema>;
+
+export function resolveMeditationAction(action: MeditationAction | null, catalog: RecommendationCatalogItem[]) {
+  if (!action) return null;
+  const item = catalog.find((candidate) => (
+    candidate.published !== false &&
+    (candidate.id === action.meditationId || candidate.catalogKey === action.meditationId)
+  ));
+  return item ? { type: 'meditation_card' as const, meditationId: item.id } : null;
 }
 
 function finalizeAssistantContent(input: {
@@ -440,7 +469,7 @@ function finalizeAssistantContent(input: {
   const baseMessage = input.explicitRequest && selected
     ? explicitRecommendationMessage({ language: input.language, item: selected })
     : input.parsedMessage;
-  const factChecked = sanitizeMeditationFacts(baseMessage, input.catalog);
+  const factChecked = sanitizeMeditationCatalogKeys(sanitizeMeditationFacts(baseMessage, input.catalog), input.catalog);
   const noLibraryInstruction = avoidLibraryInstructionWhenCardExists(factChecked, input.language, Boolean(input.recommendedMeditationId));
   const safeVisible = sanitizeVisibleAssistantMessage(noLibraryInstruction, input.language);
   return enforceLunaFeminineIdentity(safeVisible, input.language);
@@ -468,6 +497,15 @@ function lunaStructuredTextFormat() {
             },
             required: ['needed', 'goal', 'preferredCatalogKey']
           },
+          meditationAction: {
+            type: ['object', 'null'],
+            additionalProperties: false,
+            properties: {
+              type: { type: 'string', enum: ['meditation_card'] },
+              meditationId: { type: 'string' }
+            },
+            required: ['type', 'meditationId']
+          },
           conversationTitle: { type: ['string', 'null'] },
           memoryCandidates: {
             type: 'array',
@@ -485,7 +523,7 @@ function lunaStructuredTextFormat() {
             }
           }
         },
-        required: ['message', 'detectedIntent', 'recommendationIntent', 'conversationTitle', 'memoryCandidates']
+        required: ['message', 'detectedIntent', 'recommendationIntent', 'meditationAction', 'conversationTitle', 'memoryCandidates']
       }
     }
   };
@@ -894,6 +932,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       duration: item.duration,
       language: responseLanguage,
       premium: item.premium,
+      published: item.published,
       summary: compactText(item.translations?.[responseLanguage]?.subtitle ?? item.subtitle ?? item.description, 120)
     })) satisfies RecommendationCatalogItem[];
     const catalogForModel = catalogForPolicy.map((item) => ({
@@ -981,14 +1020,31 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     const recentAssistantRecommendations = recent
       .filter((message) => message.role === 'assistant')
       .slice(-4)
-      .map((message) => (message.metadata as { recommendedMeditationId?: string | null } | null)?.recommendedMeditationId ?? null);
+      .map((message) => {
+        const metadata = message.metadata as { recommendedMeditationId?: string | null; meditationAction?: { meditationId?: string | null } | null } | null;
+        return metadata?.recommendedMeditationId ?? metadata?.meditationAction?.meditationId ?? null;
+      });
     const parsed = normalizeOpenAiModelResult(extracted, responseLanguage, { telegramId, requestId: input.requestId });
     const explicitMeditationRequest = isReadyMeditationRequest(input.message);
+    const validatedAction = resolveMeditationAction(parsed.meditationAction, catalogForPolicy);
+    if (parsed.meditationAction && !validatedAction) {
+      console.warn('[Luna AI meditation action rejected]', {
+        user: userHash(telegramId),
+        conversationId: resolvedConversationId,
+        meditationId: parsed.meditationAction.meditationId,
+        actionParsingResult: 'rejected',
+        catalogMatch: false,
+        catalogSize: catalogForPolicy.length
+      });
+    }
+    const recommendationRequested = explicitMeditationRequest || parsed.recommendationIntent.needed || Boolean(parsed.meditationAction);
     let recommendedMeditationId = semanticMeditationRecommendation({
       message: input.message,
       catalog: catalogForPolicy,
       language: responseLanguage,
-      modelRecommendationId: catalogForPolicy.find((item) => item.catalogKey === parsed.recommendationIntent.preferredCatalogKey)?.id ?? null,
+      modelRecommendationId: validatedAction?.meditationId
+        ?? catalogForPolicy.find((item) => item.catalogKey === parsed.recommendationIntent.preferredCatalogKey)?.id
+        ?? null,
       modelRecommendationGoal: parsed.recommendationIntent.goal,
       recentAssistantRecommendations,
       recentMessages: recent
@@ -1004,13 +1060,26 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
         });
       }
     }
-    const assistantContent = enforceCardClaimConsistency(finalizeAssistantContent({
+    if (recommendationRequested && !recommendedMeditationId) {
+      console.warn('[Luna AI meditation card fallback]', {
+        user: userHash(telegramId),
+        conversationId: resolvedConversationId,
+        requestedMeditationId: parsed.meditationAction?.meditationId ?? parsed.recommendationIntent.preferredCatalogKey ?? null,
+        catalogMatch: Boolean(validatedAction),
+        actionParsingResult: parsed.meditationAction ? (validatedAction ? 'validated' : 'rejected') : 'not_requested',
+        recommendationRequested: true
+      });
+    }
+    const visibleMessage = recommendationRequested && !recommendedMeditationId
+      ? meditationCardFallback(responseLanguage)
+      : finalizeAssistantContent({
       parsedMessage: parsed.message,
       language: responseLanguage,
       catalog: catalogForPolicy,
       recommendedMeditationId,
       explicitRequest: explicitMeditationRequest
-    }), responseLanguage, Boolean(recommendedMeditationId));
+    });
+    const assistantContent = enforceCardClaimConsistency(visibleMessage, responseLanguage, Boolean(recommendedMeditationId));
     if (!assistantContent) throw new LunaAiError('malformed_response', 'Luna returned no safe visible message.', 502);
     if (hasInternalDataLeak(assistantContent)) {
       console.warn('[Luna AI internal data guard]', {
@@ -1025,10 +1094,13 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     const recommendedMeditation = recommendedMeditationId
       ? catalog.find((item) => item.id === recommendedMeditationId) ?? null
       : null;
+    const meditationAction = recommendedMeditation
+      ? { type: 'meditation_card' as const, meditationId: recommendedMeditation.id }
+      : null;
     const { data: assistant, error: assistantError } = await supabase.from('ai_messages').insert({
       conversation_id: resolvedConversationId, telegram_id: telegramId, role: 'assistant', content: assistantContent,
       request_id: input.requestId,
-      metadata: { recommendedMeditationId, recommendedMeditation, safetyState: 'none' }
+      metadata: { recommendedMeditationId, meditationAction, recommendedMeditation, safetyState: 'none' }
     }).select().single();
     if (assistantError) throw assistantError;
     assistantMessageId = assistant.id;
