@@ -10,8 +10,9 @@ import {
   playbackRewardDecision,
   PlaybackInputError
 } from './playback-security.js';
-import { buildCanonicalCurrentWeek } from './progress-model.js';
+import { buildCanonicalCurrentWeek, buildCanonicalDailyActivity, buildSevenDayMoodTrend, shiftDateKey } from './progress-model.js';
 import { buildProgressInsights } from './progress-insights.js';
+import { achievementDefinitions, buildAchievementItems, type AchievementStats } from './progress-achievements.js';
 import { logBackendError } from './error-logging.js';
 
 if (!globalThis.WebSocket) {
@@ -82,67 +83,6 @@ const legacyMoonGardenElementOrder = [
   'crescent_tree',
   'star_path',
   'breathing_pond'
-];
-
-type AchievementStats = {
-  completedMeditations: number;
-  completedBreathSessions: number;
-  completed: number;
-  minutesListened: number;
-  currentStreak: number;
-  longestStreak: number;
-  checkinsCount: number;
-  hasPremiumAccess: boolean;
-  gardenLevel: number;
-  hasMorningPractice: boolean;
-  hasEveningPractice: boolean;
-  practiceDays: number;
-  completedWeeks: number;
-  perfectWeeks: number;
-  categoryCounts: Record<string, number>;
-};
-
-type AchievementDefinition = {
-  id: string;
-  title: string;
-  description: string;
-  category: 'practice' | 'rhythm' | 'wellness' | 'garden' | 'premium';
-  unlocked: (stats: AchievementStats) => boolean;
-};
-
-const achievementDefinitions: AchievementDefinition[] = [
-  { id: 'first_meditation', title: 'First Meditation', description: 'Completed your first Luna meditation.', category: 'practice', unlocked: (stats) => stats.completedMeditations >= 1 },
-  { id: 'first_week', title: 'First Week', description: 'Completed practice days across your first week.', category: 'rhythm', unlocked: (stats) => stats.practiceDays >= 7 || stats.completedWeeks >= 1 },
-  { id: 'first_month', title: 'First Month', description: 'Built a month of Luna returns.', category: 'rhythm', unlocked: (stats) => stats.practiceDays >= 30 },
-  { id: 'three_meditations', title: 'Three Calm Returns', description: 'Completed three meditation sessions.', category: 'practice', unlocked: (stats) => stats.completedMeditations >= 3 },
-  { id: 'seven_day_rhythm', title: '7-Day Rhythm', description: 'Protected a full week of quiet rhythm.', category: 'rhythm', unlocked: (stats) => stats.currentStreak >= 7 || stats.longestStreak >= 7 },
-  { id: 'fourteen_day_rhythm', title: '14-Day Rhythm', description: 'Returned for two gentle weeks.', category: 'rhythm', unlocked: (stats) => stats.currentStreak >= 14 || stats.longestStreak >= 14 },
-  { id: 'thirty_day_rhythm', title: '30-Day Rhythm', description: 'Built a lasting Luna rhythm.', category: 'rhythm', unlocked: (stats) => stats.currentStreak >= 30 || stats.longestStreak >= 30 },
-  { id: 'sixty_day_rhythm', title: '60-Day Rhythm', description: 'Protected your practice through many days.', category: 'rhythm', unlocked: (stats) => stats.currentStreak >= 60 || stats.longestStreak >= 60 },
-  { id: 'hundred_day_rhythm', title: '100-Day Rhythm', description: 'Created a rare long-term rhythm.', category: 'rhythm', unlocked: (stats) => stats.currentStreak >= 100 || stats.longestStreak >= 100 },
-  { id: 'hundred_minutes', title: '100 Listening Minutes', description: 'Spent 100 minutes with Luna.', category: 'practice', unlocked: (stats) => stats.minutesListened >= 100 },
-  { id: 'five_hundred_minutes', title: '500 Listening Minutes', description: 'Created a deep practice foundation.', category: 'practice', unlocked: (stats) => stats.minutesListened >= 500 },
-  { id: 'thousand_minutes', title: '1000 Listening Minutes', description: 'Returned to calm again and again.', category: 'practice', unlocked: (stats) => stats.minutesListened >= 1000 },
-  { id: 'ten_sessions', title: '10 Sessions', description: 'Completed ten Luna practices.', category: 'practice', unlocked: (stats) => stats.completed >= 10 },
-  { id: 'fifty_sessions', title: '50 Sessions', description: 'Completed fifty Luna practices.', category: 'practice', unlocked: (stats) => stats.completed >= 50 },
-  { id: 'hundred_sessions', title: '100 Sessions', description: 'Completed one hundred Luna practices.', category: 'practice', unlocked: (stats) => stats.completed >= 100 },
-  { id: 'morning_practice', title: 'Morning Practice', description: 'Started a day with Luna.', category: 'practice', unlocked: (stats) => stats.hasMorningPractice },
-  { id: 'evening_practice', title: 'Evening Practice', description: 'Closed a day with Luna.', category: 'practice', unlocked: (stats) => stats.hasEveningPractice },
-  { id: 'deep_sleep_explorer', title: 'Deep Sleep Explorer', description: 'Completed sleep practices.', category: 'practice', unlocked: (stats) => (stats.categoryCounts.sleep ?? 0) >= 1 },
-  { id: 'anxiety_companion', title: 'Anxiety Companion', description: 'Returned to Luna during anxious moments.', category: 'practice', unlocked: (stats) => (stats.categoryCounts.anxiety ?? 0) >= 1 },
-  { id: 'focus_builder', title: 'Focus Builder', description: 'Completed focus practices.', category: 'practice', unlocked: (stats) => (stats.categoryCounts.focus ?? 0) >= 1 },
-  { id: 'first_checkin', title: 'First Check-in', description: 'Checked in with your inner weather.', category: 'wellness', unlocked: (stats) => stats.checkinsCount >= 1 },
-  { id: 'seven_checkins', title: 'Seven Check-ins', description: 'Built a gentle reflection habit.', category: 'wellness', unlocked: (stats) => stats.checkinsCount >= 7 },
-  { id: 'thirty_checkins', title: 'Thirty Check-ins', description: 'Created a fuller picture of your rhythm.', category: 'wellness', unlocked: (stats) => stats.checkinsCount >= 30 },
-  { id: 'one_hundred_checkins', title: '100 Check-ins', description: 'Built a deep reflection history.', category: 'wellness', unlocked: (stats) => stats.checkinsCount >= 100 },
-  { id: 'premium_member', title: 'Premium Member', description: 'Unlocked the deeper Luna experience.', category: 'premium', unlocked: (stats) => stats.hasPremiumAccess },
-  { id: 'moon_garden_level_5', title: 'Moon Garden Level 5', description: 'Grew your garden into a moonlit place.', category: 'garden', unlocked: (stats) => stats.gardenLevel >= 5 },
-  { id: 'moon_garden_level_10', title: 'Moon Garden Level 10', description: 'Prepared for future garden expansions.', category: 'garden', unlocked: (stats) => stats.gardenLevel >= 10 },
-  { id: 'moon_garden_level_20', title: 'Moon Garden Level 20', description: 'Expanded your Moon Garden deeply.', category: 'garden', unlocked: (stats) => stats.gardenLevel >= 20 },
-  { id: 'seven_perfect_weeks', title: 'Seven Perfect Weeks', description: 'Completed seven full practice weeks.', category: 'rhythm', unlocked: (stats) => stats.perfectWeeks >= 7 },
-  { id: 'thirty_perfect_days', title: 'Thirty Perfect Days', description: 'Completed thirty practice days.', category: 'rhythm', unlocked: (stats) => stats.practiceDays >= 30 },
-  { id: 'one_year_together', title: 'One Year Together', description: 'Returned to Luna across a year of practice days.', category: 'rhythm', unlocked: (stats) => stats.practiceDays >= 365 },
-  { id: 'calm_explorer', title: 'Calm Explorer', description: 'Completed practices across Luna.', category: 'practice', unlocked: (stats) => stats.completed >= 5 }
 ];
 
 export type DailyCheckinInput = {
@@ -730,17 +670,18 @@ function buildPracticeDaySet(input: {
   history: Array<{ completed?: boolean | null; last_played?: string | null }>;
   breathSessions: Array<{ completed_at?: string | null }>;
   practiceDays: Array<{ local_date?: string | null }>;
+  timeZone: string;
 }) {
   const days = new Set<string>();
   input.practiceDays.forEach((item) => {
     if (item.local_date) days.add(item.local_date);
   });
   input.history.forEach((item) => {
-    const key = item.completed && item.last_played ? dateKey(item.last_played) : null;
+    const key = item.completed && item.last_played ? dateKeyInTimeZone(item.last_played, input.timeZone) : null;
     if (key) days.add(key);
   });
   input.breathSessions.forEach((item) => {
-    const key = item.completed_at ? dateKey(item.completed_at) : null;
+    const key = item.completed_at ? dateKeyInTimeZone(item.completed_at, input.timeZone) : null;
     if (key) days.add(key);
   });
   return days;
@@ -754,21 +695,38 @@ function countCompletedWeeks(practiceDayKeys: Set<string>) {
   return [...weeks.values()].filter((days) => days.size >= 7).length;
 }
 
-function buildMoodTrend(checkins: Array<{ local_date?: string | null; mood?: string | null; sleep_range?: string | null }>, localDate: string) {
-  const byDate = new Map(checkins
-    .filter((item) => item.local_date)
-    .map((item) => [item.local_date as string, { mood: item.mood ?? null, sleepRange: item.sleep_range ?? null }]));
-  const today = new Date(`${todayKey(localDate)}T12:00:00Z`);
-  return Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(today);
-    date.setUTCDate(today.getUTCDate() - (6 - index));
-    const key = date.toISOString().slice(0, 10);
-    return {
-      key,
-      mood: byDate.get(key)?.mood ?? null,
-      sleepRange: byDate.get(key)?.sleepRange ?? null
-    };
-  });
+function dateKeyInTimeZone(value: string | null | undefined, timeZone: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  try {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      year: 'numeric', month: '2-digit', day: '2-digit', timeZone
+    }).formatToParts(date);
+    const year = parts.find((part) => part.type === 'year')?.value;
+    const month = parts.find((part) => part.type === 'month')?.value;
+    const day = parts.find((part) => part.type === 'day')?.value;
+    return year && month && day ? `${year}-${month}-${day}` : null;
+  } catch {
+    return date.toISOString().slice(0, 10);
+  }
+}
+
+function hourInTimeZone(value: string | null | undefined, timeZone: string) {
+  if (!value) return -1;
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return -1;
+  try {
+    const hour = new Intl.DateTimeFormat('en-US', {
+      hour: '2-digit',
+      hourCycle: 'h23',
+      timeZone
+    }).formatToParts(date).find((part) => part.type === 'hour')?.value;
+    const parsed = Number(hour);
+    return Number.isFinite(parsed) ? parsed : -1;
+  } catch {
+    return date.getUTCHours();
+  }
 }
 
 function mostCommonValue<T extends string>(values: T[]) {
@@ -1121,7 +1079,7 @@ function earnedMoonSeeds(input: {
 }
 
 async function syncAchievements(telegramId: number, stats: AchievementStats) {
-  const unlockedDefinitions = achievementDefinitions.filter((definition) => definition.unlocked(stats));
+  const unlockedDefinitions = achievementDefinitions.filter((definition) => definition.current(stats) >= definition.target);
   try {
     if (unlockedDefinitions.length > 0) {
       const now = new Date().toISOString();
@@ -1146,19 +1104,7 @@ async function syncAchievements(telegramId: number, stats: AchievementStats) {
       .eq('telegram_id', telegramId);
     if (error) throw error;
 
-    const unlockedById = new Map((data ?? []).map((item) => [item.achievement_id, item]));
-    const items = achievementDefinitions.map((definition) => {
-      const unlocked = unlockedById.get(definition.id);
-      return {
-        id: definition.id,
-        title: definition.title,
-        description: definition.description,
-        category: definition.category,
-        unlocked: Boolean(unlocked),
-        unlockedAt: unlocked?.unlocked_at ?? null,
-        progress: unlocked?.progress ?? (definition.unlocked(stats) ? 100 : 0)
-      };
-    });
+    const items = buildAchievementItems(stats, data ?? []);
 
     return {
       unlocked: items.filter((item) => item.unlocked).length,
@@ -1167,18 +1113,7 @@ async function syncAchievements(telegramId: number, stats: AchievementStats) {
     };
   } catch (error) {
     logBackendError(error, { endpoint: 'database achievements lookup', telegramId });
-    const items = achievementDefinitions.map((definition) => {
-      const unlocked = definition.unlocked(stats);
-      return {
-        id: definition.id,
-        title: definition.title,
-        description: definition.description,
-        category: definition.category,
-        unlocked,
-        unlockedAt: unlocked ? new Date().toISOString() : null,
-        progress: unlocked ? 100 : 0
-      };
-    });
+    const items = buildAchievementItems(stats, []);
     return {
       unlocked: items.filter((item) => item.unlocked).length,
       total: achievementDefinitions.length,
@@ -1353,7 +1288,7 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     { data: playbackSessions, error: playbackSessionsError }
   ] =
     await Promise.all([
-      supabase.from('history').select('completion_percent, last_position, listened_seconds, completed, last_played, meditations(category, title)').eq('telegram_id', telegramId),
+      supabase.from('history').select('meditation_id, completion_percent, last_position, listened_seconds, completed, last_played, meditations(category, title)').eq('telegram_id', telegramId),
       supabase.from('streaks').select('*').eq('telegram_id', telegramId).maybeSingle(),
       supabase.from('daily_checkins').select('local_date, mood, sleep_range').eq('telegram_id', telegramId),
       supabase.from('practice_days').select('local_date, source, minutes, sessions').eq('telegram_id', telegramId).order('local_date', { ascending: false }),
@@ -1418,12 +1353,13 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
   });
   const activeUntil = user?.active_until ? new Date(user.active_until).getTime() : 0;
   const hasPremiumAccess = Boolean(user?.lifetime_access || activeUntil > Date.now());
+  const notificationPreferences = normalizeNotificationPreferences(user?.notification_preferences ?? {});
   const hasMorningPractice = (history ?? []).some((item) => {
-    const hour = item.last_played ? new Date(item.last_played).getHours() : -1;
+    const hour = hourInTimeZone(item.last_played, notificationPreferences.timezone);
     return hour >= 5 && hour < 12;
   });
   const hasEveningPractice = (history ?? []).some((item) => {
-    const hour = item.last_played ? new Date(item.last_played).getHours() : -1;
+    const hour = hourInTimeZone(item.last_played, notificationPreferences.timezone);
     return hour >= 18 || (hour >= 0 && hour < 3);
   });
   const categoryCounts = (history ?? []).reduce<Record<string, number>>((map, item) => {
@@ -1436,16 +1372,28 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
   const practiceDayKeys = buildPracticeDaySet({
     history: history ?? [],
     breathSessions: safeBreathSessions,
-    practiceDays: safePracticeDays
+    practiceDays: safePracticeDays,
+    timeZone: notificationPreferences.timezone
   });
+  const normalizedPlaybackSessions = safePlaybackSessions.map((item) => ({
+    ...item,
+    local_date: item.local_date ?? dateKeyInTimeZone(item.created_at, notificationPreferences.timezone)
+  }));
   const currentWeek = buildCanonicalCurrentWeek({
     practiceDays: safePracticeDays,
-    playbackSessions: safePlaybackSessions.map((item) => ({
-      ...item,
-      local_date: item.local_date ?? (item.created_at ? dateKey(item.created_at) : null)
-    })),
+    playbackSessions: normalizedPlaybackSessions,
     lastFreezeUsed: streak?.last_freeze_used ?? null,
     localDate: todayKey(localDate)
+  });
+  const previousWeek = buildCanonicalCurrentWeek({
+    practiceDays: safePracticeDays,
+    playbackSessions: normalizedPlaybackSessions,
+    lastFreezeUsed: null,
+    localDate: shiftDateKey(currentWeek.weekStart, -1)
+  });
+  const dailyActivity = buildCanonicalDailyActivity({
+    practiceDays: safePracticeDays,
+    playbackSessions: normalizedPlaybackSessions
   });
   const lifetimeStats = {
     totalListeningMinutes: minutesListened,
@@ -1454,7 +1402,25 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     practiceDays: practiceDayKeys.size,
     completedWeeks: countCompletedWeeks(practiceDayKeys)
   };
-  const moodTrend = buildMoodTrend(checkins ?? [], todayKey(localDate));
+  const practicesByDate = new Map<string, { id: string | null; title: string | null }>();
+  [...(history ?? [])]
+    .filter((item) => item.completed || Number(item.completion_percent ?? 0) >= 90)
+    .sort((left, right) => String(left.last_played ?? '').localeCompare(String(right.last_played ?? '')))
+    .forEach((item) => {
+      const key = dateKeyInTimeZone(item.last_played, notificationPreferences.timezone);
+      if (!key) return;
+      const meditation = Array.isArray(item.meditations) ? item.meditations[0] : item.meditations;
+      practicesByDate.set(key, {
+        id: typeof item.meditation_id === 'string' ? item.meditation_id : null,
+        title: typeof meditation?.title === 'string' ? meditation.title : null
+      });
+    });
+  const moodTrend = buildSevenDayMoodTrend({
+    checkins: checkins ?? [],
+    localDate: todayKey(localDate),
+    activity: dailyActivity,
+    practices: practicesByDate
+  });
   const progressInsights = buildProgressInsights({
     history: history ?? [],
     breathSessions: safeBreathSessions,
@@ -1463,7 +1429,7 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     totalListeningMinutes: minutesListened,
     totalSessions: completed,
     localDate: todayKey(localDate),
-    timeZone: normalizeNotificationPreferences(user?.notification_preferences ?? {}).timezone
+    timeZone: notificationPreferences.timezone
   });
   const achievements = await syncAchievements(telegramId, {
     completedMeditations,
@@ -1513,6 +1479,7 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
       checkins: (checkins ?? []).filter((item) => item.local_date && item.local_date >= currentWeek.weekStart && item.local_date <= todayKey(localDate)).length,
       completedDays: currentWeek.completedDays
     },
+    previousWeek,
     lifetimeStats,
     currentWeek,
     moodTrend,
@@ -1530,7 +1497,22 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     lastPracticeDate,
     purchasedPlan: user?.lifetime_access ? 'lifetime' : activeUntil > Date.now() ? 'monthly' : 'free',
     calmScore,
-    achievements
+    achievements,
+    progressDiagnostics: telegramId === env.ADMIN_TELEGRAM_ID ? {
+      localWeekStart: currentWeek.weekStart,
+      localWeekEnd: shiftDateKey(currentWeek.weekStart, 6),
+      previousWeekStart: previousWeek.weekStart,
+      previousWeekEnd: shiftDateKey(previousWeek.weekStart, 6),
+      sourceSessionCount: safePlaybackSessions.length,
+      verifiedListeningSeconds: verifiedMeditationSeconds,
+      dailyActiveDates: [...practiceDayKeys].sort(),
+      currentStreak: streak?.current_streak ?? 0,
+      longestStreak: streak?.longest_streak ?? 0,
+      moodEntriesCount: new Set((checkins ?? []).map((item) => item.local_date).filter(Boolean)).size,
+      plantedGardenUpgrades: Math.min(7, moonGarden.plantedElementsCount),
+      achievementCount: achievements.unlocked,
+      lastProgressRefreshAt: new Date().toISOString()
+    } : undefined
   };
 }
 

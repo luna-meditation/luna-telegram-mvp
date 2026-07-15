@@ -90,7 +90,7 @@ import {
 } from './api';
 import { MoonGardenScene as AnimatedMoonGardenScene } from './components/moon-garden/MoonGardenScene';
 import { LunaChat } from './components/LunaChat';
-import { ProgressExperience } from './components/progress/ProgressExperience';
+import { ProgressExperience, ProgressExperienceSkeleton } from './components/progress/ProgressExperience';
 import { V2BottomNav } from './v2/components/V2BottomNav';
 import { HomeV2 } from './v2/pages/HomeV2';
 import { frontendBuildMetadata, recordPaymentStage, useRuntimeDiagnostics, type RuntimeDiagnostics } from './runtime-diagnostics';
@@ -1983,29 +1983,36 @@ function App() {
       try {
         const [accessState, profileStats, historyList, favoriteList, wellnessSummary] = await Promise.all([
           getAccess(initData),
-          getProfile(initData, todayLocalDate()).catch(() => null),
-          getHistory(initData).catch(() => []),
-          getFavorites(initData).catch(() => []),
+          getProfile(initData, todayLocalDate()).catch((error) => {
+            console.info('[Luna progress refresh failed]', error instanceof Error ? error.message : 'Profile refresh failed.');
+            return null;
+          }),
+          getHistory(initData).catch(() => null),
+          getFavorites(initData).catch(() => null),
           getWellnessSummary(initData, todayLocalDate()).catch(() => null)
         ]);
+        const nextProfile = profileStats ?? profile ?? initialAccountCache?.profile ?? null;
+        const nextHistory = historyList ?? history;
+        const nextFavorites = favoriteList ?? favorites;
+        const nextWellness = wellnessSummary ?? wellness ?? initialAccountCache?.wellness ?? null;
         setAccess(accessState);
         setAccessVerified(true);
-        setAccountUnavailable(false);
-        setProfile(profileStats);
-        const savedLanguage = profileStats?.user?.language_code ?? accessState.user?.language_code;
+        setAccountUnavailable(!profileStats);
+        setProfile(nextProfile);
+        const savedLanguage = nextProfile?.user?.language_code ?? accessState.user?.language_code;
         if (savedLanguage === 'en' || savedLanguage === 'ru') {
           setLanguage(savedLanguage);
           saveStoredLanguage(savedLanguage);
         }
-        setHistory(historyList);
-        setFavorites(favoriteList);
-        setWellness(wellnessSummary);
+        setHistory(nextHistory);
+        setFavorites(nextFavorites);
+        setWellness(nextWellness);
         writeAccountCache(user.id, {
           access: accessState,
-          profile: profileStats,
-          history: historyList,
-          favorites: favoriteList,
-          wellness: wellnessSummary
+          profile: nextProfile,
+          history: nextHistory,
+          favorites: nextFavorites,
+          wellness: nextWellness
         });
         return accessState;
       } catch (error) {
@@ -3016,11 +3023,15 @@ function App() {
           <ProgressPage
             profile={profile}
             wellness={wellness}
+            meditations={decoratedMeditations}
+            hasPremium={effectiveHasPremium}
+            isAdmin={adminStatus === 'allowed'}
             loading={accountLoading}
             unavailable={accountUnavailable}
             onRetry={() => void refreshAccount()}
             language={language}
             onMoonGarden={() => setPage('moonGarden')}
+            onOpenMeditation={openMeditation}
             onLibrary={() => setPage('library')}
           />
         )}
@@ -3397,26 +3408,34 @@ function LunaPage({
 function ProgressPage({
   profile,
   wellness,
+  meditations,
+  hasPremium,
+  isAdmin,
   loading,
   unavailable,
   onRetry,
   language,
   onMoonGarden,
+  onOpenMeditation,
   onLibrary
 }: {
   profile: ProfileStats | null;
   wellness: WellnessSummary | null;
+  meditations: Meditation[];
+  hasPremium: boolean;
+  isAdmin: boolean;
   loading: boolean;
   unavailable: boolean;
   onRetry: () => void;
   language: AppLanguage;
   onMoonGarden: () => void;
+  onOpenMeditation: (meditation: Meditation) => void;
   onLibrary: () => void;
 }) {
   if (loading && !profile) {
-    return <PageSkeleton rows={5} />;
+    return <ProgressExperienceSkeleton language={language} />;
   }
-  if (unavailable && !profile) {
+  if ((unavailable || !profile) && !profile) {
     return (
       <div className="luna-page space-y-4">
         <EmptyState
@@ -3433,6 +3452,7 @@ function ProgressPage({
   const plantedCount = planted.length;
   const seeds = availableMoonSeeds(profile);
   const stage = getCurrentGardenStage(plantedCount);
+  const nextUpgrade = nextGardenElement(profile);
   return (
     <ProgressExperience
       profile={profile}
@@ -3444,10 +3464,15 @@ function ProgressPage({
         image: stage.path,
         seeds,
         plantedCount,
-        totalElements: gardenElements.length
+        totalElements: gardenElements.length,
+        nextUpgrade: nextUpgrade ? { name: nextUpgrade.name[language], cost: nextUpgrade.cost } : null
       }}
       achievements={buildAchievementViews(profile, language)}
+      meditations={meditations}
+      hasPremium={hasPremium}
+      isAdmin={isAdmin}
       onMoonGarden={onMoonGarden}
+      onOpenMeditation={onOpenMeditation}
       onLibrary={onLibrary}
     />
   );
@@ -3471,6 +3496,10 @@ type AchievementView = {
   description: string;
   category: string;
   unlocked: boolean;
+  unlockedAt?: string | null;
+  progress?: number;
+  current?: number;
+  target?: number;
 };
 
 const achievementCopy: Record<string, Record<AppLanguage, { title: string; description: string }>> = {
@@ -3499,9 +3528,9 @@ const achievementCopy: Record<string, Record<AppLanguage, { title: string; descr
   thirty_checkins: { en: { title: 'Thirty Check-ins', description: 'Create a fuller picture of your rhythm.' }, ru: { title: 'Тридцать чек-инов', description: 'Собери более полную картину ритма.' } },
   one_hundred_checkins: { en: { title: '100 Check-ins', description: 'Build a deep reflection history.' }, ru: { title: '100 чек-инов', description: 'Создай глубокую историю самонаблюдения.' } },
   premium_member: { en: { title: 'Premium Member', description: 'Unlock the deeper Luna experience.' }, ru: { title: 'Premium участник', description: 'Открой более глубокий опыт Luna.' } },
-  moon_garden_level_5: { en: { title: 'Moon Garden Level 5', description: 'Grow your garden into a moonlit place.' }, ru: { title: 'Лунный сад 5', description: 'Выращивай сад в лунное пространство.' } },
-  moon_garden_level_10: { en: { title: 'Moon Garden Level 10', description: 'Prepare for future garden expansions.' }, ru: { title: 'Лунный сад 10', description: 'Подготовь сад к будущему росту.' } },
-  moon_garden_level_20: { en: { title: 'Moon Garden Level 20', description: 'Expand your Moon Garden deeply.' }, ru: { title: 'Лунный сад 20', description: 'Глубоко расширь свой Лунный сад.' } },
+  moon_garden_level_3: { en: { title: 'Garden Taking Shape', description: 'Plant three Moon Garden upgrades.' }, ru: { title: 'Сад обретает форму', description: 'Посади три улучшения Лунного сада.' } },
+  moon_garden_level_5: { en: { title: 'Moonlit Garden', description: 'Plant five Moon Garden upgrades.' }, ru: { title: 'Лунный сад', description: 'Посади пять улучшений Лунного сада.' } },
+  moon_garden_level_7: { en: { title: 'Full Moon Garden', description: 'Plant all seven Moon Garden upgrades.' }, ru: { title: 'Сад полной луны', description: 'Посади все семь улучшений Лунного сада.' } },
   seven_perfect_weeks: { en: { title: 'Seven Perfect Weeks', description: 'Complete seven full practice weeks.' }, ru: { title: 'Семь полных недель', description: 'Заверши семь полных недель практики.' } },
   thirty_perfect_days: { en: { title: 'Thirty Perfect Days', description: 'Complete thirty practice days.' }, ru: { title: 'Тридцать дней практики', description: 'Собери тридцать дней практики.' } },
   one_year_together: { en: { title: 'One Year Together', description: 'Return to Luna across a year of practice days.' }, ru: { title: 'Год вместе', description: 'Возвращайся к Luna на протяжении года.' } },
@@ -3545,9 +3574,9 @@ function buildAchievementViews(profile: ProfileStats | null, language: AppLangua
     first_checkin: (profile?.weeklyStats?.checkins ?? 0) > 0,
     seven_checkins: (profile?.weeklyStats?.checkins ?? 0) >= 7,
     premium_member: Boolean(profile?.purchasedPlan && profile.purchasedPlan.toLowerCase() !== 'free'),
+    moon_garden_level_3: gardenLevel >= 3,
     moon_garden_level_5: gardenLevel >= 5,
-    moon_garden_level_10: gardenLevel >= 10,
-    moon_garden_level_20: gardenLevel >= 20,
+    moon_garden_level_7: gardenLevel >= 7,
     seven_perfect_weeks: completedWeeks >= 7,
     thirty_perfect_days: practiceDays >= 30,
     one_year_together: practiceDays >= 365,

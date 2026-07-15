@@ -82,6 +82,20 @@ export type PlaybackHistory = {
   meditation?: Meditation;
 };
 
+export type ProfileWeek = {
+  weekStart: string;
+  completedDays: number;
+  completedSessions: number;
+  listeningMinutes: number;
+  days: Array<{
+    key: string;
+    label: string;
+    state: 'completed' | 'current' | 'missed' | 'future' | 'freeze_used' | 'premium_freeze';
+    minutes: number;
+    sessions: number;
+  }>;
+};
+
 export type ProfileStats = {
   user?: {
     first_name?: string;
@@ -118,29 +132,25 @@ export type ProfileStats = {
     practiceDays: number;
     completedWeeks: number;
   };
-  currentWeek?: {
-    weekStart: string;
-    completedDays: number;
-    completedSessions: number;
-    listeningMinutes: number;
-    days: Array<{
-      key: string;
-      label: string;
-      state: 'completed' | 'current' | 'missed' | 'future' | 'freeze_used' | 'premium_freeze';
-      minutes: number;
-      sessions: number;
-    }>;
-  };
+  currentWeek?: ProfileWeek;
+  previousWeek?: ProfileWeek;
   moodTrend?: Array<{
     key: string;
     mood: DailyCheckin['mood'] | null;
     sleepRange?: DailyCheckin['sleep_range'];
+    listeningMinutes?: number;
+    completedSessions?: number;
+    practiceId?: string | null;
+    practiceTitle?: string | null;
   }>;
   progressInsights?: {
     favoriteCategory: string | null;
+    favoriteCategoryCount: number;
     favoriteMeditationTitle: string | null;
     favoritePracticeTime: 'morning' | 'afternoon' | 'evening' | 'night' | null;
+    favoritePracticeTimeCount: number;
     averageSessionMinutes: number;
+    completedPracticeSamples: number;
     monthlyPracticeDays: number;
     monthlyConsistency: number;
     bestPracticeWeekday: number | null;
@@ -170,7 +180,24 @@ export type ProfileStats = {
       unlocked: boolean;
       unlockedAt?: string | null;
       progress?: number;
+      current?: number;
+      target?: number;
     }>;
+  };
+  progressDiagnostics?: {
+    localWeekStart: string;
+    localWeekEnd: string;
+    previousWeekStart: string;
+    previousWeekEnd: string;
+    sourceSessionCount: number;
+    verifiedListeningSeconds: number;
+    dailyActiveDates: string[];
+    currentStreak: number;
+    longestStreak: number;
+    moodEntriesCount: number;
+    plantedGardenUpgrades: number;
+    achievementCount: number;
+    lastProgressRefreshAt: string;
   };
 };
 

@@ -24,9 +24,12 @@ export type ProgressBreathSessionInput = {
 
 export type ProgressInsights = {
   favoriteCategory: string | null;
+  favoriteCategoryCount: number;
   favoriteMeditationTitle: string | null;
   favoritePracticeTime: PracticeTimeBucket | null;
+  favoritePracticeTimeCount: number;
   averageSessionMinutes: number;
+  completedPracticeSamples: number;
   monthlyPracticeDays: number;
   monthlyConsistency: number;
   bestPracticeWeekday: number | null;
@@ -37,8 +40,12 @@ function mostFrequent(values: string[]) {
     result[value] = (result[value] ?? 0) + 1;
     return result;
   }, {});
-  return Object.entries(counts)
+  const entry = Object.entries(counts)
     .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))[0]?.[0] ?? null;
+  return {
+    value: entry,
+    count: entry ? counts[entry] ?? 0 : 0
+  };
 }
 
 function meditationFromHistory(item: ProgressHistoryInput) {
@@ -126,11 +133,18 @@ export function buildProgressInsights(input: {
     ? Math.round((Math.max(0, input.totalListeningMinutes) / input.totalSessions) * 10) / 10
     : 0;
 
+  const favoriteCategory = mostFrequent(categories);
+  const favoriteMeditation = mostFrequent(meditationTitles);
+  const favoritePracticeTime = mostFrequent(practiceTimes);
+
   return {
-    favoriteCategory: mostFrequent(categories),
-    favoriteMeditationTitle: mostFrequent(meditationTitles),
-    favoritePracticeTime: mostFrequent(practiceTimes) as PracticeTimeBucket | null,
+    favoriteCategory: favoriteCategory.value,
+    favoriteCategoryCount: favoriteCategory.count,
+    favoriteMeditationTitle: favoriteMeditation.value,
+    favoritePracticeTime: favoritePracticeTime.value as PracticeTimeBucket | null,
+    favoritePracticeTimeCount: favoritePracticeTime.count,
     averageSessionMinutes,
+    completedPracticeSamples: completedHistory.length + input.breathSessions.length,
     monthlyPracticeDays,
     monthlyConsistency: Math.min(100, Math.round((monthlyPracticeDays / 30) * 100)),
     bestPracticeWeekday: bestPracticeWeekdayEntry ? Number(bestPracticeWeekdayEntry[0]) : null

@@ -24,9 +24,12 @@ test('progress insights are derived from completed practice history', () => {
   });
 
   assert.equal(insights.favoriteCategory, 'sleep');
+  assert.equal(insights.favoriteCategoryCount, 2);
   assert.equal(insights.favoriteMeditationTitle, 'Deep Sleep');
   assert.equal(insights.favoritePracticeTime, 'evening');
+  assert.equal(insights.favoritePracticeTimeCount, 2);
   assert.equal(insights.averageSessionMinutes, 14);
+  assert.equal(insights.completedPracticeSamples, 3);
   assert.equal(insights.monthlyPracticeDays, 3);
   assert.equal(insights.monthlyConsistency, 10);
   assert.equal(insights.bestPracticeWeekday, 1);
@@ -46,9 +49,12 @@ test('progress insights return honest empty values without practice data', () =>
 
   assert.deepEqual(insights, {
     favoriteCategory: null,
+    favoriteCategoryCount: 0,
     favoriteMeditationTitle: null,
     favoritePracticeTime: null,
+    favoritePracticeTimeCount: 0,
     averageSessionMinutes: 0,
+    completedPracticeSamples: 0,
     monthlyPracticeDays: 0,
     monthlyConsistency: 0,
     bestPracticeWeekday: null

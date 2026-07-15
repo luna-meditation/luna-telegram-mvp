@@ -11,6 +11,22 @@ export type VerifiedPlaybackRow = {
   completed_at?: string | null;
 };
 
+export type CanonicalDailyActivity = Record<string, {
+  minutes: number;
+  sessions: number;
+}>;
+
+export type MoodCheckinRow = {
+  local_date?: string | null;
+  mood?: string | null;
+  sleep_range?: string | null;
+};
+
+export type DailyPracticeDetail = {
+  id: string | null;
+  title: string | null;
+};
+
 function dateFromKey(key: string) {
   return new Date(`${key}T12:00:00Z`);
 }
@@ -21,14 +37,41 @@ export function mondayForDateKey(localDate: string) {
   return date.toISOString().slice(0, 10);
 }
 
-export function buildCanonicalCurrentWeek(input: {
+export function shiftDateKey(localDate: string, days: number) {
+  const date = dateFromKey(localDate);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+export function buildSevenDayMoodTrend(input: {
+  checkins: MoodCheckinRow[];
   localDate: string;
+  activity: CanonicalDailyActivity;
+  practices: Map<string, DailyPracticeDetail>;
+}) {
+  // One local date has one visible point. If legacy duplicates exist, the last row wins.
+  const byDate = new Map(input.checkins
+    .filter((item) => item.local_date)
+    .map((item) => [item.local_date as string, { mood: item.mood ?? null, sleepRange: item.sleep_range ?? null }]));
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const key = shiftDateKey(input.localDate, index - 6);
+    return {
+      key,
+      mood: byDate.get(key)?.mood ?? null,
+      sleepRange: byDate.get(key)?.sleepRange ?? null,
+      listeningMinutes: input.activity[key]?.minutes ?? 0,
+      completedSessions: input.activity[key]?.sessions ?? 0,
+      practiceId: input.practices.get(key)?.id ?? null,
+      practiceTitle: input.practices.get(key)?.title ?? null
+    };
+  });
+}
+
+export function buildCanonicalDailyActivity(input: {
   practiceDays: PracticeDayRow[];
   playbackSessions?: VerifiedPlaybackRow[];
-  lastFreezeUsed?: string | null;
-}) {
-  const weekStart = mondayForDateKey(input.localDate);
-  const monday = dateFromKey(weekStart);
+}): CanonicalDailyActivity {
   const playbackActivity = (input.playbackSessions ?? []).reduce<Record<string, { listenedSeconds: number; sessions: number }>>((map, item) => {
     if (!item.local_date) return map;
     const previous = map[item.local_date] ?? { listenedSeconds: 0, sessions: 0 };
@@ -39,9 +82,9 @@ export function buildCanonicalCurrentWeek(input: {
     return map;
   }, {});
 
-  const activity = input.practiceDays.reduce<Record<string, { minutes: number; sessions: number }>>((map, item) => {
+  const activity = input.practiceDays.reduce<CanonicalDailyActivity>((map, item) => {
     if (!item.local_date) return map;
-    // A verified playback session is authoritative for meditation activity on that day.
+    // Verified playback is authoritative for meditation minutes and completion on that day.
     if (item.source === 'meditation' && playbackActivity[item.local_date]) return map;
     const previous = map[item.local_date] ?? { minutes: 0, sessions: 0 };
     map[item.local_date] = {
@@ -58,6 +101,19 @@ export function buildCanonicalCurrentWeek(input: {
       sessions: previous.sessions + item.sessions
     };
   });
+
+  return activity;
+}
+
+export function buildCanonicalCurrentWeek(input: {
+  localDate: string;
+  practiceDays: PracticeDayRow[];
+  playbackSessions?: VerifiedPlaybackRow[];
+  lastFreezeUsed?: string | null;
+}) {
+  const weekStart = mondayForDateKey(input.localDate);
+  const monday = dateFromKey(weekStart);
+  const activity = buildCanonicalDailyActivity(input);
 
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(monday);
