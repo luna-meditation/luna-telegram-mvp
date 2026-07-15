@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { BarChart3, BookOpen, Home, MessageCircle, User } from 'lucide-react';
+import { BookOpen, Home, MessageCircle, Route, User } from 'lucide-react';
 
 type Page = 'home' | 'luna' | 'library' | 'progress' | 'favorites' | 'profile' | 'pricing' | 'player' | 'scenePlayer' | 'mantraPlayer' | 'breathCircle' | 'moonGarden' | 'admin';
 
@@ -19,7 +19,7 @@ const items: Array<{ page: Page; key: keyof V2BottomNavProps['labels']; icon: Lu
   { page: 'home', key: 'home', icon: Home },
   { page: 'library', key: 'library', icon: BookOpen },
   { page: 'luna', key: 'luna', icon: MessageCircle },
-  { page: 'progress', key: 'progress', icon: BarChart3 },
+  { page: 'progress', key: 'progress', icon: Route },
   { page: 'profile', key: 'profile', icon: User }
 ];
 

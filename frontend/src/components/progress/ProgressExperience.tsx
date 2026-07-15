@@ -27,8 +27,10 @@ import {
   X
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import type { AppLanguage, DailyCheckin, Meditation, ProfileStats, ProfileWeek, WellnessSummary } from '../../api';
+import type { AppLanguage, DailyCheckin, Meditation, ProfileStats, WellnessSummary } from '../../api';
 import { progressCopy, progressText } from './progressCopy';
+import { wellbeingSignalPath, wellbeingSignalPoint, wellbeingSignalsForCheckin, type WellbeingSignal } from './progressMoodSignals';
+import { progressPatternEvidence } from './progressPatterns';
 import { resolveProgressRecommendation } from './progressRecommendation';
 
 export type ProgressAchievement = {
@@ -41,16 +43,6 @@ export type ProgressAchievement = {
   progress?: number;
   current?: number;
   target?: number;
-};
-
-export type ProgressGarden = {
-  level: number;
-  title: string;
-  image: string;
-  seeds: number;
-  plantedCount: number;
-  totalElements: number;
-  nextUpgrade: { name: string; cost: number } | null;
 };
 
 type MoodDay = NonNullable<ProfileStats['moodTrend']>[number];
@@ -129,26 +121,6 @@ function MoodIcon({ mood, size = 19 }: { mood: DailyCheckin['mood'] | null; size
   return <Circle size={size - 3} />;
 }
 
-function fallbackWeek(): ProfileWeek {
-  const today = new Date();
-  const localDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  const weekday = (today.getDay() + 6) % 7;
-  const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - weekday, 12);
-  const days = Array.from({ length: 7 }, (_, index) => {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + index);
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    return {
-      key,
-      label: key,
-      state: (key === localDate ? 'current' : key < localDate ? 'missed' : 'future') as ProfileWeek['days'][number]['state'],
-      minutes: 0,
-      sessions: 0
-    };
-  });
-  return { weekStart: days[0]?.key ?? localDate, completedDays: 0, completedSessions: 0, listeningMinutes: 0, days };
-}
-
 function milestoneFor(streak: number) {
   const target = [7, 14, 30, 60, 100, 365].find((value) => value > streak) ?? Math.ceil((streak + 1) / 100) * 100;
   return { target, remaining: Math.max(1, target - streak) };
@@ -195,8 +167,8 @@ function lunaReflection(profile: ProfileStats | null, language: AppLanguage) {
 
   if (!current || (samples < 2 && lifetimeDays < 2 && !(profile?.moodTrend ?? []).some((day) => day.mood))) {
     return language === 'en'
-      ? 'Your story is still taking shape. A few more check-ins and completed practices will help Luna notice meaningful patterns.'
-      : 'Твоя история ещё формируется. Несколько чек-инов и завершённых практик помогут Луне заметить значимые закономерности.';
+      ? 'Your rhythm is still taking shape. A few more completed practices will help Luna notice meaningful patterns.'
+      : 'Ваш ритм пока формируется. Завершите ещё несколько практик, чтобы Луна могла заметить достоверные закономерности.';
   }
   const previousHasActivity = Boolean(previous && (previous.listeningMinutes > 0 || previous.completedDays > 0 || previous.completedSessions > 0));
   if (previousHasActivity && current.completedDays > (previous?.completedDays ?? 0)) {
@@ -224,16 +196,17 @@ function lunaReflection(profile: ProfileStats | null, language: AppLanguage) {
   if (current.listeningMinutes > 0) {
     return language === 'en'
       ? `You made room for ${current.listeningMinutes} verified minutes this week. Nothing in this progress needs to be rushed.`
-      : `На этой неделе у тебя было ${current.listeningMinutes} подтверждённых минут практики. Этот прогресс не нужно торопить.`;
+      : `На этой неделе у тебя было ${current.listeningMinutes} подтверждённых минут практики. Этот путь не нужно торопить.`;
   }
   return language === 'en'
-    ? 'This week is still open. One honest return is enough to give the rhythm a place to begin.'
-    : 'Эта неделя ещё открыта. Одного честного возвращения достаточно, чтобы ритм начался.';
+    ? 'This week is still open. One quiet return is enough to begin.'
+    : 'Эта неделя ещё открыта. Для начала достаточно одного тихого возвращения.';
 }
 
 function CurrentRhythmHero({ profile, language }: { profile: ProfileStats | null; language: AppLanguage }) {
   const t = progressCopy[language];
-  const week = profile?.currentWeek ?? fallbackWeek();
+  const week = profile?.currentWeek;
+  if (!week) return null;
   const streak = Math.max(0, profile?.currentStreak ?? 0);
   const longest = Math.max(streak, profile?.longestStreak ?? 0);
   const milestone = milestoneFor(streak);
@@ -315,7 +288,8 @@ function weekComparison(profile: ProfileStats | null, language: AppLanguage) {
 
 function ThisWeek({ profile, language }: { profile: ProfileStats | null; language: AppLanguage }) {
   const t = progressCopy[language];
-  const week = profile?.currentWeek ?? fallbackWeek();
+  const week = profile?.currentWeek;
+  if (!week) return null;
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const selected = week.days.find((day) => day.key === selectedKey)
     ?? week.days.find((day) => day.state === 'current')
@@ -385,6 +359,12 @@ function MoodJourney({ profile, meditations, language }: { profile: ProfileStats
   const [selectedDay, setSelectedDay] = useState<MoodDay | null>(null);
   const todayKey = days[days.length - 1]?.key;
   const hasMood = days.some((day) => day.mood);
+  const signals = days.map((day) => wellbeingSignalsForCheckin(day.mood, day.sleepRange));
+  const lines: Array<{ key: WellbeingSignal; label: string }> = [
+    { key: 'calm', label: t.calmSignal },
+    { key: 'stress', label: t.stressSignal },
+    { key: 'sleep', label: t.sleepQuality }
+  ];
   const selectedPractice = selectedDay?.practiceId ? meditations.find((item) => item.id === selectedDay.practiceId) : null;
   const practiceTitle = selectedPractice ? localizedMeditation(selectedPractice, language).title : selectedDay?.practiceTitle;
   return (
@@ -396,14 +376,52 @@ function MoodJourney({ profile, meditations, language }: { profile: ProfileStats
         </div>
         <Moon size={21} aria-hidden="true" />
       </div>
-      <div className="progress-v4-mood-line" role="list" aria-label={t.moodJourney}>
-        {days.map((day) => (
-          <button key={day.key} type="button" role="listitem" onClick={() => setSelectedDay(day)} className={`${day.mood ? `has-mood mood-${day.mood}` : 'is-empty'} ${day.key === todayKey ? 'is-today' : ''}`} aria-label={`${localDayLabel(day.key, language, true)}: ${day.mood ? moodLabel(day.mood, language) : t.noCheckin}`}>
-            <span>{day.key === todayKey ? t.today : localDayLabel(day.key, language).slice(0, 2)}</span>
-            <i><MoodIcon mood={day.mood} /></i>
-            <small>{day.mood ? moodLabel(day.mood, language) : '—'}</small>
-          </button>
-        ))}
+      <div className="progress-v4-mood-chart" aria-label={t.moodJourney}>
+        <div className="progress-v4-mood-legend">
+          {lines.map((line) => <span key={line.key} className={`signal-${line.key}`}><i />{line.label}</span>)}
+        </div>
+        <svg viewBox="0 0 320 138" role="img" aria-label={t.moodSubtitle}>
+          <g className="progress-v4-mood-grid" aria-hidden="true">
+            {[15, 39.75, 64.5, 89.25, 114].map((y) => <line key={y} x1="18" x2="302" y1={y} y2={y} />)}
+          </g>
+          {lines.map((line) => {
+            const values = signals.map((signal) => signal[line.key]);
+            return (
+              <g key={line.key} className={`progress-v4-signal signal-${line.key}`}>
+                <path d={wellbeingSignalPath(values)} />
+                {values.map((value, index) => {
+                  if (value == null) return null;
+                  const point = wellbeingSignalPoint(index, value, values.length);
+                  const day = days[index];
+                  return <circle
+                    key={day?.key ?? index}
+                    cx={point.x}
+                    cy={point.y}
+                    r="4"
+                    role="button"
+                    tabIndex={0}
+                    aria-label={day ? `${localDayLabel(day.key, language, true)}: ${day.mood ? moodLabel(day.mood, language) : t.noCheckin}` : undefined}
+                    onClick={() => day && setSelectedDay(day)}
+                    onKeyDown={(event) => {
+                      if (day && (event.key === 'Enter' || event.key === ' ')) {
+                        event.preventDefault();
+                        setSelectedDay(day);
+                      }
+                    }}
+                  />;
+                })}
+              </g>
+            );
+          })}
+        </svg>
+        <div className="progress-v4-mood-days" role="list">
+          {days.map((day) => (
+            <button key={day.key} type="button" role="listitem" onClick={() => setSelectedDay(day)} className={`${day.mood ? 'has-checkin' : 'is-empty'} ${day.key === todayKey ? 'is-today' : ''}`} aria-label={`${localDayLabel(day.key, language, true)}: ${day.mood ? moodLabel(day.mood, language) : t.noCheckin}`}>
+              <span>{day.key === todayKey ? t.today : localDayLabel(day.key, language).slice(0, 2)}</span>
+              <i aria-hidden="true" />
+            </button>
+          ))}
+        </div>
       </div>
       {!hasMood && <p className="progress-v3-empty-copy">{t.noMoodHistory}</p>}
 
@@ -440,10 +458,14 @@ function weekdayLabel(value: number | null | undefined, language: AppLanguage) {
 function PersonalPatterns({ profile, language }: { profile: ProfileStats | null; language: AppLanguage }) {
   const t = progressCopy[language];
   const insight = profile?.progressInsights;
-  if (!insight || insight.completedPracticeSamples < 3) return null;
-  const time = insight.favoritePracticeTimeCount >= 2 ? practiceTimeLabel(insight.favoritePracticeTime, language) : null;
-  const category = insight.favoriteCategoryCount >= 2 ? categoryLabel(insight.favoriteCategory, language) : null;
-  const weekday = insight.monthlyPracticeDays >= 4 ? weekdayLabel(insight.bestPracticeWeekday, language) : null;
+  const evidence = progressPatternEvidence(insight);
+  const timeSupported = evidence.time;
+  const categorySupported = evidence.category;
+  const weekdaySupported = evidence.weekday;
+  const averageSupported = evidence.average;
+  const time = timeSupported ? practiceTimeLabel(insight?.favoritePracticeTime, language) : null;
+  const category = categorySupported ? categoryLabel(insight?.favoriteCategory, language) : null;
+  const weekday = weekdaySupported ? weekdayLabel(insight?.bestPracticeWeekday, language) : null;
   const observations: string[] = [];
   if (time) observations.push(language === 'en' ? `${time} is your most consistent completed-practice window.` : `${time} — время, когда ты чаще всего завершаешь практики.`);
   if (category) observations.push(language === 'en' ? `${category} is the category you complete most often.` : `Категорию «${category}» ты завершаешь чаще всего.`);
@@ -454,46 +476,14 @@ function PersonalPatterns({ profile, language }: { profile: ProfileStats | null;
         <div><p className="progress-v3-eyebrow">{t.personalPatterns}</p><h3>{t.patternsSubtitle}</h3></div>
         <Leaf size={21} aria-hidden="true" />
       </div>
-      <div className="progress-v3-signals">
-        <div><CalendarDays size={16} /><span>{t.monthlyRhythm}</span><strong>{insight.monthlyPracticeDays} {language === 'en' ? 'days' : 'дн.'}</strong></div>
-        <div><Clock3 size={16} /><span>{t.averagePractice}</span><strong>{insight.averageSessionMinutes} {t.min}</strong></div>
-        <div><Moon size={16} /><span>{t.favoriteTime}</span><strong>{time ?? '—'}</strong></div>
-      </div>
+      {insight && (averageSupported || timeSupported) && <div className="progress-v3-signals">
+        {insight.monthlyPracticeDays > 0 && <div><CalendarDays size={16} /><span>{t.monthlyRhythm}</span><strong>{insight.monthlyPracticeDays} {language === 'en' ? 'days' : 'дн.'}</strong></div>}
+        {averageSupported && <div><Clock3 size={16} /><span>{t.averagePractice}</span><strong>{insight.averageSessionMinutes} {t.min}</strong></div>}
+        {timeSupported && <div><Moon size={16} /><span>{t.favoriteTime}</span><strong>{time}</strong></div>}
+      </div>}
       {observations.length ? (
         <div className="progress-v3-observations">{observations.slice(0, 3).map((line, index) => <p key={line}><span>{String(index + 1).padStart(2, '0')}</span>{line}</p>)}</div>
       ) : <p className="progress-v3-empty-copy">{t.patternsForming}</p>}
-    </section>
-  );
-}
-
-function GardenStory({ garden, language, onOpen }: { garden: ProgressGarden; language: AppLanguage; onOpen: () => void }) {
-  const t = progressCopy[language];
-  const [imageFailed, setImageFailed] = useState(false);
-  const level = Math.max(0, Math.min(7, garden.plantedCount));
-  return (
-    <section className="progress-v4-garden progress-v3-enter">
-      <button type="button" onClick={onOpen} className={`progress-v4-garden-scene ${imageFailed ? 'image-failed' : ''}`} aria-label={t.enterGarden}>
-        {!imageFailed && <img src={garden.image} alt="" onError={() => {
-          setImageFailed(true);
-          if (import.meta.env.DEV) console.info('[Luna Progress garden image missing]', garden.image);
-        }} />}
-        <span className="progress-v4-garden-shade" />
-        <span className="progress-v4-garden-mist" aria-hidden="true" />
-        <span className="progress-v4-garden-glow" aria-hidden="true" />
-        <div className="progress-v4-garden-overlay">
-          <p className="progress-v3-eyebrow">{t.moonGarden}</p>
-          <h3>{t.gardenLevel} {level} · {garden.title}</h3>
-          <div className="progress-v4-garden-data">
-            <span>{t.availableSeeds}<strong>{garden.seeds}</strong></span>
-            <span>{t.plantedUpgrades}<strong>{level} / 7</strong></span>
-          </div>
-          <div className="progress-v4-garden-next">
-            <span>{t.nextGardenUpgrade}</span>
-            <strong>{garden.nextUpgrade ? `${garden.nextUpgrade.name} · ${garden.nextUpgrade.cost} ${language === 'en' ? 'Moon Seeds' : russianNoun(garden.nextUpgrade.cost, 'лунное семя', 'лунных семени', 'лунных семян')}` : t.gardenComplete}</strong>
-          </div>
-          <span className="progress-v4-garden-cta">{t.enterGarden}<ChevronRight size={16} /></span>
-        </div>
-      </button>
     </section>
   );
 }
@@ -546,7 +536,7 @@ function AchievementsStory({ items, language }: { items: ProgressAchievement[]; 
   const [statusFilter, setStatusFilter] = useState<AchievementFilter>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const unlocked = items.filter((item) => item.unlocked).sort((left, right) => String(right.unlockedAt ?? '').localeCompare(String(left.unlockedAt ?? '')));
-  const featured = unlocked.slice(0, 4);
+  const featured = unlocked.slice(0, 2);
   const filtered = items
     .filter((item) => statusFilter === 'all' || achievementStatus(item) === statusFilter)
     .filter((item) => categoryFilter === 'all' || item.category === categoryFilter)
@@ -658,13 +648,11 @@ function ProgressDiagnostics({ profile, language }: { profile: ProfileStats | nu
 
 export function ProgressExperienceSkeleton({ language }: { language: AppLanguage }) {
   return (
-    <main className="progress-v3-page progress-v4-page" aria-busy="true" aria-label={language === 'en' ? 'Loading progress' : 'Загрузка прогресса'}>
-      <header className="progress-v3-header"><div className="progress-v4-skeleton h-title" /><div className="progress-v4-skeleton h-subtitle" /></header>
+    <main className="progress-v3-page progress-v4-page" aria-busy="true" aria-label={language === 'en' ? 'Loading Journey' : 'Загрузка пути'}>
       <div className="progress-v4-skeleton h-hero" />
       <div className="progress-v4-skeleton h-reflection" />
       <div className="progress-v4-skeleton h-week" />
       <div className="progress-v4-skeleton h-mood" />
-      <div className="progress-v4-skeleton h-garden" />
     </main>
   );
 }
@@ -673,37 +661,30 @@ export function ProgressExperience({
   profile,
   wellness,
   language,
-  garden,
   achievements,
   meditations,
   hasPremium,
   isAdmin,
-  onMoonGarden,
   onOpenMeditation,
   onLibrary
 }: {
   profile: ProfileStats | null;
   wellness: WellnessSummary | null;
   language: AppLanguage;
-  garden: ProgressGarden;
   achievements: ProgressAchievement[];
   meditations: Meditation[];
   hasPremium: boolean;
   isAdmin: boolean;
-  onMoonGarden: () => void;
   onOpenMeditation: (meditation: Meditation) => void;
   onLibrary: () => void;
 }) {
-  const t = progressCopy[language];
   return (
     <main className="progress-v3-page progress-v4-page">
-      <header className="progress-v3-header"><h2>{t.progress}</h2><p>{t.subtitle}</p></header>
       <CurrentRhythmHero profile={profile} language={language} />
       <LunasReflection profile={profile} language={language} />
       <ThisWeek profile={profile} language={language} />
       <MoodJourney profile={profile} meditations={meditations} language={language} />
       <PersonalPatterns profile={profile} language={language} />
-      <GardenStory garden={garden} language={language} onOpen={onMoonGarden} />
       <AchievementsStory items={achievements} language={language} />
       <NextGentleStep profile={profile} wellness={wellness} meditations={meditations} language={language} hasPremium={hasPremium} onOpenMeditation={onOpenMeditation} onLibrary={onLibrary} />
       {isAdmin && <ProgressDiagnostics profile={profile} language={language} />}

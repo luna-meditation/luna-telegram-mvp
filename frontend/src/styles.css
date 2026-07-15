@@ -2601,20 +2601,20 @@ input[type="range"] {
 
 /* Progress V4: a narrative, data-led journey built on the Luna visual system. */
 .progress-v4-page {
-  gap: 24px;
-  padding-bottom: calc(142px + env(safe-area-inset-bottom));
+  gap: 20px;
+  padding-bottom: 0;
 }
 
 .progress-v4-rhythm {
-  min-height: 486px;
+  min-height: 402px;
 }
 
 .progress-v4-rhythm .progress-v3-hero-content {
-  min-height: 486px;
+  min-height: 402px;
   grid-template-rows: auto auto auto auto;
   align-content: space-between;
-  gap: 15px;
-  padding: 20px;
+  gap: 11px;
+  padding: 17px;
 }
 
 .progress-v4-rhythm-main {
@@ -2624,14 +2624,14 @@ input[type="range"] {
 }
 
 .progress-v4-rhythm .progress-v3-rhythm-ring {
-  width: 144px;
-  height: 144px;
-  flex: 0 0 144px;
+  width: 124px;
+  height: 124px;
+  flex: 0 0 124px;
   margin: 0;
 }
 
 .progress-v4-rhythm .progress-v3-rhythm-ring strong {
-  font-size: 56px;
+  font-size: 48px;
 }
 
 .progress-v4-rhythm-facts {
@@ -2969,6 +2969,119 @@ input[type="range"] {
   line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.progress-v4-mood-chart {
+  margin-top: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(230, 236, 255, 0.08);
+  border-radius: 20px;
+  padding: 13px 10px 9px;
+  background: rgba(3, 7, 25, 0.24);
+}
+
+.progress-v4-mood-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding: 0 6px 3px;
+}
+
+.progress-v4-mood-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: rgba(201, 208, 233, 0.66);
+  font-size: 9px;
+}
+
+.progress-v4-mood-legend i {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: currentColor;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.progress-v4-mood-chart > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-top: 3px;
+  overflow: visible;
+}
+
+.progress-v4-mood-grid line {
+  stroke: rgba(230, 236, 255, 0.07);
+  stroke-width: 1;
+}
+
+.progress-v4-signal path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.progress-v4-signal circle {
+  fill: #0b102b;
+  stroke: currentColor;
+  stroke-width: 2;
+  cursor: pointer;
+  vector-effect: non-scaling-stroke;
+}
+
+.signal-calm { color: #b7a6ee; }
+.signal-stress { color: #d99b7a; }
+.signal-sleep { color: #82c9e8; }
+
+.progress-v4-mood-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 2px;
+  margin-top: -10px;
+}
+
+.progress-v4-mood-days button {
+  display: grid;
+  min-width: 0;
+  min-height: 42px;
+  place-items: center;
+  gap: 4px;
+  border: 0;
+  border-radius: 11px;
+  padding: 5px 1px;
+  background: transparent;
+  color: rgba(201, 208, 233, 0.5);
+}
+
+.progress-v4-mood-days button.is-today {
+  background: rgba(142, 119, 233, 0.1);
+  color: rgba(247, 242, 234, 0.88);
+}
+
+.progress-v4-mood-days span {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 8px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.progress-v4-mood-days i {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(201, 208, 233, 0.18);
+}
+
+.progress-v4-mood-days button.has-checkin i {
+  background: #f4d67a;
+  box-shadow: 0 0 8px rgba(244, 214, 122, 0.45);
 }
 
 .progress-v4-sheet-backdrop {
@@ -3366,7 +3479,7 @@ input[type="range"] {
 
 .progress-v4-skeleton.h-title { width: 60%; height: 35px; border-radius: 12px; }
 .progress-v4-skeleton.h-subtitle { width: 78%; height: 13px; margin-top: 9px; border-radius: 8px; }
-.progress-v4-skeleton.h-hero { height: 486px; }
+.progress-v4-skeleton.h-hero { height: 402px; }
 .progress-v4-skeleton.h-reflection { height: 154px; }
 .progress-v4-skeleton.h-week { height: 390px; }
 .progress-v4-skeleton.h-mood { height: 226px; }
@@ -3383,8 +3496,8 @@ input[type="range"] {
 
 @media (max-width: 350px) {
   .progress-v4-rhythm-main { gap: 10px; }
-  .progress-v4-rhythm .progress-v3-rhythm-ring { width: 126px; height: 126px; flex-basis: 126px; }
-  .progress-v4-rhythm .progress-v3-rhythm-ring strong { font-size: 48px; }
+  .progress-v4-rhythm .progress-v3-rhythm-ring { width: 112px; height: 112px; flex-basis: 112px; }
+  .progress-v4-rhythm .progress-v3-rhythm-ring strong { font-size: 43px; }
   .progress-v4-week-metrics span { font-size: 8px; }
   .progress-v4-achievement-grid { grid-template-columns: 1fr; }
 }

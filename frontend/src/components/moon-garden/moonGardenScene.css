@@ -286,8 +286,11 @@
 .moon-garden-scene-listening.moon-garden-scene-compact .moon-garden-scene-image { animation: moonGardenImageBreathe 12s ease-in-out infinite; }
 
 .moon-garden-scene-immersive .moon-garden-scene-chip {
-  top: 14px;
-  bottom: auto;
+  top: auto;
+  bottom: 14px;
+  left: 50%;
+  max-width: calc(100% - 28px);
+  transform: translateX(-50%);
 }
 
 .moon-garden-scene-immersive .moon-garden-sound-control {

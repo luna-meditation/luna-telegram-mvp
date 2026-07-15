@@ -149,11 +149,14 @@ export type ProfileStats = {
     favoriteMeditationTitle: string | null;
     favoritePracticeTime: 'morning' | 'afternoon' | 'evening' | 'night' | null;
     favoritePracticeTimeCount: number;
+    favoritePracticeTimeDays: number;
     averageSessionMinutes: number;
     completedPracticeSamples: number;
     monthlyPracticeDays: number;
     monthlyConsistency: number;
     bestPracticeWeekday: number | null;
+    bestPracticeWeekdayCount: number;
+    observedPracticeWeeks: number;
   };
   totalPracticeMinutes?: number;
   calmPoints?: number;

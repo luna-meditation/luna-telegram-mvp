@@ -1292,7 +1292,7 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
       supabase.from('streaks').select('*').eq('telegram_id', telegramId).maybeSingle(),
       supabase.from('daily_checkins').select('local_date, mood, sleep_range').eq('telegram_id', telegramId),
       supabase.from('practice_days').select('local_date, source, minutes, sessions').eq('telegram_id', telegramId).order('local_date', { ascending: false }),
-      supabase.from('playback_sessions').select('listened_seconds, completed_at, created_at, local_date').eq('telegram_id', telegramId)
+      supabase.from('playback_sessions').select('meditation_id, listened_seconds, completed_at, created_at, local_date').eq('telegram_id', telegramId)
     ]);
   if (historyError) throw historyError;
   if (streakError) throw streakError;
@@ -1423,6 +1423,7 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
   });
   const progressInsights = buildProgressInsights({
     history: history ?? [],
+    verifiedSessions: safePlaybackSessions,
     breathSessions: safeBreathSessions,
     practiceDays: safePracticeDays,
     practiceDayKeys: [...practiceDayKeys],
