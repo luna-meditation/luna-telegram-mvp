@@ -105,26 +105,97 @@ export function buildCanonicalDailyActivity(input: {
   return activity;
 }
 
+export function buildActiveLunaDaySet(input: {
+  checkins?: MoodCheckinRow[];
+  activity: CanonicalDailyActivity;
+}) {
+  const activeDates = new Set<string>();
+
+  for (const checkin of input.checkins ?? []) {
+    if (checkin.local_date) activeDates.add(checkin.local_date);
+  }
+
+  for (const [key, totals] of Object.entries(input.activity)) {
+    if (totals.minutes >= 1 || totals.sessions >= 1) activeDates.add(key);
+  }
+
+  return activeDates;
+}
+
+function dayDistance(from: string, to: string) {
+  return Math.round((dateFromKey(to).getTime() - dateFromKey(from).getTime()) / 86_400_000);
+}
+
+export function buildActiveLunaRhythm(input: {
+  localDate: string;
+  activeDates: Set<string>;
+  lastFreezeUsed?: string | null;
+}) {
+  const dates = [...input.activeDates].filter((key) => key <= input.localDate).sort();
+  let longestStreak = 0;
+  let runningStreak = 0;
+  let previous: string | null = null;
+
+  for (const key of dates) {
+    if (!previous) {
+      runningStreak = 1;
+    } else {
+      const distance = dayDistance(previous, key);
+      const bridgedByFreeze = distance === 2 && shiftDateKey(previous, 1) === input.lastFreezeUsed;
+      runningStreak = distance === 1 || bridgedByFreeze ? runningStreak + 1 : 1;
+    }
+    longestStreak = Math.max(longestStreak, runningStreak);
+    previous = key;
+  }
+
+  let cursor = input.activeDates.has(input.localDate) ? input.localDate : shiftDateKey(input.localDate, -1);
+  let currentStreak = 0;
+  let canCrossFreeze = false;
+  while (true) {
+    if (input.activeDates.has(cursor)) {
+      currentStreak += 1;
+      canCrossFreeze = true;
+      cursor = shiftDateKey(cursor, -1);
+      continue;
+    }
+    if (canCrossFreeze && cursor === input.lastFreezeUsed) {
+      cursor = shiftDateKey(cursor, -1);
+      continue;
+    }
+    break;
+  }
+
+  return {
+    activeDateKeys: dates,
+    currentStreak,
+    longestStreak
+  };
+}
+
 export function buildCanonicalCurrentWeek(input: {
   localDate: string;
   practiceDays: PracticeDayRow[];
   playbackSessions?: VerifiedPlaybackRow[];
+  checkins?: MoodCheckinRow[];
   lastFreezeUsed?: string | null;
 }) {
   const weekStart = mondayForDateKey(input.localDate);
   const monday = dateFromKey(weekStart);
   const activity = buildCanonicalDailyActivity(input);
+  const checkinDates = new Set((input.checkins ?? []).map((item) => item.local_date).filter((key): key is string => Boolean(key)));
 
   const days = Array.from({ length: 7 }, (_, index) => {
     const date = new Date(monday);
     date.setUTCDate(monday.getUTCDate() + index);
     const key = date.toISOString().slice(0, 10);
     const totals = activity[key] ?? { minutes: 0, sessions: 0 };
-    const completed = totals.minutes >= 1 || totals.sessions >= 1;
+    const hasCheckin = checkinDates.has(key);
+    const hasVerifiedPractice = totals.minutes >= 1 || totals.sessions >= 1;
+    const active = hasCheckin || hasVerifiedPractice;
     return {
       key,
       label: key,
-      state: completed
+      state: active
         ? 'completed' as const
         : input.lastFreezeUsed === key
           ? 'freeze_used' as const
@@ -134,14 +205,23 @@ export function buildCanonicalCurrentWeek(input: {
               ? 'current' as const
               : 'missed' as const,
       minutes: totals.minutes,
-      sessions: totals.sessions
+      sessions: totals.sessions,
+      isCurrent: key === input.localDate,
+      hasCheckin,
+      hasVerifiedPractice
     };
   });
+
+  const activeDays = days.filter((item) => item.state === 'completed').length;
+  const practiceDays = days.filter((item) => item.hasVerifiedPractice).length;
 
   return {
     weekStart,
     days,
-    completedDays: days.filter((item) => item.state === 'completed').length,
+    activeDays,
+    practiceDays,
+    // Kept as an API compatibility alias while consumers migrate to activeDays.
+    completedDays: activeDays,
     completedSessions: days.reduce((sum, item) => sum + item.sessions, 0),
     listeningMinutes: days.reduce((sum, item) => sum + item.minutes, 0)
   };

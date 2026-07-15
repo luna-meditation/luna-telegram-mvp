@@ -1,7 +1,18 @@
 .journey-hub {
+  --v2-bg: #050817;
+  --v2-surface: rgba(22, 29, 68, 0.42);
+  --v2-glass: rgba(255, 255, 255, 0.055);
+  --v2-line: rgba(219, 226, 255, 0.105);
+  --v2-ivory: #fbf7ef;
+  --v2-muted: #c9c5df;
+  --v2-dim: #928caf;
+  --v2-violet: #8e67e9;
+  --v2-gold: #f0cf74;
   width: 100%;
   min-width: 0;
-  padding-top: 6px;
+  padding: 6px 0 24px;
+  color: var(--v2-ivory);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .journey-hub-header {
@@ -12,7 +23,7 @@
 
 .journey-hub-header h2 {
   margin: 0;
-  color: var(--luna-text-primary);
+  color: var(--v2-ivory);
   font-family: "Playfair Display", Georgia, serif;
   font-size: 34px;
   font-weight: 600;
@@ -22,15 +33,14 @@
 .journey-hub-header p {
   max-width: 34rem;
   margin: 0;
-  color: rgba(201, 208, 233, 0.68);
+  color: rgba(201, 197, 223, 0.68);
   font-size: 13px;
   line-height: 1.55;
 }
 
 .journey-hub-tabs {
-  position: sticky;
-  top: calc(env(safe-area-inset-top, 0px) + 8px);
-  z-index: 34;
+  position: relative;
+  z-index: 1;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   width: min(236px, 68vw);
@@ -38,17 +48,17 @@
   margin: 0 0 18px;
   padding: 3px;
   border: 1px solid rgba(230, 236, 255, 0.1);
-  border-radius: 14px;
-  background: rgba(6, 11, 28, 0.82);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.24);
-  backdrop-filter: blur(18px);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: none;
+  backdrop-filter: blur(14px);
 }
 
 .journey-hub-tabs button {
   min-width: 0;
   min-height: 34px;
   border: 0;
-  border-radius: 11px;
+  border-radius: 999px;
   background: transparent;
   color: rgba(201, 208, 233, 0.64);
   font-size: 12px;
@@ -56,9 +66,10 @@
 }
 
 .journey-hub-tabs button.is-active {
-  background: linear-gradient(145deg, rgba(117, 98, 214, 0.3), rgba(92, 78, 177, 0.16));
-  color: #fff;
-  box-shadow: inset 0 0 0 1px rgba(157, 140, 255, 0.16), 0 8px 18px rgba(39, 28, 92, 0.2);
+  border: 1px solid rgba(240, 207, 116, 0.24);
+  background: rgba(251, 247, 239, 0.1);
+  color: var(--v2-ivory);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
 }
 
 .journey-hub-content {
@@ -77,8 +88,8 @@
 
 .journey-garden-tab .moon-garden-scene-immersive {
   width: calc(100% + 32px);
-  aspect-ratio: 4 / 5;
-  max-height: 520px;
+  aspect-ratio: 10 / 13.8;
+  max-height: 548px;
   margin-left: -16px;
   border-radius: 26px;
 }
@@ -100,10 +111,10 @@
 
 .journey-garden-stage-journey h3 {
   margin: 0;
-  color: var(--luna-text-primary);
-  font-family: "Playfair Display", Georgia, serif;
-  font-size: 23px;
-  font-weight: 600;
+  color: var(--v2-ivory);
+  font-size: 17px;
+  font-weight: 740;
+  letter-spacing: -0.015em;
 }
 
 .journey-garden-stage-track {
@@ -130,11 +141,61 @@
 }
 
 .journey-garden-stage-card.is-current { border-color: rgba(212, 175, 55, 0.5); box-shadow: 0 12px 28px rgba(212, 175, 55, 0.12); }
+.journey-garden-stage-card.is-unlocked:not(.is-current) { border-color: rgba(240, 207, 116, 0.16); box-shadow: inset 0 0 0 1px rgba(240, 207, 116, 0.035); }
 .journey-garden-stage-card.is-locked { opacity: 0.5; }
 .journey-garden-stage-card img { display: block; width: 100%; height: 112px; object-fit: cover; object-position: 50% 12%; }
 .journey-garden-stage-card div { display: grid; gap: 2px; padding: 9px 10px 11px; }
 .journey-garden-stage-card span { color: var(--luna-gold-soft); font-size: 9px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; }
 .journey-garden-stage-card strong { color: rgba(247, 242, 234, 0.9); font-size: 11px; line-height: 1.35; }
+
+.journey-garden-summary {
+  display: grid;
+  grid-template-columns: 0.85fr 0.8fr 1fr;
+  gap: 8px;
+}
+
+.journey-garden-summary > div {
+  min-width: 0;
+  min-height: 78px;
+  border: 1px solid var(--v2-line);
+  border-radius: 16px;
+  padding: 12px 10px 10px;
+  background: var(--v2-surface);
+  backdrop-filter: blur(14px);
+}
+
+.journey-garden-summary span,
+.journey-garden-summary strong { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.journey-garden-summary span { color: rgba(201, 197, 223, 0.62); font-size: 8.5px; font-weight: 680; line-height: 1.25; }
+.journey-garden-summary strong { margin-top: 11px; color: var(--v2-ivory); font-size: 18px; font-weight: 760; line-height: 1; white-space: nowrap; }
+
+.journey-garden-next-card {
+  border: 1px solid var(--v2-line);
+  border-radius: 20px;
+  padding: 16px;
+  background: linear-gradient(145deg, rgba(31, 39, 82, 0.56), rgba(13, 18, 47, 0.68));
+}
+
+.journey-garden-next-card h3 { margin: 4px 0 0; color: var(--v2-ivory); font-size: 18px; font-weight: 740; letter-spacing: -0.015em; }
+.journey-garden-next-card p { color: rgba(201, 197, 223, 0.68); }
+
+.journey-garden-milestones { display: grid; gap: 10px; }
+.journey-garden-milestones h3 { margin: 0; color: var(--v2-ivory); font-size: 17px; font-weight: 740; }
+.journey-garden-milestone-list { display: grid; gap: 7px; }
+.journey-garden-milestone {
+  display: flex;
+  min-height: 54px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--v2-line);
+  border-radius: 16px;
+  padding: 9px 11px;
+  background: rgba(255, 255, 255, 0.035);
+}
+.journey-garden-milestone i { width: 9px; height: 9px; flex: 0 0 9px; border-radius: 999px; background: var(--v2-gold); box-shadow: 0 0 12px rgba(240, 207, 116, 0.35); }
+.journey-garden-milestone div { min-width: 0; }
+.journey-garden-milestone strong { display: block; overflow: hidden; color: var(--v2-ivory); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.journey-garden-milestone span { display: block; margin-top: 2px; color: rgba(201, 197, 223, 0.58); font-size: 9px; }
 
 @keyframes journeyStoryEnter {
   from { opacity: 0; transform: translateY(7px); }
@@ -149,7 +210,7 @@
 @media (max-width: 370px) {
   .journey-hub-header h2 { font-size: 31px; }
   .journey-hub-tabs { width: 224px; }
-  .journey-garden-tab .moon-garden-scene-immersive { max-height: 500px; }
+  .journey-garden-tab .moon-garden-scene-immersive { max-height: 515px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

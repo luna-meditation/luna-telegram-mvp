@@ -170,8 +170,10 @@ function lunaReflection(profile: ProfileStats | null, language: AppLanguage) {
       ? 'Your rhythm is still taking shape. A few more completed practices will help Luna notice meaningful patterns.'
       : 'Ваш ритм пока формируется. Завершите ещё несколько практик, чтобы Луна могла заметить достоверные закономерности.';
   }
-  const previousHasActivity = Boolean(previous && (previous.listeningMinutes > 0 || previous.completedDays > 0 || previous.completedSessions > 0));
-  if (previousHasActivity && current.completedDays > (previous?.completedDays ?? 0)) {
+  const currentActiveDays = current.activeDays ?? current.completedDays;
+  const previousActiveDays = previous?.activeDays ?? previous?.completedDays ?? 0;
+  const previousHasActivity = Boolean(previous && (previous.listeningMinutes > 0 || previousActiveDays > 0 || previous.completedSessions > 0));
+  if (previousHasActivity && currentActiveDays > previousActiveDays) {
     const time = preferredTimeCount >= 2 ? practiceTimeLabel(preferredTime, language) : null;
     return language === 'en'
       ? `You have returned on more days than last week.${time ? ` ${time} remains your most familiar practice window.` : ''}`
@@ -187,11 +189,11 @@ function lunaReflection(profile: ProfileStats | null, language: AppLanguage) {
       ? 'You returned after time away. That return matters more than the days between practices.'
       : 'После паузы ты снова с Luna. Это возвращение важнее дней между практиками.';
   }
-  if (current.completedDays >= 2 && preferredTimeCount >= 2 && preferredTime) {
+  if (current.practiceDays >= 2 && preferredTimeCount >= 2 && preferredTime) {
     const time = practiceTimeLabel(preferredTime, language);
     return language === 'en'
-      ? `${time} is becoming a steadier part of your rhythm. You practiced across ${current.completedDays} days this week.`
-      : `${time} становится более устойчивой частью твоего ритма. На этой неделе практика была в ${current.completedDays} днях.`;
+      ? `${time} is becoming a steadier part of your rhythm. You practiced across ${current.practiceDays} days this week.`
+      : `${time} становится более устойчивой частью твоего ритма. На этой неделе практика была в ${current.practiceDays} днях.`;
   }
   if (current.listeningMinutes > 0) {
     return language === 'en'
@@ -209,6 +211,7 @@ function CurrentRhythmHero({ profile, language }: { profile: ProfileStats | null
   if (!week) return null;
   const streak = Math.max(0, profile?.currentStreak ?? 0);
   const longest = Math.max(streak, profile?.longestStreak ?? 0);
+  const activeDays = week.activeDays ?? week.completedDays;
   const milestone = milestoneFor(streak);
   const ring = Math.min(100, Math.round((streak / milestone.target) * 100));
   return (
@@ -239,7 +242,7 @@ function CurrentRhythmHero({ profile, language }: { profile: ProfileStats | null
           </div>
           <div className="progress-v4-rhythm-facts">
             <div><span>{t.longestRhythm}</span><strong>{longest} {language === 'en' ? (longest === 1 ? 'day' : 'days') : 'дн.'}</strong></div>
-            <div><span>{t.activeThisWeek}</span><strong>{week.completedDays} / 7 {t.activeDays}</strong></div>
+            <div><span>{t.activeThisWeek}</span><strong>{activeDays} / 7 {t.activeDays}</strong></div>
           </div>
         </div>
 
@@ -247,7 +250,7 @@ function CurrentRhythmHero({ profile, language }: { profile: ProfileStats | null
           {week.days.map((day) => (
             <div key={day.key} title={`${localDayLabel(day.key, language, true)}: ${day.minutes} ${t.min}`}>
               <span>{localDayLabel(day.key, language).slice(0, 2)}</span>
-              <i className={`progress-v4-week-dot progress-v4-week-dot-${day.state}`}>
+              <i className={`progress-v4-week-dot progress-v4-week-dot-${day.state} ${day.isCurrent ? 'is-current-day' : ''} ${day.hasVerifiedPractice ? 'has-practice' : day.hasCheckin ? 'has-checkin' : ''}`}>
                 {day.state === 'completed' ? <Check size={13} /> : day.state === 'freeze_used' ? <Snowflake size={11} /> : null}
               </i>
             </div>
@@ -277,7 +280,7 @@ function LunasReflection({ profile, language }: { profile: ProfileStats | null; 
 function weekComparison(profile: ProfileStats | null, language: AppLanguage) {
   const current = profile?.currentWeek;
   const previous = profile?.previousWeek;
-  if (!current || !previous || (previous.listeningMinutes <= 0 && previous.completedDays <= 0 && previous.completedSessions <= 0)) {
+  if (!current || !previous || current.listeningMinutes <= 0 || previous.listeningMinutes <= 0) {
     return progressCopy[language].noComparison;
   }
   const difference = current.listeningMinutes - previous.listeningMinutes;
@@ -292,23 +295,25 @@ function ThisWeek({ profile, language }: { profile: ProfileStats | null; languag
   if (!week) return null;
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const selected = week.days.find((day) => day.key === selectedKey)
+    ?? week.days.find((day) => day.isCurrent)
     ?? week.days.find((day) => day.state === 'current')
     ?? week.days[week.days.length - 1];
   const maxMinutes = Math.max(1, ...week.days.map((day) => day.minutes));
-  const hasActivity = week.listeningMinutes > 0 || week.completedDays > 0 || week.completedSessions > 0;
+  const activeDays = week.activeDays ?? week.completedDays;
+  const hasActivity = activeDays > 0 || week.listeningMinutes > 0 || week.completedSessions > 0;
   return (
     <section className="progress-v4-week-section progress-v3-enter">
       <div className="progress-v3-section-heading">
         <div>
           <p className="progress-v3-eyebrow">{t.thisWeek}</p>
-          <h3>{week.listeningMinutes} {t.min} <span>{language === 'en' ? `across ${week.completedDays} ${week.completedDays === 1 ? 'day' : 'days'}` : `за ${week.completedDays} ${russianNoun(week.completedDays, 'день', 'дня', 'дней')}`}</span></h3>
+          <h3>{activeDays} / 7 <span>{t.activeDays}</span></h3>
         </div>
         <CalendarDays size={21} aria-hidden="true" />
       </div>
       <div className="progress-v4-week-metrics">
-        <div><span>{t.listeningMinutes}</span><strong>{week.listeningMinutes}</strong></div>
+        <div><span>{t.activeDaysLabel}</span><strong>{activeDays}/7</strong></div>
+        <div><span>{t.listeningMinutes}</span><strong>{week.listeningMinutes} {t.min}</strong></div>
         <div><span>{t.completedPractices}</span><strong>{week.completedSessions}</strong></div>
-        <div><span>{t.practiceDays}</span><strong>{week.completedDays}/7</strong></div>
       </div>
       <div className="progress-v4-activity-heading"><span>{t.weeklyActivity}</span><small>{t.minutesUnit}</small></div>
       <div className="progress-v4-bars" role="group" aria-label={t.weeklyActivity}>
@@ -358,8 +363,8 @@ function MoodJourney({ profile, meditations, language }: { profile: ProfileStats
   const days = profile?.moodTrend ?? [];
   const [selectedDay, setSelectedDay] = useState<MoodDay | null>(null);
   const todayKey = days[days.length - 1]?.key;
-  const hasMood = days.some((day) => day.mood);
   const signals = days.map((day) => wellbeingSignalsForCheckin(day.mood, day.sleepRange));
+  const hasMoodData = signals.some((signal) => Object.values(signal).some((value) => value != null));
   const lines: Array<{ key: WellbeingSignal; label: string }> = [
     { key: 'calm', label: t.calmSignal },
     { key: 'stress', label: t.stressSignal },
@@ -380,40 +385,44 @@ function MoodJourney({ profile, meditations, language }: { profile: ProfileStats
         <div className="progress-v4-mood-legend">
           {lines.map((line) => <span key={line.key} className={`signal-${line.key}`}><i />{line.label}</span>)}
         </div>
-        <svg viewBox="0 0 320 138" role="img" aria-label={t.moodSubtitle}>
-          <g className="progress-v4-mood-grid" aria-hidden="true">
-            {[15, 39.75, 64.5, 89.25, 114].map((y) => <line key={y} x1="18" x2="302" y1={y} y2={y} />)}
-          </g>
-          {lines.map((line) => {
-            const values = signals.map((signal) => signal[line.key]);
-            return (
-              <g key={line.key} className={`progress-v4-signal signal-${line.key}`}>
-                <path d={wellbeingSignalPath(values)} />
-                {values.map((value, index) => {
-                  if (value == null) return null;
-                  const point = wellbeingSignalPoint(index, value, values.length);
-                  const day = days[index];
-                  return <circle
-                    key={day?.key ?? index}
-                    cx={point.x}
-                    cy={point.y}
-                    r="4"
-                    role="button"
-                    tabIndex={0}
-                    aria-label={day ? `${localDayLabel(day.key, language, true)}: ${day.mood ? moodLabel(day.mood, language) : t.noCheckin}` : undefined}
-                    onClick={() => day && setSelectedDay(day)}
-                    onKeyDown={(event) => {
-                      if (day && (event.key === 'Enter' || event.key === ' ')) {
-                        event.preventDefault();
-                        setSelectedDay(day);
-                      }
-                    }}
-                  />;
-                })}
-              </g>
-            );
-          })}
-        </svg>
+        <div className="progress-v4-mood-plot">
+          <div className="progress-v4-mood-scale" aria-hidden="true"><span>{t.signalHigh}</span><span>{t.signalModerate}</span><span>{t.signalLow}</span></div>
+          <svg viewBox="0 0 320 138" role="img" aria-label={`${t.moodSubtitle} ${t.signalLow}, ${t.signalModerate}, ${t.signalHigh}.`}>
+            <g className="progress-v4-mood-grid" aria-hidden="true">
+              {[15, 39.75, 64.5, 89.25, 114].map((y) => <line key={y} x1="18" x2="302" y1={y} y2={y} />)}
+            </g>
+            {lines.map((line) => {
+              const values = signals.map((signal) => signal[line.key]);
+              return (
+                <g key={line.key} className={`progress-v4-signal signal-${line.key}`}>
+                  <path d={wellbeingSignalPath(values)} />
+                  {values.map((value, index) => {
+                    if (value == null) return null;
+                    const point = wellbeingSignalPoint(index, value, values.length);
+                    const day = days[index];
+                    return <circle
+                      key={day?.key ?? index}
+                      cx={point.x}
+                      cy={point.y}
+                      r={selectedDay?.key === day?.key ? '5.5' : '4'}
+                      className={`${selectedDay?.key === day?.key ? 'is-selected' : ''} ${day?.key === todayKey ? 'is-today' : ''}`}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={day ? `${localDayLabel(day.key, language, true)}: ${day.mood ? moodLabel(day.mood, language) : t.noCheckin}` : undefined}
+                      onClick={() => day && setSelectedDay(day)}
+                      onKeyDown={(event) => {
+                        if (day && (event.key === 'Enter' || event.key === ' ')) {
+                          event.preventDefault();
+                          setSelectedDay(day);
+                        }
+                      }}
+                    />;
+                  })}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
         <div className="progress-v4-mood-days" role="list">
           {days.map((day) => (
             <button key={day.key} type="button" role="listitem" onClick={() => setSelectedDay(day)} className={`${day.mood ? 'has-checkin' : 'is-empty'} ${day.key === todayKey ? 'is-today' : ''}`} aria-label={`${localDayLabel(day.key, language, true)}: ${day.mood ? moodLabel(day.mood, language) : t.noCheckin}`}>
@@ -423,7 +432,7 @@ function MoodJourney({ profile, meditations, language }: { profile: ProfileStats
           ))}
         </div>
       </div>
-      {!hasMood && <p className="progress-v3-empty-copy">{t.noMoodHistory}</p>}
+      {!hasMoodData && <p className="progress-v3-empty-copy">{t.noMoodHistory}</p>}
 
       {selectedDay && typeof document !== 'undefined' && createPortal(
         <div className="progress-v4-sheet-backdrop" role="presentation" onClick={() => setSelectedDay(null)}>
@@ -489,10 +498,16 @@ function PersonalPatterns({ profile, language }: { profile: ProfileStats | null;
 }
 
 function achievementIcon(item: ProgressAchievement): LucideIcon {
-  if (item.id.includes('garden')) return Sprout;
-  if (item.id.includes('checkin')) return Sparkles;
+  if (item.id === 'moon_garden_level_3') return Sprout;
+  if (item.id === 'moon_garden_level_5') return Leaf;
+  if (item.id === 'moon_garden_level_7') return Moon;
+  if (item.id === 'first_checkin') return Sparkles;
+  if (item.id.includes('checkin')) return HeartHandshake;
   if (item.id.includes('morning')) return Sunrise;
   if (item.id.includes('evening') || item.id.includes('sleep')) return Sunset;
+  if (item.id.includes('minute')) return Clock3;
+  if (item.id === 'first_meditation') return Flower2;
+  if (item.id.includes('session') || item.id.includes('meditation')) return Medal;
   if (item.id.includes('premium')) return Crown;
   if (item.id.includes('focus')) return Focus;
   if (item.id.includes('anxiety')) return HeartHandshake;
@@ -536,7 +551,9 @@ function AchievementsStory({ items, language }: { items: ProgressAchievement[]; 
   const [statusFilter, setStatusFilter] = useState<AchievementFilter>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const unlocked = items.filter((item) => item.unlocked).sort((left, right) => String(right.unlockedAt ?? '').localeCompare(String(left.unlockedAt ?? '')));
-  const featured = unlocked.slice(0, 2);
+  const journeyItems = items.filter((item) => item.category !== 'garden');
+  const journeyUnlocked = journeyItems.filter((item) => item.unlocked).sort((left, right) => String(right.unlockedAt ?? '').localeCompare(String(left.unlockedAt ?? '')));
+  const featured = journeyUnlocked.slice(0, 2);
   const filtered = items
     .filter((item) => statusFilter === 'all' || achievementStatus(item) === statusFilter)
     .filter((item) => categoryFilter === 'all' || item.category === categoryFilter)
@@ -548,7 +565,7 @@ function AchievementsStory({ items, language }: { items: ProgressAchievement[]; 
     <section className="progress-v4-achievements progress-v3-enter">
       <div className="progress-v3-section-heading">
         <div><p className="progress-v3-eyebrow">{t.achievements}</p><h3>{t.latestAchievements}</h3></div>
-        <span className="progress-v4-achievement-count">{progressText(language, 'unlockedCount', { unlocked: unlocked.length, total: items.length })}</span>
+        <span className="progress-v4-achievement-count">{progressText(language, 'unlockedCount', { unlocked: journeyUnlocked.length, total: journeyItems.length })}</span>
       </div>
       {featured.length ? <div className="progress-v4-achievement-grid">{featured.map((item) => <AchievementCard key={item.id} item={item} language={language} compact />)}</div> : <p className="progress-v3-empty-copy">{t.noAchievements}</p>}
       {items.length > 0 && <button type="button" className="progress-v4-view-achievements" onClick={() => setOpen(true)}>{t.viewAllAchievements}<ChevronRight size={16} /></button>}
@@ -610,7 +627,7 @@ function NextGentleStep({
   };
   return (
     <section className="progress-v3-next progress-v4-next progress-v3-enter">
-      <div className="progress-v4-next-heading"><div><p className="progress-v3-eyebrow">{t.nextStep}</p><h3>{language === 'en' ? 'One practice that fits your rhythm now.' : 'Одна практика, которая подходит твоему ритму сейчас.'}</h3></div><Sparkles size={20} /></div>
+      <div className="progress-v4-next-heading"><div><p className="progress-v3-eyebrow">{t.nextStep}</p><h3>{t.recommendedNow}</h3></div><Sparkles size={20} /></div>
       <div className="progress-v4-next-practice">
         <img src={recommendation.meditation.cover_image} alt="" />
         <div><h4>{localized.title}</h4><p>{localized.subtitle}</p><span>{duration} {t.min} · {recommendation.locked ? t.premium : t.included}</span></div>

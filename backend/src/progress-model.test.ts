@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildCanonicalCurrentWeek, buildCanonicalDailyActivity, buildSevenDayMoodTrend, mondayForDateKey, shiftDateKey } from './progress-model.js';
+import {
+  buildActiveLunaDaySet,
+  buildActiveLunaRhythm,
+  buildCanonicalCurrentWeek,
+  buildCanonicalDailyActivity,
+  buildSevenDayMoodTrend,
+  mondayForDateKey,
+  shiftDateKey
+} from './progress-model.js';
 
 test('local calendar week boundaries remain Monday through Sunday', () => {
   assert.equal(mondayForDateKey('2026-07-15'), '2026-07-13');
@@ -18,6 +26,8 @@ test('week totals and Monday-Sunday markers come from the same rows', () => {
     ]
   });
   assert.equal(week.weekStart, '2026-07-13');
+  assert.equal(week.activeDays, 2);
+  assert.equal(week.practiceDays, 2);
   assert.equal(week.completedDays, 2);
   assert.equal(week.completedSessions, 4);
   assert.equal(week.listeningMinutes, 36);
@@ -95,4 +105,59 @@ test('one verified minute counts as a practice day without inventing a completio
   assert.equal(week.completedSessions, 0);
   assert.equal(week.listeningMinutes, 1);
   assert.equal(week.days[2]?.state, 'completed');
+});
+
+test('one shared Active Luna Day model includes check-ins without inventing listening', () => {
+  const checkins = [
+    { local_date: '2026-07-13', mood: 'focused' },
+    { local_date: '2026-07-14', mood: 'tired' },
+    { local_date: '2026-07-15', mood: 'calm' },
+    { local_date: '2026-07-16', mood: 'stressed' }
+  ];
+  const week = buildCanonicalCurrentWeek({
+    localDate: '2026-07-16',
+    practiceDays: [],
+    checkins
+  });
+  const activity = buildCanonicalDailyActivity({ practiceDays: [] });
+  const activeDates = buildActiveLunaDaySet({ checkins, activity });
+  const rhythm = buildActiveLunaRhythm({ localDate: '2026-07-16', activeDates });
+
+  assert.equal(week.activeDays, 4);
+  assert.equal(week.practiceDays, 0);
+  assert.equal(week.listeningMinutes, 0);
+  assert.equal(week.completedSessions, 0);
+  assert.equal(rhythm.currentStreak, 4);
+  assert.deepEqual(week.days.slice(0, 4).map((day) => day.hasCheckin), [true, true, true, true]);
+  assert.deepEqual(week.days.slice(0, 4).map((day) => day.hasVerifiedPractice), [false, false, false, false]);
+});
+
+test('four active days inside one week display four of seven while listening stays independent', () => {
+  const week = buildCanonicalCurrentWeek({
+    localDate: '2026-07-16',
+    practiceDays: [{ local_date: '2026-07-15', source: 'breath', minutes: 1, sessions: 1 }],
+    checkins: [
+      { local_date: '2026-07-13', mood: 'calm' },
+      { local_date: '2026-07-14', mood: 'focused' },
+      { local_date: '2026-07-16', mood: 'tired' }
+    ]
+  });
+
+  assert.equal(week.activeDays, 4);
+  assert.equal(week.practiceDays, 1);
+  assert.equal(week.listeningMinutes, 1);
+  assert.equal(week.completedSessions, 1);
+  assert.equal(week.days.filter((day) => day.state === 'completed').length, 4);
+});
+
+test('freeze state appears only for the date where a freeze was actually consumed', () => {
+  const withoutFreeze = buildCanonicalCurrentWeek({ localDate: '2026-07-16', practiceDays: [] });
+  const withFreeze = buildCanonicalCurrentWeek({
+    localDate: '2026-07-16',
+    practiceDays: [],
+    lastFreezeUsed: '2026-07-14'
+  });
+
+  assert.equal(withoutFreeze.days.some((day) => day.state === 'freeze_used'), false);
+  assert.equal(withFreeze.days.find((day) => day.key === '2026-07-14')?.state, 'freeze_used');
 });

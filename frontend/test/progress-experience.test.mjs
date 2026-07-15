@@ -8,6 +8,7 @@ const progressSource = readFileSync(resolve(process.cwd(), 'src/components/progr
 const progressCopySource = readFileSync(resolve(process.cwd(), 'src/components/progress/progressCopy.ts'), 'utf8');
 const stylesSource = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
 const patternsSource = readFileSync(resolve(process.cwd(), 'src/components/progress/progressPatterns.ts'), 'utf8');
+const homeStyles = readFileSync(resolve(process.cwd(), 'src/v2/design-system/homeV2.css'), 'utf8');
 
 test('Progress uses the narrative experience instead of the legacy metric dashboard', () => {
   const progressPage = appSource.slice(appSource.indexOf('function ProgressPage'), appSource.indexOf('function PageSkeleton'));
@@ -83,9 +84,36 @@ test('Progress next step opens a catalog meditation directly', () => {
 
 test('Journey keeps a two-achievement preview and uses one shared bottom inset', () => {
   const progressPageStyles = stylesSource.match(/\.progress-v4-page\s*\{([^}]*)\}/)?.[1] ?? '';
-  assert.match(progressSource, /unlocked\.slice\(0, 2\)/);
+  assert.match(progressSource, /journeyUnlocked\.slice\(0, 2\)/);
+  assert.match(progressSource, /item\.category !== 'garden'/);
   assert.match(progressPageStyles, /padding-bottom:\s*0/);
   assert.doesNotMatch(progressPageStyles, /safe-area-inset-bottom/);
+});
+
+test('This Week renders Active Luna Days separately from listening and completions', () => {
+  assert.match(progressSource, /week\.activeDays \?\? week\.completedDays/);
+  assert.match(progressSource, /t\.activeDaysLabel/);
+  assert.match(progressSource, /week\.listeningMinutes/);
+  assert.match(progressSource, /week\.completedSessions/);
+  assert.match(progressSource, /day\.hasVerifiedPractice/);
+  assert.match(progressSource, /day\.hasCheckin/);
+  assert.match(progressSource, /day\.isCurrent/);
+});
+
+test('Mood Journey legend exactly matches graph colors and exposes a relative scale', () => {
+  assert.match(stylesSource, /\.progress-v4-mood-legend \.signal-calm \{ color: #b7a6ee; \}/);
+  assert.match(stylesSource, /\.progress-v4-mood-legend \.signal-stress \{ color: #d99b7a; \}/);
+  assert.match(stylesSource, /\.progress-v4-mood-legend \.signal-sleep \{ color: #82c9e8; \}/);
+  assert.match(progressSource, /progress-v4-mood-scale/);
+  assert.match(progressCopySource, /Your mood over the last seven days\./);
+  assert.match(progressCopySource, /Ваше настроение за последние семь дней\./);
+});
+
+test('Journey factual typography follows the Home Inter system while reflection remains editorial', () => {
+  assert.match(homeStyles, /font-family: Inter/);
+  assert.match(stylesSource, /\.journey-hub \.progress-v3-section-heading h3/);
+  assert.match(stylesSource, /\.progress-v4-next-practice h4[^}]*font-family: Inter/s);
+  assert.match(stylesSource, /\.progress-v3-reflection-copy[^}]*font-family: "Playfair Display"/s);
 });
 
 test('Personal Patterns encode explicit minimum evidence thresholds', () => {

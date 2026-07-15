@@ -10,7 +10,14 @@ import {
   playbackRewardDecision,
   PlaybackInputError
 } from './playback-security.js';
-import { buildCanonicalCurrentWeek, buildCanonicalDailyActivity, buildSevenDayMoodTrend, shiftDateKey } from './progress-model.js';
+import {
+  buildActiveLunaDaySet,
+  buildActiveLunaRhythm,
+  buildCanonicalCurrentWeek,
+  buildCanonicalDailyActivity,
+  buildSevenDayMoodTrend,
+  shiftDateKey
+} from './progress-model.js';
 import { buildProgressInsights } from './progress-insights.js';
 import { achievementDefinitions, buildAchievementItems, type AchievementStats } from './progress-achievements.js';
 import { logBackendError } from './error-logging.js';
@@ -801,6 +808,11 @@ export async function upsertDailyCheckin(telegramId: number, input: DailyCheckin
     .single();
 
   if (error) throw error;
+  try {
+    await updateStreak(telegramId, localDate);
+  } catch (streakError) {
+    logBackendError(streakError, { endpoint: 'daily check-in Active Luna Day streak update', telegramId });
+  }
   return data;
 }
 
@@ -1344,13 +1356,6 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
   const lastPlaybackDate = safePlaybackSessions.map((item) => item.completed_at ?? item.created_at).filter(Boolean).sort().at(-1);
   const lastPracticeDate = [lastMeditationDate, lastBreathDate, lastPlaybackDate].filter(Boolean).sort().at(-1) ?? null;
   const gardenLevel = minutesListened >= 150 ? 5 : minutesListened >= 60 ? 4 : minutesListened >= 30 ? 3 : minutesListened >= 10 ? 2 : 1;
-  const moonGarden = await getMoonGardenState(telegramId, {
-    completedMeditations,
-    completedBreathSessions,
-    currentStreak: streak?.current_streak ?? 0,
-    longestStreak: streak?.longest_streak ?? 0,
-    gardenLevel
-  });
   const activeUntil = user?.active_until ? new Date(user.active_until).getTime() : 0;
   const hasPremiumAccess = Boolean(user?.lifetime_access || activeUntil > Date.now());
   const notificationPreferences = normalizeNotificationPreferences(user?.notification_preferences ?? {});
@@ -1379,26 +1384,46 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     ...item,
     local_date: item.local_date ?? dateKeyInTimeZone(item.created_at, notificationPreferences.timezone)
   }));
+  const dailyActivity = buildCanonicalDailyActivity({
+    practiceDays: safePracticeDays,
+    playbackSessions: normalizedPlaybackSessions
+  });
+  const activeLunaDaySet = buildActiveLunaDaySet({
+    checkins: checkins ?? [],
+    activity: dailyActivity
+  });
+  const derivedRhythm = buildActiveLunaRhythm({
+    localDate: todayKey(localDate),
+    activeDates: activeLunaDaySet,
+    lastFreezeUsed: streak?.last_freeze_used ?? null
+  });
+  const currentStreak = derivedRhythm.currentStreak;
+  const longestStreak = Math.max(derivedRhythm.longestStreak, Number(streak?.longest_streak ?? 0));
+  const moonGarden = await getMoonGardenState(telegramId, {
+    completedMeditations,
+    completedBreathSessions,
+    currentStreak,
+    longestStreak,
+    gardenLevel
+  });
   const currentWeek = buildCanonicalCurrentWeek({
     practiceDays: safePracticeDays,
     playbackSessions: normalizedPlaybackSessions,
+    checkins: checkins ?? [],
     lastFreezeUsed: streak?.last_freeze_used ?? null,
     localDate: todayKey(localDate)
   });
   const previousWeek = buildCanonicalCurrentWeek({
     practiceDays: safePracticeDays,
     playbackSessions: normalizedPlaybackSessions,
+    checkins: checkins ?? [],
     lastFreezeUsed: null,
     localDate: shiftDateKey(currentWeek.weekStart, -1)
-  });
-  const dailyActivity = buildCanonicalDailyActivity({
-    practiceDays: safePracticeDays,
-    playbackSessions: normalizedPlaybackSessions
   });
   const lifetimeStats = {
     totalListeningMinutes: minutesListened,
     totalSessions: completed,
-    longestStreak: streak?.longest_streak ?? 0,
+    longestStreak,
     practiceDays: practiceDayKeys.size,
     completedWeeks: countCompletedWeeks(practiceDayKeys)
   };
@@ -1437,8 +1462,8 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     completedBreathSessions,
     completed,
     minutesListened,
-    currentStreak: streak?.current_streak ?? 0,
-    longestStreak: streak?.longest_streak ?? 0,
+    currentStreak,
+    longestStreak,
     checkinsCount: checkins?.length ?? 0,
     hasPremiumAccess,
     gardenLevel: moonGarden.gardenLevel,
@@ -1459,9 +1484,9 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     completed,
     completedMeditations,
     completedBreathSessions,
-    dayStreak: streak?.current_streak ?? 0,
-    currentStreak: streak?.current_streak ?? 0,
-    longestStreak: streak?.longest_streak ?? 0,
+    dayStreak: currentStreak,
+    currentStreak,
+    longestStreak,
     freezeCount: streak?.freeze_count ?? (hasPremiumAccess ? 3 : 1),
     freezeMax: hasPremiumAccess ? 3 : 1,
     lastFreezeUsed: streak?.last_freeze_used ?? null,
@@ -1478,7 +1503,9 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
       listeningMinutes: currentWeek.listeningMinutes,
       completedSessions: currentWeek.completedSessions,
       checkins: (checkins ?? []).filter((item) => item.local_date && item.local_date >= currentWeek.weekStart && item.local_date <= todayKey(localDate)).length,
-      completedDays: currentWeek.completedDays
+      activeDays: currentWeek.activeDays,
+      practiceDays: currentWeek.practiceDays,
+      completedDays: currentWeek.activeDays
     },
     previousWeek,
     lifetimeStats,
@@ -1494,7 +1521,7 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     plantedElementsCount: moonGarden.plantedElementsCount,
     lastMoonSeedEarnedAt: moonGarden.lastMoonSeedEarnedAt,
     gardenLevel: moonGarden.gardenLevel,
-    streakDays: streak?.current_streak ?? 0,
+    streakDays: currentStreak,
     lastPracticeDate,
     purchasedPlan: user?.lifetime_access ? 'lifetime' : activeUntil > Date.now() ? 'monthly' : 'free',
     calmScore,
@@ -1506,9 +1533,9 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
       previousWeekEnd: shiftDateKey(previousWeek.weekStart, 6),
       sourceSessionCount: safePlaybackSessions.length,
       verifiedListeningSeconds: verifiedMeditationSeconds,
-      dailyActiveDates: [...practiceDayKeys].sort(),
-      currentStreak: streak?.current_streak ?? 0,
-      longestStreak: streak?.longest_streak ?? 0,
+      dailyActiveDates: [...activeLunaDaySet].sort(),
+      currentStreak,
+      longestStreak,
       moodEntriesCount: new Set((checkins ?? []).map((item) => item.local_date).filter(Boolean)).size,
       plantedGardenUpgrades: Math.min(7, moonGarden.plantedElementsCount),
       achievementCount: achievements.unlocked,

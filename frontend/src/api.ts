@@ -84,6 +84,8 @@ export type PlaybackHistory = {
 
 export type ProfileWeek = {
   weekStart: string;
+  activeDays: number;
+  practiceDays: number;
   completedDays: number;
   completedSessions: number;
   listeningMinutes: number;
@@ -93,6 +95,9 @@ export type ProfileWeek = {
     state: 'completed' | 'current' | 'missed' | 'future' | 'freeze_used' | 'premium_freeze';
     minutes: number;
     sessions: number;
+    isCurrent: boolean;
+    hasCheckin: boolean;
+    hasVerifiedPractice: boolean;
   }>;
 };
 
@@ -123,6 +128,8 @@ export type ProfileStats = {
     listeningMinutes: number;
     completedSessions: number;
     checkins: number;
+    activeDays: number;
+    practiceDays: number;
     completedDays: number;
   };
   lifetimeStats?: {

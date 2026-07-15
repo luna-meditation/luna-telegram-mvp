@@ -821,6 +821,9 @@ const copy = {
     gardenJourney: 'Garden Journey',
     gardenJourneyBody: 'Eight stages of your quiet place',
     gardenStageLevel: 'Level {level}',
+    gardenUpgrades: 'Upgrades',
+    gardenMilestones: 'Garden Milestones',
+    milestoneUnlocked: 'Unlocked',
     gardenTakingShape: 'Your garden is taking shape.',
     gardenFlourishing: 'Your moon garden is flourishing.',
     gardenQuietPlace: 'Your quiet place is growing.',
@@ -1155,6 +1158,9 @@ const copy = {
     gardenJourney: 'Путь сада',
     gardenJourneyBody: 'Восемь этапов твоего тихого места',
     gardenStageLevel: 'Уровень {level}',
+    gardenUpgrades: 'Улучшения',
+    gardenMilestones: 'Вехи сада',
+    milestoneUnlocked: 'Открыто',
     gardenTakingShape: 'Твой сад обретает форму.',
     gardenFlourishing: 'Твой лунный сад расцветает.',
     gardenQuietPlace: 'Твоё тихое место растёт.',
@@ -3547,6 +3553,14 @@ const achievementCopy: Record<string, Record<AppLanguage, { title: string; descr
   calm_explorer: { en: { title: 'Calm Explorer', description: 'Complete practices across Luna.' }, ru: { title: 'Исследователь спокойствия', description: 'Завершай практики Luna.' } }
 };
 
+function fallbackAchievementCategory(id: string) {
+  if (id.startsWith('moon_garden_')) return 'garden';
+  if (id.includes('checkin')) return 'wellness';
+  if (id.includes('rhythm') || id.includes('week') || id.includes('month') || id.includes('day') || id === 'one_year_together') return 'rhythm';
+  if (id === 'premium_member') return 'premium';
+  return 'practice';
+}
+
 function buildAchievementViews(profile: ProfileStats | null, language: AppLanguage): AchievementView[] {
   const backendItems = profile?.achievements?.items ?? [];
   if (backendItems.length) {
@@ -3597,7 +3611,7 @@ function buildAchievementViews(profile: ProfileStats | null, language: AppLangua
     id,
     title: localized[language].title,
     description: localized[language].description,
-    category: 'progress',
+    category: fallbackAchievementCategory(id),
     unlocked: Boolean(checks[id])
   }));
 }
@@ -4777,6 +4791,10 @@ function MoonGardenPage({
   const readyElement = gardenElements.find((element) => !planted.has(element.id) && element.cost <= seeds) ?? null;
   const nextSuggestedElement = readyElement ?? nextElement;
   const isGardenComplete = plantedCount >= gardenElements.length;
+  const gardenMilestones = buildAchievementViews(activeProfile, language)
+    .filter((achievement) => achievement.category === 'garden' && achievement.unlocked)
+    .sort((left, right) => String(right.unlockedAt ?? '').localeCompare(String(left.unlockedAt ?? '')))
+    .slice(0, 3);
   const nextUpgradeNeeded = nextSuggestedElement ? Math.max(0, nextSuggestedElement.cost - seeds) : 0;
   const canPlantNextUpgrade = Boolean(nextSuggestedElement && nextUpgradeNeeded === 0 && !workingId);
   const progressMessage = plantedCount >= gardenElements.length
@@ -4899,22 +4917,18 @@ function MoonGardenPage({
         onAmbienceVolume={onAmbienceVolume}
       />
 
-      <section className="border-y border-white/10 py-4">
-        <div className="grid grid-cols-3 gap-2 text-xs">
-          <Stat label={copy[language].availableMoonSeeds} value={String(seeds)} />
-          <Stat label={copy[language].gardenLevel} value={`${stage.level} · ${stage.title[language]}`} />
-          <Stat label={copy[language].plantedElements} value={String(plantedCount)} />
-        </div>
-        {message && <p className="mt-3 rounded-2xl bg-night/70 px-3 py-2 text-sm text-gold">{message}</p>}
+      <section className="journey-garden-summary" aria-label={copy[language].moonGarden}>
+        <div><span>{copy[language].availableMoonSeeds}</span><strong>{seeds}</strong></div>
+        <div><span>{copy[language].gardenLevel}</span><strong>{stage.level}</strong></div>
+        <div><span>{copy[language].gardenUpgrades}</span><strong>{plantedCount} / 7</strong></div>
       </section>
+      {message && <p className="rounded-2xl bg-night/70 px-3 py-2 text-sm text-gold">{message}</p>}
 
-      <section className="rounded-[26px] border border-gold/20 bg-gold/10 p-4">
+      <section className="journey-garden-next-card">
         {isGardenComplete ? (
           <>
             <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].gardenComplete}</p>
-            <h3 className="mt-1 font-serif text-2xl">{stage.title[language]}</h3>
-            <p className="mt-2 text-sm leading-6 text-cream/75">{copy[language].gardenFlourishing}</p>
-            <p className="mt-3 rounded-2xl bg-night/60 px-3 py-2 text-sm text-gold">{plantedCount} / {gardenElements.length} {copy[language].plantedElements.toLowerCase()}</p>
+            <h3>{copy[language].gardenFlourishing}</h3>
           </>
         ) : nextSuggestedElement ? (
           <>
@@ -4924,7 +4938,7 @@ function MoonGardenPage({
                 <GardenUpgradeIcon visual={nextSuggestedElement.visual} active />
               </span>
               <div className="min-w-0 flex-1">
-                <h3 className="font-serif text-2xl">{nextSuggestedElement.name[language]}</h3>
+                <h3>{nextSuggestedElement.name[language]}</h3>
                 <p className="mt-1 text-xs text-lavender">{text(language, 'unlocksLevel', { level: nextSuggestedElement.unlockLevel })} · {copy[language].cost}: {moonSeedCountLabel(nextSuggestedElement.cost, language)}</p>
               </div>
             </div>
@@ -4964,49 +4978,19 @@ function MoonGardenPage({
         </div>
       </section>
 
-      <section className="space-y-3">
-        <h3 className="font-serif text-2xl">{copy[language].gardenElements}</h3>
-        {gardenElements.map((element) => {
-          const isPlanted = planted.has(element.id);
-          const needed = Math.max(0, element.cost - seeds);
-          const canPlant = !isPlanted && needed === 0;
-          const status = isPlanted ? copy[language].planted : canPlant ? copy[language].availableToPlant : copy[language].locked;
-          return (
-            <article key={element.id} className="luna-editorial-row">
-              <div className="flex items-center gap-3">
-                <span className={`grid h-16 w-16 shrink-0 place-items-center rounded-[22px] border ${isPlanted ? 'border-gold bg-gold/20 shadow-gold' : canPlant ? 'border-gold/30 bg-gold/10' : 'border-white/10 bg-night/70'}`}>
-                  <GardenUpgradeIcon visual={element.visual} active={isPlanted || canPlant} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <h4 className="truncate font-serif text-xl">{element.name[language]}</h4>
-                    <span className={`rounded-full px-2 py-1 text-[11px] ${isPlanted ? 'bg-white/10 text-lavender' : 'bg-gold/15 text-gold'}`}>{moonSeedCountLabel(element.cost, language)}</span>
-                  </div>
-                  <p className="mt-1 text-xs text-lavender">{text(language, 'unlocksLevel', { level: element.unlockLevel })} · {status}</p>
-                  <p className="mt-2 text-sm leading-5 text-cream/70">{element.description[language]}</p>
-                </div>
-              </div>
-              {isPlanted ? (
-                <p className="mt-3 inline-flex items-center gap-2 rounded-full bg-gold/15 px-3 py-2 text-xs font-semibold text-gold">
-                  <CheckCircle size={14} /> {copy[language].planted}
-                </p>
-              ) : (
-                <button
-                  onClick={() => void plant(element)}
-                  disabled={Boolean(workingId) || !canPlant}
-                  className={`mt-3 w-full rounded-full px-4 py-3 text-sm font-semibold ${
-                    canPlant ? 'luna-button-primary' : 'border border-white/10 bg-white/10 text-lavender'
-                  } disabled:cursor-not-allowed disabled:opacity-80`}
-                >
-                  {canPlant
-                    ? (workingId === element.id ? copy[language].planting : copy[language].plantUpgrade)
-                    : text(language, 'needMoreSeeds', { count: needed })}
-                </button>
-              )}
-            </article>
-          );
-        })}
-      </section>
+      {gardenMilestones.length > 0 && (
+        <section className="journey-garden-milestones">
+          <h3>{copy[language].gardenMilestones}</h3>
+          <div className="journey-garden-milestone-list">
+            {gardenMilestones.map((milestone) => (
+              <article key={milestone.id} className="journey-garden-milestone">
+                <i aria-hidden="true" />
+                <div><strong>{milestone.title}</strong><span>{copy[language].milestoneUnlocked}</span></div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       {isAdmin && (
         <section className="rounded-[24px] border border-gold/20 bg-night/80 p-4 shadow-glow">

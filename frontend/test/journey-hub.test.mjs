@@ -7,6 +7,7 @@ const appSource = readFileSync(resolve(process.cwd(), 'src/App.tsx'), 'utf8');
 const hubSource = readFileSync(resolve(process.cwd(), 'src/components/journey/JourneyHub.tsx'), 'utf8');
 const hubStyles = readFileSync(resolve(process.cwd(), 'src/components/journey/journeyHub.css'), 'utf8');
 const navSource = readFileSync(resolve(process.cwd(), 'src/v2/components/V2BottomNav.tsx'), 'utf8');
+const homeStyles = readFileSync(resolve(process.cwd(), 'src/v2/design-system/homeV2.css'), 'utf8');
 
 test('bottom navigation remains five items and labels Progress as Journey and Путь', () => {
   const pages = [...navSource.matchAll(/\{ page: '([^']+)'/g)].map((match) => match[1]);
@@ -45,7 +46,24 @@ test('Garden entry is restrained, reduced-motion aware, and uses art-directed im
   assert.match(hubStyles, /prefers-reduced-motion: reduce/);
   assert.match(hubStyles, /object-fit: cover/);
   assert.match(hubStyles, /object-position: 50% 10%/);
-  assert.match(hubStyles, /aspect-ratio: 4 \/ 5/);
+  assert.match(hubStyles, /aspect-ratio: 10 \/ 13\.8/);
+});
+
+test('Journey tabs scroll normally and use the compact Library-style pill treatment', () => {
+  const tabs = hubStyles.match(/\.journey-hub-tabs\s*\{([^}]*)\}/)?.[1] ?? '';
+  assert.match(tabs, /position:\s*relative/);
+  assert.doesNotMatch(tabs, /sticky/);
+  assert.doesNotMatch(tabs, /safe-area-inset-top/);
+  assert.match(tabs, /border-radius:\s*999px/);
+});
+
+test('Journey reuses Home typography and surface tokens without loading another font', () => {
+  for (const token of ['--v2-surface', '--v2-line', '--v2-ivory', '--v2-muted', '--v2-violet', '--v2-gold']) {
+    assert.match(homeStyles, new RegExp(token));
+    assert.match(hubStyles, new RegExp(token));
+  }
+  assert.match(hubStyles, /font-family: Inter/);
+  assert.doesNotMatch(hubStyles, /@import|fonts\.googleapis/);
 });
 
 test('stale profiles cannot render a fresh-looking zero week beside cached lifetime data', () => {
@@ -65,6 +83,21 @@ test('Garden has eight stages, seven approved upgrades, and no seasons', () => {
   assert.equal([...elementBlock.matchAll(/cost:\s*10,/g)].length, 7);
   assert.doesNotMatch(stageBlock, /level:\s*8/);
   assert.doesNotMatch(appSource, /gardenCollections/);
+});
+
+test('Garden uses one contextual upgrade card instead of repeating seven vertical upgrade rows', () => {
+  const gardenPage = appSource.slice(appSource.indexOf('function MoonGardenPage'), appSource.indexOf('function resizeAvatarImage'));
+  assert.match(gardenPage, /journey-garden-next-card/);
+  assert.match(gardenPage, /journey-garden-stage-track/);
+  assert.doesNotMatch(gardenPage, /gardenElements\.map\(/);
+  assert.match(gardenPage, /plantedCount} \/ 7/);
+  assert.match(gardenPage, /journey-garden-milestones/);
+});
+
+test('Journey and Garden share one comfortable bottom clearance above navigation', () => {
+  const hub = hubStyles.match(/\.journey-hub\s*\{([^}]*)\}/)?.[1] ?? '';
+  assert.match(hub, /padding:\s*6px 0 24px/);
+  assert.match(appSource, /pb-\[calc\(112px\+env\(safe-area-inset-bottom\)\)\]/);
 });
 
 test('Journey diagnostics remain behind the real admin authorization branch', () => {
