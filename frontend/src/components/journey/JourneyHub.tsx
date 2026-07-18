@@ -1,5 +1,7 @@
 import { useEffect, type MutableRefObject, type ReactNode } from 'react';
 import type { AppLanguage } from '../../api';
+import { PageHeader } from '../../design-system/components/PageHeader';
+import { SegmentedTabs } from '../../design-system/components/SegmentedTabs';
 import { progressCopy } from '../progress/progressCopy';
 import './journeyHub.css';
 
@@ -36,18 +38,14 @@ export function JourneyHub({ activeTab, language, journey, garden, scrollPositio
 
   return (
     <div className={`journey-hub journey-hub-${activeTab}`}>
-      <header className="journey-hub-header">
-        <h2>{activeTab === 'journey' ? t.progress : t.moonGarden}</h2>
-        <p>{activeTab === 'journey' ? t.subtitle : t.gardenHubSubtitle}</p>
-      </header>
-      <div className="journey-hub-tabs" role="tablist" aria-label={t.journeyHub}>
-        <button type="button" role="tab" aria-selected={activeTab === 'journey'} className={activeTab === 'journey' ? 'is-active' : ''} onClick={() => selectTab('journey')}>
-          {t.journeyTab}
-        </button>
-        <button type="button" role="tab" aria-selected={activeTab === 'garden'} className={activeTab === 'garden' ? 'is-active' : ''} onClick={() => selectTab('garden')}>
-          {t.gardenTab}
-        </button>
-      </div>
+      <PageHeader title={activeTab === 'journey' ? t.progress : t.moonGarden} subtitle={activeTab === 'journey' ? t.subtitle : t.gardenHubSubtitle} />
+      <SegmentedTabs
+        value={activeTab}
+        onChange={selectTab}
+        ariaLabel={t.journeyHub}
+        className="journey-hub-tabs"
+        tabs={[{ id: 'journey', label: t.journeyTab }, { id: 'garden', label: t.gardenTab }]}
+      />
       <div className={`journey-hub-content ${activeTab === 'garden' ? 'journey-garden-enter' : 'journey-story-enter'}`} role="tabpanel">
         {activeTab === 'journey' ? journey : garden}
       </div>

@@ -1,41 +1,18 @@
 .journey-hub {
-  --v2-bg: #050817;
-  --v2-surface: rgba(22, 29, 68, 0.42);
-  --v2-glass: rgba(255, 255, 255, 0.055);
-  --v2-line: rgba(219, 226, 255, 0.105);
-  --v2-ivory: #fbf7ef;
-  --v2-muted: #c9c5df;
-  --v2-dim: #928caf;
-  --v2-violet: #8e67e9;
-  --v2-gold: #f0cf74;
+  --v2-bg: var(--color-bg-base);
+  --v2-surface: var(--color-surface-primary);
+  --v2-glass: var(--color-surface-glass);
+  --v2-line: var(--color-border-card);
+  --v2-ivory: var(--color-text-primary);
+  --v2-muted: var(--color-text-secondary);
+  --v2-dim: var(--color-text-muted);
+  --v2-violet: var(--color-violet-soft);
+  --v2-gold: var(--color-gold-soft);
   width: 100%;
   min-width: 0;
   padding: 6px 0 24px;
   color: var(--v2-ivory);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-
-.journey-hub-header {
-  display: grid;
-  gap: 5px;
-  padding: 7px 2px 13px;
-}
-
-.journey-hub-header h2 {
-  margin: 0;
-  color: var(--v2-ivory);
-  font-family: "Playfair Display", Georgia, serif;
-  font-size: 34px;
-  font-weight: 600;
-  line-height: 1.02;
-}
-
-.journey-hub-header p {
-  max-width: 34rem;
-  margin: 0;
-  color: rgba(201, 197, 223, 0.68);
-  font-size: 13px;
-  line-height: 1.55;
+  font-family: var(--font-sans);
 }
 
 .journey-hub-tabs {
@@ -44,32 +21,9 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   width: min(236px, 68vw);
-  min-height: 40px;
+  min-height: var(--target-min);
   margin: 0 0 18px;
   padding: 3px;
-  border: 1px solid rgba(230, 236, 255, 0.1);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
-  box-shadow: none;
-  backdrop-filter: blur(14px);
-}
-
-.journey-hub-tabs button {
-  min-width: 0;
-  min-height: 34px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: rgba(201, 208, 233, 0.64);
-  font-size: 12px;
-  font-weight: 650;
-}
-
-.journey-hub-tabs button.is-active {
-  border: 1px solid rgba(240, 207, 116, 0.24);
-  background: rgba(251, 247, 239, 0.1);
-  color: var(--v2-ivory);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
 }
 
 .journey-hub-content {

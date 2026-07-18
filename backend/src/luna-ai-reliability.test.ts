@@ -53,7 +53,8 @@ test('recommendation metadata persists on the matching assistant message', () =>
   assert.match(backend, /resolvedIntent/);
   assert.match(backend, /recommendation_id: attachedMeditationId/);
   assert.match(frontend, /key=\{message\.id\}/);
-  assert.match(frontend, /message\.metadata\?\.recommendedMeditationId/);
+  assert.match(frontend, /recommendationIdForMessage\(message\)/);
+  assert.match(frontend, /metadata\.recommendedMeditationId/);
   assert.match(frontend, /message\.metadata\?\.recommendedMeditation/);
 });
 

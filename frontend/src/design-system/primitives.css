@@ -1,0 +1,175 @@
+.app-shell {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: var(--app-viewport-height);
+  flex-direction: column;
+  margin-inline: auto;
+  max-width: 28rem;
+  padding: var(--app-top-padding) var(--page-gutter) var(--app-content-bottom);
+}
+
+.app-root { min-height: var(--app-viewport-height); }
+
+.app-shell-no-nav {
+  padding-bottom: calc(var(--space-6) + var(--safe-area-bottom));
+}
+
+.app-shell-chat {
+  height: var(--app-viewport-height);
+  min-height: 0;
+  overflow: hidden;
+  padding-bottom: var(--app-navigation-clearance);
+}
+
+.app-header {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  min-height: var(--target-min);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.app-header-brand {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 9px;
+}
+
+.brand-logo {
+  display: block;
+  flex: 0 0 auto;
+  border-radius: 28%;
+  object-fit: cover;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+.app-header-wordmark {
+  overflow: hidden;
+  color: rgba(247, 242, 234, 0.72);
+  font-family: var(--font-sans);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.app-header-actions { display: flex; align-items: center; gap: var(--space-2); }
+.app-status-pill { max-width: 118px; overflow: hidden; border: 1px solid var(--color-border-card); border-radius: var(--radius-round); padding: 6px 10px; background: rgba(255,255,255,.055); color: rgba(247,242,234,.74); font-size: 0.625rem; text-overflow: ellipsis; white-space: nowrap; }
+.language-selector { display: flex; border: 1px solid var(--color-border-card); border-radius: var(--radius-round); padding: 2px; background: rgba(255,255,255,.055); }
+.language-selector button { min-width: var(--target-min); min-height: var(--target-min); border-radius: var(--radius-round); color: var(--color-text-muted); font-size: 0.625rem; font-weight: 700; }
+.language-selector button[aria-pressed="true"] { background: rgba(117,98,214,.22); color: var(--color-text-primary); }
+
+.page-header { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); padding: 6px 2px 8px; }
+.page-header-copy { min-width: 0; }
+.page-header h1,
+.page-header h2 { margin: 0; color: var(--color-text-primary); }
+.page-header p { max-width: 330px; margin: var(--space-2) 0 0; color: var(--color-text-secondary); }
+
+.segmented-tabs {
+  display: grid;
+  min-height: var(--target-min);
+  gap: 3px;
+  border: 1px solid var(--color-border-card);
+  border-radius: var(--radius-round);
+  padding: 3px;
+  background: rgba(255,255,255,.04);
+  backdrop-filter: blur(14px);
+}
+
+.segmented-tabs button { min-width: 0; min-height: var(--target-min); border-radius: var(--radius-round); padding: 0 10px; color: rgba(201,208,233,.72); font-size: 0.75rem; font-weight: 650; }
+.segmented-tabs button[aria-selected="true"] { border: 1px solid rgba(244,214,122,.22); background: rgba(247,242,234,.1); color: var(--color-text-primary); box-shadow: 0 10px 24px rgba(0,0,0,.12); }
+
+.content-card { border: 1px solid var(--color-border-card); border-radius: var(--radius-lg); padding: var(--card-padding); background: var(--color-surface-primary); box-shadow: var(--shadow-soft); backdrop-filter: blur(18px); }
+
+.bottom-navigation {
+  position: fixed;
+  right: max(var(--page-gutter), var(--safe-area-right));
+  bottom: var(--app-navigation-bottom);
+  left: max(var(--page-gutter), var(--safe-area-left));
+  z-index: 80;
+  display: grid;
+  height: var(--app-navigation-height);
+  max-width: 430px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 3px;
+  margin-inline: auto;
+  border: 1px solid rgba(230,236,255,.13);
+  border-radius: var(--radius-lg);
+  padding: 6px;
+  background: rgba(8,13,31,.88);
+  box-shadow: 0 18px 44px rgba(0,0,0,.3);
+  backdrop-filter: blur(22px);
+}
+
+.bottom-navigation-item { position: relative; display: grid; min-width: 0; min-height: 52px; place-items: center; border: 1px solid transparent; border-radius: var(--radius-md); color: rgba(247,242,234,.66); font-size: var(--type-navigation-size); }
+.bottom-navigation-item svg { width: var(--icon-md); height: var(--icon-md); stroke-width: 1.8; }
+.bottom-navigation-item span { max-width: 100%; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bottom-navigation-item[aria-current="page"] { border-color: rgba(244,214,122,.18); background: rgba(244,214,122,.08); color: var(--color-gold-soft); }
+.bottom-navigation-item[aria-current="page"]::after { content: ""; position: absolute; bottom: 4px; width: 5px; height: 5px; border-radius: var(--radius-round); background: currentColor; box-shadow: 0 0 10px currentColor; }
+.bottom-navigation-item-luna[aria-current="page"] { border-color: rgba(98,191,255,.26); background: rgba(98,191,255,.1); color: var(--color-luna-blue); }
+
+.chat-meditation-card { display: grid; width: 100%; grid-template-columns: 64px minmax(0,1fr); gap: var(--space-3); border: 1px solid var(--color-border-card); border-radius: var(--radius-lg); padding: var(--space-2); background: var(--color-surface-secondary); color: var(--color-text-primary); text-align: left; box-shadow: var(--shadow-soft); }
+.chat-meditation-card img { width: 64px; height: 64px; border-radius: 16px; object-fit: cover; }
+.chat-meditation-card-copy { min-width: 0; }
+.chat-meditation-card-copy strong,
+.chat-meditation-card-copy small,
+.chat-meditation-card-copy span { display: block; }
+.chat-meditation-card-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-meditation-card-copy small { margin-top: 3px; color: var(--color-text-secondary); }
+.chat-meditation-card-copy span { display: -webkit-box; overflow: hidden; margin-top: 5px; color: rgba(201,208,233,.72); font-size: .6875rem; line-height: 1.4; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.chat-meditation-card-action { grid-column: 1 / -1; display: flex; min-height: var(--target-min); align-items: center; justify-content: center; gap: var(--space-2); border-radius: var(--radius-md); background: linear-gradient(135deg, var(--color-gold-soft), var(--color-gold)); color: #11152d; font-size: .75rem; font-weight: 700; }
+
+.meditation-card { color: var(--color-text-primary); }
+.meditation-card-row { display: grid; grid-template-columns: 80px minmax(0, 1fr) 44px; align-items: center; gap: 12px; border-bottom: 1px solid var(--color-border-muted); padding: 8px 0; }
+.meditation-card-cover { position: relative; width: 80px; height: 80px; overflow: hidden; border-radius: 17px; }
+.meditation-card-cover img { width: 100%; height: 100%; object-fit: cover; }
+.meditation-card-cover img.is-locked { filter: blur(3px); }
+.meditation-card-cover svg { position: absolute; inset: 0; margin: auto; color: var(--color-gold-soft); }
+.meditation-card-copy { min-width: 0; text-align: left; }
+.meditation-card-title-line { display: flex; min-width: 0; align-items: center; gap: 7px; }
+.meditation-card-title-line strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meditation-card-title-line svg { flex: 0 0 auto; color: var(--color-gold-soft); }
+.meditation-card-copy > small { display: block; margin-top: 3px; overflow: hidden; color: var(--color-text-secondary); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+.meditation-card-copy > p { display: -webkit-box; overflow: hidden; margin: 3px 0 0; color: var(--color-text-muted); font-size: 11px; line-height: 15px; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
+.meditation-card-badges { display: flex; gap: 4px; margin-top: 5px; }
+.meditation-card-badges em { border: 1px solid var(--color-border-card); border-radius: var(--radius-round); padding: 3px 7px; background: rgba(255,255,255,.04); color: var(--color-text-secondary); font-size: 9px; font-style: normal; }
+.meditation-card-favorite { display: grid; width: var(--target-min); height: var(--target-min); place-items: center; border: 1px solid var(--color-border-card); border-radius: var(--radius-round); background: rgba(255,255,255,.045); }
+.meditation-card-favorite svg { color: var(--color-text-secondary); }
+.meditation-card-favorite svg.is-favorite { fill: var(--color-gold-soft); color: var(--color-gold-soft); }
+.meditation-card-tile { position: relative; width: 142px; aspect-ratio: 4 / 3; flex: 0 0 auto; overflow: hidden; border: 1px solid var(--color-border-card); border-radius: var(--radius-md); background: var(--color-bg-night); text-align: left; scroll-snap-align: start; }
+.meditation-card-tile > img { width: 100%; height: 100%; object-fit: cover; opacity: .74; }
+.meditation-card-tile::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 24%, rgba(3,6,18,.9)); }
+.meditation-card-tile-copy { position: absolute; right: 11px; bottom: 10px; left: 11px; z-index: 1; }
+.meditation-card-tile-copy strong, .meditation-card-tile-copy small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meditation-card-tile-copy small { margin-top: 3px; color: var(--color-text-secondary); font-size: 10px; }
+.meditation-card-tile-copy svg { position: absolute; right: 0; bottom: 0; color: var(--color-gold-soft); }
+
+.library-filter-scroll {
+  scroll-padding-inline: var(--page-gutter);
+  scroll-snap-type: x proximity;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 var(--page-gutter), #000 calc(100% - 28px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 var(--page-gutter), #000 calc(100% - 28px), transparent);
+}
+.library-filter-scroll button { min-height: var(--target-min); scroll-snap-align: start; }
+
+:where(button, a, input, textarea, select):focus-visible { outline: 2px solid var(--color-gold-soft); outline-offset: 2px; }
+
+@media (max-width: 360px) {
+  :root { --page-gutter: 14px; }
+  .app-status-pill { display: none; }
+  .app-header-wordmark { max-width: 88px; }
+}
+
+html[data-keyboard-open="true"] .bottom-navigation { transform: translateY(calc(100% + 24px)); opacity: 0; pointer-events: none; }
+html[data-keyboard-open="true"] .app-shell-chat { padding-bottom: max(6px, var(--safe-area-bottom)); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+}

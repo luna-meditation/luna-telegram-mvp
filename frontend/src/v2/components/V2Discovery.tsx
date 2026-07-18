@@ -1,5 +1,6 @@
 import { ArrowRight, MessageCircle, Sparkles } from 'lucide-react';
 import type { Meditation } from '../../api';
+import { MeditationCard } from '../../design-system/components/MeditationCard';
 
 type MeditationView = {
   title: string;
@@ -16,12 +17,11 @@ type V2DiscoveryProps = {
   meditationView: (meditation: Meditation) => MeditationView;
   categoryLabel: (category: string) => string;
   durationLabel: (seconds: number) => string;
+  premiumLabel: string;
 };
 
-export function V2Discovery({ title, viewAllLabel, meditations, onViewAll, onOpen, meditationView, categoryLabel, durationLabel }: V2DiscoveryProps) {
+export function V2Discovery({ title, viewAllLabel, meditations, onViewAll, onOpen, meditationView, categoryLabel, durationLabel, premiumLabel }: V2DiscoveryProps) {
   if (!meditations.length) return null;
-  const [featured, ...rest] = meditations;
-  const featuredView = meditationView(featured);
 
   return (
     <section className="home-v2-discovery-grid">
@@ -30,23 +30,18 @@ export function V2Discovery({ title, viewAllLabel, meditations, onViewAll, onOpe
         <button type="button" onClick={onViewAll} className="home-v2-view-all">{viewAllLabel} →</button>
       </div>
       <div className="home-v2-editorial-rail">
-        <button type="button" onClick={() => onOpen(featured)} className="home-v2-feature-tile">
-          <img src={featured.cover_image} alt="" loading="lazy" />
-          <span>
-            <strong>{featuredView.title}</strong>
-            <small>{categoryLabel(featured.category)} · {durationLabel(featured.duration)}</small>
-          </span>
-        </button>
-        {rest.slice(0, 3).map((meditation) => {
+        {meditations.slice(0, 4).map((meditation) => {
           const view = meditationView(meditation);
           return (
-            <button key={meditation.id} type="button" onClick={() => onOpen(meditation)} className="home-v2-mini-row">
-              <img src={meditation.cover_image} alt="" loading="lazy" />
-              <span>
-                <strong>{view.title}</strong>
-                <small>{durationLabel(meditation.duration)}</small>
-              </span>
-            </button>
+            <MeditationCard
+              key={meditation.id}
+              variant="tile"
+              meditation={meditation}
+              title={view.title}
+              metadata={`${categoryLabel(meditation.category)} · ${durationLabel(meditation.duration)}`}
+              premiumLabel={premiumLabel}
+              onOpen={() => onOpen(meditation)}
+            />
           );
         })}
       </div>

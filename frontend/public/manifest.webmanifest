@@ -1,27 +1,29 @@
 {
   "name": "Luna Meditation",
   "short_name": "Luna",
+  "id": "/?startapp=home",
+  "version": "2026.07.18.2",
   "description": "AI-guided calm inside Telegram.",
   "start_url": "/?startapp=home",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#141026",
-  "theme_color": "#141026",
+  "background_color": "#030612",
+  "theme_color": "#030612",
   "icons": [
     {
-      "src": "/assets/icons/luna-icon-192.png",
+      "src": "/assets/brand/luna-pwa-192-v2-20260718.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/assets/icons/luna-icon-512.png",
+      "src": "/assets/brand/luna-pwa-512-v2-20260718.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/assets/icons/luna-icon-1024.png",
+      "src": "/assets/brand/luna-pwa-1024-v2-20260718.png",
       "sizes": "1024x1024",
       "type": "image/png",
       "purpose": "any"

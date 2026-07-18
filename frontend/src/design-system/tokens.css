@@ -1,0 +1,115 @@
+:root {
+  color-scheme: dark;
+
+  /* Typography */
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-editorial: "Playfair Display", Georgia, serif;
+  --type-display-size: clamp(2.5rem, 12vw, 4rem);
+  --type-page-title-size: clamp(1.75rem, 7vw, 2.125rem);
+  --type-hero-size: clamp(1.5rem, 6.5vw, 1.75rem);
+  --type-section-size: 1.0625rem;
+  --type-card-size: 0.9375rem;
+  --type-body-size: 0.875rem;
+  --type-body-small-size: 0.75rem;
+  --type-label-size: 0.6875rem;
+  --type-button-size: 0.875rem;
+  --type-navigation-size: 0.5625rem;
+
+  /* Brand colors */
+  --color-bg-base: #030612;
+  --color-bg-night: #071024;
+  --color-surface-primary: rgba(14, 22, 52, 0.64);
+  --color-surface-secondary: rgba(22, 31, 70, 0.56);
+  --color-surface-glass: rgba(10, 18, 42, 0.72);
+  --color-border-card: rgba(230, 236, 255, 0.105);
+  --color-border-muted: rgba(230, 236, 255, 0.075);
+  --color-gold: #d4af37;
+  --color-gold-soft: #f4d67a;
+  --color-violet: #7562d6;
+  --color-violet-soft: #9d8cff;
+  --color-luna-blue: #62bfff;
+  --color-text-primary: #f7f2ea;
+  --color-text-secondary: #c9d0e9;
+  --color-text-muted: #8b92b2;
+  --color-danger: #ff7575;
+  --color-success: #79d99e;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --page-gutter: 16px;
+  --card-padding: 16px;
+  --section-gap: 20px;
+
+  /* Shape and elevation */
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --radius-xl: 30px;
+  --radius-round: 999px;
+  --shadow-soft: 0 18px 50px rgba(0, 0, 0, 0.26);
+  --shadow-glass: 0 22px 70px rgba(0, 0, 0, 0.34);
+  --shadow-gold: 0 18px 48px rgba(212, 175, 55, 0.16);
+  --glow-violet: 0 0 34px rgba(157, 140, 255, 0.24);
+
+  /* Controls */
+  --target-min: 44px;
+  --button-height: 48px;
+  --icon-sm: 16px;
+  --icon-md: 20px;
+  --icon-lg: 24px;
+
+  /* Motion */
+  --motion-fast: 160ms;
+  --motion-base: 260ms;
+  --motion-slow: 420ms;
+  --ease-standard: cubic-bezier(0.22, 0.8, 0.2, 1);
+
+  /* Telegram, safe areas, and canonical navigation geometry */
+  --safe-area-top: max(env(safe-area-inset-top, 0px), var(--tg-content-safe-area-inset-top, 0px));
+  --safe-area-right: max(env(safe-area-inset-right, 0px), var(--tg-content-safe-area-inset-right, 0px));
+  --safe-area-bottom: max(env(safe-area-inset-bottom, 0px), var(--tg-content-safe-area-inset-bottom, 0px));
+  --safe-area-left: max(env(safe-area-inset-left, 0px), var(--tg-content-safe-area-inset-left, 0px));
+  --app-viewport-height: var(--tg-viewport-stable-height, 100dvh);
+  --app-top-padding: calc(var(--safe-area-top) + 14px);
+  --app-navigation-height: 66px;
+  --app-navigation-offset: 10px;
+  --app-navigation-bottom: max(var(--safe-area-bottom), var(--app-navigation-offset));
+  --app-navigation-clearance: calc(var(--app-navigation-height) + var(--app-navigation-bottom) + 8px);
+  --app-content-bottom: calc(var(--app-navigation-height) + var(--app-navigation-bottom) + 24px);
+  --app-keyboard-inset: 0px;
+
+  /* Compatibility aliases for established components. */
+  --luna-bg-deep: var(--color-bg-base);
+  --luna-bg-night: var(--color-bg-night);
+  --luna-bg-surface: var(--color-surface-primary);
+  --luna-bg-elevated: var(--color-surface-secondary);
+  --luna-purple: var(--color-violet);
+  --luna-purple-soft: var(--color-violet-soft);
+  --luna-gold: var(--color-gold);
+  --luna-gold-soft: var(--color-gold-soft);
+  --luna-text-primary: var(--color-text-primary);
+  --luna-text-secondary: var(--color-text-secondary);
+  --luna-text-muted: var(--color-text-muted);
+  --luna-border: var(--color-border-card);
+  --luna-border-strong: rgba(212, 175, 55, 0.28);
+  --luna-glass: var(--color-surface-glass);
+  --luna-danger: var(--color-danger);
+  --luna-success: var(--color-success);
+  --luna-radius-sm: var(--radius-sm);
+  --luna-radius-md: var(--radius-md);
+  --luna-radius-lg: var(--radius-lg);
+  --luna-radius-xl: var(--radius-xl);
+  --luna-shadow-soft: var(--shadow-soft);
+  --luna-shadow-glass: var(--shadow-glass);
+  --luna-shadow-gold: var(--shadow-gold);
+}
+
+@supports not (height: 100dvh) {
+  :root { --app-viewport-height: var(--tg-viewport-stable-height, 100vh); }
+}

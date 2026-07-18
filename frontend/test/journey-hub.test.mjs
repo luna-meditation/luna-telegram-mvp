@@ -6,7 +6,8 @@ import test from 'node:test';
 const appSource = readFileSync(resolve(process.cwd(), 'src/App.tsx'), 'utf8');
 const hubSource = readFileSync(resolve(process.cwd(), 'src/components/journey/JourneyHub.tsx'), 'utf8');
 const hubStyles = readFileSync(resolve(process.cwd(), 'src/components/journey/journeyHub.css'), 'utf8');
-const navSource = readFileSync(resolve(process.cwd(), 'src/v2/components/V2BottomNav.tsx'), 'utf8');
+const navSource = readFileSync(resolve(process.cwd(), 'src/design-system/components/BottomNavigation.tsx'), 'utf8');
+const primitiveStyles = readFileSync(resolve(process.cwd(), 'src/design-system/primitives.css'), 'utf8');
 const homeStyles = readFileSync(resolve(process.cwd(), 'src/v2/design-system/homeV2.css'), 'utf8');
 
 test('bottom navigation remains five items and labels Progress as Journey and Путь', () => {
@@ -20,7 +21,7 @@ test('bottom navigation remains five items and labels Progress as Journey and П
 
 test('Journey Hub switches locally between Journey and Garden without nested navigation', () => {
   assert.match(hubSource, /activeTab === 'journey' \? journey : garden/);
-  assert.match(hubSource, /role="tablist"/);
+  assert.match(hubSource, /<SegmentedTabs/);
   assert.match(hubSource, /onTabChange\(nextTab\)/);
   assert.doesNotMatch(hubSource, /V2BottomNav/);
   assert.match(appSource, /activeTab=\{page === 'moonGarden' \? 'garden' : 'journey'\}/);
@@ -34,8 +35,7 @@ test('Journey is the default direct tab and Garden supports direct startapp navi
 });
 
 test('Journey and Garden preserve independent session scroll positions', () => {
-  assert.match(appSource, /min-h-screen overflow-x-clip bg-night/);
-  assert.doesNotMatch(appSource, /min-h-screen overflow-hidden bg-night/);
+  assert.match(appSource, /app-root overflow-x-clip bg-night/);
   assert.match(appSource, /journeyScrollPositionsRef = useRef<Record<JourneyHubTab, number>>\(\{ journey: 0, garden: 0 \}\)/);
   assert.match(hubSource, /scrollPositions\.current\[activeTab\] = window\.scrollY/);
   assert.match(hubSource, /window\.scrollTo\(\{ top: scrollPositions\.current\[activeTab\]/);
@@ -54,7 +54,7 @@ test('Journey tabs scroll normally and use the compact Library-style pill treatm
   assert.match(tabs, /position:\s*relative/);
   assert.doesNotMatch(tabs, /sticky/);
   assert.doesNotMatch(tabs, /safe-area-inset-top/);
-  assert.match(tabs, /border-radius:\s*999px/);
+  assert.match(primitiveStyles, /\.segmented-tabs/);
 });
 
 test('Journey reuses Home typography and surface tokens without loading another font', () => {
@@ -62,7 +62,7 @@ test('Journey reuses Home typography and surface tokens without loading another 
     assert.match(homeStyles, new RegExp(token));
     assert.match(hubStyles, new RegExp(token));
   }
-  assert.match(hubStyles, /font-family: Inter/);
+  assert.match(hubStyles, /font-family: var\(--font-sans\)/);
   assert.doesNotMatch(hubStyles, /@import|fonts\.googleapis/);
 });
 
@@ -97,7 +97,7 @@ test('Garden uses one contextual upgrade card instead of repeating seven vertica
 test('Journey and Garden share one comfortable bottom clearance above navigation', () => {
   const hub = hubStyles.match(/\.journey-hub\s*\{([^}]*)\}/)?.[1] ?? '';
   assert.match(hub, /padding:\s*6px 0 24px/);
-  assert.match(appSource, /pb-\[calc\(112px\+env\(safe-area-inset-bottom\)\)\]/);
+  assert.match(primitiveStyles, /padding: var\(--app-top-padding\) var\(--page-gutter\) var\(--app-content-bottom\)/);
 });
 
 test('Journey diagnostics remain behind the real admin authorization branch', () => {

@@ -92,7 +92,14 @@ import { MoonGardenScene as AnimatedMoonGardenScene } from './components/moon-ga
 import { JourneyHub, type JourneyHubTab } from './components/journey/JourneyHub';
 import { LunaChat } from './components/LunaChat';
 import { ProgressExperience, ProgressExperienceSkeleton } from './components/progress/ProgressExperience';
-import { V2BottomNav } from './v2/components/V2BottomNav';
+import { AppHeader } from './design-system/components/AppHeader';
+import { BottomNavigation } from './design-system/components/BottomNavigation';
+import { BrandLogo } from './design-system/components/BrandLogo';
+import { MeditationCard as SharedMeditationCard } from './design-system/components/MeditationCard';
+import { PageHeader } from './design-system/components/PageHeader';
+import { SegmentedTabs } from './design-system/components/SegmentedTabs';
+import { useAppViewport } from './hooks/useChatViewport';
+import { formatMeditationDuration } from './utils/duration';
 import { HomeV2 } from './v2/pages/HomeV2';
 import { frontendBuildMetadata, recordPaymentStage, useRuntimeDiagnostics, type RuntimeDiagnostics } from './runtime-diagnostics';
 
@@ -1570,25 +1577,6 @@ function translateCategory(category: string | null | undefined, language: AppLan
   return key ? copy[language][key] : (category ?? '');
 }
 
-function translateMoodLabel(label: string | null | undefined, language: AppLanguage) {
-  const keyBySlug: Record<string, keyof typeof copy.en> = {
-    sleep: 'moodSleep',
-    calm: 'moodCalm',
-    focused: 'moodFocused',
-    focus: 'moodFocused',
-    anxious: 'moodAnxious',
-    anxiety: 'moodAnxious',
-    stressed: 'moodStressed',
-    stress: 'moodStressed',
-    tired: 'moodTired',
-    energy: 'moodEnergy',
-    'low-energy': 'moodLowEnergy',
-    'not-enough-data-yet': 'notEnoughData'
-  };
-  const key = keyBySlug[normalizeSlug(label)];
-  return key ? copy[language][key] : (label ?? '');
-}
-
 function translateFocus(focus: string | null | undefined, language: AppLanguage) {
   const keyByFocus: Record<string, keyof typeof copy.en> = {
     'breath and anxiety relief': 'focusBreathAnxiety',
@@ -1930,11 +1918,8 @@ function durationLabel(value: DailyCheckin['available_minutes'] | null | undefin
   return copy[language].minutes3;
 }
 
-function MoonMark({ className = '' }: { className?: string }) {
-  return <span className={`luna-moon-mark ${className}`} aria-hidden="true" />;
-}
-
 function App() {
+  useAppViewport(true);
   const telegram = getTelegram();
   const runtimeDiagnostics = useRuntimeDiagnostics();
   const user = telegram?.initDataUnsafe.user ?? fallbackUser;
@@ -2914,10 +2899,10 @@ function App() {
   }, [initData, scenePlaying, selectedScene]);
 
   return (
-    <main className={`min-h-screen overflow-x-clip bg-night text-cream ${page === 'home' ? 'home-v2-shell' : ''}`}>
+    <main className={`app-root overflow-x-clip bg-night text-cream ${page === 'home' ? 'home-v2-shell' : ''}`}>
       <div className="fixed inset-0 luna-bg" />
-      <section className={`relative mx-auto flex min-h-screen w-full max-w-md flex-col px-4 pt-[calc(env(safe-area-inset-top,0px)+14px)] ${page === 'admin' || (page === 'profile' && profileNestedActive) ? 'pb-[calc(24px+env(safe-area-inset-bottom))]' : 'pb-[calc(112px+env(safe-area-inset-bottom))]'}`}>
-        {page !== 'luna' && <Header plan={access.plan} streak={profile?.currentStreak ?? 0} language={language} onLanguageChange={changeLanguage} compact={page === 'home'} />}
+      <section className={`app-shell ${page === 'luna' ? 'app-shell-chat' : ''} ${page === 'admin' || (page === 'profile' && profileNestedActive) ? 'app-shell-no-nav' : ''}`}>
+        {page !== 'luna' && <AppHeader statusLabel={(profile?.currentStreak ?? 0) > 0 ? streakLabel(profile?.currentStreak ?? 0, language) : planLabel(access.plan, language)} language={language} languageLabel={copy[language].language} onLanguageChange={changeLanguage} />}
         {appNotice && <div className="fixed left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+12px)] z-50 mx-auto max-w-md rounded-full border border-gold/20 bg-night/90 px-4 py-3 text-center text-xs font-semibold text-cream shadow-glow backdrop-blur-xl luna-fade" role="status">{appNotice}</div>}
 
         {page === 'home' && (
@@ -2932,7 +2917,7 @@ function App() {
             moods={moods}
             setMood={selectMood}
             checkinLine={wellness?.todayCheckin ? copy[language].checkinSaved : heroMood ? moodMessage(heroMood, wellness, language) : copy[language].checkinContextHint}
-            checkinMeta={wellness?.weeklyCheckinCount ? `${translateMoodLabel(wellness.mostCommonMoodLabel, language)} · ${wellness.weeklyCheckinCount}/7 ${copy[language].checkins}` : undefined}
+            checkinMeta={wellness?.todayCheckin ? (language === 'en' ? `Based on today’s ${homeMoodLabel(heroMood ?? 'Calm', language).toLowerCase()} check-in` : `Выбрано по сегодняшней отметке: ${homeMoodLabel(heroMood ?? 'Calm', language).toLowerCase()}`) : undefined}
             daily={dailyMeditation}
             heroLabel={copy[language][heroLabelKey]}
             continueListening={homeSections.continueListening}
@@ -2994,7 +2979,7 @@ function App() {
             meditationView={(meditation) => getLocalizedMeditation(meditation, language)}
             categoryLabel={(value) => translateCategory(value, language)}
             moodLabel={(value) => translateCategory(value, language)}
-            durationLabel={formatTime}
+            durationLabel={(seconds) => formatMeditationDuration(seconds, language)}
           />
         )}
 
@@ -3213,7 +3198,7 @@ function App() {
           />
         )}
         {page !== 'admin' && !(page === 'profile' && profileNestedActive) && (
-          <V2BottomNav
+          <BottomNavigation
             active={page}
             onChange={setPage}
             labels={{
@@ -3230,44 +3215,6 @@ function App() {
         )}
       </section>
     </main>
-  );
-}
-
-function Header({
-  plan,
-  streak,
-  language,
-  onLanguageChange
-}: {
-  plan: string;
-  streak: number;
-  language: AppLanguage;
-  onLanguageChange: (language: AppLanguage) => void;
-  compact?: boolean;
-}) {
-  return (
-    <div className="mb-2 flex items-center justify-between px-1 pt-0.5">
-      <div className="flex items-center gap-2">
-        <MoonMark className="h-6 w-6 shrink-0 opacity-70" />
-        <span className="text-[9px] font-semibold uppercase tracking-[0.22em] text-cream/48">Luna Meditation</span>
-      </div>
-      <div className="flex items-center gap-2">
-        <div className="max-w-[112px] truncate rounded-full border border-white/10 bg-white/[0.06] px-2.5 py-1 text-[10px] text-cream/70 backdrop-blur-md">
-          {streak > 0 ? streakLabel(streak, language) : planLabel(plan, language)}
-        </div>
-        <div className="flex rounded-full border border-white/10 bg-white/[0.06] p-0.5 text-[9px] font-semibold text-lavender backdrop-blur-md" aria-label={copy[language].language}>
-          {(['en', 'ru'] as const).map((item) => (
-            <button
-              key={item}
-              onClick={() => onLanguageChange(item)}
-              className={`rounded-full px-1.5 py-0.5 transition ${language === item ? 'luna-chip-active' : 'text-lavender/75'}`}
-            >
-              {item.toUpperCase()}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
   );
 }
 function LibraryPage(props: {
@@ -3295,28 +3242,24 @@ function LibraryPage(props: {
   );
   return (
     <div className="luna-page space-y-3 pb-6">
-      <div className="flex items-end justify-between gap-4">
-        <PageTitle title={t.libraryTitle} />
-        <span className="rounded-full border border-white/10 bg-white/[0.045] px-2.5 py-1 text-[10px] text-lavender">{props.meditations.length}</span>
-      </div>
-      <div className="grid grid-cols-3 gap-1 rounded-full border border-white/10 bg-white/[0.04] p-1 backdrop-blur-md">
-        <button onClick={() => props.setMode('meditations')} className={`rounded-full px-2.5 py-2 text-xs font-semibold transition ${props.mode === 'meditations' ? 'border border-gold/25 bg-cream/12 text-cream shadow-glow' : 'text-lavender/80'}`}>
-          {t.meditationsTab}
-        </button>
-        <button onClick={() => props.setMode('breathing')} className={`rounded-full px-2.5 py-2 text-xs font-semibold transition ${props.mode === 'breathing' ? 'border border-gold/25 bg-cream/12 text-cream shadow-glow' : 'text-lavender/80'}`}>
-          {t.breathingTab}
-        </button>
-        <button onClick={() => props.setMode('mantras')} className={`rounded-full px-2.5 py-2 text-xs font-semibold transition ${props.mode === 'mantras' ? 'border border-gold/25 bg-cream/12 text-cream shadow-glow' : 'text-lavender/80'}`}>
-          {t.mantrasTab}
-        </button>
-      </div>
+      <PageHeader title={t.libraryTitle} trailing={<span className="rounded-full border border-white/10 bg-white/[0.045] px-2.5 py-1 text-[10px] text-lavender">{props.meditations.length}</span>} />
+      <SegmentedTabs
+        value={props.mode}
+        onChange={props.setMode}
+        ariaLabel={t.libraryTitle}
+        tabs={[
+          { id: 'meditations', label: t.meditationsTab },
+          { id: 'breathing', label: t.breathingTab },
+          { id: 'mantras', label: t.mantrasTab }
+        ]}
+      />
       <div className="flex items-center gap-2 rounded-[18px] border border-white/10 bg-white/[0.04] px-3.5 py-2.5 backdrop-blur-md">
         <Search size={16} className="text-lavender/80" />
         <input value={props.query} onChange={(event) => props.setQuery(event.target.value)} placeholder={t.searchByTitle} className="w-full bg-transparent text-sm outline-none placeholder:text-cream/45" />
       </div>
       {props.mode === 'meditations' ? (
         <>
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-0.5 luna-scrollbar-none">
+          <div className="library-filter-scroll -mx-4 flex gap-2 overflow-x-auto px-4 pb-2 luna-scrollbar-none">
             <FilterPill active={props.category === 'all'} onClick={() => props.setCategory('all')} label={t.all} />
             <FilterPill active={props.category === 'saved'} onClick={() => props.setCategory('saved')} label={t.navSaved} />
             <FilterPill active={props.category === 'short'} onClick={() => props.setCategory('short')} label={t.short} />
@@ -3354,7 +3297,7 @@ function LibraryPage(props: {
               <Sparkles size={19} />
             </div>
             <p className="text-xs uppercase tracking-[0.18em] text-gold">{t.breathingTab}</p>
-            <h3 className="mt-1 font-serif text-[24px] leading-tight">{t.breathCircle}</h3>
+            <h3 className="type-section-title mt-1">{t.breathCircle}</h3>
             <p className="mt-2 max-w-[250px] text-sm leading-5 text-cream/75">{t.breathCircleSubtitle}</p>
             <p className="mt-3 text-[11px] text-lavender">1 / 3 / 5 min</p>
           </button>
@@ -3393,15 +3336,6 @@ function FilterPill({ active, label, onClick }: { active: boolean; label: string
     <button onClick={onClick} className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${active ? 'border-gold/30 bg-gold/12 text-cream shadow-glow' : 'border-white/10 bg-white/[0.035] text-lavender/82'}`}>
       {label}
     </button>
-  );
-}
-
-function PageTitle({ title, subtitle }: { title: string; subtitle?: string }) {
-  return (
-    <div className="luna-page-title">
-      <h2 className="luna-editorial-title text-[34px] leading-none">{title}</h2>
-      {subtitle ? <p className="mt-2 max-w-[310px] text-sm leading-5 text-lavender">{subtitle}</p> : null}
-    </div>
   );
 }
 
@@ -3497,7 +3431,7 @@ function ProgressPage({
 function PageSkeleton({ rows = 4 }: { rows?: number }) {
   return (
     <div className="luna-page space-y-4" aria-busy="true" aria-label="Loading">
-      <div className="h-9 w-2/3 animate-pulse rounded-2xl bg-white/[0.08]" />
+      <div className="flex items-center gap-3"><BrandLogo size={38} eager /><div className="h-9 w-2/3 animate-pulse rounded-2xl bg-white/[0.08]" /></div>
       <div className="h-56 animate-pulse rounded-[30px] bg-white/[0.07]" />
       <div className="grid grid-cols-2 gap-3">
         {Array.from({ length: rows }, (_, index) => <div key={index} className="h-24 animate-pulse rounded-[24px] bg-white/[0.06]" />)}
@@ -3627,38 +3561,22 @@ function MeditationCard({ meditation, locked, showPopular, onOpen, onFavorite, o
 }) {
   const localized = getLocalizedMeditation(meditation, language);
   const hasProgress = (meditation.history?.last_position ?? 0) > 0;
-  const hasDescription = localized.description.trim().length > 0;
-  const hasBadges = meditation.premium || showPopular || hasProgress;
   return (
-    <article className="luna-editorial-row">
-      <div className="grid grid-cols-[80px_minmax(0,1fr)_38px] items-center gap-3">
-        <button onClick={() => (locked ? onUnlock() : onOpen(meditation))} className="relative shrink-0 text-left">
-          <img src={meditation.cover_image} alt="" className={`h-20 w-20 rounded-[17px] object-cover shadow-glow ${locked ? 'blur-sm' : ''}`} loading="lazy" />
-          {locked && <Lock className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gold" />}
-        </button>
-        <div className="grid min-h-20 min-w-0 content-center">
-          <button onClick={() => (locked ? onUnlock() : onOpen(meditation))} className="w-full text-left">
-            <div className="flex items-center gap-2">
-              <h3 className="truncate text-[15px] font-semibold leading-tight text-cream">{localized.title}</h3>
-              {meditation.premium && <Crown size={13} className="text-gold" />}
-            </div>
-            <p className="mt-0.5 text-[11px] capitalize text-lavender">{translateCategory(meditation.category, language)} · {formatTime(meditation.duration)}</p>
-            {hasDescription && <p className="mt-0.5 line-clamp-1 text-[11px] leading-[15px] text-cream/55">{localized.description}</p>}
-          </button>
-          {!localized.hasSelectedLanguageAudio && <p className="mt-1 text-[11px] text-gold">{copy[language].availableInEnglish}</p>}
-          {hasBadges && (
-            <div className="mt-1 flex flex-wrap gap-1 text-[9px] leading-none">
-              {meditation.premium && <span className="whitespace-nowrap rounded-full border border-gold/20 bg-gold/10 px-2 py-0.5 text-gold">{copy[language].premium}</span>}
-              {showPopular && <span className="whitespace-nowrap rounded-full border border-lavender/15 bg-lavender/10 px-2 py-0.5 text-lavender">{copy[language].popularToday}</span>}
-              {hasProgress ? <span className="whitespace-nowrap rounded-full border border-white/10 bg-white/[0.045] px-2 py-0.5 text-cream/70">{copy[language].resume}</span> : null}
-            </div>
-          )}
-        </div>
-        <button onClick={() => onFavorite(meditation)} className="grid min-h-[38px] min-w-[38px] place-items-center rounded-full border border-white/10 bg-white/[0.045] text-cream transition hover:bg-white/[0.075]" aria-label="Favorite meditation">
-          <Heart size={16} className={meditation.favorite ? 'fill-gold text-gold' : 'text-cream/72'} />
-        </button>
-      </div>
-    </article>
+    <SharedMeditationCard
+      meditation={meditation}
+      title={localized.title}
+      description={localized.description}
+      metadata={`${translateCategory(meditation.category, language)} · ${formatMeditationDuration(meditation.duration, language)}${!localized.hasSelectedLanguageAudio ? ` · ${copy[language].availableInEnglish}` : ''}`}
+      locked={locked}
+      favorite={Boolean(meditation.favorite)}
+      showPopular={showPopular}
+      hasProgress={hasProgress}
+      premiumLabel={copy[language].premium}
+      popularLabel={copy[language].popularToday}
+      resumeLabel={copy[language].resume}
+      onOpen={() => (locked ? onUnlock() : onOpen(meditation))}
+      onFavorite={() => onFavorite(meditation)}
+    />
   );
 }
 
@@ -3681,7 +3599,7 @@ function MantraCard({ mantra, locked, onOpen, language }: {
             <h3 className="truncate text-[15px] font-semibold leading-tight text-cream">{mantra.title[language]}</h3>
             {mantra.access === 'premium' && <Crown size={13} className="text-gold" />}
           </div>
-          <p className="mt-0.5 text-[11px] text-lavender">{mantra.subtitle[language]} · {formatTime(mantra.duration)}</p>
+          <p className="mt-0.5 text-[11px] text-lavender">{mantra.subtitle[language]} · {formatMeditationDuration(mantra.duration, language)}</p>
           {hasDescription && <p className="mt-0.5 line-clamp-2 text-[11px] leading-[15px] text-cream/55">{mantra.description[language]}</p>}
           <div className="mt-1 flex flex-wrap gap-1 text-[9px] leading-none">
             {mantra.access === 'premium' && <span className="rounded-full border border-gold/20 bg-gold/10 px-2 py-0.5 text-gold">{copy[language].premium}</span>}
@@ -3738,7 +3656,7 @@ function MantraPlayerPage({ mantra, onClose, language }: { mantra: MantraDefinit
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].mantrasTab}</p>
-            <h2 className="mt-1 font-serif text-3xl">{mantra.title[language]}</h2>
+            <h2 className="type-page-title mt-1">{mantra.title[language]}</h2>
           </div>
           <button onClick={onClose} aria-label={copy[language].close} className="luna-icon-button">
             <X size={18} />
@@ -3793,7 +3711,7 @@ function ScenePlayerPage({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].scenesTitle}</p>
-            <h2 className="mt-1 max-w-[250px] font-serif text-[25px] leading-tight">{scene.title[language]}</h2>
+            <h2 className="type-page-title mt-1 max-w-[250px]">{scene.title[language]}</h2>
           </div>
           <button onClick={onClose} aria-label={copy[language].closeScene} className="luna-icon-button">
             <X size={18} />
@@ -3936,7 +3854,7 @@ function DailyCheckinSheet({
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-gold">{t.checkinKicker}</p>
-            <h3 className="mt-1 font-serif text-3xl">{t.checkinTitle}</h3>
+            <h3 className="type-page-title mt-1">{t.checkinTitle}</h3>
           </div>
           <button onClick={onClose} className="rounded-full bg-surface px-3 py-2 text-sm text-lavender">{t.checkinSkip}</button>
         </div>
@@ -4050,6 +3968,8 @@ function PricingPage({
   if (!accessVerified) {
     return (
       <div className="luna-page space-y-4">
+        <PageHeader title={t.premiumTitle} />
+        <BrandLogo size={64} className="mx-auto" eager />
         <EmptyState
           title={language === 'ru' ? 'Проверяем твой Premium' : 'Checking your Premium access'}
           body={language === 'ru' ? 'Планы появятся после подтверждения текущего доступа, чтобы не предлагать повторную покупку.' : 'Plans will appear after your current access is confirmed, so Luna never offers a duplicate purchase.'}
@@ -4061,10 +3981,11 @@ function PricingPage({
 
   return (
     <div className="luna-page space-y-4">
+      <PageHeader title={t.premiumTitle} />
       <section className="relative overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_100%_0%,rgba(124,93,214,.18),transparent_34%),linear-gradient(145deg,rgba(29,24,70,.92),rgba(9,8,25,.96))] p-5 shadow-[0_20px_45px_rgba(4,3,18,.26)]">
         <div className="relative z-10">
-          <p className="luna-section-kicker">{t.premiumTitle}</p>
-          <h2 className="luna-editorial-title mt-3 max-w-[310px] text-[30px] leading-[1.05]">{isLifetime ? (language === 'ru' ? 'Premium навсегда активен' : 'Lifetime Premium active') : isMonthly ? (language === 'ru' ? 'Месячный Premium активен' : 'Monthly Premium active') : t.premiumHeadline}</h2>
+          <BrandLogo size={48} eager />
+          <h2 className="type-editorial mt-3 max-w-[310px] text-[30px] leading-[1.05]">{isLifetime ? (language === 'ru' ? 'Premium навсегда активен' : 'Lifetime Premium active') : isMonthly ? (language === 'ru' ? 'Месячный Premium активен' : 'Monthly Premium active') : t.premiumHeadline}</h2>
           <p className="mt-3 max-w-[330px] text-sm leading-6 text-lavender">{isLifetime
           ? (language === 'ru' ? 'Твой постоянный доступ к Luna открыт. Повторная покупка не нужна.' : 'Your permanent Luna access is open. No further purchase is needed.')
           : isMonthly
@@ -4450,7 +4371,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
             <div className="absolute inset-0 grid place-items-center bg-night/80 p-5 text-center backdrop-blur-sm">
               <div className="w-full rounded-[22px] border border-gold/25 bg-gradient-to-br from-gold/15 via-lavender/10 to-night/80 p-4 shadow-glow">
                 <CheckCircle className="mx-auto text-gold" size={42} />
-                <h3 className="mt-3 font-serif text-3xl">{copy[language].sessionComplete}</h3>
+                <h3 className="type-page-title mt-3">{copy[language].sessionComplete}</h3>
                 <p className="mt-2 text-sm text-cream/75">{copy[language].sessionCompleteBody}</p>
                 <div className="mt-4 grid grid-cols-2 gap-2 text-left text-xs">
                   <span className="rounded-2xl bg-night/70 p-3 text-lavender">
@@ -4476,7 +4397,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
         </div>
 
         <div className="mt-5 text-center">
-          <h2 className="luna-editorial-title mt-1 text-[36px] leading-[0.98]">{localized.title}</h2>
+          <h2 className="type-page-title mt-1">{localized.title}</h2>
           <p className="mt-1 text-sm text-cream/70">{localized.subtitle}</p>
           {!localized.hasSelectedLanguageAudio && <p className="mt-2 text-xs text-gold">{copy[language].availableInEnglish}</p>}
           <p className="mt-2 text-sm text-lavender">{text(language, 'elapsedRemaining', { elapsed: formatTime(position), remaining: formatTime(Math.max(0, duration - position)) })}</p>
@@ -4639,7 +4560,7 @@ function BreathCirclePage({
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].categoryBreath}</p>
-          <h2 className="font-serif text-3xl font-semibold">{copy[language].breathCircle}</h2>
+          <h2 className="type-page-title">{copy[language].breathCircle}</h2>
           <p className="mt-1 text-sm text-lavender">{copy[language].breathCircleSubtitle}</p>
         </div>
         <button onClick={onClose} className="grid h-11 w-11 place-items-center rounded-full bg-surface text-cream" aria-label={copy[language].close}>
@@ -4655,7 +4576,7 @@ function BreathCirclePage({
           >
             <div>
               <p className="text-xs uppercase tracking-[0.18em] text-gold">{phase.label}</p>
-              <p className="mt-1 font-serif text-2xl">{formatTime(Math.max(0, durationSeconds - elapsed))}</p>
+              <p className="type-metric-large mt-1">{formatTime(Math.max(0, durationSeconds - elapsed))}</p>
             </div>
           </div>
         </div>
@@ -4683,7 +4604,7 @@ function BreathCirclePage({
       {done ? (
         <div className="rounded-[24px] border border-gold/20 bg-gold/10 p-4 text-center">
           <CheckCircle className="mx-auto text-gold" />
-          <h3 className="mt-2 font-serif text-2xl">{copy[language].breathComplete}</h3>
+          <h3 className="type-section-title mt-2">{copy[language].breathComplete}</h3>
           <p className="mt-2 text-sm text-cream/75">
             {mode === 'reset'
               ? text(language, 'minutesToReturn', { minutes })
@@ -4898,7 +4819,7 @@ function MoonGardenPage({
       {!embedded && (
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="luna-editorial-title text-[34px] leading-none">{copy[language].moonGarden}</h2>
+            <h2 className="type-page-title">{copy[language].moonGarden}</h2>
             <p className="mt-1 text-sm text-lavender">{copy[language].moonGardenBody}</p>
           </div>
           {onBack && <button onClick={onBack} className="luna-icon-button" aria-label={copy[language].close}><X size={18} /></button>}
@@ -5603,9 +5524,7 @@ function ProfilePage({
 
   return (
     <div className="luna-page space-y-4">
-      <div>
-        <h2 className="text-[28px] font-semibold tracking-[-0.04em] text-cream">{copy[language].profile}</h2>
-      </div>
+      <PageHeader title={copy[language].profile} />
 
       <section className="flex items-center gap-4 px-1">
         <button
@@ -5613,7 +5532,7 @@ function ProfilePage({
           className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border border-gold/30 bg-white/[0.045] shadow-glow focus:outline-none focus:ring-2 focus:ring-gold/35"
           aria-label={language === 'en' ? 'Change profile photo' : 'Изменить фото профиля'}
         >
-          {avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : <MoonMark className="h-full w-full border-0" />}
+          {avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : <BrandLogo size={80} className="h-full w-full border-0" />}
           <span className="absolute -bottom-1 -right-1 grid h-11 w-11 place-items-center rounded-full border border-white/15 bg-night/90 text-gold shadow-glow backdrop-blur">
             <Camera size={17} />
           </span>
@@ -6092,7 +6011,7 @@ function AdminPage({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.18em] text-gold">AI Guided Meditation</p>
-          <h2 className="font-serif text-3xl font-semibold">LUNA Admin</h2>
+          <h2 className="type-page-title">LUNA Admin</h2>
         </div>
         <button onClick={onBack} className="shrink-0 rounded-full bg-gold px-4 py-2 text-sm font-semibold text-night">Back to Luna</button>
       </div>
@@ -6643,7 +6562,7 @@ function AdminPreview({ form }: { form: MeditationPayload }) {
           <span className="absolute bottom-2 left-2 rounded-full bg-gold px-2 py-1 text-[10px] font-semibold text-night">{form.premium ? 'Premium' : 'Free'}</span>
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-serif text-xl font-semibold">{form.title || 'Meditation title'}</h3>
+          <h3 className="type-section-title truncate">{form.title || 'Meditation title'}</h3>
           <p className="mt-1 line-clamp-1 text-xs text-lavender">{form.subtitle || 'Subtitle'}</p>
           <p className="mt-2 text-sm capitalize text-cream/70">{formatTime(form.duration)} · {form.category.replace('-', ' ')} · {form.published ? 'Published' : 'Draft'}</p>
           <button type="button" className="mt-4 inline-flex items-center gap-2 rounded-[18px] bg-gold px-4 py-2 text-sm font-semibold text-night">
@@ -6666,7 +6585,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 function EmptyState({ title, body }: { title: string; body: string }) {
-  return <div className="luna-surface rounded-[24px] p-4 text-center"><Sparkles className="mx-auto text-gold" /><h3 className="mt-3 font-serif text-xl font-semibold">{title}</h3><p className="mt-1 text-sm text-lavender">{body}</p></div>;
+  return <div className="luna-surface rounded-[24px] p-4 text-center"><Sparkles className="mx-auto text-gold" /><h3 className="type-section-title mt-3">{title}</h3><p className="mt-1 text-sm text-lavender">{body}</p></div>;
 }
 
 export default App;

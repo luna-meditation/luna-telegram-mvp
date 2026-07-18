@@ -18,7 +18,22 @@ test('quota exhaustion disables retry and the composer', () => {
 });
 
 test('recommendation stays associated with its assistant message', () => {
-  assert.match(source, /message\.metadata\?\.recommendedMeditationId/);
+  assert.match(source, /recommendationIdForMessage\(message\)/);
+  assert.match(source, /metadata\.recommendedMeditationId/);
   assert.match(source, /key=\{message\.id\}/);
   assert.doesNotMatch(source, /key=\{index\}/);
+});
+
+test('an explicit cleared meditation action cannot revive a stale legacy card', () => {
+  assert.match(source, /hasOwnProperty\.call\(metadata, 'meditationAction'\)/);
+  assert.match(source, /metadata\.meditationAction\?\.meditationId \?\? null/);
+  assert.match(source, /<ChatMeditationCard/);
+  assert.equal((source.match(/<ChatMeditationCard/g) ?? []).length, 1);
+});
+
+test('chat keeps all quick prompts in a horizontal rail and normalizes long generated titles', () => {
+  assert.match(source, /className="luna-quick-prompts"/);
+  assert.doesNotMatch(source, /prompts\.slice/);
+  assert.match(source, /displayConversationTitle/);
+  assert.match(source, /clean\.length <= 48/);
 });

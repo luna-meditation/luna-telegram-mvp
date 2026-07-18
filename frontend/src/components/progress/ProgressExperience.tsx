@@ -315,6 +315,7 @@ function ThisWeek({ profile, language }: { profile: ProfileStats | null; languag
         <div><span>{t.listeningMinutes}</span><strong>{week.listeningMinutes} {t.min}</strong></div>
         <div><span>{t.completedPractices}</span><strong>{week.completedSessions}</strong></div>
       </div>
+      <p className="progress-v4-active-help">{t.activeDayHelp}</p>
       <div className="progress-v4-activity-heading"><span>{t.weeklyActivity}</span><small>{t.minutesUnit}</small></div>
       <div className="progress-v4-bars" role="group" aria-label={t.weeklyActivity}>
         {week.days.map((day) => {
@@ -382,6 +383,7 @@ function MoodJourney({ profile, meditations, language }: { profile: ProfileStats
         <Moon size={21} aria-hidden="true" />
       </div>
       <div className="progress-v4-mood-chart" aria-label={t.moodJourney}>
+        <p className="sr-only">{t.chartSummary}</p>
         <div className="progress-v4-mood-legend">
           {lines.map((line) => <span key={line.key} className={`signal-${line.key}`}><i />{line.label}</span>)}
         </div>

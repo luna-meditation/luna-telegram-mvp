@@ -11,9 +11,9 @@ import {
   type LunaMessage,
   type Meditation
 } from '../api';
-import { useChatViewport } from '../hooks/useChatViewport';
+import { BrandLogo } from '../design-system/components/BrandLogo';
+import { ChatMeditationCard } from '../design-system/components/ChatMeditationCard';
 import { recordLunaStage } from '../runtime-diagnostics';
-import { formatMeditationDuration } from '../utils/duration';
 
 type LunaChatProps = {
   firstName: string;
@@ -83,13 +83,19 @@ function errorDetails(error: unknown, language: AppLanguage): Omit<FailedTurn, '
   };
 }
 
-function localizeMeditation(meditation: Meditation, language: AppLanguage) {
-  const translation = meditation.translations?.[language];
-  return {
-    title: translation?.title || meditation.title,
-    subtitle: translation?.subtitle || meditation.subtitle,
-    description: translation?.description || meditation.description
-  };
+export function recommendationIdForMessage(message: LunaMessage) {
+  const metadata = message.metadata;
+  if (!metadata) return null;
+  if (Object.prototype.hasOwnProperty.call(metadata, 'meditationAction')) {
+    return metadata.meditationAction?.meditationId ?? null;
+  }
+  return metadata.recommendedMeditationId ?? null;
+}
+
+export function displayConversationTitle(title: string | null | undefined, language: AppLanguage) {
+  const clean = title?.replace(/\s+/g, ' ').trim() ?? '';
+  if (clean && clean.length <= 48 && clean.split(' ').length <= 7 && !/[.!?]{2,}/.test(clean)) return clean;
+  return language === 'ru' ? 'Luna' : 'Luna';
 }
 
 function dateLabel(value: string, language: AppLanguage) {
@@ -115,11 +121,9 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const nearBottomRef = useRef(true);
   const renderedCardsRef = useRef(new Set<string>());
-  useChatViewport(true);
-
   const prompts = language === 'ru'
-    ? ['🌙 Не могу уснуть', '🧠 Мысли не останавливаются', '💼 Я перегружен(а)', '❤️ Мне нужно поговорить', '✨ Подбери медитацию']
-    : ["🌙 I can't sleep", "🧠 My thoughts won't stop", "💼 I'm overwhelmed", '❤️ I need someone to talk to', '✨ Recommend a meditation'];
+    ? ['Не могу уснуть', 'Мысли не останавливаются', 'Я перегружен(а)', 'Мне нужно поговорить', 'Подбери медитацию']
+    : ["I can't sleep", "My thoughts won't stop", "I'm overwhelmed", 'I need someone to talk to', 'Recommend a meditation'];
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -235,7 +239,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
     recordLunaStage('model_request_started', { requestId: clientRequestId }, initData);
     try {
       const result = await sendLunaMessage({ conversationId: activeId || undefined, message: clean, language, requestId: clientRequestId }, initData);
-      const recommendationId = result.message.metadata?.meditationAction?.meditationId ?? result.message.metadata?.recommendedMeditationId ?? null;
+      const recommendationId = recommendationIdForMessage(result.message);
       const pendingState = result.message.metadata?.pending_state;
       recordLunaStage('model_result_received', { requestId: clientRequestId, hasAssistantMessage: Boolean(result.message.content) }, initData);
       recordLunaStage('pending_state_loaded', { requestId: clientRequestId, pendingStatePresent: Boolean(pendingState || result.message.metadata?.pending_action) }, initData);
@@ -276,13 +280,13 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
     }
   };
 
-  const activeTitle = conversations.find((conversation) => conversation.id === activeId)?.title || 'Luna';
+  const activeTitle = displayConversationTitle(conversations.find((conversation) => conversation.id === activeId)?.title, language);
   const visibleMessages = useMemo(() => messages.filter((message) => message.role === 'user' || message.role === 'assistant'), [messages]);
 
   useEffect(() => {
     visibleMessages.forEach((message) => {
       if (message.role !== 'assistant' || renderedCardsRef.current.has(message.id)) return;
-      const recommendationId = message.metadata?.meditationAction?.meditationId ?? message.metadata?.recommendedMeditationId;
+      const recommendationId = recommendationIdForMessage(message);
       if (!recommendationId) return;
       renderedCardsRef.current.add(message.id);
       recordLunaStage('card_render_attempted', { requestId: message.request_id ?? null, meditationId: recommendationId }, initData);
@@ -320,7 +324,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
     <section className="luna-live-chat" aria-busy={thinking}>
       <header className="luna-live-chat-header">
         <button type="button" onClick={() => { setScreen('overview'); setError(''); }} aria-label={language === 'ru' ? 'История разговоров' : 'Conversation history'}><History size={19} /></button>
-        <div><h2>{activeTitle}</h2><p>{thinking ? (language === 'ru' ? 'Luna думает...' : 'Luna is reflecting...') : (language === 'ru' ? 'Рядом и слушает' : 'Here and listening')}</p></div>
+        <div><BrandLogo size={28} eager /><span><h2>{activeTitle}</h2><p>{thinking ? (language === 'ru' ? 'Luna думает...' : 'Luna is reflecting...') : (language === 'ru' ? 'Рядом и слушает' : 'Here and listening')}</p></span></div>
         <button type="button" onClick={() => void removeConversation()} disabled={!activeId} aria-label={language === 'ru' ? 'Удалить разговор' : 'Delete conversation'}><Trash2 size={17} /></button>
       </header>
 
@@ -336,47 +340,29 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
       >
         {loading ? (
           <div className="space-y-3 px-2" aria-label={language === 'ru' ? 'Загрузка разговора' : 'Loading conversation'}>
+            <BrandLogo size={48} className="mx-auto" eager />
             <div className="luna-ai-loading-line" />
             <div className="luna-ai-loading-line ml-auto max-w-[76%]" />
             <div className="luna-ai-loading-line max-w-[86%]" />
           </div>
         ) : !visibleMessages.length ? (
           <div className="luna-live-empty">
-            <div className="luna-breathing-orb" aria-hidden="true" />
+            <BrandLogo size={88} alt={language === 'ru' ? 'Логотип Luna Meditation' : 'Luna Meditation logo'} eager />
             <h3>{language === 'ru' ? `Я рядом, ${firstName || 'друг'}.` : `I'm here, ${firstName || 'friend'}.`}</h3>
             <p>{language === 'ru' ? 'Расскажи, что у тебя на душе. Я выслушаю без осуждения.' : "Tell me what's on your mind. I'll listen without judgment."}</p>
-            <div>{prompts.slice(0, 4).map((prompt) => <button key={prompt} type="button" onClick={() => setDraft(prompt.replace(/^[^\p{L}\p{N}]+/u, '').trim())}>{prompt}</button>)}</div>
+            <div className="luna-quick-prompts" aria-label={language === 'ru' ? 'Быстрые темы' : 'Quick prompts'}>{prompts.map((prompt) => <button key={prompt} type="button" onClick={() => setDraft(prompt)}>{prompt}</button>)}</div>
           </div>
         ) : visibleMessages.map((message) => {
-          const recommendationId = message.metadata?.meditationAction?.meditationId ?? message.metadata?.recommendedMeditationId;
+          const recommendationId = recommendationIdForMessage(message);
           const recommendation = recommendationId
             ? meditations.find((item) => item.id === recommendationId) ?? message.metadata?.recommendedMeditation ?? undefined
             : undefined;
-          const localized = recommendation ? localizeMeditation(recommendation, language) : null;
-          const isPremium = Boolean(recommendation?.premium);
           return (
             <div key={message.id} className={`luna-live-message-row luna-live-message-${message.role}`}>
               {message.role === 'assistant' ? <span className="luna-message-orb" aria-hidden="true" /> : null}
               <div className="luna-live-message-content">
                 <div className="luna-message-bubble"><p>{message.content}</p></div>
-                {recommendation && localized ? (
-                  <button
-                    type="button"
-                    className="luna-recommendation-message"
-                    aria-label={isPremium && !hasPremium
-                      ? (language === 'ru' ? `Открыть Premium: ${localized.title}` : `Open Premium: ${localized.title}`)
-                      : (language === 'ru' ? `Начать практику: ${localized.title}` : `Start practice: ${localized.title}`)}
-                    onClick={() => onOpenMeditation(recommendation)}
-                  >
-                    <img src={recommendation.cover_image} alt="" />
-                    <span className="luna-recommendation-message-copy">
-                      <strong>{localized.title}</strong>
-                      <small>{localized.subtitle} · {formatMeditationDuration(recommendation.duration, language)} · {isPremium ? 'Premium' : (language === 'ru' ? 'Бесплатно' : 'Free')}</small>
-                      <em>{localized.description}</em>
-                    </span>
-                    <b>{language === 'ru' ? 'Начать практику' : 'Start practice'}</b>
-                  </button>
-                ) : null}
+                {recommendation ? <ChatMeditationCard meditation={recommendation} language={language} hasPremium={hasPremium} onOpen={() => onOpenMeditation(recommendation)} /> : null}
               </div>
             </div>
           );

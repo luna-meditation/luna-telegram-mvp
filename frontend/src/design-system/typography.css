@@ -1,0 +1,60 @@
+.type-display,
+.type-page-title,
+.type-hero-question,
+.type-section-title,
+.type-card-title,
+.type-body,
+.type-body-small,
+.type-label,
+.type-metric-large,
+.type-button,
+.type-navigation {
+  font-family: var(--font-sans);
+}
+
+.type-display {
+  font-size: var(--type-display-size);
+  font-weight: 700;
+  letter-spacing: -0.05em;
+  line-height: 0.98;
+}
+
+.type-page-title {
+  font-size: var(--type-page-title-size);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1.04;
+}
+
+.type-hero-question {
+  font-size: var(--type-hero-size);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.08;
+}
+
+.type-section-title {
+  font-size: var(--type-section-size);
+  font-weight: 700;
+  letter-spacing: -0.018em;
+  line-height: 1.25;
+}
+
+.type-card-title {
+  font-size: var(--type-card-size);
+  font-weight: 650;
+  line-height: 1.3;
+}
+
+.type-body { font-size: var(--type-body-size); line-height: 1.6; }
+.type-body-small { font-size: var(--type-body-small-size); line-height: 1.5; }
+.type-label { font-size: var(--type-label-size); font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+.type-metric-large { font-size: clamp(2rem, 10vw, 3rem); font-weight: 700; letter-spacing: -0.05em; line-height: 1; }
+.type-button { font-size: var(--type-button-size); font-weight: 700; line-height: 1; }
+.type-navigation { font-size: var(--type-navigation-size); font-weight: 650; line-height: 1; }
+
+.type-editorial {
+  font-family: var(--font-editorial);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}

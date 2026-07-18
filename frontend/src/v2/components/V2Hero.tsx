@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Brain, CloudMoon, Focus, HeartPulse, Sparkles, type LucideIcon } from 'lucide-react';
 
 type MoodChip = 'Sleep' | 'Calm' | 'Focus' | 'Anxiety' | 'Breath' | 'Energy';
 
@@ -36,12 +37,12 @@ export function V2Hero({
   onCheckinDetails,
   onMood
 }: V2HeroProps) {
-  const visualMoods: Array<{ mood: MoodChip; active: MoodChip[]; symbol: string; label: Record<'en' | 'ru', string> }> = [
-    { mood: 'Focus', active: ['Focus', 'Energy'], symbol: '😊', label: { en: 'Great', ru: 'Отлично' } },
-    { mood: 'Calm', active: ['Calm'], symbol: '🙂', label: { en: 'Good', ru: 'Хорошо' } },
-    { mood: 'Breath', active: ['Breath'], symbol: '😐', label: { en: 'Meh', ru: 'Норм' } },
-    { mood: 'Anxiety', active: ['Anxiety'], symbol: '😟', label: { en: 'Anxious', ru: 'Тревожно' } },
-    { mood: 'Sleep', active: ['Sleep'], symbol: '😴', label: { en: 'Tired', ru: 'Устал' } }
+  const visualMoods: Array<{ mood: MoodChip; active: MoodChip[]; icon: LucideIcon; label: Record<'en' | 'ru', string> }> = [
+    { mood: 'Focus', active: ['Focus', 'Energy'], icon: Sparkles, label: { en: 'Great', ru: 'Отлично' } },
+    { mood: 'Calm', active: ['Calm'], icon: Focus, label: { en: 'Good', ru: 'Хорошо' } },
+    { mood: 'Breath', active: ['Breath'], icon: HeartPulse, label: { en: 'Meh', ru: 'Норм' } },
+    { mood: 'Anxiety', active: ['Anxiety'], icon: Brain, label: { en: 'Anxious', ru: 'Тревожно' } },
+    { mood: 'Sleep', active: ['Sleep'], icon: CloudMoon, label: { en: 'Tired', ru: 'Устал' } }
   ];
   const heroImage = '/images/home/hero-night.png';
   const [imageFailed, setImageFailed] = useState(false);
@@ -69,7 +70,7 @@ export function V2Hero({
 
       {moodSaved && activeMood ? (
         <div className="home-v2-mood-saved" role="status">
-          <span>{visualMoods.find((item) => item.active.includes(activeMood))?.symbol ?? '◌'}</span>
+          {(() => { const SavedIcon = visualMoods.find((item) => item.active.includes(activeMood))?.icon ?? Focus; return <span><SavedIcon size={16} aria-hidden="true" /></span>; })()}
           <strong>{checkinLine}</strong>
           <div className="home-v2-mood-actions">
             <button type="button" onClick={onCheckinDetails}>{detailsLabel}</button>
@@ -78,7 +79,7 @@ export function V2Hero({
         </div>
       ) : (
         <div className="home-v2-mood-row" aria-label={checkinLine}>
-          {visualMoods.map(({ mood, active, symbol, label }) => (
+          {visualMoods.map(({ mood, active, icon: Icon, label }) => (
           <button
             key={mood}
             type="button"
@@ -87,7 +88,7 @@ export function V2Hero({
             className={`home-v2-mood-pill ${activeMood && active.includes(activeMood) ? 'home-v2-mood-pill-active' : ''}`}
             title={moodLabel(mood)}
           >
-            <span>{symbol}</span>
+            <span><Icon size={15} aria-hidden="true" /></span>
             <small>{label[language]}</small>
           </button>
           ))}

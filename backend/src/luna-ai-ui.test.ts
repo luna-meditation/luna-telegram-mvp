@@ -4,6 +4,9 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 
 const componentPath = resolve(process.cwd(), '../frontend/src/components/LunaChat.tsx');
+const chatCardPath = resolve(process.cwd(), '../frontend/src/design-system/components/ChatMeditationCard.tsx');
+const viewportPath = resolve(process.cwd(), '../frontend/src/hooks/useChatViewport.ts');
+const appPath = resolve(process.cwd(), '../frontend/src/App.tsx');
 
 test('Luna opens directly as chat and renders a message input immediately', () => {
   const source = readFileSync(componentPath, 'utf8');
@@ -29,26 +32,35 @@ test('quota exhaustion has no Retry and disables the composer', () => {
 
 test('suggestion chips fill the input instead of hiding typing behind a start step', () => {
   const source = readFileSync(componentPath, 'utf8');
-  assert.match(source, /setDraft\(prompt\.replace/);
+  assert.match(source, /setDraft\(prompt\)/);
+  assert.match(source, /className="luna-quick-prompts"/);
+  assert.doesNotMatch(source, /prompts\.slice/);
   assert.doesNotMatch(source, /prompts\.map\(\(prompt\) => <button key=\{prompt\} type="button" onClick=\{\(\) => beginConversation\(prompt\)/);
 });
 
 test('Luna initial chat has no dashboard thought block and uses iOS-safe viewport architecture', () => {
   const source = readFileSync(componentPath, 'utf8');
+  const viewport = readFileSync(viewportPath, 'utf8');
+  const app = readFileSync(appPath, 'utf8');
   assert.doesNotMatch(source, /Today.?s Thought|Мысль дня|dailyThought/);
-  assert.match(source, /useChatViewport\(true\)/);
+  assert.match(app, /useAppViewport\(true\)/);
+  assert.match(viewport, /window\.visualViewport/);
+  assert.match(viewport, /viewportChanged/);
+  assert.match(viewport, /--app-keyboard-inset/);
   assert.match(source, /ref=\{textareaRef\}/);
 });
 
-test('recommended meditation ids render as an in-chat card with an Open action', () => {
+test('recommended meditation ids render as one shared in-chat practice card', () => {
   const source = readFileSync(componentPath, 'utf8');
-  assert.match(source, /message\.metadata\?\.recommendedMeditationId/);
-  assert.match(source, /message\.metadata\?\.meditationAction\?\.meditationId/);
+  const card = readFileSync(chatCardPath, 'utf8');
+  assert.match(source, /metadata\.recommendedMeditationId/);
+  assert.match(source, /metadata\.meditationAction\?\.meditationId/);
+  assert.match(source, /hasOwnProperty\.call\(metadata, 'meditationAction'\)/);
   assert.match(source, /meditations\.find\(\(item\) => item\.id === recommendationId\)/);
   assert.match(source, /message\.metadata\?\.recommendedMeditation/);
-  assert.match(source, /className="luna-recommendation-message"/);
-  assert.match(source, /onClick=\{\(\) => onOpenMeditation\(recommendation\)\}/);
-  assert.match(source, /language === 'ru' \? 'Начать практику' : 'Start practice'/);
-  assert.match(source, /language === 'ru' \? 'Бесплатно' : 'Free'/);
-  assert.match(source, /localized\.description/);
+  assert.match(source, /<ChatMeditationCard/);
+  assert.match(source, /onOpen=\{\(\) => onOpenMeditation\(recommendation\)\}/);
+  assert.match(card, /language === 'ru' \? 'Начать практику' : 'Start practice'/);
+  assert.match(card, /language === 'ru' \? 'Бесплатно' : 'Free'/);
+  assert.match(card, /formatMeditationDuration/);
 });

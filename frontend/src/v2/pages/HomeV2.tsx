@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { Crown } from 'lucide-react';
 import type { AppLanguage, Meditation } from '../../api';
+import { BrandLogo } from '../../design-system/components/BrandLogo';
 import { V2Continue } from '../components/V2Continue';
 import { V2Discovery, V2PracticeTiles } from '../components/V2Discovery';
 import { V2Hero, V2HeroFallback } from '../components/V2Hero';
@@ -169,6 +171,7 @@ export function HomeV2(props: HomeV2Props) {
         meditationView={props.meditationView}
         categoryLabel={props.categoryLabel}
         durationLabel={props.durationLabel}
+        premiumLabel={props.labels.premium}
       />
 
       <V2Continue
@@ -216,7 +219,7 @@ export function HomeV2(props: HomeV2Props) {
                 onClick={() => props.onSoundSelect(scene)}
                 className={props.selectedScene?.id === scene.id ? 'home-v2-choice home-v2-choice-active' : 'home-v2-choice'}
               >
-                {scene.title[props.language]} {locked ? '⭐' : ''}
+                {scene.title[props.language]} {locked ? <Crown size={14} aria-label={props.labels.premium} /> : null}
               </button>
             );
           })}
@@ -224,7 +227,7 @@ export function HomeV2(props: HomeV2Props) {
       ) : null}
 
       <button type="button" onClick={props.onAddHome} className="home-v2-home-action">
-        <img src="/assets/icons/luna-crescent-icon.svg" alt="" loading="lazy" />
+        <BrandLogo size={42} alt={props.language === 'ru' ? 'Логотип Luna Meditation' : 'Luna Meditation logo'} />
         <span>
           <strong>{props.labels.addHomeTitle}</strong>
           <small>{props.homeScreenMessage || props.labels.addHomeBody}</small>

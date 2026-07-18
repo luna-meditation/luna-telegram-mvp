@@ -110,10 +110,17 @@ test('Mood Journey legend exactly matches graph colors and exposes a relative sc
 });
 
 test('Journey factual typography follows the Home Inter system while reflection remains editorial', () => {
-  assert.match(homeStyles, /font-family: Inter/);
+  assert.match(homeStyles, /font-family: var\(--font-sans\)/);
   assert.match(stylesSource, /\.journey-hub \.progress-v3-section-heading h3/);
-  assert.match(stylesSource, /\.progress-v4-next-practice h4[^}]*font-family: Inter/s);
-  assert.match(stylesSource, /\.progress-v3-reflection-copy[^}]*font-family: "Playfair Display"/s);
+  assert.match(stylesSource, /\.progress-v4-next-practice h4[^}]*font-family: var\(--font-sans\)/s);
+  assert.match(stylesSource, /\.progress-v3-reflection-copy[^}]*font-family: var\(--font-editorial\)/s);
+});
+
+test('Active days are explicitly explained and Mood Journey has a chart summary', () => {
+  assert.match(progressCopySource, /An active day includes a check-in or completed listening activity\./);
+  assert.match(progressCopySource, /Активный день включает чек-ин или завершённое прослушивание\./);
+  assert.match(progressSource, /t\.activeDayHelp/);
+  assert.match(progressSource, /className="sr-only">\{t\.chartSummary\}/);
 });
 
 test('Personal Patterns encode explicit minimum evidence thresholds', () => {
