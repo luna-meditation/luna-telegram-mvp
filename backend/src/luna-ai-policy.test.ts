@@ -4,6 +4,7 @@ import {
   avoidLibraryInstructionWhenCardExists,
   containsMasculineLunaSelfReference,
   detectConversationLanguage,
+  resolveResponseLanguage,
   enforceLunaFeminineIdentity,
   formatMeditationDuration,
   enforceCardClaimConsistency,
@@ -128,6 +129,15 @@ test('detects the current message language, including language switches and mixe
   assert.equal(detectConversationLanguage('I feel anxious today', 'ru'), 'en');
   assert.equal(detectConversationLanguage('Luna, мне тревожно today', 'en'), 'ru');
   assert.equal(detectConversationLanguage('ok', 'ru'), 'ru');
+});
+
+test('explicit interface locale wins over message history unless the user clearly asks to switch', () => {
+  assert.equal(resolveResponseLanguage('I feel anxious today', 'en'), 'en');
+  assert.equal(resolveResponseLanguage('Мне тревожно', 'ru'), 'ru');
+  assert.equal(resolveResponseLanguage('Earlier we spoke Russian, but I need help now', 'en'), 'en');
+  assert.equal(resolveResponseLanguage('Earlier we spoke English, но мне нужна помощь', 'ru'), 'ru');
+  assert.equal(resolveResponseLanguage('Please answer in Russian', 'en'), 'ru');
+  assert.equal(resolveResponseLanguage('Ответь на английском', 'ru'), 'en');
 });
 
 test('recognizes forbidden masculine Luna self-references', () => {

@@ -61,9 +61,9 @@ test('paid payments refresh access, profile, Moon Seeds, and recent payments', (
   assert.match(appSource, /status === 'paid'/);
 });
 
-test('premium copy uses refresh access instead of App Store restoration language', () => {
-  assert.match(appSource, /restore: 'Refresh access'/);
-  assert.match(appSource, /restore: 'Обновить доступ'/);
+test('premium copy names account access restoration without App Store language', () => {
+  assert.match(appSource, /restore: 'Restore Access'/);
+  assert.match(appSource, /restore: 'Восстановить доступ'/);
   assert.doesNotMatch(appSource, /Restore purchases/);
   assert.doesNotMatch(appSource, /Восстановить покупки/);
 });
@@ -96,8 +96,9 @@ test('Monthly and Lifetime plan CTAs both enter the same direct invoice pipeline
   const pricingSource = appSource.slice(appSource.indexOf('function PricingPage'), appSource.indexOf('function PlanCard'));
   assert.match(pricingSource, /onBuy\('monthly'\)/);
   assert.match(pricingSource, /onBuy\('lifetime'\)/);
-  assert.match(pricingSource, /premiumPrices\.monthly/);
-  assert.match(pricingSource, /premiumPrices\.lifetime/);
+  assert.match(pricingSource, /plans\.monthly\.amountStars/);
+  assert.match(pricingSource, /plans\.lifetime\.amountStars/);
+  assert.match(apiSource, /getPlans/);
 });
 
 test('all Telegram invoice callback statuses restore the primary CTA and paid refreshes account data', () => {

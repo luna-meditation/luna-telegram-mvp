@@ -50,11 +50,11 @@
 
 .app-header-wordmark {
   overflow: hidden;
-  color: rgba(247, 242, 234, 0.72);
+  color: rgba(247, 242, 234, 0.88);
   font-family: var(--font-sans);
   font-size: 0.625rem;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;

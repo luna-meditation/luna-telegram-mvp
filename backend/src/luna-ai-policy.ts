@@ -99,6 +99,14 @@ export function detectConversationLanguage(message: string, fallback: LunaLangua
   return fallback;
 }
 
+export function resolveResponseLanguage(message: string, interfaceLanguage: LunaLanguage): LunaLanguage {
+  const asksForRussian = /(?:reply|answer|respond|write|speak)\s+(?:to me\s+)?in\s+russian|(?:ответь|пиши|говори)\s+(?:мне\s+)?(?:по-)?русски/i.test(message);
+  const asksForEnglish = /(?:reply|answer|respond|write|speak)\s+(?:to me\s+)?in\s+english|(?:ответь|пиши|говори)\s+(?:мне\s+)?(?:на\s+)?английск/i.test(message);
+  if (asksForRussian && !asksForEnglish) return 'ru';
+  if (asksForEnglish && !asksForRussian) return 'en';
+  return interfaceLanguage;
+}
+
 export function containsMasculineLunaSelfReference(message: string) {
   return /(?:^|[\s.!?])я\s+(?:понял|готов|переключился|создан|уверен|рад|сделал|решил)(?=$|[\s,.!?])/i.test(message);
 }

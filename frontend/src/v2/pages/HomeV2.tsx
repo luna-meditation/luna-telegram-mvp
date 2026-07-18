@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Crown } from 'lucide-react';
 import type { AppLanguage, Meditation } from '../../api';
 import { BrandLogo } from '../../design-system/components/BrandLogo';
@@ -36,6 +36,7 @@ type HomeV2Labels = {
   feeling: string;
   todayRecommendation: string;
   checkinSaved: string;
+  checkinToast: string;
   checkins: string;
   moreToExplore: string;
   continueListening: string;
@@ -67,8 +68,8 @@ type HomeV2Props = {
   greeting: string;
   mood?: MoodChip;
   moodSaved: boolean;
+  showCheckinToast: boolean;
   moodSaving: boolean;
-  onChangeMood: () => void;
   onCheckinDetails: () => void;
   moods: MoodChip[];
   setMood: (mood: MoodChip) => void;
@@ -106,8 +107,29 @@ type HomeV2Props = {
 
 export function HomeV2(props: HomeV2Props) {
   const [soundExpanded, setSoundExpanded] = useState(false);
+  const [soundOverflow, setSoundOverflow] = useState(false);
+  const soundChooserRef = useRef<HTMLDivElement | null>(null);
   const activeScene = props.selectedScene ?? props.scenes[0] ?? null;
   const discoveryItems = props.explore.length ? props.explore : props.recentlyPlayed;
+
+  useEffect(() => {
+    if (!soundExpanded) {
+      setSoundOverflow(false);
+      return;
+    }
+
+    const chooser = soundChooserRef.current;
+    if (!chooser) return;
+    const measure = () => setSoundOverflow(chooser.scrollWidth > chooser.clientWidth + 2);
+    measure();
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
+    observer?.observe(chooser);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [props.scenes.length, soundExpanded]);
 
   if (props.loading && !props.daily) {
     return (
@@ -131,11 +153,11 @@ export function HomeV2(props: HomeV2Props) {
           moodLabel={props.moodLabel}
           language={props.language}
           checkinLine={props.checkinLine}
+          checkinToast={props.labels.checkinToast}
+          showCheckinToast={props.showCheckinToast}
           moodSaved={props.moodSaved}
           moodSaving={props.moodSaving}
           changeLabel={props.language === 'ru' ? 'Изменить' : 'Change'}
-          detailsLabel={props.language === 'ru' ? 'Чек-ин' : 'Check-in'}
-          onChangeMood={props.onChangeMood}
           onCheckinDetails={props.onCheckinDetails}
           onMood={props.setMood}
         />
@@ -209,7 +231,7 @@ export function HomeV2(props: HomeV2Props) {
       </section>
 
       {soundExpanded ? (
-        <div className="home-v2-sound-chooser">
+        <div ref={soundChooserRef} className={`home-v2-sound-chooser ${soundOverflow ? 'home-v2-sound-chooser-overflow' : ''}`}>
           {props.scenes.map((scene) => {
             const locked = scene.access === 'premium' && !props.hasPremium;
             return (

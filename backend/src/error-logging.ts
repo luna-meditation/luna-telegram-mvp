@@ -12,6 +12,8 @@ type ErrorContext = {
   telegramId?: number | string | null;
   plan?: string | null;
   stage?: string | null;
+  reminderType?: string | null;
+  deliveryId?: string | null;
   telegramApiError?: unknown;
   rpcName?: string;
   expectedParameterContract?: string;
@@ -102,6 +104,8 @@ export function logBackendError(error: unknown, context: ErrorContext = {}) {
     telegramId: context.telegramId ?? telegramIdFrom(req),
     plan: context.plan ?? null,
     stage: context.stage ?? null,
+    reminderType: context.reminderType ?? null,
+    deliveryId: context.deliveryId ?? null,
     telegramApiError: context.telegramApiError ?? null,
     rpcName: context.rpcName ?? null,
     expectedParameterContract: context.expectedParameterContract ?? null,

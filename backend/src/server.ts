@@ -7,9 +7,11 @@ import { env } from './config.js';
 import { bot, configureTelegramBot, createStarsInvoiceLink, sendStarsInvoice } from './bot.js';
 import {
   createMeditation,
+  createSupportRequest,
   deleteCategory,
   deleteMeditation,
   getAdminDashboard,
+  getAdminSupportRequests,
   getCategories,
   getFavorites,
   getHistory,
@@ -35,6 +37,7 @@ import {
   updateUserNotificationPreferences,
   updateMeditation,
   updateAdminUserAccess,
+  updateSupportRequestStatus,
   upsertCategory,
   upsertDailyCheckin,
   upsertFavorite,
@@ -44,7 +47,7 @@ import {
   type MeditationInput
 } from './db.js';
 import { runMigrations } from './migrations.js';
-import { isPlanId, isValidTelegramInvoiceUrl } from './plans.js';
+import { isPlanId, isValidTelegramInvoiceUrl, plans } from './plans.js';
 import { paymentEligibility } from './payment-policy.js';
 import { logBackendError, type RequestWithId } from './error-logging.js';
 import { PlaybackInputError } from './playback-security.js';
@@ -61,6 +64,8 @@ import {
   getLunaProviderHealth,
   setLunaMemoryEnabled
 } from './luna-ai.js';
+import { startReminderScheduler } from './reminders.js';
+import { supportRequestInputSchema, supportStatusInputSchema } from './support-policy.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -179,6 +184,7 @@ app.use('/api/admin', rateLimit({ windowMs: 60_000, max: 120 }));
 app.use('/api/payments', rateLimit({ windowMs: 60_000, max: 30 }));
 app.use('/api/luna', rateLimit({ windowMs: 60_000, max: 30 }));
 app.use('/api/client-events', rateLimit({ windowMs: 60_000, max: 120 }));
+app.use('/api/support', rateLimit({ windowMs: 60_000, max: 8 }));
 
 app.post(
   '/api/admin/storage/:kind',
@@ -386,6 +392,10 @@ app.get('/api/practices', async (_req, res, next) => {
   }
 });
 
+app.get('/api/plans', (_req, res) => {
+  res.json({ plans });
+});
+
 app.get('/api/categories', async (_req, res, next) => {
   try {
     res.json({ categories: await getCategories() });
@@ -397,7 +407,8 @@ app.get('/api/categories', async (_req, res, next) => {
 app.get('/api/meditations', requireTelegramWebApp, async (req, res, next) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    res.json({ meditations: await getMeditations(authReq.telegramUser.telegram_id) });
+    const timezone = typeof req.query.timezone === 'string' ? req.query.timezone.slice(0, 64) : undefined;
+    res.json({ meditations: await getMeditations(authReq.telegramUser.telegram_id, false, timezone) });
   } catch (error) {
     next(error);
   }
@@ -809,12 +820,24 @@ app.post('/api/profile/notifications', requireTelegramWebApp, async (req, res, n
     const authReq = req as AuthenticatedRequest;
     res.json({
       user: await updateUserNotificationPreferences(authReq.telegramUser.telegram_id, {
-        dailyReminder: Boolean(req.body?.dailyReminder),
+        remindersEnabled: Boolean(req.body?.remindersEnabled ?? req.body?.dailyReminder),
+        reminderTypes: req.body?.reminderTypes,
         newContent: Boolean(req.body?.newContent),
         reminderTime: req.body?.reminderTime,
-        timezone: req.body?.timezone
+        timezone: req.body?.timezone,
+        dailyReminder: Boolean(req.body?.remindersEnabled ?? req.body?.dailyReminder)
       })
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/api/support', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const input = supportRequestInputSchema.parse(req.body);
+    res.status(201).json({ request: await createSupportRequest(authReq.telegramUser.telegram_id, input) });
   } catch (error) {
     next(error);
   }
@@ -862,6 +885,25 @@ app.get('/api/admin/dashboard', requireTelegramWebApp, async (req, res, next) =>
   try {
     if (!assertAdmin(req, res)) return;
     res.json(await getAdminDashboard());
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/api/admin/support', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    if (!assertAdmin(req, res)) return;
+    res.json({ requests: await getAdminSupportRequests() });
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.patch('/api/admin/support/:id', requireTelegramWebApp, async (req, res, next) => {
+  try {
+    if (!assertAdmin(req, res)) return;
+    const { status } = supportStatusInputSchema.parse(req.body);
+    res.json({ request: await updateSupportRequestStatus(req.params.id, status) });
   } catch (error) {
     next(error);
   }
@@ -978,6 +1020,8 @@ app.listen(env.PORT, async () => {
     await bot.launch();
     console.log('Telegram bot launched with polling.');
   }
+
+  startReminderScheduler();
 });
 
 process.once('SIGINT', () => bot.stop('SIGINT'));

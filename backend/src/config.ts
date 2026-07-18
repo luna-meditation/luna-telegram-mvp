@@ -32,6 +32,8 @@ const envSchema = z.object({
   AI_REASONING_EFFORT: z.enum(['minimal', 'low', 'medium', 'high']).default('minimal'),
   AI_RECENT_MESSAGE_LIMIT: z.coerce.number().int().min(4).max(40).default(16),
   AI_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(5000).max(120000).default(30000),
+  AI_CONVERSATION_RETENTION_DAYS: z.coerce.number().int().min(30).max(365).default(90),
+  REMINDER_SCHEDULER_ENABLED: envBoolean.default(true),
   PORT: z.coerce.number().default(4000)
 });
 

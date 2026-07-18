@@ -9,7 +9,7 @@ import {
   memoryCategories,
   avoidLibraryInstructionWhenCardExists,
   containsMasculineLunaSelfReference,
-  detectConversationLanguage,
+  resolveResponseLanguage,
   enforceLunaFeminineIdentity,
   formatMeditationDuration,
   hasInternalDataLeak,
@@ -854,6 +854,14 @@ export async function clearLunaConversations(telegramId: number) {
   if (error) throw error;
 }
 
+async function pruneExpiredLunaConversations(telegramId: number, currentConversationId?: string) {
+  const cutoff = new Date(Date.now() - env.AI_CONVERSATION_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  let query = supabase.from('ai_conversations').delete().eq('telegram_id', telegramId).lt('last_message_at', cutoff);
+  if (currentConversationId) query = query.neq('id', currentConversationId);
+  const { error } = await query;
+  if (error) console.warn('[Luna AI conversation retention cleanup failed]', { user: userHash(telegramId), error: error.message });
+}
+
 export async function getLunaMemory(telegramId: number) {
   const [{ data: user, error: userError }, { data: memories, error: memoryError }] = await Promise.all([
     supabase.from('users').select('ai_memory_enabled').eq('telegram_id', telegramId).single(),
@@ -880,10 +888,11 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
   if (!env.AI_CHAT_ENABLED) throw new LunaAiError('chat_disabled', 'Luna AI chat is not enabled.', 503);
   if (!env.OPENAI_API_KEY) throw new LunaAiError('missing_api_key', 'Luna AI is not configured.', 503);
   const input = lunaChatInputSchema.parse(rawInput);
-  const responseLanguage = detectConversationLanguage(input.message, input.language);
+  const responseLanguage = resolveResponseLanguage(input.message, input.language);
   const telegramId = user.telegram_id;
 
   await upsertUser(user);
+  await pruneExpiredLunaConversations(telegramId, input.conversationId);
   const access = await getUserAccess(telegramId);
   const limit = access.hasPremium ? env.AI_PREMIUM_MAX_MESSAGES_PER_DAY : env.AI_MAX_MESSAGES_PER_DAY;
   const reservation = await reserveChatRequest(telegramId, input.requestId, limit, input.conversationId);

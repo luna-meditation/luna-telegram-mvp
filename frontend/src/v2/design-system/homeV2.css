@@ -514,6 +514,11 @@
   scrollbar-width: none;
 }
 
+.home-v2-sound-chooser-overflow {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 16px), transparent);
+}
+
 .home-v2-sound-chooser::-webkit-scrollbar {
   display: none;
 }
@@ -524,9 +529,9 @@
   border: 1px solid rgba(221, 218, 255, 0.1);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
-  padding: 0 12px;
+  padding: 0 9px;
   color: var(--v2-muted);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 650;
 }
 
@@ -899,21 +904,50 @@
   position: relative;
   z-index: 3;
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin: 0 14px 14px;
-  min-height: 52px;
-  padding: 8px 10px;
+  min-height: 48px;
+  padding: 6px 8px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 18px;
-  background: rgba(18, 17, 46, 0.72);
+  background: rgba(18, 17, 46, 0.48);
   backdrop-filter: blur(18px);
 }
 
-.home-v2-mood-saved > span { font-size: 21px; text-align: center; }
+.home-v2-mood-saved > span { display: grid; place-items: center; color: rgba(245, 241, 233, 0.75); }
 .home-v2-mood-saved strong { overflow: hidden; font-size: 12px; font-weight: 600; color: rgba(245, 241, 233, 0.9); text-overflow: ellipsis; white-space: nowrap; }
 .home-v2-mood-saved button { min-height: 36px; padding: 0 10px; border-radius: 12px; color: #d9b85f; font-size: 11px; font-weight: 700; }
-.home-v2-mood-actions { display: flex; align-items: center; gap: 2px; }
-.home-v2-mood-actions button:first-child { color: rgba(245, 241, 233, 0.62); }
+.home-v2-mood-actions { display: flex; align-items: center; }
+.home-v2-mood-actions button:first-child { color: #d9b85f; }
 .home-v2-mood-pill:disabled { pointer-events: none; opacity: 0.58; }
+
+.home-v2-checkin-toast {
+  position: absolute;
+  right: 18px;
+  bottom: 76px;
+  left: 18px;
+  z-index: 5;
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(244, 214, 122, 0.22);
+  border-radius: 999px;
+  background: rgba(11, 14, 39, 0.7);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.25);
+  color: rgba(250, 246, 237, 0.94);
+  font-size: 11px;
+  backdrop-filter: blur(18px);
+  animation: homeV2CheckinToast 2600ms ease both;
+}
+
+.home-v2-checkin-toast span { color: #f4d67a; }
+
+@keyframes homeV2CheckinToast {
+  0% { opacity: 0; transform: translateY(8px) scale(0.98); }
+  12%, 82% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-3px) scale(0.99); }
+}

@@ -211,11 +211,39 @@ export type ProfileStats = {
   };
 };
 
+export type ReminderType = 'daily' | 'morning' | 'evening' | 'streak_risk' | 'inactivity' | 'weekly_summary';
+
 export type NotificationPreferences = {
+  remindersEnabled: boolean;
+  reminderTypes: ReminderType[];
+  consentedAt: string | null;
   dailyReminder: boolean;
   newContent: boolean;
   reminderTime: string;
   timezone: string;
+};
+
+export type PlanCatalog = Record<'monthly' | 'lifetime', {
+  id: 'monthly' | 'lifetime';
+  title: string;
+  amountStars: number;
+  days?: number;
+}>;
+
+export type SupportCategory = 'problem' | 'feedback' | 'payment' | 'contact' | 'account_deletion';
+export type SupportStatus = 'new' | 'in_progress' | 'resolved';
+export type AdminSupportRequest = {
+  id: string;
+  category: SupportCategory;
+  message: string;
+  contact: string | null;
+  app_version: string;
+  build_sha: string;
+  platform: string;
+  status: SupportStatus;
+  created_at: string;
+  updated_at: string;
+  users?: { first_name?: string | null; username?: string | null } | null;
 };
 
 export type DailyCheckin = {
@@ -400,7 +428,13 @@ export async function getCategories(): Promise<Category[]> {
 }
 
 export async function getMeditations(initData?: string): Promise<Meditation[]> {
-  const response = await request<{ meditations: Meditation[] }>('/api/meditations', undefined, initData);
+  let timezone = 'UTC';
+  try {
+    timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  } catch {
+    timezone = 'UTC';
+  }
+  const response = await request<{ meditations: Meditation[] }>(`/api/meditations?timezone=${encodeURIComponent(timezone)}`, undefined, initData);
   return response.meditations;
 }
 
@@ -455,7 +489,7 @@ export async function heartbeatPlaybackSession(sessionId: string, lastPosition: 
 }
 
 export async function saveBreathSession(input: {
-  mode: 'calm' | 'box' | 'reset';
+  mode: 'calm' | 'box' | '478' | 'coherent' | 'triangle' | 'sigh' | 'anxiety_reset' | 'sleep' | 'morning_energy';
   duration_seconds: number;
   breath_count: number;
   local_date?: string;
@@ -693,6 +727,35 @@ export async function updateNotificationPreferences(preferences: NotificationPre
   return request<{ user: { notification_preferences: NotificationPreferences } }>('/api/profile/notifications', {
     method: 'POST',
     body: JSON.stringify(preferences)
+  }, initData);
+}
+
+export async function getPlans() {
+  return request<{ plans: PlanCatalog }>('/api/plans');
+}
+
+export async function submitSupportRequest(input: {
+  category: SupportCategory;
+  message: string;
+  contact?: string;
+  appVersion?: string;
+  buildSha?: string;
+  platform?: string;
+}, initData?: string) {
+  return request<{ request: { id: string; category: SupportCategory; status: SupportStatus; created_at: string } }>('/api/support', {
+    method: 'POST',
+    body: JSON.stringify(input)
+  }, initData);
+}
+
+export async function getAdminSupportRequests(initData?: string) {
+  return request<{ requests: AdminSupportRequest[] }>('/api/admin/support', undefined, initData);
+}
+
+export async function updateAdminSupportRequestStatus(id: string, status: SupportStatus, initData?: string) {
+  return request<{ request: Pick<AdminSupportRequest, 'id' | 'status' | 'updated_at'> }>(`/api/admin/support/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status })
   }, initData);
 }
 

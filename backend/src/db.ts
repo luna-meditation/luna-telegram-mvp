@@ -21,6 +21,10 @@ import {
 import { buildProgressInsights } from './progress-insights.js';
 import { achievementDefinitions, buildAchievementItems, type AchievementStats } from './progress-achievements.js';
 import { logBackendError } from './error-logging.js';
+import { normalizeNotificationPreferences, type NotificationPreferences, type ReminderType } from './notification-policy.js';
+import { rankPersonalizedMeditations } from './recommendation-policy.js';
+import type { z } from 'zod';
+import type { supportRequestInputSchema, supportStatusInputSchema } from './support-policy.js';
 
 if (!globalThis.WebSocket) {
   globalThis.WebSocket = WebSocket as unknown as typeof globalThis.WebSocket;
@@ -101,28 +105,7 @@ export type DailyCheckinInput = {
 
 const allowedProfileGoals = new Set(['sleep', 'anxiety', 'focus', 'routine', 'stress']);
 
-export type NotificationPreferences = {
-  dailyReminder: boolean;
-  newContent: boolean;
-  reminderTime: string;
-  timezone: string;
-};
-
-export function normalizeNotificationPreferences(input: Partial<NotificationPreferences> = {}): NotificationPreferences {
-  const reminderTime = typeof input.reminderTime === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(input.reminderTime)
-    ? input.reminderTime
-    : '21:00';
-  const timezone = typeof input.timezone === 'string' && input.timezone.length >= 2 && input.timezone.length <= 64
-    ? input.timezone
-    : 'UTC';
-
-  return {
-    dailyReminder: Boolean(input.dailyReminder),
-    newContent: false,
-    reminderTime,
-    timezone
-  };
-}
+export { normalizeNotificationPreferences, type NotificationPreferences } from './notification-policy.js';
 
 function normalizeProfileGoals(goals: unknown) {
   if (!Array.isArray(goals)) return [];
@@ -204,7 +187,20 @@ export async function updateUserGoals(telegramId: number, goals: unknown) {
 }
 
 export async function updateUserNotificationPreferences(telegramId: number, preferences: Partial<NotificationPreferences>) {
-  const normalizedPreferences = normalizeNotificationPreferences(preferences);
+  const { data: current, error: currentError } = await supabase
+    .from('users')
+    .select('notification_preferences')
+    .eq('telegram_id', telegramId)
+    .single();
+  if (currentError) throw currentError;
+  const existing = normalizeNotificationPreferences(current?.notification_preferences ?? {});
+  const enabled = Boolean(preferences.remindersEnabled ?? preferences.dailyReminder);
+  const normalizedPreferences = normalizeNotificationPreferences({
+    ...preferences,
+    remindersEnabled: enabled,
+    dailyReminder: enabled,
+    consentedAt: enabled ? existing.consentedAt ?? new Date().toISOString() : null
+  });
   const { data, error } = await supabase
     .from('users')
     .update({ notification_preferences: normalizedPreferences, last_seen_at: new Date().toISOString() })
@@ -236,7 +232,7 @@ export async function getCategories() {
   return data ?? [];
 }
 
-export async function getMeditations(telegramId?: number, includeUnpublished = false) {
+export async function getMeditations(telegramId?: number, includeUnpublished = false, personalizationTimezone?: string) {
   let query = supabase
     .from('meditations')
     .select('*')
@@ -249,19 +245,136 @@ export async function getMeditations(telegramId?: number, includeUnpublished = f
   if (error) throw error;
   if (!telegramId) return meditations ?? [];
 
-  const [{ data: favorites }, { data: history }] = await Promise.all([
+  const [{ data: favorites }, { data: history }, { data: user }, { data: checkin }] = await Promise.all([
     supabase.from('favorites').select('meditation_id').eq('telegram_id', telegramId),
-    supabase.from('history').select('*').eq('telegram_id', telegramId)
+    supabase.from('history').select('*').eq('telegram_id', telegramId).order('last_played', { ascending: false }),
+    supabase.from('users').select('profile_goals, notification_preferences, language_code').eq('telegram_id', telegramId).maybeSingle(),
+    supabase.from('daily_checkins').select('mood, available_minutes').eq('telegram_id', telegramId).order('local_date', { ascending: false }).limit(1).maybeSingle()
   ]);
 
   const favoriteIds = new Set((favorites ?? []).map((item) => item.meditation_id));
   const historyByMeditation = new Map((history ?? []).map((item) => [item.meditation_id, item]));
 
-  return (meditations ?? []).map((meditation) => ({
+  const decorated = (meditations ?? []).map((meditation) => ({
     ...meditation,
     favorite: favoriteIds.has(meditation.id),
     history: historyByMeditation.get(meditation.id) ?? null
   }));
+  const preferences = normalizeNotificationPreferences({
+    ...(user?.notification_preferences ?? {}),
+    ...(personalizationTimezone ? { timezone: personalizationTimezone } : {})
+  });
+  return rankPersonalizedMeditations(decorated, {
+    goals: Array.isArray(user?.profile_goals) ? user.profile_goals : [],
+    checkinMood: checkin?.mood ?? null,
+    availableMinutes: checkin?.available_minutes ?? null,
+    localHour: hourInTimeZone(new Date().toISOString(), preferences.timezone),
+    language: user?.language_code === 'ru' ? 'ru' : 'en',
+    recentMeditationIds: (history ?? []).slice(0, 4).map((item) => item.meditation_id)
+  });
+}
+
+export type ReminderCandidate = {
+  telegramId: number;
+  language: 'en' | 'ru';
+  goals: string[];
+  preferences: NotificationPreferences;
+  currentStreak: number;
+  lastPracticeDate: string | null;
+  lastSeenAt: string | null;
+};
+
+export async function getReminderCandidates(): Promise<ReminderCandidate[]> {
+  const [{ data: users, error: usersError }, { data: streaks, error: streaksError }, { data: practiceDays, error: practiceError }] = await Promise.all([
+    supabase.from('users').select('telegram_id, language_code, profile_goals, notification_preferences, last_seen_at'),
+    supabase.from('streaks').select('telegram_id, current_streak'),
+    supabase.from('practice_days').select('telegram_id, local_date').order('local_date', { ascending: false })
+  ]);
+  if (usersError) throw usersError;
+  if (streaksError) throw streaksError;
+  if (practiceError) throw practiceError;
+
+  const streakByUser = new Map((streaks ?? []).map((item) => [Number(item.telegram_id), Number(item.current_streak ?? 0)]));
+  const lastPracticeByUser = new Map<number, string>();
+  for (const item of practiceDays ?? []) {
+    const telegramId = Number(item.telegram_id);
+    if (!lastPracticeByUser.has(telegramId)) lastPracticeByUser.set(telegramId, String(item.local_date));
+  }
+
+  return (users ?? []).map((user) => ({
+    telegramId: Number(user.telegram_id),
+    language: String(user.language_code ?? '').toLowerCase().startsWith('ru') ? 'ru' : 'en',
+    goals: normalizeProfileGoals(user.profile_goals),
+    preferences: normalizeNotificationPreferences(user.notification_preferences ?? {}),
+    currentStreak: streakByUser.get(Number(user.telegram_id)) ?? 0,
+    lastPracticeDate: lastPracticeByUser.get(Number(user.telegram_id)) ?? null,
+    lastSeenAt: user.last_seen_at ?? null
+  }));
+}
+
+export async function claimReminderDelivery(input: {
+  telegramId: number;
+  type: ReminderType;
+  localDate: string;
+  idempotencyKey: string;
+}) {
+  const { data, error } = await supabase.from('reminder_deliveries').insert({
+    telegram_id: input.telegramId,
+    reminder_type: input.type,
+    local_date: input.localDate,
+    idempotency_key: input.idempotencyKey,
+    status: 'processing',
+    attempt_count: 1
+  }).select('id').maybeSingle();
+  if (error?.code === '23505') return null;
+  if (error) throw error;
+  return data?.id ?? null;
+}
+
+export async function finishReminderDelivery(id: string, status: 'sent' | 'failed', errorMessage?: string | null) {
+  const { error } = await supabase.from('reminder_deliveries').update({
+    status,
+    sent_at: status === 'sent' ? new Date().toISOString() : null,
+    error_message: errorMessage?.slice(0, 500) ?? null
+  }).eq('id', id);
+  if (error) throw error;
+}
+
+type SupportRequestInput = z.infer<typeof supportRequestInputSchema>;
+type SupportStatusInput = z.infer<typeof supportStatusInputSchema>['status'];
+
+export async function createSupportRequest(telegramId: number, input: SupportRequestInput) {
+  const { data, error } = await supabase.from('support_requests').insert({
+    telegram_id: telegramId,
+    category: input.category,
+    message: input.message,
+    contact: input.contact || null,
+    app_version: input.appVersion,
+    build_sha: input.buildSha,
+    platform: input.platform,
+    status: 'new'
+  }).select('id, category, status, created_at').single();
+  if (error) throw error;
+  return data;
+}
+
+export async function getAdminSupportRequests() {
+  const { data, error } = await supabase.from('support_requests')
+    .select('id, category, message, contact, app_version, build_sha, platform, status, created_at, updated_at, users(first_name, username)')
+    .order('created_at', { ascending: false })
+    .limit(100);
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function updateSupportRequestStatus(id: string, status: SupportStatusInput) {
+  const { data, error } = await supabase.from('support_requests')
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('id, status, updated_at')
+    .single();
+  if (error) throw error;
+  return data;
 }
 
 export async function getMeditationById(id: string) {
@@ -522,7 +635,8 @@ export async function recordBreathSession(telegramId: number, input: {
   breath_count: unknown;
   local_date?: string;
 }) {
-  const mode = ['calm', 'box', 'reset'].includes(input.mode) ? input.mode : 'calm';
+  const allowedModes = ['calm', 'box', '478', 'coherent', 'triangle', 'sigh', 'anxiety_reset', 'sleep', 'morning_energy'];
+  const mode = allowedModes.includes(input.mode) ? input.mode : 'calm';
   const requestedDurationSeconds = normalizePlaybackSeconds(input.duration_seconds, {
     field: 'duration_seconds',
     fallback: 60

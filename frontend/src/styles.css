@@ -1,6 +1,122 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap");
 @import "./design-system/index.css";
 
+html,
+body,
+#root {
+  background: var(--color-bg-base);
+}
+
+.breath-circle-page {
+  display: flex;
+  min-height: calc(var(--app-viewport-height) - var(--app-top-padding) - var(--app-content-bottom) - 54px);
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 2px;
+}
+
+.breath-circle-header {
+  display: flex;
+  min-height: 54px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.breath-circle-header h2 { margin-top: 1px; }
+.breath-circle-header > div > p:last-child { margin: 2px 0 0; color: var(--color-text-secondary); font-size: 11px; }
+
+.breath-circle-visual {
+  display: grid;
+  grid-template-columns: minmax(164px, 0.9fr) minmax(0, 1fr);
+  gap: 13px;
+  align-items: center;
+  min-height: 210px;
+  border: 1px solid rgba(225, 219, 255, 0.13);
+  border-radius: 26px;
+  padding: 12px;
+  background:
+    radial-gradient(circle at 28% 44%, rgba(142, 103, 233, 0.17), transparent 46%),
+    linear-gradient(145deg, rgba(27, 34, 75, 0.68), rgba(9, 14, 34, 0.7));
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.24);
+  overflow: hidden;
+}
+
+.breath-circle-orbit {
+  display: grid;
+  width: 174px;
+  max-width: 100%;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid rgba(244, 214, 122, 0.2);
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(121, 106, 220, 0.12), rgba(6, 10, 27, 0.48) 68%);
+  box-shadow: inset 0 0 32px rgba(129, 111, 231, 0.12);
+}
+
+.breath-circle-core {
+  display: grid;
+  width: 122px;
+  height: 122px;
+  place-items: center;
+  border: 1px solid rgba(244, 214, 122, 0.36);
+  border-radius: 999px;
+  background: linear-gradient(145deg, rgba(183, 168, 255, 0.52), rgba(85, 74, 176, 0.46) 52%, rgba(16, 22, 52, 0.86));
+  text-align: center;
+  box-shadow: 0 0 30px rgba(132, 111, 227, 0.19), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  transition: transform 900ms cubic-bezier(.38, 0, .2, 1), box-shadow 700ms ease;
+}
+
+.breath-circle-core.is-running { box-shadow: 0 0 38px rgba(148, 127, 239, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.18); }
+.breath-circle-phase { margin: 0; color: var(--color-gold-soft); font-size: 10px; font-weight: 760; letter-spacing: 0.14em; text-transform: uppercase; }
+.breath-circle-count { margin: 4px 0 0; color: var(--color-text-primary); font-size: 25px; font-weight: 720; letter-spacing: -0.035em; }
+
+.breath-circle-session-meta { min-width: 0; }
+.breath-circle-session-meta strong,
+.breath-circle-session-meta span,
+.breath-circle-session-meta small { display: block; }
+.breath-circle-session-meta strong { color: var(--color-text-primary); font-size: 15px; line-height: 1.25; }
+.breath-circle-session-meta span { margin-top: 7px; color: var(--color-gold-soft); font-size: 10px; line-height: 1.45; }
+.breath-circle-session-meta small { margin-top: 7px; color: var(--color-text-secondary); font-size: 10px; line-height: 1.45; }
+
+.breath-circle-controls { display: grid; gap: 8px; }
+.breath-practice-select { display: grid; gap: 4px; }
+.breath-practice-select > span { color: var(--color-text-secondary); font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.breath-practice-select select {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid var(--color-border-card);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.055);
+  padding: 0 36px 0 13px;
+  color: var(--color-text-primary);
+  font-size: 12px;
+  outline: none;
+}
+
+.breath-duration-options { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.breath-duration-options button { min-width: 0; min-height: 44px; border: 1px solid var(--color-border-card); border-radius: 14px; background: rgba(255, 255, 255, 0.045); color: var(--color-text-secondary); font-size: 10px; font-weight: 720; }
+.breath-duration-options button[aria-pressed="true"] { border-color: rgba(244, 214, 122, 0.42); background: rgba(244, 214, 122, 0.13); color: var(--color-gold-soft); }
+
+.breath-circle-actions { display: flex; gap: 8px; margin-top: auto; }
+.breath-circle-primary,
+.breath-circle-restart { min-height: 50px; border-radius: 17px; font-size: 13px; font-weight: 760; }
+.breath-circle-primary { flex: 1; background: linear-gradient(135deg, var(--color-gold-soft), var(--color-gold)); color: #11152d; box-shadow: 0 12px 28px rgba(212, 175, 55, 0.16); }
+.breath-circle-restart { flex: 0 0 92px; border: 1px solid var(--color-border-card); background: rgba(255, 255, 255, 0.045); color: var(--color-text-secondary); }
+
+@media (max-width: 374px) {
+  .breath-circle-visual { grid-template-columns: 148px minmax(0, 1fr); gap: 9px; padding: 10px; }
+  .breath-circle-orbit { width: 148px; }
+  .breath-circle-core { width: 108px; height: 108px; }
+  .breath-circle-session-meta strong { font-size: 13px; }
+  .breath-circle-session-meta span,
+  .breath-circle-session-meta small { font-size: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .breath-circle-core { transition: none; }
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

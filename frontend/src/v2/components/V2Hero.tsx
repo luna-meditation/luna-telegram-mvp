@@ -12,11 +12,11 @@ type V2HeroProps = {
   moodLabel: (mood: MoodChip) => string;
   language: 'en' | 'ru';
   checkinLine: string;
+  checkinToast: string;
+  showCheckinToast: boolean;
   moodSaved: boolean;
   moodSaving: boolean;
   changeLabel: string;
-  detailsLabel: string;
-  onChangeMood: () => void;
   onCheckinDetails: () => void;
   onMood: (mood: MoodChip) => void;
 };
@@ -29,11 +29,11 @@ export function V2Hero({
   moodLabel,
   language,
   checkinLine,
+  checkinToast,
+  showCheckinToast,
   moodSaved,
   moodSaving,
   changeLabel,
-  detailsLabel,
-  onChangeMood,
   onCheckinDetails,
   onMood
 }: V2HeroProps) {
@@ -68,13 +68,19 @@ export function V2Hero({
         <h1>{headline}</h1>
       </div>
 
+      {showCheckinToast ? (
+        <div className="home-v2-checkin-toast" role="status">
+          <span aria-hidden="true">✓</span>
+          <strong>{checkinToast}</strong>
+        </div>
+      ) : null}
+
       {moodSaved && activeMood ? (
-        <div className="home-v2-mood-saved" role="status">
+        <div className="home-v2-mood-saved">
           {(() => { const SavedIcon = visualMoods.find((item) => item.active.includes(activeMood))?.icon ?? Focus; return <span><SavedIcon size={16} aria-hidden="true" /></span>; })()}
           <strong>{checkinLine}</strong>
           <div className="home-v2-mood-actions">
-            <button type="button" onClick={onCheckinDetails}>{detailsLabel}</button>
-            <button type="button" onClick={onChangeMood}>{changeLabel}</button>
+            <button type="button" onClick={onCheckinDetails}>{changeLabel}</button>
           </div>
         </div>
       ) : (
