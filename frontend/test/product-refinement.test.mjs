@@ -27,6 +27,23 @@ test('Home preserves backend personalization order and masks sound chips only on
   assert.match(home, /home-v2-sound-chooser-overflow/);
 });
 
+test('Home sound chooser keeps compact typography without overriding component font sizes', () => {
+  const buttonReset = homeStyles.match(/\.home-v2 button\s*\{([^}]*)\}/)?.[1] ?? '';
+  const soundChoice = homeStyles.match(/\.home-v2-choice\s*\{([^}]*)\}/)?.[1] ?? '';
+  assert.match(buttonReset, /font-family:\s*inherit/);
+  assert.doesNotMatch(buttonReset, /font:\s*inherit/);
+  assert.match(soundChoice, /font-size:\s*9px/);
+  assert.match(soundChoice, /font-weight:\s*580/);
+});
+
+test('a previously verified admin keeps navigation during transient backend failures', () => {
+  assert.match(app, /adminAccessCacheKey/);
+  assert.match(app, /readAdminAccessCache\(user\.id\) \? 'allowed' : 'checking'/);
+  assert.match(app, /isExplicitAdminDenial/);
+  assert.match(app, /writeAdminAccessCache\(user\.id, true\)/);
+  assert.match(app, /setAdminStatus\(readAdminAccessCache\(user\.id\) \? 'allowed' : 'denied'\)/);
+});
+
 test('notifications and support are real backend flows rather than decorative settings', () => {
   assert.match(app, /Allow Telegram reminders/);
   assert.match(app, /reminderTypes/);

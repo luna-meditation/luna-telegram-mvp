@@ -1386,6 +1386,34 @@ function writeAccountCache(telegramId: number, nextCache: Omit<AccountCache, 'sa
   }
 }
 
+function adminAccessCacheKey(telegramId: number) {
+  return `luna.admin-access.${telegramId}.v1`;
+}
+
+function readAdminAccessCache(telegramId: number) {
+  try {
+    return window.localStorage.getItem(adminAccessCacheKey(telegramId)) === 'allowed';
+  } catch {
+    return false;
+  }
+}
+
+function writeAdminAccessCache(telegramId: number, allowed: boolean) {
+  try {
+    if (allowed) {
+      window.localStorage.setItem(adminAccessCacheKey(telegramId), 'allowed');
+    } else {
+      window.localStorage.removeItem(adminAccessCacheKey(telegramId));
+    }
+  } catch {
+    // This cache only preserves navigation during a transient outage. The API still authorizes every admin request.
+  }
+}
+
+function isExplicitAdminDenial(error: unknown) {
+  return error instanceof ApiRequestError && (error.status === 401 || error.status === 403);
+}
+
 function preloadCoverImages(meditations: Meditation[]) {
   meditations.slice(0, 8).forEach((meditation) => {
     if (!meditation.cover_image) return;
@@ -1934,7 +1962,7 @@ function App() {
   const [paymentMessage, setPaymentMessage] = useState('');
   const [openingPlan, setOpeningPlan] = useState<'monthly' | 'lifetime' | null>(null);
   const [fallbackInvoice, setFallbackInvoice] = useState<{ plan: 'monthly' | 'lifetime'; invoiceLink: string; requestId: string } | null>(null);
-  const [adminStatus, setAdminStatus] = useState<'checking' | 'allowed' | 'denied'>('checking');
+  const [adminStatus, setAdminStatus] = useState<'checking' | 'allowed' | 'denied'>(() => readAdminAccessCache(user.id) ? 'allowed' : 'checking');
   const [adminMeditations, setAdminMeditations] = useState<Meditation[]>([]);
   const [adminDashboard, setAdminDashboard] = useState<AdminDashboardData | null>(null);
   const [adminSupportRequests, setAdminSupportRequests] = useState<AdminSupportRequest[]>([]);
@@ -2135,6 +2163,7 @@ function App() {
 
       try {
         await checkAdmin(initData);
+        writeAdminAccessCache(user.id, true);
         setAdminStatus('allowed');
         try {
           setBackendVersion(await getBackendVersion(initData));
@@ -2143,7 +2172,12 @@ function App() {
         }
       } catch (error) {
         console.info('[Luna admin check failed]', error instanceof Error ? error.message : 'Admin check failed.');
-        setAdminStatus('denied');
+        if (isExplicitAdminDenial(error)) {
+          writeAdminAccessCache(user.id, false);
+          setAdminStatus('denied');
+        } else {
+          setAdminStatus(readAdminAccessCache(user.id) ? 'allowed' : 'denied');
+        }
       }
 
       await Promise.all([libraryPromise, plansPromise]);
@@ -2159,6 +2193,7 @@ function App() {
     async function bootAdmin() {
       try {
         await checkAdmin(initData);
+        writeAdminAccessCache(user.id, true);
         setAdminStatus('allowed');
         try {
           setBackendVersion(await getBackendVersion(initData));
@@ -2168,7 +2203,12 @@ function App() {
         await Promise.all([refreshLibrary(), refreshAdmin()]);
       } catch (error) {
         console.info('[Luna admin check failed]', error instanceof Error ? error.message : 'Admin check failed.');
-        setAdminStatus('denied');
+        if (isExplicitAdminDenial(error)) {
+          writeAdminAccessCache(user.id, false);
+          setAdminStatus('denied');
+        } else {
+          setAdminStatus(readAdminAccessCache(user.id) ? 'allowed' : 'denied');
+        }
       }
     }
 
@@ -3156,10 +3196,8 @@ function App() {
 
         {page === 'breathCircle' && (
           <BreathCirclePage
-            hasPremium={effectiveHasPremium}
             onComplete={completeBreathCircle}
             onClose={() => setPage('home')}
-            onPremium={() => setPage('pricing')}
             language={language}
           />
         )}
@@ -4486,16 +4524,12 @@ function IconButton({ label, children, onClick }: { label: string; children: Rea
 }
 
 function BreathCirclePage({
-  hasPremium,
   onComplete,
   onClose,
-  onPremium,
   language
 }: {
-  hasPremium: boolean;
   onComplete: (mode: BreathMode, durationSeconds: number, breathCount: number) => Promise<void>;
   onClose: () => void;
-  onPremium: () => void;
   language: AppLanguage;
 }) {
   const [mode, setMode] = useState<BreathMode>('calm');
@@ -4528,10 +4562,6 @@ function BreathCirclePage({
   }, [durationSeconds, language, mode, onComplete, practice, running]);
 
   const startOrResume = () => {
-    if (minutes > 1 && !hasPremium) {
-      onPremium();
-      return;
-    }
     const resumeElapsed = done ? 0 : elapsed;
     setSavingError('');
     setDone(false);
@@ -4587,10 +4617,14 @@ function BreathCirclePage({
             {breathPractices.map((item) => <option key={item.id} value={item.id}>{item.name[language]} — {item.timing[language]}</option>)}
           </select>
         </label>
+        <div className="breath-practice-guide">
+          <strong>{language === 'en' ? 'How it helps' : 'Как выполнять'}</strong>
+          <p>{practice.guide[language]}</p>
+        </div>
         <div className="breath-duration-options" role="group" aria-label={language === 'en' ? 'Session duration' : 'Длительность сессии'}>
           {[1, 3, 5, 10].map((item) => (
             <button key={item} onClick={() => setMinutes(item)} disabled={running || hasStarted} aria-pressed={minutes === item}>
-              {item} {language === 'en' ? 'min' : 'мин'} {item > 1 && !hasPremium ? '⭐' : ''}
+              {item} {language === 'en' ? 'min' : 'мин'}
             </button>
           ))}
         </div>

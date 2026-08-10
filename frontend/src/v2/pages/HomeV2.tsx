@@ -241,7 +241,7 @@ export function HomeV2(props: HomeV2Props) {
                 onClick={() => props.onSoundSelect(scene)}
                 className={props.selectedScene?.id === scene.id ? 'home-v2-choice home-v2-choice-active' : 'home-v2-choice'}
               >
-                {scene.title[props.language]} {locked ? <Crown size={14} aria-label={props.labels.premium} /> : null}
+                {scene.title[props.language]} {locked ? <Crown size={11} aria-label={props.labels.premium} /> : null}
               </button>
             );
           })}
