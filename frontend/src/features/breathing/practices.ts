@@ -7,20 +7,111 @@ export type BreathPractice = {
   id: BreathPracticeId;
   name: Record<AppLanguage, string>;
   description: Record<AppLanguage, string>;
+  guide: Record<AppLanguage, string>;
   timing: Record<AppLanguage, string>;
   phases: Array<{ kind: BreathPhaseKind; seconds: number }>;
 };
 
 export const breathPractices: BreathPractice[] = [
-  { id: 'calm', name: { en: 'Calm Breath', ru: 'Спокойное дыхание' }, description: { en: 'A gentle longer exhale.', ru: 'Мягкий удлинённый выдох.' }, timing: { en: 'Inhale 4 · Exhale 6', ru: 'Вдох 4 · Выдох 6' }, phases: [{ kind: 'inhale', seconds: 4 }, { kind: 'exhale', seconds: 6 }] },
-  { id: 'box', name: { en: 'Box Breathing', ru: 'Квадратное дыхание' }, description: { en: 'An even four-part rhythm.', ru: 'Ровный ритм из четырёх частей.' }, timing: { en: '4 · 4 · 4 · 4', ru: '4 · 4 · 4 · 4' }, phases: [{ kind: 'inhale', seconds: 4 }, { kind: 'hold', seconds: 4 }, { kind: 'exhale', seconds: 4 }, { kind: 'pause', seconds: 4 }] },
-  { id: '478', name: { en: '4-7-8 Breathing', ru: 'Дыхание 4-7-8' }, description: { en: 'A slow settling rhythm.', ru: 'Медленный успокаивающий ритм.' }, timing: { en: 'Inhale 4 · Hold 7 · Exhale 8', ru: 'Вдох 4 · Пауза 7 · Выдох 8' }, phases: [{ kind: 'inhale', seconds: 4 }, { kind: 'hold', seconds: 7 }, { kind: 'exhale', seconds: 8 }] },
-  { id: 'coherent', name: { en: 'Coherent Breathing', ru: 'Когерентное дыхание' }, description: { en: 'A balanced, steady cadence.', ru: 'Ровный сбалансированный темп.' }, timing: { en: 'Inhale 5 · Exhale 5', ru: 'Вдох 5 · Выдох 5' }, phases: [{ kind: 'inhale', seconds: 5 }, { kind: 'exhale', seconds: 5 }] },
-  { id: 'triangle', name: { en: 'Triangle Breathing', ru: 'Треугольное дыхание' }, description: { en: 'Three equal, grounded phases.', ru: 'Три равные устойчивые фазы.' }, timing: { en: 'Inhale 4 · Hold 4 · Exhale 4', ru: 'Вдох 4 · Пауза 4 · Выдох 4' }, phases: [{ kind: 'inhale', seconds: 4 }, { kind: 'hold', seconds: 4 }, { kind: 'exhale', seconds: 4 }] },
-  { id: 'sigh', name: { en: 'Physiological Sigh', ru: 'Физиологический вздох' }, description: { en: 'Two-stage inhale, then a long exhale.', ru: 'Двойной вдох и длинный выдох.' }, timing: { en: 'Inhale 2 + 2 · Exhale 6', ru: 'Вдох 2 + 2 · Выдох 6' }, phases: [{ kind: 'inhale', seconds: 2 }, { kind: 'inhale_top', seconds: 2 }, { kind: 'exhale', seconds: 6 }] },
-  { id: 'anxiety_reset', name: { en: 'Anxiety Reset', ru: 'Перезагрузка при тревоге' }, description: { en: 'A soft exhale-led reset.', ru: 'Мягкая практика с акцентом на выдох.' }, timing: { en: 'Inhale 4 · Exhale 6 · Pause 2', ru: 'Вдох 4 · Выдох 6 · Пауза 2' }, phases: [{ kind: 'inhale', seconds: 4 }, { kind: 'exhale', seconds: 6 }, { kind: 'pause', seconds: 2 }] },
-  { id: 'sleep', name: { en: 'Sleep Wind-down', ru: 'Настрой на сон' }, description: { en: 'Slow and low-stimulation.', ru: 'Медленный ритм без лишней стимуляции.' }, timing: { en: 'Inhale 4 · Exhale 8 · Pause 2', ru: 'Вдох 4 · Выдох 8 · Пауза 2' }, phases: [{ kind: 'inhale', seconds: 4 }, { kind: 'exhale', seconds: 8 }, { kind: 'pause', seconds: 2 }] },
-  { id: 'morning_energy', name: { en: 'Morning Energy', ru: 'Утренняя энергия' }, description: { en: 'A clear, balanced morning rhythm.', ru: 'Ясный сбалансированный утренний ритм.' }, timing: { en: 'Inhale 4 · Hold 2 · Exhale 4 · Pause 2', ru: 'Вдох 4 · Пауза 2 · Выдох 4 · Пауза 2' }, phases: [{ kind: 'inhale', seconds: 4 }, { kind: 'hold', seconds: 2 }, { kind: 'exhale', seconds: 4 }, { kind: 'pause', seconds: 2 }] }
+  {
+    id: 'calm',
+    name: { en: 'Calm Breath', ru: 'Спокойное дыхание' },
+    description: { en: 'A gentle longer exhale.', ru: 'Мягкий удлинённый выдох.' },
+    guide: {
+      en: 'Use it to settle and release tension. Breathe in gently through the nose, then let the exhale stay soft and a little longer.',
+      ru: 'Помогает успокоиться и отпустить напряжение. Мягко вдохни через нос, а выдох сделай спокойным и чуть длиннее.',
+    },
+    timing: { en: 'Inhale 4 · Exhale 6', ru: 'Вдох 4 · Выдох 6' },
+    phases: [{ kind: 'inhale', seconds: 4 }, { kind: 'exhale', seconds: 6 }],
+  },
+  {
+    id: 'box',
+    name: { en: 'Box Breathing', ru: 'Квадратное дыхание' },
+    description: { en: 'An even four-part rhythm.', ru: 'Ровный ритм из четырёх частей.' },
+    guide: {
+      en: 'Use it when you want a steady, focused rhythm. Keep all four phases equal and never force the holds.',
+      ru: 'Подходит, когда нужны собранность и ровный ритм. Держи все четыре фазы равными и не задерживай дыхание через силу.',
+    },
+    timing: { en: '4 · 4 · 4 · 4', ru: '4 · 4 · 4 · 4' },
+    phases: [{ kind: 'inhale', seconds: 4 }, { kind: 'hold', seconds: 4 }, { kind: 'exhale', seconds: 4 }, { kind: 'pause', seconds: 4 }],
+  },
+  {
+    id: '478',
+    name: { en: '4-7-8 Breathing', ru: 'Дыхание 4-7-8' },
+    description: { en: 'A slow settling rhythm.', ru: 'Медленный успокаивающий ритм.' },
+    guide: {
+      en: 'Use it while winding down before rest. Keep the inhale slow, hold only without strain, and let the long exhale stay relaxed.',
+      ru: 'Используй, когда готовишься к отдыху. Вдыхай медленно, не держи дыхание через силу и расслабь длинный выдох.',
+    },
+    timing: { en: 'Inhale 4 · Hold 7 · Exhale 8', ru: 'Вдох 4 · Пауза 7 · Выдох 8' },
+    phases: [{ kind: 'inhale', seconds: 4 }, { kind: 'hold', seconds: 7 }, { kind: 'exhale', seconds: 8 }],
+  },
+  {
+    id: 'coherent',
+    name: { en: 'Coherent Breathing', ru: 'Когерентное дыхание' },
+    description: { en: 'A balanced, steady cadence.', ru: 'Ровный сбалансированный темп.' },
+    guide: {
+      en: 'A balanced everyday reset without breath holds. Breathe smoothly through the nose and keep the inhale and exhale equally easy.',
+      ru: 'Мягкая повседневная практика без задержек. Дыши через нос и сохраняй вдох и выдох одинаково лёгкими.',
+    },
+    timing: { en: 'Inhale 5 · Exhale 5', ru: 'Вдох 5 · Выдох 5' },
+    phases: [{ kind: 'inhale', seconds: 5 }, { kind: 'exhale', seconds: 5 }],
+  },
+  {
+    id: 'triangle',
+    name: { en: 'Triangle Breathing', ru: 'Треугольное дыхание' },
+    description: { en: 'Three equal, grounded phases.', ru: 'Три равные устойчивые фазы.' },
+    guide: {
+      en: 'Use it to regain focus through a simple structure. Inhale, hold comfortably, then exhale for the same count.',
+      ru: 'Помогает вернуть фокус через простую структуру. Вдохни, комфортно задержи дыхание и выдохни на тот же счёт.',
+    },
+    timing: { en: 'Inhale 4 · Hold 4 · Exhale 4', ru: 'Вдох 4 · Пауза 4 · Выдох 4' },
+    phases: [{ kind: 'inhale', seconds: 4 }, { kind: 'hold', seconds: 4 }, { kind: 'exhale', seconds: 4 }],
+  },
+  {
+    id: 'sigh',
+    name: { en: 'Physiological Sigh', ru: 'Физиологический вздох' },
+    description: { en: 'Two-stage inhale, then a long exhale.', ru: 'Двойной вдох и длинный выдох.' },
+    guide: {
+      en: 'Use it for a quick release of acute tension. Inhale through the nose, add a small top-up inhale, then exhale slowly through the mouth.',
+      ru: 'Используй для быстрого сброса острого напряжения. Вдохни через нос, добавь короткий довдох и медленно выдохни через рот.',
+    },
+    timing: { en: 'Inhale 2 + 2 · Exhale 6', ru: 'Вдох 2 + 2 · Выдох 6' },
+    phases: [{ kind: 'inhale', seconds: 2 }, { kind: 'inhale_top', seconds: 2 }, { kind: 'exhale', seconds: 6 }],
+  },
+  {
+    id: 'anxiety_reset',
+    name: { en: 'Anxiety Reset', ru: 'Перезагрузка при тревоге' },
+    description: { en: 'A soft exhale-led reset.', ru: 'Мягкая практика с акцентом на выдох.' },
+    guide: {
+      en: 'A grounding rhythm for moments of tension. Take a gentle nose inhale, exhale slowly, and rest before the next breath without forcing the pause.',
+      ru: 'Заземляющий ритм для моментов напряжения. Мягко вдохни через нос, медленно выдохни и отдохни перед новым вдохом, не удлиняя паузу через силу.',
+    },
+    timing: { en: 'Inhale 4 · Exhale 6 · Pause 2', ru: 'Вдох 4 · Выдох 6 · Пауза 2' },
+    phases: [{ kind: 'inhale', seconds: 4 }, { kind: 'exhale', seconds: 6 }, { kind: 'pause', seconds: 2 }],
+  },
+  {
+    id: 'sleep',
+    name: { en: 'Sleep Wind-down', ru: 'Настрой на сон' },
+    description: { en: 'Slow and low-stimulation.', ru: 'Медленный ритм без лишней стимуляции.' },
+    guide: {
+      en: 'Use it in bed or during your evening wind-down. Keep the breath quiet and effortless, lengthen the exhale, and pause only while comfortable.',
+      ru: 'Используй в постели или во время вечернего замедления. Дыши тихо и без усилия, удлиняй выдох и делай паузу только пока комфортно.',
+    },
+    timing: { en: 'Inhale 4 · Exhale 8 · Pause 2', ru: 'Вдох 4 · Выдох 8 · Пауза 2' },
+    phases: [{ kind: 'inhale', seconds: 4 }, { kind: 'exhale', seconds: 8 }, { kind: 'pause', seconds: 2 }],
+  },
+  {
+    id: 'morning_energy',
+    name: { en: 'Morning Energy', ru: 'Утренняя энергия' },
+    description: { en: 'A clear, balanced morning rhythm.', ru: 'Ясный сбалансированный утренний ритм.' },
+    guide: {
+      en: 'Use it sitting upright when you want to feel alert. Keep the inhale smooth, the hold brief, and the exhale even; stop if you feel lightheaded.',
+      ru: 'Используй сидя с прямой спиной, когда хочешь взбодриться. Вдыхай плавно, задерживай дыхание ненадолго и выдыхай ровно; остановись, если закружится голова.',
+    },
+    timing: { en: 'Inhale 4 · Hold 2 · Exhale 4 · Pause 2', ru: 'Вдох 4 · Пауза 2 · Выдох 4 · Пауза 2' },
+    phases: [{ kind: 'inhale', seconds: 4 }, { kind: 'hold', seconds: 2 }, { kind: 'exhale', seconds: 4 }, { kind: 'pause', seconds: 2 }],
+  },
 ];
 
 export function breathCycleSeconds(practice: BreathPractice) {

@@ -54,7 +54,7 @@
 }
 
 .home-v2 button {
-  font: inherit;
+  font-family: inherit;
 }
 
 .home-v2-atmosphere {
@@ -524,15 +524,19 @@
 }
 
 .home-v2-choice {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
   flex: 0 0 auto;
   min-height: var(--target-min);
   border: 1px solid rgba(221, 218, 255, 0.1);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.06);
-  padding: 0 9px;
+  padding: 0 8px;
   color: var(--v2-muted);
-  font-size: 10px;
-  font-weight: 650;
+  font-size: 9px;
+  font-weight: 580;
+  line-height: 1.15;
 }
 
 .home-v2-choice-active {
