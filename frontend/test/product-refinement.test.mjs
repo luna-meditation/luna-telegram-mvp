@@ -44,6 +44,11 @@ test('a previously verified admin keeps navigation during transient backend fail
   assert.match(app, /setAdminStatus\(readAdminAccessCache\(user\.id\) \? 'allowed' : 'denied'\)/);
 });
 
+test('quick mood check-in refreshes profile streak and Journey activity', () => {
+  const quickMoodFlow = app.slice(app.indexOf('const selectMood'), app.indexOf('const saveCheckin'));
+  assert.match(quickMoodFlow, /void Promise\.all\(\[refreshAccount\(\), refreshLibrary\(\)\]\)/);
+});
+
 test('notifications and support are real backend flows rather than decorative settings', () => {
   assert.match(app, /Allow Telegram reminders/);
   assert.match(app, /reminderTypes/);

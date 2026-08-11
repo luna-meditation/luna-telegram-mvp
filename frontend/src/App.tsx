@@ -2644,7 +2644,7 @@ function App() {
       const nextSummary = await getWellnessSummary(initData, todayLocalDate()).catch(() => null);
       setWellness((current) => nextSummary ? { ...nextSummary, todayCheckin: checkin } : current ? { ...current, todayCheckin: checkin } : current);
       showCheckinConfirmation();
-      void refreshLibrary();
+      void Promise.all([refreshAccount(), refreshLibrary()]);
     } catch (error) {
       setMood(previousMood);
       setMoodSelectedByUser(previousMoodSelectedByUser);
