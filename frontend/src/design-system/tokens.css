@@ -29,8 +29,8 @@
   --color-violet-soft: #9d8cff;
   --color-luna-blue: #62bfff;
   --color-text-primary: #f7f2ea;
-  --color-text-secondary: #c9d0e9;
-  --color-text-muted: #8b92b2;
+  --color-text-secondary: #d5daed;
+  --color-text-muted: #a8b0ca;
   --color-danger: #ff7575;
   --color-success: #79d99e;
 
@@ -77,7 +77,7 @@
   --safe-area-left: max(env(safe-area-inset-left, 0px), var(--tg-content-safe-area-inset-left, 0px));
   --app-viewport-height: var(--tg-viewport-stable-height, 100dvh);
   --app-top-padding: calc(var(--safe-area-top) + 14px);
-  --app-navigation-height: 66px;
+  --app-navigation-height: 58px;
   --app-navigation-offset: 10px;
   --app-navigation-bottom: max(var(--safe-area-bottom), var(--app-navigation-offset));
   --app-navigation-clearance: calc(var(--app-navigation-height) + var(--app-navigation-bottom) + 8px);

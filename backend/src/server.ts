@@ -337,7 +337,7 @@ app.post('/api/client-events', requireTelegramWebApp, (req, res) => {
     event,
     requestId: typeof body.requestId === 'string' ? body.requestId.slice(0, 128) : null,
     telegramId: authReq.telegramUser.telegram_id,
-    plan: body.plan === 'monthly' || body.plan === 'lifetime' ? body.plan : null,
+    plan: body.plan === 'annual' || body.plan === 'lifetime' ? body.plan : null,
     frontendSha: typeof body.frontendSha === 'string' ? body.frontendSha.slice(0, 160) : 'unknown',
     backendSha: getBackendVersion().commitSha,
     platform: typeof body.platform === 'string' ? body.platform.slice(0, 40) : null,
@@ -511,11 +511,11 @@ app.post('/api/payments/invoice', requireTelegramWebApp, async (req, res, next) 
 
     const access = await getUserAccess(authReq.telegramUser.telegram_id);
     if (!paymentEligibility(access.plan, plan).allowed) {
-      res.status(409).json({ error: access.plan === 'Lifetime' ? 'Lifetime Premium is already active.' : 'Monthly Premium is already active.', code: 'plan_already_active' });
+      res.status(409).json({ error: access.plan === 'Lifetime' ? 'Lifetime Premium is already active.' : 'Premium access is already active.', code: 'plan_already_active' });
       return;
     }
     await sendStarsInvoice(chatId, authReq.telegramUser.telegram_id, plan, requestId);
-    res.json({ ok: true, requestId, plan, amountStars: plan === 'monthly' ? 499 : 2499 });
+    res.json({ ok: true, requestId, plan, amountStars: plans[plan].amountStars });
   } catch (error) {
     logBackendError(error, {
       req: req as RequestWithId,
@@ -542,7 +542,7 @@ app.post('/api/payments/invoice-link', requireTelegramWebApp, async (req, res, n
 
     const access = await getUserAccess(authReq.telegramUser.telegram_id);
     if (!paymentEligibility(access.plan, plan).allowed) {
-      res.status(409).json({ error: access.plan === 'Lifetime' ? 'Lifetime Premium is already active.' : 'Monthly Premium is already active.', code: 'plan_already_active' });
+      res.status(409).json({ error: access.plan === 'Lifetime' ? 'Lifetime Premium is already active.' : 'Premium access is already active.', code: 'plan_already_active' });
       return;
     }
     const invoiceLink = await createStarsInvoiceLink(authReq.telegramUser.telegram_id, plan, requestId);
@@ -560,11 +560,11 @@ app.post('/api/payments/invoice-link', requireTelegramWebApp, async (req, res, n
     console.info('[Luna invoice link created]', {
       user: crypto.createHash('sha256').update(String(authReq.telegramUser.telegram_id)).digest('hex').slice(0, 12),
       plan,
-      amountStars: plan === 'monthly' ? 499 : 2499,
+      amountStars: plans[plan].amountStars,
       requestId,
       invoiceHost: new URL(invoiceLink).hostname
     });
-    res.json({ invoiceLink, requestId, plan, amountStars: plan === 'monthly' ? 499 : 2499 });
+    res.json({ invoiceLink, requestId, plan, amountStars: plans[plan].amountStars });
   } catch (error) {
     logBackendError(error, {
       req: req as RequestWithId,

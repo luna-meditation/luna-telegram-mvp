@@ -88,6 +88,7 @@ import {
   type MoonGardenDevAction,
   type NotificationPreferences,
   type PlanCatalog,
+  type PurchasePlanId,
   type ReminderType,
   type SupportCategory,
   type SupportStatus,
@@ -723,8 +724,8 @@ const copy = {
     savedEmptyTitle: 'Your saved calm will live here.',
     savedEmptyBody: 'Tap the heart on any meditation to build a small refuge you can return to anytime.',
     premiumTitle: 'LUNA PREMIUM',
-    premiumHeadline: 'Your complete space for meditation, breathing and mindful conversations.',
-    premiumBody: 'Choose the access that fits your Luna practice.',
+    premiumHeadline: 'Go deeper with Luna.',
+    premiumBody: 'All meditations · More Luna conversations · Premium content',
     premiumLibrary: 'All meditations',
     premiumLunaAi: 'More Luna messages',
     premiumMoonSeeds: '40 Moon Seeds',
@@ -732,7 +733,7 @@ const copy = {
     weeklyContent: 'Weekly Content',
     dailyStreak: 'Daily Streak',
     lockedPremium: '{title} is part of Luna Premium.',
-    monthlyPremium: 'Monthly Premium',
+    annualPremium: 'Annual Premium',
     lifetimePremium: 'Lifetime Premium',
     unlimitedMeditations: 'Full meditation library',
     premiumBreathing: 'Longer breath practices',
@@ -742,7 +743,7 @@ const copy = {
     allFuturePractices: 'Future meditations and mantras',
     bestValue: 'Best long-term value',
     instantTelegramUnlock: 'Instant unlock with Telegram Stars',
-    unlockMonthly: 'Unlock Monthly',
+    unlockAnnual: 'Unlock Annual',
     getLifetime: 'Get Lifetime',
     sleepDeeper: 'Sleep deeper',
     sleepDeeperBody: 'Evening practices made for softer endings.',
@@ -1061,8 +1062,8 @@ const copy = {
     savedEmptyTitle: 'Здесь будет твоё сохранённое спокойствие.',
     savedEmptyBody: 'Нажми сердечко на любой медитации, чтобы собрать практики для возвращения.',
     premiumTitle: 'LUNA PREMIUM',
-    premiumHeadline: 'Твоё полное пространство для медитации, дыхания и осознанных разговоров.',
-    premiumBody: 'Выбери доступ, который подходит твоей практике Luna.',
+    premiumHeadline: 'Открой Luna глубже.',
+    premiumBody: 'Все медитации · Больше разговоров с Luna · Premium-контент',
     premiumLibrary: 'Все медитации',
     premiumLunaAi: 'Больше сообщений Luna',
     premiumMoonSeeds: '40 лунных семян',
@@ -1070,7 +1071,7 @@ const copy = {
     weeklyContent: 'Новый контент каждую неделю',
     dailyStreak: 'Ежедневная серия',
     lockedPremium: '{title} входит в Luna Premium.',
-    monthlyPremium: 'Месячный Premium',
+    annualPremium: 'Premium на год',
     lifetimePremium: 'Premium навсегда',
     unlimitedMeditations: 'Полная библиотека медитаций',
     premiumBreathing: 'Длинные дыхательные практики',
@@ -1080,7 +1081,7 @@ const copy = {
     allFuturePractices: 'Будущие медитации и мантры',
     bestValue: 'Лучшая долгосрочная ценность',
     instantTelegramUnlock: 'Мгновенно через Telegram Stars',
-    unlockMonthly: 'Открыть на месяц',
+    unlockAnnual: 'Открыть на год',
     getLifetime: 'Получить навсегда',
     sleepDeeper: 'Глубже засыпать',
     sleepDeeperBody: 'Вечерние практики для мягкого расслабления.',
@@ -1271,7 +1272,7 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string)
 function openTelegramInvoiceWithTimeout(
   telegram: TelegramWebApp | undefined,
   invoiceLink: string,
-  paymentContext: { plan: 'monthly' | 'lifetime'; requestId: string; telegramId: number },
+  paymentContext: { plan: PurchasePlanId; requestId: string; telegramId: number },
   initData?: string,
   userGesture = false,
   timeoutMs = 90_000
@@ -1647,7 +1648,8 @@ function translateFocus(focus: string | null | undefined, language: AppLanguage)
 
 function planLabel(plan: string, language: AppLanguage) {
   if (plan.toLowerCase() === 'free') return copy[language].free;
-  if (plan.toLowerCase() === 'monthly') return language === 'ru' ? copy[language].monthlyPremium : plan;
+  if (plan.toLowerCase() === 'monthly') return copy[language].premiumActive;
+  if (plan.toLowerCase() === 'annual') return copy[language].annualPremium;
   if (plan.toLowerCase() === 'lifetime') return language === 'ru' ? copy[language].lifetimePremium : plan;
   return plan;
 }
@@ -1960,8 +1962,8 @@ function App() {
   const [moonGardenVolume, setMoonGardenVolume] = useState(readMoonGardenVolume);
   const [moonGardenAmbienceError, setMoonGardenAmbienceError] = useState(false);
   const [paymentMessage, setPaymentMessage] = useState('');
-  const [openingPlan, setOpeningPlan] = useState<'monthly' | 'lifetime' | null>(null);
-  const [fallbackInvoice, setFallbackInvoice] = useState<{ plan: 'monthly' | 'lifetime'; invoiceLink: string; requestId: string } | null>(null);
+  const [openingPlan, setOpeningPlan] = useState<PurchasePlanId | null>(null);
+  const [fallbackInvoice, setFallbackInvoice] = useState<{ plan: PurchasePlanId; invoiceLink: string; requestId: string } | null>(null);
   const [adminStatus, setAdminStatus] = useState<'checking' | 'allowed' | 'denied'>(() => readAdminAccessCache(user.id) ? 'allowed' : 'checking');
   const [adminMeditations, setAdminMeditations] = useState<Meditation[]>([]);
   const [adminDashboard, setAdminDashboard] = useState<AdminDashboardData | null>(null);
@@ -2674,13 +2676,13 @@ function App() {
     setShowCheckin(false);
   };
 
-  const buyPlan = async (plan: 'monthly' | 'lifetime') => {
+  const buyPlan = async (plan: PurchasePlanId) => {
     if (openingPlan || paymentOperationRef.current) return;
     if (!accessVerified) {
       setPaymentMessage(language === 'ru' ? 'Не удалось подтвердить статус доступа. Попробуй обновить его.' : 'Your access status could not be verified. Please restore it first.');
       return;
     }
-    if (access.plan === 'Lifetime' || (access.plan === 'Monthly' && plan === 'monthly')) {
+    if (access.plan === 'Lifetime' || (access.hasPremium && plan === 'annual')) {
       setPaymentMessage(language === 'ru' ? 'Этот план уже активен.' : 'This plan is already active.');
       return;
     }
@@ -2741,7 +2743,7 @@ function App() {
       paymentOperationRef.current = false;
 
       if (status === 'paid') {
-        setAccess((current) => ({ ...current, hasPremium: true, plan: plan === 'lifetime' ? 'Lifetime' : 'Monthly' }));
+        setAccess((current) => ({ ...current, hasPremium: true, plan: plan === 'lifetime' ? 'Lifetime' : 'Annual' }));
         setPaymentMessage(copy[language].paymentSuccessful);
         void refreshAccessAndPayments(invoice.requestId).catch(() => undefined);
         return;
@@ -2819,7 +2821,7 @@ function App() {
       setOpeningPlan(null);
       paymentOperationRef.current = false;
       if (status === 'paid') {
-        setAccess((current) => ({ ...current, hasPremium: true, plan: invoice.plan === 'lifetime' ? 'Lifetime' : 'Monthly' }));
+        setAccess((current) => ({ ...current, hasPremium: true, plan: invoice.plan === 'lifetime' ? 'Lifetime' : 'Annual' }));
         setPaymentMessage(copy[language].paymentSuccessful);
         void refreshAccessAndPayments(invoice.requestId).catch(() => undefined);
         return;
@@ -3979,12 +3981,12 @@ function PricingPage({
   plans: PlanCatalog | null;
   access: AccessState;
   accessVerified: boolean;
-  onBuy: (plan: 'monthly' | 'lifetime') => void;
+  onBuy: (plan: PurchasePlanId) => void;
   onRestore: () => AccessState | void | Promise<AccessState | void>;
   onOpenFallbackInvoice: () => void;
-  fallbackInvoice: { plan: 'monthly' | 'lifetime'; invoiceLink: string; requestId: string } | null;
+  fallbackInvoice: { plan: PurchasePlanId; invoiceLink: string; requestId: string } | null;
   message: string;
-  openingPlan: 'monthly' | 'lifetime' | null;
+  openingPlan: PurchasePlanId | null;
   onLibrary: () => void;
   locked: Meditation | null;
   language: AppLanguage;
@@ -3992,16 +3994,16 @@ function PricingPage({
   const t = copy[language];
   const [restoreState, setRestoreState] = useState<RestoreState>('idle');
   const isLifetime = access.plan === 'Lifetime';
-  const isMonthly = access.plan === 'Monthly';
+  const isFixedTerm = access.hasPremium && !isLifetime;
   const activeUntil = access.user?.active_until
     ? new Date(access.user.active_until).toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })
     : null;
-  const monthlyBenefits = language === 'ru'
-    ? ['Полная библиотека медитаций', 'Больше разговоров с Luna', '40 лунных семян после первой активации']
-    : ['Full Meditation Library', 'Higher Luna Conversation Limit', '40 Moon Seeds after first activation'];
+  const annualBenefits = language === 'ru'
+    ? ['Полная библиотека медитаций', 'Больше разговоров с Luna', 'Весь Premium-контент', 'Все новые Premium-релизы']
+    : ['Full Meditation Library', 'Higher Luna Conversation Limit', 'All Premium Content', 'New Premium Releases Included'];
   const lifetimeBenefits = language === 'ru'
-    ? ['Доступ навсегда', 'Полная библиотека медитаций', 'Больше разговоров с Luna', 'Весь текущий и будущий Premium-контент']
-    : ['Lifetime Access', 'Full Meditation Library', 'Higher Luna Conversation Limit', 'All Current and Future Premium Content'];
+    ? ['Всё из Premium', 'Доступ навсегда', 'Весь текущий и будущий Premium-контент', 'Больше разговоров с Luna', '40 лунных семян после активации']
+    : ['Everything in Premium', 'Lifetime Access', 'All Current & Future Premium Content', 'Higher Luna Conversation Limit', '40 Moon Seeds after activation'];
   const restoreAccess = async () => {
     if (restoreState === 'loading') return;
     setRestoreState('loading');
@@ -4028,28 +4030,33 @@ function PricingPage({
   }
 
   return (
-    <div className="luna-page space-y-4">
-      <PageHeader title={t.premiumTitle} />
-      <section className="px-1">
-          <h2 className="type-editorial max-w-[330px] text-[30px] leading-[1.05]">{isLifetime ? (language === 'ru' ? 'Premium навсегда активен' : 'Lifetime Premium active') : isMonthly ? (language === 'ru' ? 'Месячный Premium активен' : 'Monthly Premium active') : t.premiumHeadline}</h2>
-          <p className="mt-3 max-w-[340px] text-sm leading-6 text-lavender">{isLifetime
+    <div className="luna-page premium-page">
+      <section className="premium-page-header">
+        <p className="type-label">{t.premiumTitle}</p>
+        <h2 className="type-editorial">{isLifetime ? (language === 'ru' ? 'Premium навсегда активен' : 'Lifetime Premium active') : isFixedTerm ? (language === 'ru' ? 'Premium активен' : 'Premium is active') : t.premiumHeadline}</h2>
+        <p>{isLifetime
           ? (language === 'ru' ? 'Твой постоянный доступ к Luna открыт. Повторная покупка не нужна.' : 'Your permanent Luna access is open. No further purchase is needed.')
-          : isMonthly
-            ? (activeUntil ? (language === 'ru' ? `Доступ активен до ${activeUntil}.` : `Access is active through ${activeUntil}.`) : (language === 'ru' ? 'Твой месячный доступ активен.' : 'Your monthly access is active.'))
+          : isFixedTerm
+            ? (activeUntil ? (language === 'ru' ? `Доступ активен до ${activeUntil}.` : `Access is active through ${activeUntil}.`) : (language === 'ru' ? 'Твой Premium-доступ активен.' : 'Your Premium access is active.'))
             : t.premiumBody}</p>
+        {!access.hasPremium && <div className="premium-benefit-pills" aria-label={language === 'ru' ? 'Преимущества Premium' : 'Premium benefits'}>
+          <span>{t.premiumLibrary}</span><span>{t.premiumLunaAi}</span><span>{t.premiumSoundscapes}</span>
+        </div>}
       </section>
-      {locked && <p className="luna-card p-4 text-sm text-cream/80">{text(language, 'lockedPremium', { title: getLocalizedMeditation(locked, language).title })}</p>}
-      {!plans && !isLifetime ? <div className="luna-surface rounded-[22px] p-4 text-sm text-lavender" role="status">{language === 'ru' ? 'Загружаем актуальные планы…' : 'Loading current plans…'}</div> : null}
-      {plans && !isLifetime && !isMonthly && <PlanCard title={t.monthlyPremium} price={`${plans.monthly.amountStars} ⭐ · ${plans.monthly.days ?? 30} ${language === 'ru' ? 'дней' : 'days'}`} features={monthlyBenefits} action={t.unlockMonthly} loading={openingPlan === 'monthly'} disabled={Boolean(openingPlan)} onClick={() => onBuy('monthly')} language={language} />}
-      {plans && !isLifetime && <PlanCard title={t.lifetimePremium} price={`${plans.lifetime.amountStars} ⭐ · ${language === 'ru' ? 'навсегда' : 'forever'}`} features={lifetimeBenefits} action={isMonthly ? (language === 'ru' ? 'Перейти на Lifetime' : 'Upgrade to Lifetime') : t.getLifetime} loading={openingPlan === 'lifetime'} disabled={Boolean(openingPlan)} onClick={() => onBuy('lifetime')} language={language} />}
-      {isLifetime && <button onClick={onLibrary} className="w-full rounded-[20px] bg-gold px-5 py-4 font-semibold text-night">{t.openPremiumLibrary}</button>}
-      {message && <p className="rounded-2xl bg-lavender/15 p-4 text-sm text-cream/80">{message}</p>}
+      {locked && <p className="premium-unlock-context">{language === 'ru' ? 'Открывается с Premium:' : 'Unlocking:'} <strong>{getLocalizedMeditation(locked, language).title}</strong></p>}
+      {!plans && !isLifetime ? <div className="premium-loading" role="status">{language === 'ru' ? 'Загружаем актуальные планы…' : 'Loading current plans…'}</div> : null}
+      <div className="premium-plan-list">
+        {plans && !isLifetime && !isFixedTerm && <PlanCard title={t.annualPremium} price={`${plans.annual.amountStars} ⭐`} period={language === 'ru' ? 'в год · 12 месяцев' : 'per year · 12 months'} features={annualBenefits} action={t.unlockAnnual} loading={openingPlan === 'annual'} disabled={Boolean(openingPlan)} onClick={() => onBuy('annual')} language={language} />}
+        {plans && !isLifetime && <PlanCard badge={language === 'ru' ? 'ЛУЧШАЯ ЦЕННОСТЬ' : 'BEST VALUE'} title={t.lifetimePremium} price={`${plans.lifetime.amountStars} ⭐`} period={language === 'ru' ? 'один платёж · навсегда' : 'one payment · forever'} features={lifetimeBenefits} action={isFixedTerm ? (language === 'ru' ? 'Перейти на Lifetime' : 'Upgrade to Lifetime') : t.getLifetime} loading={openingPlan === 'lifetime'} disabled={Boolean(openingPlan)} onClick={() => onBuy('lifetime')} language={language} featured />}
+      </div>
+      {isLifetime && <button onClick={onLibrary} className="luna-button-primary w-full">{t.openPremiumLibrary}</button>}
+      {message && <p className="premium-payment-message" role="status">{message}</p>}
       {fallbackInvoice && !openingPlan && <button type="button" onClick={onOpenFallbackInvoice} className="luna-button-primary w-full">{language === 'ru' ? 'Открыть оплату' : 'Open payment'}</button>}
       {openingPlan && <div className="h-1 overflow-hidden rounded-full bg-cream/10"><div className="h-full w-1/2 animate-pulse rounded-full bg-gold" /></div>}
       {message === t.paymentSuccessful && <button onClick={onLibrary} className="w-full rounded-2xl bg-cream px-5 py-4 font-semibold text-night">{t.openPremiumLibrary}</button>}
-      <div className="pt-1 text-center">
-        <button type="button" onClick={() => void restoreAccess()} disabled={restoreState === 'loading'} className="min-h-[44px] px-4 text-sm font-semibold text-gold disabled:opacity-55">{restoreState === 'loading' ? (language === 'ru' ? 'Проверка…' : 'Checking…') : t.restore}</button>
-        <p className="text-[11px] leading-5 text-lavender/70">{language === 'ru' ? 'Проверяет покупки Telegram Stars этого аккаунта.' : 'Checks Telegram Stars purchases for this account.'}</p>
+      <div className="premium-restore">
+        <button type="button" onClick={() => void restoreAccess()} disabled={restoreState === 'loading'}>{restoreState === 'loading' ? (language === 'ru' ? 'Проверка…' : 'Checking…') : t.restore}</button>
+        <p>{language === 'ru' ? 'Проверяет покупки Telegram Stars этого аккаунта.' : 'Checks Telegram Stars purchases for this account.'}</p>
         {restoreState !== 'idle' && restoreState !== 'loading' ? <p className="mt-1 text-xs text-lavender" role="status">{restoreState === 'success'
           ? (language === 'ru' ? 'Premium-доступ восстановлен.' : 'Premium access restored.')
           : restoreState === 'empty'
@@ -4060,24 +4067,22 @@ function PricingPage({
   );
 }
 
-function PlanCard(props: { title: string; price: string; features: string[]; action?: string; loading?: boolean; disabled?: boolean; featured?: boolean; onClick?: () => void; language: AppLanguage }) {
+function PlanCard(props: { badge?: string; title: string; price: string; period: string; features: string[]; action?: string; loading?: boolean; disabled?: boolean; featured?: boolean; onClick?: () => void; language: AppLanguage }) {
   return (
-    <article className={`rounded-[26px] border p-4 backdrop-blur ${props.featured ? 'border-gold/35 bg-gold/10 shadow-gold' : 'border-white/10 bg-white/5'}`}>
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-xl font-semibold">{props.title}</h3>
-          <p className="mt-1 text-gold">{props.price}</p>
-        </div>
-        <Crown className="text-gold" />
+    <article className={`premium-plan-card ${props.featured ? 'is-featured' : ''}`}>
+      {props.badge && <span className="premium-plan-badge">{props.badge}</span>}
+      <div className="premium-plan-heading">
+        <div><h3>{props.title}</h3><strong>{props.price}</strong><p>{props.period}</p></div>
+        <Crown aria-hidden="true" />
       </div>
-      <ul className="mt-3 grid gap-1.5 text-xs text-cream/75">
-        {props.features.map((feature) => <li key={feature}>• {feature}</li>)}
+      <ul>
+        {props.features.map((feature) => <li key={feature}><CheckCircle size={15} aria-hidden="true" />{feature}</li>)}
       </ul>
       {props.action && (
         <button
           onClick={props.onClick}
           disabled={props.disabled}
-          className={`${props.featured ? 'luna-button-primary' : 'rounded-full border border-gold/25 text-gold'} mt-4 flex w-full items-center justify-center gap-2 px-4 py-3 font-semibold transition disabled:cursor-not-allowed disabled:opacity-70`}
+          className="luna-button-primary premium-plan-cta"
         >
           {props.loading && <span className="h-4 w-4 animate-spin rounded-full border-2 border-night/30 border-t-night" />}
           {props.loading ? copy[props.language].openingPayment : props.action}
@@ -5233,9 +5238,7 @@ function ProfilePage({
     : access.hasPremium
     ? access.plan.toLowerCase().includes('lifetime')
       ? copy[language].lifetimePremium
-      : access.plan.toLowerCase().includes('monthly')
-        ? copy[language].monthlyPremium
-        : copy[language].premium
+      : copy[language].premiumActive
     : copy[language].premiumFree;
   const localizedPlanStatus = planStatus;
   const goalsLabel = goalsCountLabel(goals.length, language);
@@ -5256,7 +5259,7 @@ function ProfilePage({
       : (language === 'en' ? 'Temporarily unavailable' : 'Временно недоступна');
   const languageLabel = language === 'en' ? 'English' : 'Русский';
   const isLifetime = access.hasPremium && access.plan.toLowerCase().includes('lifetime');
-  const isMonthly = access.hasPremium && access.plan.toLowerCase().includes('monthly');
+  const isFixedTerm = access.hasPremium && !isLifetime;
 
   const updateAvatarInProfile = (avatar_url: string | null) => {
     onProfileUpdate((current) => current ? { ...current, user: { ...current.user, avatar_url } } : current);
@@ -5564,8 +5567,8 @@ function ProfilePage({
               ? (language === 'en' ? 'Reconnect to confirm your current access before opening any purchase options.' : 'Подключись снова, чтобы подтвердить текущий доступ перед открытием вариантов покупки.')
               : isLifetime
               ? (language === 'en' ? 'Active forever. You have permanent access to Luna Premium.' : 'Активно навсегда. У тебя постоянный доступ к Luna Premium.')
-              : isMonthly
-                ? (language === 'en' ? 'Monthly Premium is active through Telegram Stars.' : 'Месячный Premium активен через Telegram Stars.')
+              : isFixedTerm
+                ? (language === 'en' ? 'Premium access is active through Telegram Stars.' : 'Premium-доступ активен через Telegram Stars.')
                 : (language === 'en' ? 'Unlock the full Luna experience when you are ready.' : 'Открой полный опыт Luna, когда будешь готов.')}
           </p>
           {accessVerified && <div className="mt-4 space-y-2 text-sm text-lavender">
@@ -6675,7 +6678,7 @@ function SettingsPanel({ plans }: { plans: PlanCatalog | null }) {
   return (
     <div className="space-y-4">
       <AdminSection title="Settings">
-        <p className="rounded-2xl bg-cream/10 p-3 text-sm text-cream/75">Monthly Access: {plans ? `${plans.monthly.amountStars} Telegram Stars` : 'Loading from backend…'}</p>
+        <p className="rounded-2xl bg-cream/10 p-3 text-sm text-cream/75">Annual Access: {plans ? `${plans.annual.amountStars} Telegram Stars` : 'Loading from backend…'}</p>
         <p className="rounded-2xl bg-cream/10 p-3 text-sm text-cream/75">Lifetime Access: {plans ? `${plans.lifetime.amountStars} Telegram Stars` : 'Loading from backend…'}</p>
         <p className="rounded-2xl bg-cream/10 p-3 text-sm text-cream/75">Uploads happen only when an admin explicitly selects MP3 or cover files.</p>
         <p className="rounded-2xl bg-cream/10 p-3 text-sm text-cream/75">Backend debug endpoint is protected by Telegram admin authentication.</p>

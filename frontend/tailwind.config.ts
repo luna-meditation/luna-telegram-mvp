@@ -7,7 +7,7 @@ export default {
       colors: {
         cream: '#F5F1E9',
         beige: '#C9BFD6',
-        lavender: '#8E5FD6',
+        lavender: '#B7BDD8',
         gold: '#D4AF37',
         lightgold: '#F4D67A',
         night: '#1A1026',

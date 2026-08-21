@@ -223,8 +223,10 @@ export type NotificationPreferences = {
   timezone: string;
 };
 
-export type PlanCatalog = Record<'monthly' | 'lifetime', {
-  id: 'monthly' | 'lifetime';
+export type PurchasePlanId = 'annual' | 'lifetime';
+
+export type PlanCatalog = Record<PurchasePlanId, {
+  id: PurchasePlanId;
   title: string;
   amountStars: number;
   days?: number;
@@ -548,7 +550,7 @@ export type InvoiceLinkResult = {
   invoiceLink: string;
   requestId: string;
   amountStars?: number;
-  plan: 'monthly' | 'lifetime';
+  plan: PurchasePlanId;
   sourceField: string;
   rawResponse: unknown;
 };
@@ -574,7 +576,7 @@ function invoiceUrlFromResponse(response: unknown) {
   return null;
 }
 
-export async function createInvoiceLink(plan: 'monthly' | 'lifetime', initData?: string, requestId = createPaymentRequestId()): Promise<InvoiceLinkResult> {
+export async function createInvoiceLink(plan: PurchasePlanId, initData?: string, requestId = createPaymentRequestId()): Promise<InvoiceLinkResult> {
   const response = await request<unknown>('/api/payments/invoice-link', {
     method: 'POST',
     headers: { 'x-request-id': requestId },

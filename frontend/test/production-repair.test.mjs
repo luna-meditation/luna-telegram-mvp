@@ -92,12 +92,13 @@ test('invoice opens automatically after the tariff tap and exposes fallback only
   assert.match(appSource, /directUserGesture: userGesture/);
 });
 
-test('Monthly and Lifetime plan CTAs both enter the same direct invoice pipeline', () => {
+test('Annual and Lifetime plan CTAs both enter the same direct invoice pipeline', () => {
   const pricingSource = appSource.slice(appSource.indexOf('function PricingPage'), appSource.indexOf('function PlanCard'));
-  assert.match(pricingSource, /onBuy\('monthly'\)/);
+  assert.match(pricingSource, /onBuy\('annual'\)/);
   assert.match(pricingSource, /onBuy\('lifetime'\)/);
-  assert.match(pricingSource, /plans\.monthly\.amountStars/);
+  assert.match(pricingSource, /plans\.annual\.amountStars/);
   assert.match(pricingSource, /plans\.lifetime\.amountStars/);
+  assert.doesNotMatch(pricingSource, /onBuy\('monthly'\)/);
   assert.match(apiSource, /getPlans/);
 });
 

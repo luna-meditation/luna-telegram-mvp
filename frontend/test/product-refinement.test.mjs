@@ -60,8 +60,10 @@ test('notifications and support are real backend flows rather than decorative se
 
 test('Premium prices come from the backend and Restore Access has explicit states', () => {
   assert.match(api, /getPlans/);
-  assert.match(app, /plans\.monthly\.amountStars/);
+  assert.match(app, /plans\.annual\.amountStars/);
   assert.match(app, /plans\.lifetime\.amountStars/);
+  assert.match(app, /onBuy\('annual'\)/);
+  assert.doesNotMatch(app, /onBuy\('monthly'\)/);
   assert.match(app, /No active purchase found\. Your current access is unchanged\./);
   assert.doesNotMatch(app, /const premiumPrices/);
 });

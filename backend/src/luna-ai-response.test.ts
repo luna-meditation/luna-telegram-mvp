@@ -206,7 +206,7 @@ test('builds Responses request with larger output budget and minimal reasoning',
   assert.equal(request.instructions.includes('translations'), false);
   assert.match(request.instructions, /Luna is a female mindfulness companion/);
   assert.match(request.instructions, /VERIFIED_PRODUCT_CAPABILITIES/);
-  assert.match(request.instructions, /Default to 30-120 words/);
+  assert.match(request.instructions, /Default to 20-90 words/);
   assert.match(request.instructions, /team behind Luna Meditation created her/);
   assert.match(request.instructions, /Never invent navigation/);
   assert.match(request.instructions, /Never claim that a card was rendered or playback started/);

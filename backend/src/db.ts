@@ -1,7 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
 import { env } from './config.js';
-import { isPlanId, plans, type PlanId } from './plans.js';
+import {
+  paymentPlanDetails,
+  payloadPlanFromStoredPayment,
+  storedPlanId,
+  type PaymentPayloadPlanId
+} from './plans.js';
 import {
   applyPlaybackHeartbeat,
   mergePlaybackRanges,
@@ -1817,12 +1822,17 @@ export async function updateMoonGardenDevState(
   };
 }
 
-async function applySuccessfulPaymentEntitlement(telegramId: number, planId: PlanId) {
+async function applySuccessfulPaymentEntitlement(telegramId: number, planId: PaymentPayloadPlanId) {
   const now = new Date();
-  const activeUntil = planId === 'monthly'
-    ? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
-    : null;
   const currentAccess = await getUserAccess(telegramId);
+  const plan = paymentPlanDetails(planId);
+  const existingExpiry = currentAccess.user?.active_until
+    ? new Date(currentAccess.user.active_until).getTime()
+    : 0;
+  const entitlementBase = Math.max(now.getTime(), Number.isFinite(existingExpiry) ? existingExpiry : 0);
+  const activeUntil = planId === 'lifetime'
+    ? null
+    : new Date(entitlementBase + (plan.days ?? 0) * 24 * 60 * 60 * 1000).toISOString();
   const updates = currentAccess.plan === 'Lifetime'
     ? { lifetime_access: true, active_until: null }
     : planId === 'lifetime'
@@ -1842,32 +1852,33 @@ async function applySuccessfulPaymentEntitlement(telegramId: number, planId: Pla
 
 export async function recordSuccessfulPayment(input: {
   telegram_id: number;
-  plan: PlanId;
+  plan: PaymentPayloadPlanId;
   telegram_payment_charge_id?: string;
   provider_payment_charge_id?: string;
 }) {
-  const plan = plans[input.plan];
+  const plan = paymentPlanDetails(input.plan);
 
   if (input.telegram_payment_charge_id) {
     const { data: existingPayment, error: existingPaymentError } = await supabase
       .from('payments')
-      .select('id, telegram_id, plan')
+      .select('id, telegram_id, plan, amount_stars')
       .eq('telegram_payment_charge_id', input.telegram_payment_charge_id)
       .maybeSingle();
 
     if (existingPaymentError) throw existingPaymentError;
     if (existingPayment) {
-      if (Number(existingPayment.telegram_id) !== input.telegram_id || !isPlanId(existingPayment.plan)) {
+      const recoveredPlan = payloadPlanFromStoredPayment(existingPayment.plan, existingPayment.amount_stars);
+      if (Number(existingPayment.telegram_id) !== input.telegram_id || !recoveredPlan) {
         throw new Error('Telegram payment charge does not match the Luna account.');
       }
-      const recovered = await applySuccessfulPaymentEntitlement(input.telegram_id, existingPayment.plan);
+      const recovered = await applySuccessfulPaymentEntitlement(input.telegram_id, recoveredPlan);
       return { isNewPayment: false, ...recovered };
     }
   }
 
   const { error: paymentError } = await supabase.from('payments').insert({
     telegram_id: input.telegram_id,
-    plan: input.plan,
+    plan: storedPlanId(input.plan),
     amount_stars: plan.amountStars,
     currency: 'XTR',
     telegram_payment_charge_id: input.telegram_payment_charge_id,
