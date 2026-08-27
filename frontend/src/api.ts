@@ -194,6 +194,24 @@ export type ProfileStats = {
       target?: number;
     }>;
   };
+  journeyStatus?: {
+    id: 'initiate' | 'seeker' | 'adept' | 'guardian' | 'luminary' | 'sage' | 'ascendant' | 'celestial' | 'ethereal' | 'lunaris';
+    rank: number;
+    earned: boolean;
+    eligibleRank: number;
+    unlockedAt?: string | null;
+    next: {
+      id: 'initiate' | 'seeker' | 'adept' | 'guardian' | 'luminary' | 'sage' | 'ascendant' | 'celestial' | 'ethereal' | 'lunaris';
+      rank: number;
+      progressPercent: number;
+      remaining: Array<{
+        key: 'completedMeditations' | 'longestStreak' | 'unlockedAchievements' | 'gardenLevel';
+        current: number;
+        target: number;
+        remaining: number;
+      }>;
+    } | null;
+  };
   progressDiagnostics?: {
     localWeekStart: string;
     localWeekEnd: string;

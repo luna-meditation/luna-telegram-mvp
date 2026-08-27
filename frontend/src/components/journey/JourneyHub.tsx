@@ -7,10 +7,9 @@ import './journeyHub.css';
 type JourneyHubProps = {
   language: AppLanguage;
   journey: ReactNode;
-  garden: ReactNode;
 };
 
-export function JourneyHub({ language, journey, garden }: JourneyHubProps) {
+export function JourneyHub({ language, journey }: JourneyHubProps) {
   const t = progressCopy[language];
 
   return (
@@ -18,9 +17,6 @@ export function JourneyHub({ language, journey, garden }: JourneyHubProps) {
       <PageHeader title={t.progress} subtitle={t.subtitle} />
       <div className="journey-hub-content journey-story-enter">
         {journey}
-        <div className="journey-hub-garden" aria-label={t.moonGarden}>
-          {garden}
-        </div>
       </div>
     </div>
   );

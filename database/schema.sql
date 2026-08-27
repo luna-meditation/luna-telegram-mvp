@@ -43,6 +43,8 @@ create table if not exists public.users (
 alter table public.users
   add column if not exists avatar_url text,
   add column if not exists ai_memory_enabled boolean not null default true,
+  add column if not exists journey_status_rank smallint not null default -1,
+  add column if not exists journey_status_unlocked_at timestamptz,
   add column if not exists profile_goals text[] not null default '{}'::text[],
   add column if not exists notification_preferences jsonb not null default jsonb_build_object(
     'dailyReminder', false,
@@ -50,6 +52,21 @@ alter table public.users
     'reminderTime', '21:00',
     'timezone', 'UTC'
   );
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'users_journey_status_rank_check'
+      and conrelid = 'public.users'::regclass
+  ) then
+    alter table public.users
+      add constraint users_journey_status_rank_check
+      check (journey_status_rank between -1 and 9);
+  end if;
+end
+$$;
 
 create table if not exists public.payments (
   id uuid primary key default gen_random_uuid(),

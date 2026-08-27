@@ -6,6 +6,7 @@ import { lunaAiRpcAmbiguityFixMigration } from './luna-ai-rpc-ambiguity-fix-migr
 import { lunaAiRpcMigration } from './luna-ai-rpc-migration.js';
 import { lunaAiPendingStateMigration } from './luna-ai-pending-state-migration.js';
 import { lunaAiConversationStateMigration } from './luna-ai-conversation-state-migration.js';
+import { journeyStatusMigration } from './journey-status-migration.js';
 import { productRefinementMigration } from './product-refinement-migration.js';
 
 const meditationPlatformMigration = `
@@ -340,6 +341,7 @@ export async function runMigrations() {
     await client.query(lunaAiPendingStateMigration);
     await client.query(lunaAiConversationStateMigration);
     await client.query(productRefinementMigration);
+    await client.query(journeyStatusMigration);
     console.log('[Database migration] Luna AI RPC synchronization applied', {
       migration: '006_luna_ai_rpc_sync',
       functions: ['reserve_luna_chat_request', 'increment_meditation_play_count'],
@@ -360,6 +362,10 @@ export async function runMigrations() {
     console.log('[Database migration] Premium product refinement applied', {
       migration: '20260718103933_premium_product_refinement',
       tables: ['support_requests', 'reminder_deliveries']
+    });
+    console.log('[Database migration] Permanent Journey status applied', {
+      migration: '011_journey_status',
+      columns: ['users.journey_status_rank', 'users.journey_status_unlocked_at']
     });
     console.log('Database migrations applied.');
   } finally {

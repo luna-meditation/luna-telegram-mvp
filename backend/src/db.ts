@@ -25,6 +25,7 @@ import {
 } from './progress-model.js';
 import { buildProgressInsights } from './progress-insights.js';
 import { achievementDefinitions, buildAchievementItems, type AchievementStats } from './progress-achievements.js';
+import { buildJourneyStatus, type JourneyStatusMetrics } from './journey-status.js';
 import { moonSeedsForNewActiveDay, streakMoonSeedTotal } from './streak-rewards.js';
 import { logBackendError } from './error-logging.js';
 import { normalizeNotificationPreferences, type NotificationPreferences, type ReminderType } from './notification-policy.js';
@@ -42,6 +43,52 @@ export const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE
     transport: WebSocket as unknown as typeof globalThis.WebSocket
   }
 });
+
+async function syncPermanentJourneyStatus(telegramId: number, metrics: JourneyStatusMetrics) {
+  const { data: stored, error: readError } = await supabase
+    .from('users')
+    .select('journey_status_rank, journey_status_unlocked_at')
+    .eq('telegram_id', telegramId)
+    .maybeSingle();
+
+  if (readError) {
+    logBackendError(readError, { endpoint: 'database Journey status read', telegramId });
+    return buildJourneyStatus(metrics);
+  }
+
+  const rawStoredRank = Number(stored?.journey_status_rank ?? -1);
+  const storedRank = Number.isFinite(rawStoredRank) ? rawStoredRank : -1;
+  const unlockedAt = typeof stored?.journey_status_unlocked_at === 'string'
+    ? stored.journey_status_unlocked_at
+    : null;
+  const status = buildJourneyStatus(metrics, storedRank, unlockedAt);
+
+  if (status.eligibleRank <= storedRank) return status;
+
+  const nextUnlockedAt = new Date().toISOString();
+  const { data: updated, error: updateError } = await supabase
+    .from('users')
+    .update({
+      journey_status_rank: status.eligibleRank,
+      journey_status_unlocked_at: nextUnlockedAt
+    })
+    .eq('telegram_id', telegramId)
+    .lt('journey_status_rank', status.eligibleRank)
+    .select('journey_status_rank, journey_status_unlocked_at')
+    .maybeSingle();
+
+  if (updateError) {
+    logBackendError(updateError, { endpoint: 'database Journey status update', telegramId });
+    return status;
+  }
+
+  if (!updated) return status;
+  return buildJourneyStatus(
+    metrics,
+    Number(updated.journey_status_rank ?? status.eligibleRank),
+    typeof updated.journey_status_unlocked_at === 'string' ? updated.journey_status_unlocked_at : nextUnlockedAt
+  );
+}
 
 export type TelegramUserInput = {
   telegram_id: number;
@@ -1597,6 +1644,12 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     perfectWeeks: lifetimeStats.completedWeeks,
     categoryCounts
   });
+  const journeyStatus = await syncPermanentJourneyStatus(telegramId, {
+    completedMeditations,
+    longestStreak,
+    unlockedAchievements: achievements.unlocked,
+    gardenLevel: moonGarden.gardenLevel
+  });
 
   return {
     user: user ? {
@@ -1649,6 +1702,7 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     purchasedPlan: user?.lifetime_access ? 'lifetime' : activeUntil > Date.now() ? 'monthly' : 'free',
     calmScore,
     achievements,
+    journeyStatus,
     progressDiagnostics: telegramId === env.ADMIN_TELEGRAM_ID ? {
       localWeekStart: currentWeek.weekStart,
       localWeekEnd: shiftDateKey(currentWeek.weekStart, 6),
