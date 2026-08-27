@@ -19,26 +19,25 @@ test('bottom navigation remains five items and labels Progress as Journey and П
   assert.match(navSource, /Route/);
 });
 
-test('Journey Hub switches locally between Journey and Garden without nested navigation', () => {
-  assert.match(hubSource, /activeTab === 'journey' \? journey : garden/);
-  assert.match(hubSource, /<SegmentedTabs/);
-  assert.match(hubSource, /onTabChange\(nextTab\)/);
+test('Journey Hub combines Journey and Garden into one continuous screen', () => {
+  assert.match(hubSource, /\{journey\}[\s\S]*journey-hub-garden[\s\S]*\{garden\}/);
+  assert.doesNotMatch(hubSource, /<SegmentedTabs|onTabChange|activeTab/);
   assert.doesNotMatch(hubSource, /V2BottomNav/);
-  assert.match(appSource, /activeTab=\{page === 'moonGarden' \? 'garden' : 'journey'\}/);
+  assert.match(appSource, /<JourneyHub[\s\S]*journey=\{\([\s\S]*<ProgressPage[\s\S]*garden=\{\([\s\S]*<MoonGardenPage/);
 });
 
-test('Journey is the default direct tab and Garden supports direct startapp navigation', () => {
+test('Journey is the default route and legacy Garden links open the same unified screen', () => {
   assert.match(appSource, /normalized === 'journey'\) return 'progress'/);
   assert.match(appSource, /normalized === 'garden'\) return 'moonGarden'/);
   assert.match(appSource, /normalized === 'moon-garden'\) return 'moonGarden'/);
-  assert.match(appSource, /onTabChange=\{\(tab\) => setPage\(tab === 'garden' \? 'moonGarden' : 'progress'\)\}/);
+  assert.match(appSource, /\(page === 'progress' \|\| page === 'moonGarden'\)/);
+  assert.doesNotMatch(appSource, /onTabChange=\{\(tab\) => setPage/);
 });
 
-test('Journey and Garden preserve independent session scroll positions', () => {
+test('unified Journey uses one natural page scroll without tab scroll bookkeeping', () => {
   assert.match(appSource, /app-root overflow-x-clip bg-night/);
-  assert.match(appSource, /journeyScrollPositionsRef = useRef<Record<JourneyHubTab, number>>\(\{ journey: 0, garden: 0 \}\)/);
-  assert.match(hubSource, /scrollPositions\.current\[activeTab\] = window\.scrollY/);
-  assert.match(hubSource, /window\.scrollTo\(\{ top: scrollPositions\.current\[activeTab\]/);
+  assert.doesNotMatch(appSource, /journeyScrollPositionsRef|JourneyHubTab/);
+  assert.doesNotMatch(hubSource, /scrollPositions|window\.scrollTo/);
 });
 
 test('Garden entry is restrained, reduced-motion aware, and uses art-directed imagery', () => {
@@ -46,14 +45,13 @@ test('Garden entry is restrained, reduced-motion aware, and uses art-directed im
   assert.match(hubStyles, /prefers-reduced-motion: reduce/);
   assert.match(hubStyles, /object-fit: cover/);
   assert.match(hubStyles, /object-position: 50% 10%/);
-  assert.match(hubStyles, /aspect-ratio: 10 \/ 13\.8/);
+  assert.match(hubStyles, /aspect-ratio: 10 \/ 11\.2/);
 });
 
-test('Journey tabs scroll normally and use the compact Library-style pill treatment', () => {
-  const tabs = hubStyles.match(/\.journey-hub-tabs\s*\{([^}]*)\}/)?.[1] ?? '';
-  assert.match(tabs, /position:\s*relative/);
-  assert.doesNotMatch(tabs, /sticky/);
-  assert.doesNotMatch(tabs, /safe-area-inset-top/);
+test('Journey removes nested tabs while preserving shared design-system primitives', () => {
+  assert.doesNotMatch(hubStyles, /\.journey-hub-tabs/);
+  assert.match(hubStyles, /\.journey-hub-content/);
+  assert.match(hubStyles, /\.journey-hub-garden/);
   assert.match(primitiveStyles, /\.segmented-tabs/);
 });
 

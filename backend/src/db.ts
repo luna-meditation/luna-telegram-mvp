@@ -25,6 +25,7 @@ import {
 } from './progress-model.js';
 import { buildProgressInsights } from './progress-insights.js';
 import { achievementDefinitions, buildAchievementItems, type AchievementStats } from './progress-achievements.js';
+import { moonSeedsForNewActiveDay, streakMoonSeedTotal } from './streak-rewards.js';
 import { logBackendError } from './error-logging.js';
 import { normalizeNotificationPreferences, type NotificationPreferences, type ReminderType } from './notification-policy.js';
 import { rankPersonalizedMeditations } from './recommendation-policy.js';
@@ -1099,9 +1100,12 @@ export async function updateStreak(telegramId: number, requestedLocalDate?: stri
     .single();
 
   if (error) throw error;
-  if (nextStreak >= 7 && !current?.reward_7) {
-    await awardMoonSeeds(telegramId, 5);
-  }
+  await awardMoonSeeds(telegramId, moonSeedsForNewActiveDay(nextStreak, {
+    reward_7: Boolean(current?.reward_7),
+    reward_14: Boolean(current?.reward_14),
+    reward_30: Boolean(current?.reward_30),
+    reward_100: Boolean(current?.reward_100)
+  }));
   if (protectedByFreeze) {
     console.info(`Streak protected with freeze for telegram_id=${telegramId}`);
   }
@@ -1205,8 +1209,8 @@ function earnedMoonSeeds(input: {
   currentStreak: number;
   longestStreak: number;
 }) {
-  const streakBonus = Math.max(input.currentStreak, input.longestStreak) >= 7 ? 5 : 0;
-  return input.completedMeditations + input.completedBreathSessions + streakBonus;
+  const streakSeeds = streakMoonSeedTotal(Math.max(input.currentStreak, input.longestStreak));
+  return input.completedMeditations + input.completedBreathSessions + streakSeeds;
 }
 
 async function syncAchievements(telegramId: number, stats: AchievementStats) {

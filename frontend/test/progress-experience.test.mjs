@@ -7,7 +7,6 @@ const appSource = readFileSync(resolve(process.cwd(), 'src/App.tsx'), 'utf8');
 const progressSource = readFileSync(resolve(process.cwd(), 'src/components/progress/ProgressExperience.tsx'), 'utf8');
 const progressCopySource = readFileSync(resolve(process.cwd(), 'src/components/progress/progressCopy.ts'), 'utf8');
 const stylesSource = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
-const patternsSource = readFileSync(resolve(process.cwd(), 'src/components/progress/progressPatterns.ts'), 'utf8');
 const homeStyles = readFileSync(resolve(process.cwd(), 'src/v2/design-system/homeV2.css'), 'utf8');
 
 test('Progress uses the narrative experience instead of the legacy metric dashboard', () => {
@@ -17,34 +16,23 @@ test('Progress uses the narrative experience instead of the legacy metric dashbo
   assert.doesNotMatch(appSource, /function ProgressMetricCard|function HeroProgressCard|function WeeklySummaryCard/);
 });
 
-test('Journey story follows the approved order and does not duplicate Garden', () => {
-  for (const component of [
-    'CurrentRhythmHero',
-    'LunasReflection',
-    'ThisWeek',
-    'MoodJourney',
-    'PersonalPatterns',
-    'AchievementsStory',
-    'NextGentleStep'
-  ]) {
-    assert.match(progressSource, new RegExp(`<${component}`));
+test('Journey story renders only streaks and achievements before the unified Garden', () => {
+  const rendered = progressSource.slice(progressSource.indexOf('export function ProgressExperience('));
+  assert.match(rendered, /<CurrentRhythmHero[\s\S]*<AchievementsStory/);
+  for (const component of ['LunasReflection', 'ThisWeek', 'MoodJourney', 'PersonalPatterns', 'NextGentleStep']) {
+    assert.doesNotMatch(rendered, new RegExp(`<${component}`));
   }
   assert.doesNotMatch(progressSource, /function GardenStory|<GardenStory/);
-  const order = ['<CurrentRhythmHero', '<LunasReflection', '<ThisWeek', '<MoodJourney', '<PersonalPatterns', '<AchievementsStory', '<NextGentleStep'];
-  assert.deepEqual([...order].sort((left, right) => progressSource.indexOf(left) - progressSource.indexOf(right)), order);
 });
 
-test('Progress insights and emotional curves use real profile data with safe empty states', () => {
-  assert.match(progressSource, /profile\?\.progressInsights/);
-  assert.match(progressSource, /profile\?\.moodTrend/);
+test('Current Rhythm uses real streak and active-day profile data', () => {
   assert.match(progressSource, /profile\?\.currentWeek/);
-  assert.match(progressSource, /profile\?\.previousWeek/);
-  assert.match(progressSource, /sleepRange/);
-  assert.match(progressSource, /listeningMinutes/);
-  assert.doesNotMatch(progressSource, /calm score has improved|stress reduced|meditation appears to improve/i);
-  assert.doesNotMatch(progressSource, /moodScore|meditation reduced your anxiety/i);
-  assert.match(progressSource, /wellbeingSignalsForCheckin/);
-  assert.match(progressSource, /wellbeingSignalPath/);
+  assert.match(progressSource, /profile\?\.currentStreak/);
+  assert.match(progressSource, /profile\?\.longestStreak/);
+  assert.match(progressSource, /week\.activeDays \?\? week\.completedDays/);
+  assert.match(progressSource, /day\.hasVerifiedPractice/);
+  assert.match(progressSource, /day\.hasCheckin/);
+  assert.match(progressSource, /\+1 Moon Seed each active day/);
 });
 
 test('Progress experience has complete English and Russian primary copy', () => {
@@ -53,83 +41,41 @@ test('Progress experience has complete English and Russian primary copy', () => 
     'Ваш путь',
     "journeyTab: 'Journey'",
     "journeyTab: 'Путь'",
-    'Luna’s Reflection',
-    'Наблюдение Луны',
-    'This Week with Luna',
-    'Эта неделя с Луной',
-    'Next Gentle Step',
-    'Следующий мягкий шаг'
+    "achievements: 'Achievements'",
+    "achievements: 'Достижения'",
+    "moonGarden: 'Moon Garden'",
+    "moonGarden: 'Лунный сад'"
   ]) {
     assert.match(progressCopySource, new RegExp(text));
   }
 });
 
-test('Mood days open a detail sheet and achievements open a filtered full view', () => {
-  assert.match(progressSource, /setSelectedDay\(day\)/);
+test('Achievements open a filtered full icon view', () => {
   assert.match(progressSource, /role="dialog"/);
   assert.match(progressSource, /createPortal/);
   assert.match(progressSource, /document\.body/);
   assert.match(progressSource, /statusFilter/);
   assert.match(progressSource, /categoryFilter/);
   assert.match(progressSource, /unlockedAt/);
-  assert.match(progressSource, /role="button"/);
-  assert.match(progressSource, /wellbeingSignalPoint/);
+  assert.match(progressSource, /aria-label={`\$\{item\.title\}\. \$\{item\.description\}`}/);
 });
 
-test('Progress next step opens a catalog meditation directly', () => {
-  assert.match(progressSource, /resolveProgressRecommendation/);
-  assert.match(progressSource, /onOpenMeditation\(recommendation\.meditation\)/);
-  assert.doesNotMatch(progressSource, /Choose a practice/);
-});
-
-test('Journey keeps a two-achievement preview and uses one shared bottom inset', () => {
+test('Journey shows a six-icon achievement preview and uses one shared bottom inset', () => {
   const progressPageStyles = stylesSource.match(/\.progress-v4-page\s*\{([^}]*)\}/)?.[1] ?? '';
-  assert.match(progressSource, /journeyUnlocked\.slice\(0, 2\)/);
-  assert.match(progressSource, /item\.category !== 'garden'/);
+  assert.match(progressSource, /Number\(right\.unlocked\) - Number\(left\.unlocked\)/);
+  assert.match(progressSource, /\.slice\(0, 6\)/);
+  assert.match(progressSource, /item\.unlocked \? 'is-unlocked' : 'is-locked'/);
+  assert.match(stylesSource, /\.progress-v4-achievement-grid[\s\S]*grid-template-columns: repeat\(3/);
+  assert.match(stylesSource, /\.progress-v4-achievements-list[\s\S]*grid-template-columns: repeat\(3/);
+  assert.match(progressSource, /const journeyItems = items/);
   assert.match(progressPageStyles, /padding-bottom:\s*0/);
   assert.doesNotMatch(progressPageStyles, /safe-area-inset-bottom/);
 });
 
-test('This Week renders Active Luna Days separately from listening and completions', () => {
-  assert.match(progressSource, /week\.activeDays \?\? week\.completedDays/);
-  assert.match(progressSource, /t\.activeDaysLabel/);
-  assert.match(progressSource, /week\.listeningMinutes/);
-  assert.match(progressSource, /week\.completedSessions/);
-  assert.match(progressSource, /day\.hasVerifiedPractice/);
-  assert.match(progressSource, /day\.hasCheckin/);
-  assert.match(progressSource, /day\.isCurrent/);
-});
-
-test('Mood Journey legend exactly matches graph colors and exposes a relative scale', () => {
-  assert.match(stylesSource, /\.progress-v4-mood-legend \.signal-calm \{ color: #b7a6ee; \}/);
-  assert.match(stylesSource, /\.progress-v4-mood-legend \.signal-stress \{ color: #d99b7a; \}/);
-  assert.match(stylesSource, /\.progress-v4-mood-legend \.signal-sleep \{ color: #82c9e8; \}/);
-  assert.match(progressSource, /progress-v4-mood-scale/);
-  assert.match(progressCopySource, /Your mood over the last seven days\./);
-  assert.match(progressCopySource, /Ваше настроение за последние семь дней\./);
-});
-
-test('Journey factual typography follows the Home Inter system while reflection remains editorial', () => {
+test('Journey factual typography follows the Home Inter system', () => {
   assert.match(homeStyles, /font-family: var\(--font-sans\)/);
   assert.match(stylesSource, /\.journey-hub \.progress-v3-section-heading h3/);
-  assert.match(stylesSource, /\.progress-v4-next-practice h4[^}]*font-family: var\(--font-sans\)/s);
-  assert.match(stylesSource, /\.progress-v3-reflection-copy[^}]*font-family: var\(--font-editorial\)/s);
-});
-
-test('Active days are explicitly explained and Mood Journey has a chart summary', () => {
-  assert.match(progressCopySource, /An active day includes a check-in or completed listening activity\./);
-  assert.match(progressCopySource, /Активный день включает чек-ин или завершённое прослушивание\./);
-  assert.match(progressSource, /t\.activeDayHelp/);
-  assert.match(progressSource, /className="sr-only">\{t\.chartSummary\}/);
-});
-
-test('Personal Patterns encode explicit minimum evidence thresholds', () => {
-  assert.match(patternsSource, /preferredTimeSessions:\s*5/);
-  assert.match(patternsSource, /preferredTimeDays:\s*3/);
-  assert.match(patternsSource, /familiarCategoryCompletions:\s*3/);
-  assert.match(patternsSource, /strongestWeekdayWeeks:\s*2/);
-  assert.match(progressCopySource, /Luna is still learning your rhythm/);
-  assert.match(progressCopySource, /Луна пока изучает ваш ритм/);
+  assert.match(stylesSource, /\.progress-v4-achievement-copy h4[^}]*font-family: var\(--font-sans\)/s);
 });
 
 test('Garden progression remains clamped to levels zero through seven', () => {

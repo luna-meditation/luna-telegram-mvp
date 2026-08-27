@@ -955,3 +955,18 @@
   12%, 82% { opacity: 1; transform: translateY(0) scale(1); }
   100% { opacity: 0; transform: translateY(-3px) scale(0.99); }
 }
+
+/* A restrained luminous edge separates dark surfaces without brightening the interface. */
+.home-v2 :where(
+  .home-v2-atmosphere,
+  .home-v2-recommendation,
+  .home-v2-stat-card,
+  .home-v2-practice-tile,
+  .home-v2-ask-tile,
+  .home-v2-sound-ribbon,
+  .home-v2-home-action,
+  .home-v2-continue-card,
+  .home-v2-feature-tile
+) {
+  box-shadow: var(--shadow-soft);
+}
