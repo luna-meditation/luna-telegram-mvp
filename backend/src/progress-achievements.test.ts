@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { achievementDefinitions, buildAchievementItems, progressToTarget, type AchievementStats } from './progress-achievements.js';
+import { moonSeedsForNewActiveDay, streakMoonSeedTotal } from './streak-rewards.js';
 
 const baseStats: AchievementStats = {
   completedMeditations: 2,
@@ -38,4 +39,13 @@ test('Moon Garden achievements stop at the real seven-upgrade maximum', () => {
 
   const items = buildAchievementItems({ ...baseStats, gardenLevel: 7 }, []);
   assert.equal(items.filter((item) => item.category === 'garden' && item.unlocked).length, 3);
+});
+
+test('each new streak day earns a Moon Seed and milestones add one-time bonuses', () => {
+  assert.equal(streakMoonSeedTotal(1), 1);
+  assert.equal(streakMoonSeedTotal(7), 12);
+  assert.equal(streakMoonSeedTotal(14), 29);
+  assert.equal(moonSeedsForNewActiveDay(7, {}), 6);
+  assert.equal(moonSeedsForNewActiveDay(7, { reward_7: true }), 1);
+  assert.equal(moonSeedsForNewActiveDay(14, { reward_7: true }), 11);
 });

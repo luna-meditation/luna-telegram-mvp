@@ -52,8 +52,8 @@
   --radius-lg: 24px;
   --radius-xl: 30px;
   --radius-round: 999px;
-  --shadow-soft: 0 18px 50px rgba(0, 0, 0, 0.26);
-  --shadow-glass: 0 22px 70px rgba(0, 0, 0, 0.34);
+  --shadow-soft: 0 18px 50px rgba(0, 0, 0, 0.26), 0 0 28px rgba(157, 140, 255, 0.045), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  --shadow-glass: 0 22px 70px rgba(0, 0, 0, 0.34), 0 0 36px rgba(157, 140, 255, 0.055), inset 0 1px 0 rgba(255, 255, 255, 0.04);
   --shadow-gold: 0 18px 48px rgba(212, 175, 55, 0.16);
   --glow-violet: 0 0 34px rgba(157, 140, 255, 0.24);
 

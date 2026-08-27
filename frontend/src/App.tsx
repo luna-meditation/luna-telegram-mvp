@@ -99,7 +99,7 @@ import {
   type InvoiceLinkResult
 } from './api';
 import { MoonGardenScene as AnimatedMoonGardenScene } from './components/moon-garden/MoonGardenScene';
-import { JourneyHub, type JourneyHubTab } from './components/journey/JourneyHub';
+import { JourneyHub } from './components/journey/JourneyHub';
 import { LunaChat } from './components/LunaChat';
 import { ProgressExperience, ProgressExperienceSkeleton } from './components/progress/ProgressExperience';
 import { AppHeader } from './design-system/components/AppHeader';
@@ -1933,7 +1933,6 @@ function App() {
   const paymentOperationRef = useRef(false);
   const [language, setLanguage] = useState<AppLanguage>(() => initialLanguage(user));
   const [page, setPage] = useState<Page>(() => initialPageFromLaunch(launchStartParam));
-  const journeyScrollPositionsRef = useRef<Record<JourneyHubTab, number>>({ journey: 0, garden: 0 });
   const [libraryMode, setLibraryMode] = useState<LibraryMode>('meditations');
   const [mood, setMood] = useState<MoodChip>('Calm');
   const [moodSelectedByUser, setMoodSelectedByUser] = useState(false);
@@ -3065,23 +3064,15 @@ function App() {
 
         {(page === 'progress' || page === 'moonGarden') && (
           <JourneyHub
-            activeTab={page === 'moonGarden' ? 'garden' : 'journey'}
             language={language}
-            scrollPositions={journeyScrollPositionsRef}
-            onTabChange={(tab) => setPage(tab === 'garden' ? 'moonGarden' : 'progress')}
             journey={(
               <ProgressPage
                 profile={profile}
-                wellness={wellness}
-                meditations={decoratedMeditations}
-                hasPremium={effectiveHasPremium}
                 isAdmin={adminStatus === 'allowed'}
                 loading={accountLoading || journeySummaryRefreshing}
                 unavailable={accountUnavailable}
                 onRetry={() => void refreshAccount()}
                 language={language}
-                onOpenMeditation={openMeditation}
-                onLibrary={() => setPage('library')}
               />
             )}
             garden={(
@@ -3407,28 +3398,18 @@ function LunaPage({
 }
 function ProgressPage({
   profile,
-  wellness,
-  meditations,
-  hasPremium,
   isAdmin,
   loading,
   unavailable,
   onRetry,
-  language,
-  onOpenMeditation,
-  onLibrary
+  language
 }: {
   profile: ProfileStats | null;
-  wellness: WellnessSummary | null;
-  meditations: Meditation[];
-  hasPremium: boolean;
   isAdmin: boolean;
   loading: boolean;
   unavailable: boolean;
   onRetry: () => void;
   language: AppLanguage;
-  onOpenMeditation: (meditation: Meditation) => void;
-  onLibrary: () => void;
 }) {
   const hasFreshJourneySummary = Boolean(
     profile?.currentWeek
@@ -3456,14 +3437,9 @@ function ProgressPage({
   return (
     <ProgressExperience
       profile={profile}
-      wellness={wellness}
       language={language}
       achievements={buildAchievementViews(profile, language)}
-      meditations={meditations}
-      hasPremium={hasPremium}
       isAdmin={isAdmin}
-      onOpenMeditation={onOpenMeditation}
-      onLibrary={onLibrary}
     />
   );
 }
