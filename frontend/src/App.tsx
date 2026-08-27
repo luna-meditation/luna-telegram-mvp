@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Bot,
   Bell,
@@ -3073,25 +3074,25 @@ function App() {
                 unavailable={accountUnavailable}
                 onRetry={() => void refreshAccount()}
                 language={language}
-              />
-            )}
-            garden={(
-              <MoonGardenPage
-                profile={profile}
-                onPlant={async (element) => {
-                  const result = await plantMoonGardenElement(element.id, initData);
-                  setProfile(result.profile);
-                  return result.profile;
-                }}
-                isAdmin={adminStatus === 'allowed'}
-                ambiencePlaying={moonGardenAmbiencePlaying}
-                ambienceVolume={moonGardenVolume}
-                ambienceError={moonGardenAmbienceError}
-                onToggleAmbience={toggleMoonGardenAmbience}
-                onAmbienceVolume={changeMoonGardenVolume}
-                onDevAction={runMoonGardenDevAction}
-                language={language}
-                embedded
+                garden={(
+                  <MoonGardenPage
+                    profile={profile}
+                    onPlant={async (element) => {
+                      const result = await plantMoonGardenElement(element.id, initData);
+                      setProfile(result.profile);
+                      return result.profile;
+                    }}
+                    isAdmin={adminStatus === 'allowed'}
+                    ambiencePlaying={moonGardenAmbiencePlaying}
+                    ambienceVolume={moonGardenVolume}
+                    ambienceError={moonGardenAmbienceError}
+                    onToggleAmbience={toggleMoonGardenAmbience}
+                    onAmbienceVolume={changeMoonGardenVolume}
+                    onDevAction={runMoonGardenDevAction}
+                    language={language}
+                    embedded
+                  />
+                )}
               />
             )}
           />
@@ -3402,7 +3403,8 @@ function ProgressPage({
   loading,
   unavailable,
   onRetry,
-  language
+  language,
+  garden
 }: {
   profile: ProfileStats | null;
   isAdmin: boolean;
@@ -3410,13 +3412,11 @@ function ProgressPage({
   unavailable: boolean;
   onRetry: () => void;
   language: AppLanguage;
+  garden: ReactNode;
 }) {
   const hasFreshJourneySummary = Boolean(
     profile?.currentWeek
     && profile.currentWeek.weekStart === currentLocalWeekStart()
-    && profile.moodTrend
-    && profile.progressInsights
-    && profile.lifetimeStats
   );
   if (loading) {
     return <ProgressExperienceSkeleton language={language} />;
@@ -3439,6 +3439,7 @@ function ProgressPage({
       profile={profile}
       language={language}
       achievements={buildAchievementViews(profile, language)}
+      garden={garden}
       isAdmin={isAdmin}
     />
   );
@@ -4716,6 +4717,7 @@ function MoonGardenPage({
   const [liveProfile, setLiveProfile] = useState<ProfileStats | null>(profile);
   const [message, setMessage] = useState('');
   const [appearedElementId, setAppearedElementId] = useState<string | null>(null);
+  const [gardenJourneyOpen, setGardenJourneyOpen] = useState(false);
   const [devOpen, setDevOpen] = useState(false);
   const [grantAmount, setGrantAmount] = useState(40);
   const [exactBalance, setExactBalance] = useState(25);
@@ -4728,19 +4730,8 @@ function MoonGardenPage({
   const readyElement = gardenElements.find((element) => !planted.has(element.id) && element.cost <= seeds) ?? null;
   const nextSuggestedElement = readyElement ?? nextElement;
   const isGardenComplete = plantedCount >= gardenElements.length;
-  const gardenMilestones = buildAchievementViews(activeProfile, language)
-    .filter((achievement) => achievement.category === 'garden' && achievement.unlocked)
-    .sort((left, right) => String(right.unlockedAt ?? '').localeCompare(String(left.unlockedAt ?? '')))
-    .slice(0, 3);
   const nextUpgradeNeeded = nextSuggestedElement ? Math.max(0, nextSuggestedElement.cost - seeds) : 0;
   const canPlantNextUpgrade = Boolean(nextSuggestedElement && nextUpgradeNeeded === 0 && !workingId);
-  const progressMessage = plantedCount >= gardenElements.length
-    ? copy[language].gardenFlourishing
-    : plantedCount >= 3
-      ? copy[language].gardenTakingShape
-      : plantedCount > 0
-        ? copy[language].gardenQuietPlace
-        : copy[language].completePracticeSeed;
 
   useEffect(() => {
     setLiveProfile(profile);
@@ -4832,7 +4823,12 @@ function MoonGardenPage({
 
   return (
     <div className={embedded ? 'journey-garden-tab' : 'luna-page space-y-5 pt-[calc(env(safe-area-inset-top,0px)+24px)]'}>
-      {!embedded && (
+      {embedded ? (
+        <header className="journey-garden-header">
+          <p className="progress-v3-eyebrow">{copy[language].moonGarden}</p>
+          <h3>{language === 'en' ? 'Grow your quiet place.' : 'Вырасти своё тихое место.'}</h3>
+        </header>
+      ) : (
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="type-page-title">{copy[language].moonGarden}</h2>
@@ -4854,82 +4850,66 @@ function MoonGardenPage({
         onAmbienceVolume={onAmbienceVolume}
       />
 
-      <section className="journey-garden-summary" aria-label={copy[language].moonGarden}>
-        <div><span>{copy[language].availableMoonSeeds}</span><strong>{seeds}</strong></div>
-        <div><span>{copy[language].gardenLevel}</span><strong>{stage.level}</strong></div>
-        <div><span>{copy[language].gardenUpgrades}</span><strong>{plantedCount} / 7</strong></div>
-      </section>
+      <p className="journey-garden-meta" aria-label={copy[language].moonGarden}>
+        <span>{language === 'en' ? `Level ${stage.level}` : `Уровень ${stage.level}`}</span>
+        <i aria-hidden="true">·</i>
+        <span>{language === 'en' ? `${plantedCount}/7 upgrades` : `${plantedCount}/7 улучшений`}</span>
+        <i aria-hidden="true">·</i>
+        <span>{language === 'en' ? `${seeds} Moon Seeds` : `${seeds} лунных семян`}</span>
+        {isGardenComplete && <strong>{copy[language].gardenComplete}</strong>}
+      </p>
       {message && <p className="rounded-2xl bg-night/70 px-3 py-2 text-sm text-gold">{message}</p>}
 
-      <section className="journey-garden-next-card">
-        {isGardenComplete ? (
-          <>
-            <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].gardenComplete}</p>
-            <h3>{copy[language].gardenFlourishing}</h3>
-          </>
-        ) : nextSuggestedElement ? (
-          <>
-            <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].nextUnlock}</p>
-            <div className="mt-3 flex items-center gap-3">
-              <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[20px] border border-gold/30 bg-gold/10">
-                <GardenUpgradeIcon visual={nextSuggestedElement.visual} active />
-              </span>
-              <div className="min-w-0 flex-1">
-                <h3>{nextSuggestedElement.name[language]}</h3>
-                <p className="mt-1 text-xs text-lavender">{text(language, 'unlocksLevel', { level: nextSuggestedElement.unlockLevel })} · {copy[language].cost}: {moonSeedCountLabel(nextSuggestedElement.cost, language)}</p>
-              </div>
-            </div>
-            <p className="mt-3 text-sm leading-6 text-cream/75">{nextSuggestedElement.description[language]}</p>
+      {!isGardenComplete && nextSuggestedElement && (
+        <section className="journey-garden-next-row">
+          <span className="journey-garden-next-icon"><GardenUpgradeIcon visual={nextSuggestedElement.visual} active /></span>
+          <div>
+            <span>{copy[language].nextUnlock}</span>
+            <strong>{nextSuggestedElement.name[language]}</strong>
+            <small>{copy[language].cost}: {moonSeedCountLabel(nextSuggestedElement.cost, language)}</small>
+          </div>
+          <div className="journey-garden-next-action">
             <button
               onClick={() => void plant(nextSuggestedElement)}
               disabled={!canPlantNextUpgrade}
-              className={`mt-4 w-full rounded-full px-4 py-3 text-sm font-semibold ${
+              className={
                 canPlantNextUpgrade ? 'luna-button-primary' : 'border border-white/10 bg-white/10 text-lavender'
-              } disabled:cursor-not-allowed disabled:opacity-80`}
+              }
             >
               {canPlantNextUpgrade
                 ? (workingId === nextSuggestedElement.id ? copy[language].planting : copy[language].plantUpgrade)
                 : text(language, 'needMoreSeeds', { count: nextUpgradeNeeded })}
             </button>
-          </>
-        ) : (
-          <p className="text-sm text-lavender">{progressMessage}</p>
-        )}
-      </section>
-
-      <section className="journey-garden-stage-journey">
-        <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].gardenJourney}</p>
-          <h3>{copy[language].gardenJourneyBody}</h3>
-        </div>
-        <div className="journey-garden-stage-track">
-          {gardenStages.map((gardenStage) => (
-            <article key={gardenStage.level} className={`journey-garden-stage-card ${gardenStage.level === stage.level ? 'is-current' : ''} ${gardenStage.level > stage.level ? 'is-locked' : 'is-unlocked'}`}>
-              <img src={gardenStage.path} alt="" />
-              <div>
-                <span>{text(language, 'gardenStageLevel', { level: gardenStage.level })}</span>
-                <strong>{gardenStage.title[language]}</strong>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      {gardenMilestones.length > 0 && (
-        <section className="journey-garden-milestones">
-          <h3>{copy[language].gardenMilestones}</h3>
-          <div className="journey-garden-milestone-list">
-            {gardenMilestones.map((milestone) => (
-              <article key={milestone.id} className="journey-garden-milestone">
-                <i aria-hidden="true" />
-                <div><strong>{milestone.title}</strong><span>{copy[language].milestoneUnlocked}</span></div>
-              </article>
-            ))}
           </div>
         </section>
       )}
 
-      {isAdmin && (
+      <button type="button" className="journey-garden-journey-link" onClick={() => setGardenJourneyOpen(true)}>
+        {language === 'en' ? 'View garden journey' : 'Посмотреть путь сада'} <span aria-hidden="true">→</span>
+      </button>
+
+      {gardenJourneyOpen && typeof document !== 'undefined' && createPortal(
+        <div className="journey-garden-sheet" role="dialog" aria-modal="true" aria-label={copy[language].gardenJourney}>
+          <button type="button" className="journey-garden-sheet-backdrop" onClick={() => setGardenJourneyOpen(false)} aria-label={copy[language].close} />
+          <div className="journey-garden-sheet-panel">
+            <header>
+              <div><p className="progress-v3-eyebrow">{copy[language].gardenJourney}</p><h2>{copy[language].gardenJourneyBody}</h2></div>
+              <button type="button" onClick={() => setGardenJourneyOpen(false)} aria-label={copy[language].close}><X size={20} /></button>
+            </header>
+            <div className="journey-garden-stage-grid">
+              {gardenStages.map((gardenStage) => (
+                <article key={gardenStage.level} className={`journey-garden-stage-card ${gardenStage.level === stage.level ? 'is-current' : ''} ${gardenStage.level > stage.level ? 'is-locked' : 'is-unlocked'}`}>
+                  <img src={gardenStage.path} alt={`${text(language, 'gardenStageLevel', { level: gardenStage.level })}: ${gardenStage.title[language]}`} loading="lazy" />
+                  <div><span>{text(language, 'gardenStageLevel', { level: gardenStage.level })}</span><strong>{gardenStage.title[language]}</strong></div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {import.meta.env.DEV && isAdmin && (
         <section className="rounded-[24px] border border-gold/20 bg-night/80 p-4 shadow-glow">
           <button onClick={() => setDevOpen((value) => !value)} className="flex w-full items-center justify-between text-left">
             <span className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].developerTools}</span>

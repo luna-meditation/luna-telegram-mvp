@@ -20,7 +20,8 @@ test('bottom navigation remains five items and labels Progress as Journey and П
 });
 
 test('Journey Hub combines Journey and Garden into one continuous screen', () => {
-  assert.match(hubSource, /\{journey\}[\s\S]*journey-hub-garden[\s\S]*\{garden\}/);
+  assert.match(hubSource, /\{journey\}/);
+  assert.doesNotMatch(hubSource, /garden: ReactNode/);
   assert.doesNotMatch(hubSource, /<SegmentedTabs|onTabChange|activeTab/);
   assert.doesNotMatch(hubSource, /V2BottomNav/);
   assert.match(appSource, /<JourneyHub[\s\S]*journey=\{\([\s\S]*<ProgressPage[\s\S]*garden=\{\([\s\S]*<MoonGardenPage/);
@@ -40,12 +41,12 @@ test('unified Journey uses one natural page scroll without tab scroll bookkeepin
   assert.doesNotMatch(hubSource, /scrollPositions|window\.scrollTo/);
 });
 
-test('Garden entry is restrained, reduced-motion aware, and uses art-directed imagery', () => {
+test('Garden entry is restrained, reduced-motion aware, and never crops stage artwork', () => {
   assert.match(hubStyles, /journeyGardenEnter 680ms/);
   assert.match(hubStyles, /prefers-reduced-motion: reduce/);
-  assert.match(hubStyles, /object-fit: cover/);
-  assert.match(hubStyles, /object-position: 50% 10%/);
-  assert.match(hubStyles, /aspect-ratio: 10 \/ 11\.2/);
+  assert.match(hubStyles, /object-fit: contain/);
+  assert.doesNotMatch(hubStyles, /object-fit: cover/);
+  assert.doesNotMatch(hubStyles, /aspect-ratio: 10 \/ 11\.2/);
 });
 
 test('Journey removes nested tabs while preserving shared design-system primitives', () => {
@@ -70,7 +71,7 @@ test('stale profiles cannot render a fresh-looking zero week beside cached lifet
   assert.match(appSource, /profile\.currentWeek\.weekStart === currentLocalWeekStart\(\)/);
   assert.match(appSource, /journeySummaryRefreshing/);
   assert.match(appSource.slice(appSource.indexOf('function ProgressPage'), appSource.indexOf('function PageSkeleton')), /if \(loading\) \{\s*return <ProgressExperienceSkeleton/);
-  assert.match(appSource, /profile\.progressInsights/);
+  assert.doesNotMatch(appSource.slice(appSource.indexOf('function ProgressPage'), appSource.indexOf('function PageSkeleton')), /profile\.progressInsights|profile\.moodTrend|profile\.lifetimeStats/);
   assert.doesNotMatch(appSource.slice(appSource.indexOf('function ProgressPage'), appSource.indexOf('function PageSkeleton')), /fallbackWeek/);
 });
 
@@ -83,13 +84,14 @@ test('Garden has eight stages, seven approved upgrades, and no seasons', () => {
   assert.doesNotMatch(appSource, /gardenCollections/);
 });
 
-test('Garden uses one contextual upgrade card instead of repeating seven vertical upgrade rows', () => {
+test('Garden keeps one compact upgrade action and moves all eight stages behind a detail action', () => {
   const gardenPage = appSource.slice(appSource.indexOf('function MoonGardenPage'), appSource.indexOf('function resizeAvatarImage'));
-  assert.match(gardenPage, /journey-garden-next-card/);
-  assert.match(gardenPage, /journey-garden-stage-track/);
+  assert.match(gardenPage, /journey-garden-next-row/);
+  assert.match(gardenPage, /journey-garden-journey-link/);
+  assert.match(gardenPage, /journey-garden-sheet/);
   assert.doesNotMatch(gardenPage, /gardenElements\.map\(/);
-  assert.match(gardenPage, /plantedCount} \/ 7/);
-  assert.match(gardenPage, /journey-garden-milestones/);
+  assert.match(gardenPage, /plantedCount}\/7 upgrades/);
+  assert.doesNotMatch(gardenPage, /journey-garden-milestones/);
 });
 
 test('Journey and Garden share one comfortable bottom clearance above navigation', () => {
@@ -101,6 +103,16 @@ test('Journey and Garden share one comfortable bottom clearance above navigation
 test('Journey diagnostics remain behind the real admin authorization branch', () => {
   assert.match(appSource, /isAdmin=\{adminStatus === 'allowed'\}/);
   const progressSource = readFileSync(resolve(process.cwd(), 'src/components/progress/ProgressExperience.tsx'), 'utf8');
-  assert.match(progressSource, /\{isAdmin && <ProgressDiagnostics/);
-  assert.match(appSource, /\{isAdmin && \(/);
+  assert.match(progressSource, /\{import\.meta\.env\.DEV && isAdmin && <ProgressDiagnostics/);
+  assert.match(appSource, /\{import\.meta\.env\.DEV && isAdmin && \(/);
+});
+
+test('all approved Moon Garden PNGs keep their original portrait dimensions', () => {
+  for (let level = 0; level <= 7; level += 1) {
+    const match = appSource.match(new RegExp(`level: ${level},[\\s\\S]*?path: '([^']+)'`));
+    assert.ok(match, `missing stage ${level}`);
+    const png = readFileSync(resolve(process.cwd(), `public${match[1]}`));
+    const dimensions = [png.readUInt32BE(16), png.readUInt32BE(20)];
+    assert.deepEqual(dimensions, level === 6 ? [936, 1680] : [941, 1672]);
+  }
 });

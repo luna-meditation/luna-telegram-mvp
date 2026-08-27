@@ -16,9 +16,9 @@ test('Progress uses the narrative experience instead of the legacy metric dashbo
   assert.doesNotMatch(appSource, /function ProgressMetricCard|function HeroProgressCard|function WeeklySummaryCard/);
 });
 
-test('Journey story renders only streaks and achievements before the unified Garden', () => {
+test('Journey renders status, streak, Garden, and achievements in the approved order', () => {
   const rendered = progressSource.slice(progressSource.indexOf('export function ProgressExperience('));
-  assert.match(rendered, /<CurrentRhythmHero[\s\S]*<AchievementsStory/);
+  assert.match(rendered, /<JourneyStatusHero[\s\S]*<CurrentRhythmHero[\s\S]*journey-hub-garden[\s\S]*<AchievementsStory/);
   for (const component of ['LunasReflection', 'ThisWeek', 'MoodJourney', 'PersonalPatterns', 'NextGentleStep']) {
     assert.doesNotMatch(rendered, new RegExp(`<${component}`));
   }
@@ -60,16 +60,27 @@ test('Achievements open a filtered full icon view', () => {
   assert.match(progressSource, /aria-label={`\$\{item\.title\}\. \$\{item\.description\}`}/);
 });
 
-test('Journey shows a six-icon achievement preview and uses one shared bottom inset', () => {
+test('Journey shows a three-icon achievement preview and uses one shared bottom inset', () => {
   const progressPageStyles = stylesSource.match(/\.progress-v4-page\s*\{([^}]*)\}/)?.[1] ?? '';
   assert.match(progressSource, /Number\(right\.unlocked\) - Number\(left\.unlocked\)/);
-  assert.match(progressSource, /\.slice\(0, 6\)/);
+  assert.match(progressSource, /\.slice\(0, 3\)/);
   assert.match(progressSource, /item\.unlocked \? 'is-unlocked' : 'is-locked'/);
   assert.match(stylesSource, /\.progress-v4-achievement-grid[\s\S]*grid-template-columns: repeat\(3/);
   assert.match(stylesSource, /\.progress-v4-achievements-list[\s\S]*grid-template-columns: repeat\(3/);
   assert.match(progressSource, /const journeyItems = items/);
   assert.match(progressPageStyles, /padding-bottom:\s*0/);
   assert.doesNotMatch(progressPageStyles, /safe-area-inset-bottom/);
+});
+
+test('Journey status hero includes all ten permanent status names and localized progress copy', () => {
+  for (const name of ['Initiate', 'Seeker', 'Adept', 'Guardian', 'Luminary', 'Sage', 'Ascendant', 'Celestial', 'Ethereal', 'Lunaris']) {
+    assert.match(progressSource, new RegExp(name));
+  }
+  assert.match(progressSource, /Your status/);
+  assert.match(progressSource, /Твой статус/);
+  assert.match(progressSource, /Next status/);
+  assert.match(progressSource, /Следующий статус/);
+  assert.match(progressSource, /next\.remaining\.slice\(0, 3\)/);
 });
 
 test('Journey factual typography follows the Home Inter system', () => {

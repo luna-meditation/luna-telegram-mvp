@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react';
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Check,
@@ -43,11 +43,6 @@ function localDayLabel(key: string, language: AppLanguage, long = false) {
   });
 }
 
-function milestoneFor(streak: number) {
-  const target = [7, 14, 30, 60, 100, 365].find((value) => value > streak) ?? Math.ceil((streak + 1) / 100) * 100;
-  return { target, remaining: Math.max(1, target - streak) };
-}
-
 function russianNoun(count: number, one: string, few: string, many: string) {
   const lastTwo = Math.abs(count) % 100;
   const last = Math.abs(count) % 10;
@@ -55,19 +50,6 @@ function russianNoun(count: number, one: string, few: string, many: string) {
   if (last === 1) return one;
   if (last >= 2 && last <= 4) return few;
   return many;
-}
-
-function milestoneSentence(language: AppLanguage, remaining: number, target: number) {
-  if (remaining === 1) return progressText(language, 'oneMoreDay', { target });
-  if (language === 'en') return progressText(language, 'moreDays', { count: remaining, target });
-  const lastTwo = remaining % 100;
-  const last = remaining % 10;
-  const key = lastTwo >= 11 && lastTwo <= 14
-    ? 'moreDaysMany'
-    : last >= 2 && last <= 4
-      ? 'moreDaysFew'
-      : 'moreDaysMany';
-  return progressText(language, key, { count: remaining, target });
 }
 
 function rhythmSentence(streak: number, language: AppLanguage) {
@@ -79,6 +61,91 @@ function rhythmSentence(streak: number, language: AppLanguage) {
     : `Ты возвращаешься ${streak} ${russianNoun(streak, 'день', 'дня', 'дней')} подряд.`;
 }
 
+type JourneyStatusId = NonNullable<ProfileStats['journeyStatus']>['id'];
+type JourneyRequirement = NonNullable<NonNullable<ProfileStats['journeyStatus']>['next']>['remaining'][number];
+
+const journeyStatusNames: Record<AppLanguage, Record<JourneyStatusId, string>> = {
+  en: {
+    initiate: 'Initiate', seeker: 'Seeker', adept: 'Adept', guardian: 'Guardian', luminary: 'Luminary',
+    sage: 'Sage', ascendant: 'Ascendant', celestial: 'Celestial', ethereal: 'Ethereal', lunaris: 'Lunaris'
+  },
+  ru: {
+    initiate: 'Посвящённый', seeker: 'Искатель', adept: 'Адепт', guardian: 'Хранитель', luminary: 'Светоч',
+    sage: 'Мудрец', ascendant: 'Возвышенный', celestial: 'Небесный', ethereal: 'Эфирный', lunaris: 'Лунарис'
+  }
+};
+
+const journeyStatusDescriptions: Record<AppLanguage, Record<JourneyStatusId, string>> = {
+  en: {
+    initiate: 'Your first quiet return.', seeker: 'Calm is becoming a rhythm.', adept: 'Practice is taking root.',
+    guardian: 'You protect space for yourself.', luminary: 'Your consistency carries light.', sage: 'Stillness has become familiar.',
+    ascendant: 'Your practice keeps rising.', celestial: 'A rare rhythm under the moon.', ethereal: 'Calm moves with you.', lunaris: 'The full Luna path is yours.'
+  },
+  ru: {
+    initiate: 'Твоё первое тихое возвращение.', seeker: 'Спокойствие становится ритмом.', adept: 'Практика пускает корни.',
+    guardian: 'Ты бережёшь пространство для себя.', luminary: 'Твоя регулярность несёт свет.', sage: 'Тишина стала знакомой.',
+    ascendant: 'Твоя практика продолжает расти.', celestial: 'Редкий ритм под светом луны.', ethereal: 'Спокойствие остаётся с тобой.', lunaris: 'Полный путь Luna открыт.'
+  }
+};
+
+function journeyRequirementText(requirement: JourneyRequirement, language: AppLanguage) {
+  const { key, current, target, remaining } = requirement;
+  if (language === 'en') {
+    if (key === 'completedMeditations') return `${remaining} more ${remaining === 1 ? 'meditation' : 'meditations'} · ${current}/${target}`;
+    if (key === 'longestStreak') return `${remaining} more ${remaining === 1 ? 'day' : 'days'} in your best streak · ${current}/${target}`;
+    if (key === 'unlockedAchievements') return `${remaining} more ${remaining === 1 ? 'achievement' : 'achievements'} · ${current}/${target}`;
+    return `${remaining} more garden ${remaining === 1 ? 'level' : 'levels'} · ${current}/${target}`;
+  }
+  if (key === 'completedMeditations') return `Ещё ${remaining} ${russianNoun(remaining, 'медитация', 'медитации', 'медитаций')} · ${current}/${target}`;
+  if (key === 'longestStreak') return `Ещё ${remaining} ${russianNoun(remaining, 'день', 'дня', 'дней')} в лучшем стрике · ${current}/${target}`;
+  if (key === 'unlockedAchievements') return `Ещё ${remaining} ${russianNoun(remaining, 'достижение', 'достижения', 'достижений')} · ${current}/${target}`;
+  return `Ещё ${remaining} ${russianNoun(remaining, 'уровень', 'уровня', 'уровней')} сада · ${current}/${target}`;
+}
+
+function JourneyStatusHero({ profile, language }: { profile: ProfileStats | null; language: AppLanguage }) {
+  const savedStatus = profile?.journeyStatus;
+  const completedMeditations = Math.max(0, profile?.completedMeditations ?? 0);
+  const status = savedStatus ?? {
+    id: 'initiate' as const,
+    rank: completedMeditations > 0 ? 0 : -1,
+    earned: completedMeditations > 0,
+    next: {
+      id: 'initiate' as const,
+      rank: 0,
+      progressPercent: Math.min(100, completedMeditations * 100),
+      remaining: completedMeditations > 0 ? [] : [{ key: 'completedMeditations' as const, current: 0, target: 1, remaining: 1 }]
+    }
+  };
+  const next = status.next;
+  const name = journeyStatusNames[language][status.id];
+  const nextName = next ? journeyStatusNames[language][next.id] : null;
+
+  return (
+    <section className="progress-v5-status progress-v3-enter" aria-label={language === 'en' ? `Journey status: ${name}` : `Статус пути: ${name}`}>
+      <div className="progress-v5-status-heading">
+        <div className="progress-v5-status-seal" aria-hidden="true"><Moon size={28} /><Sparkles size={13} /></div>
+        <div className="progress-v5-status-copy">
+          <p className="progress-v3-eyebrow">{language === 'en' ? 'Your status' : 'Твой статус'}</p>
+          <h2>{name}</h2>
+          <p>{journeyStatusDescriptions[language][status.id]}</p>
+        </div>
+        <span className="progress-v5-status-rank">{Math.max(1, status.rank + 1)} / 10</span>
+      </div>
+      {next ? (
+        <div className="progress-v5-status-progress">
+          <div className="progress-v5-status-progress-label"><span>{language === 'en' ? 'Next status' : 'Следующий статус'}</span><strong>{nextName}</strong><b>{next.progressPercent}%</b></div>
+          <div className="progress-v5-status-progress-track" aria-label={`${next.progressPercent}%`}><span style={{ width: `${next.progressPercent}%` }} /></div>
+          <div className="progress-v5-status-requirements">
+            {next.remaining.slice(0, 3).map((requirement) => <span key={requirement.key}>{journeyRequirementText(requirement, language)}</span>)}
+          </div>
+        </div>
+      ) : (
+        <p className="progress-v5-status-complete"><Sparkles size={14} />{language === 'en' ? 'Highest Journey status reached' : 'Высший статус пути достигнут'}</p>
+      )}
+    </section>
+  );
+}
+
 function CurrentRhythmHero({ profile, language }: { profile: ProfileStats | null; language: AppLanguage }) {
   const t = progressCopy[language];
   const week = profile?.currentWeek;
@@ -86,8 +153,7 @@ function CurrentRhythmHero({ profile, language }: { profile: ProfileStats | null
   const streak = Math.max(0, profile?.currentStreak ?? 0);
   const longest = Math.max(streak, profile?.longestStreak ?? 0);
   const activeDays = week.activeDays ?? week.completedDays;
-  const milestone = milestoneFor(streak);
-  const ring = Math.min(100, Math.round((streak / milestone.target) * 100));
+  const ring = Math.min(100, Math.round((streak / 7) * 100));
   return (
     <section className="progress-v3-hero progress-v4-rhythm progress-v3-enter">
       <img src="/images/progress/progress-bg-01.webp" alt="" className="progress-v3-hero-image" />
@@ -131,10 +197,6 @@ function CurrentRhythmHero({ profile, language }: { profile: ProfileStats | null
           ))}
         </div>
         <div className="progress-v4-rhythm-footer">
-          <div className="progress-v4-next-milestone">
-            <span>{t.nextMilestone}</span>
-            <p>{milestoneSentence(language, milestone.remaining, milestone.target)}</p>
-          </div>
           <div className="progress-v4-seed-reward">
             <Sprout size={15} aria-hidden="true" />
             <span>{language === 'en' ? '+1 Moon Seed each active day' : '+1 лунное семя за активный день'}</span>
@@ -205,8 +267,10 @@ function AchievementsStory({ items, language }: { items: ProgressAchievement[]; 
   const journeyItems = items;
   const journeyUnlocked = journeyItems.filter((item) => item.unlocked).sort((left, right) => String(right.unlockedAt ?? '').localeCompare(String(left.unlockedAt ?? '')));
   const featured = [...journeyItems]
-    .sort((left, right) => Number(right.unlocked) - Number(left.unlocked) || (right.progress ?? 0) - (left.progress ?? 0))
-    .slice(0, 6);
+    .sort((left, right) => Number(right.unlocked) - Number(left.unlocked)
+      || String(right.unlockedAt ?? '').localeCompare(String(left.unlockedAt ?? ''))
+      || (right.progress ?? 0) - (left.progress ?? 0))
+    .slice(0, 3);
   const filtered = items
     .filter((item) => statusFilter === 'all' || achievementStatus(item) === statusFilter)
     .filter((item) => categoryFilter === 'all' || item.category === categoryFilter)
@@ -282,18 +346,22 @@ export function ProgressExperience({
   profile,
   language,
   achievements,
+  garden,
   isAdmin
 }: {
   profile: ProfileStats | null;
   language: AppLanguage;
   achievements: ProgressAchievement[];
+  garden: ReactNode;
   isAdmin: boolean;
 }) {
   return (
     <main className="progress-v3-page progress-v4-page">
+      <JourneyStatusHero profile={profile} language={language} />
       <CurrentRhythmHero profile={profile} language={language} />
+      <div className="journey-hub-garden" aria-label={progressCopy[language].moonGarden}>{garden}</div>
       <AchievementsStory items={achievements} language={language} />
-      {isAdmin && <ProgressDiagnostics profile={profile} language={language} />}
+      {import.meta.env.DEV && isAdmin && <ProgressDiagnostics profile={profile} language={language} />}
     </main>
   );
 }

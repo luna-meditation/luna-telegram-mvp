@@ -2724,13 +2724,62 @@ input[type="range"] {
   border-radius: 24px;
 }
 
+.progress-v5-status {
+  overflow: hidden;
+  border: 1px solid rgba(230, 236, 255, 0.11);
+  border-radius: 24px;
+  padding: 16px;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(240, 207, 116, 0.14), transparent 34%),
+    radial-gradient(circle at 92% 0%, rgba(137, 108, 232, 0.18), transparent 38%),
+    linear-gradient(150deg, rgba(28, 35, 79, 0.9), rgba(9, 14, 40, 0.96));
+  box-shadow: var(--shadow-soft);
+}
+
+.progress-v5-status-heading {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.progress-v5-status-seal {
+  position: relative;
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border: 1px solid rgba(240, 207, 116, 0.34);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(240, 207, 116, 0.18), rgba(119, 91, 211, 0.18));
+  color: #f0cf74;
+  box-shadow: inset 0 0 20px rgba(240, 207, 116, 0.06), 0 10px 28px rgba(3, 5, 18, 0.24);
+}
+
+.progress-v5-status-seal svg:last-child { position: absolute; right: 8px; top: 7px; color: #fff3c2; }
+.progress-v5-status-copy { min-width: 0; }
+.progress-v5-status-copy h2 { margin: 3px 0 0; color: #fbf7ef; font-family: var(--font-sans); font-size: 25px; font-weight: 760; letter-spacing: -0.025em; line-height: 1; }
+.progress-v5-status-copy > p:last-child { margin: 6px 0 0; color: rgba(201, 208, 233, 0.68); font-size: 10px; line-height: 1.4; }
+.progress-v5-status-rank { align-self: start; border: 1px solid rgba(240, 207, 116, 0.18); border-radius: 999px; padding: 6px 8px; color: rgba(240, 207, 116, 0.72); font-size: 8px; font-weight: 700; white-space: nowrap; }
+
+.progress-v5-status-progress { display: grid; gap: 8px; margin-top: 15px; border-top: 1px solid rgba(230, 236, 255, 0.09); padding-top: 12px; }
+.progress-v5-status-progress-label { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; gap: 7px; }
+.progress-v5-status-progress-label span { color: rgba(201, 208, 233, 0.56); font-size: 8px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.progress-v5-status-progress-label strong { color: rgba(251, 247, 239, 0.9); font-size: 11px; }
+.progress-v5-status-progress-label b { color: #f0cf74; font-size: 10px; }
+.progress-v5-status-progress-track { height: 5px; overflow: hidden; border-radius: 999px; background: rgba(255, 255, 255, 0.07); }
+.progress-v5-status-progress-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #8f77e8, #f0cf74); box-shadow: 0 0 14px rgba(240, 207, 116, 0.2); }
+.progress-v5-status-requirements { display: flex; flex-wrap: wrap; gap: 5px 10px; }
+.progress-v5-status-requirements span { color: rgba(201, 208, 233, 0.58); font-size: 8px; line-height: 1.4; }
+.progress-v5-status-complete { display: flex; align-items: center; gap: 7px; margin: 14px 0 0; border-top: 1px solid rgba(230, 236, 255, 0.09); padding-top: 11px; color: #f0cf74; font-size: 10px; font-weight: 700; }
+
 .progress-v4-rhythm {
-  min-height: 312px;
+  min-height: 270px;
   box-shadow: var(--shadow-glass);
 }
 
 .progress-v4-rhythm .progress-v3-hero-content {
-  min-height: 312px;
+  min-height: 270px;
   grid-template-rows: auto auto auto auto;
   align-content: space-between;
   gap: 11px;
@@ -2862,9 +2911,8 @@ input[type="range"] {
 }
 
 .progress-v4-rhythm-footer {
-  display: grid;
-  grid-template-columns: minmax(0, 1.18fr) minmax(0, 0.82fr);
-  gap: 10px;
+  display: flex;
+  justify-content: flex-end;
   border-top: 1px solid rgba(230, 236, 255, 0.12);
   padding-top: 10px;
 }
@@ -3529,6 +3577,14 @@ input[type="range"] {
   background: linear-gradient(145deg, rgba(244, 214, 122, 0.16), rgba(117, 98, 214, 0.16));
   color: #f4d67a;
 }
+
+.progress-v4-achievement.is-compact .progress-v4-achievement-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+}
+
+.progress-v4-achievement.is-compact .progress-v4-achievement-copy h4 { min-height: 23px; font-size: 9.5px; }
 
 .progress-v4-achievement-copy { min-width: 0; width: 100%; text-align: center; }
 .progress-v4-achievement-copy > span { color: rgba(244, 214, 122, 0.72); font-size: 8px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
