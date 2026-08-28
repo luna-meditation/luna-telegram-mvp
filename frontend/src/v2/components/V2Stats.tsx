@@ -7,16 +7,18 @@ export type V2Stat = {
 };
 
 export function V2Stats({ stats }: { stats: V2Stat[] }) {
+  const summary = stats.slice(0, 3);
+
   return (
-    <section className="home-v2-stats" aria-label="Home stats">
-      {stats.slice(0, 4).map((stat) => (
-        <article key={stat.label} className={`home-v2-stat-card ${stat.kind ? `home-v2-stat-${stat.kind}` : ''} ${stat.tone ? `home-v2-stat-tone-${stat.tone}` : ''}`}>
-          <i aria-hidden="true" />
-          <span>{stat.label}</span>
-          <strong>{stat.value}</strong>
-          {stat.secondary ? <small>{stat.secondary}</small> : null}
-        </article>
-      ))}
+    <section className="home-v2-summary" aria-label="Personal summary">
+      <dl>
+        {summary.map((stat) => (
+          <div key={stat.label} className={stat.kind ? `home-v2-summary-${stat.kind}` : undefined}>
+            <dt>{stat.label}</dt>
+            <dd>{stat.value}{stat.secondary ? <small>{stat.secondary}</small> : null}</dd>
+          </div>
+        ))}
+      </dl>
     </section>
   );
 }

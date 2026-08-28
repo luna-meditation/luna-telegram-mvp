@@ -47,6 +47,9 @@ test('Garden entry is restrained, reduced-motion aware, and never crops stage ar
   assert.match(hubStyles, /object-fit: contain/);
   assert.doesNotMatch(hubStyles, /object-fit: cover/);
   assert.doesNotMatch(hubStyles, /aspect-ratio: 10 \/ 11\.2/);
+  assert.match(hubStyles, /max-height:\s*62vh/);
+  assert.match(hubStyles, /position:\s*absolute/);
+  assert.match(hubStyles, /max-height:\s*100%/);
 });
 
 test('Journey removes nested tabs while preserving shared design-system primitives', () => {

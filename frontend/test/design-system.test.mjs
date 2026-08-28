@@ -12,6 +12,9 @@ const primitives = readFileSync(resolve(sourceRoot, 'design-system/primitives.cs
 const chat = readFileSync(resolve(sourceRoot, 'components/LunaChat.tsx'), 'utf8');
 const viewport = readFileSync(resolve(sourceRoot, 'hooks/useChatViewport.ts'), 'utf8');
 const home = readFileSync(resolve(sourceRoot, 'v2/pages/HomeV2.tsx'), 'utf8');
+const homeStats = readFileSync(resolve(sourceRoot, 'v2/components/V2Stats.tsx'), 'utf8');
+const homeDiscovery = readFileSync(resolve(sourceRoot, 'v2/components/V2Discovery.tsx'), 'utf8');
+const navigation = readFileSync(resolve(sourceRoot, 'design-system/components/BottomNavigation.tsx'), 'utf8');
 const libraryCard = readFileSync(resolve(sourceRoot, 'design-system/components/MeditationCard.tsx'), 'utf8');
 const indexHtml = readFileSync(resolve(process.cwd(), 'index.html'), 'utf8');
 const manifest = JSON.parse(readFileSync(resolve(process.cwd(), 'public/manifest.webmanifest'), 'utf8'));
@@ -75,6 +78,23 @@ test('chat and Library scrolling share viewport-safe bottom clearance', () => {
   assert.match(viewport, /viewportChanged/);
   assert.match(viewport, /--app-keyboard-inset/);
   assert.match(indexHtml, /width=device-width, initial-scale=1, viewport-fit=cover/);
+});
+
+test('primary navigation resets the actual document scroll container and keeps one gold selected state', () => {
+  assert.match(appSource, /document\.scrollingElement/);
+  assert.match(appSource, /appShellRef\.current/);
+  assert.match(appSource, /useLayoutEffect/);
+  assert.match(appSource, /onChange=\{navigatePrimaryPage\}/);
+  assert.doesNotMatch(navigation, /bottom-navigation-item-luna/);
+  assert.doesNotMatch(primitives, /color-luna-blue/);
+});
+
+test('Home uses one compact personal summary and matched Breath and Luna actions', () => {
+  assert.match(homeStats, /home-v2-summary/);
+  assert.doesNotMatch(homeStats, /home-v2-stat-card/);
+  assert.match(homeDiscovery, /breathAction/);
+  assert.match(homeDiscovery, /askAction/);
+  assert.equal((homeDiscovery.match(/<small>/g) ?? []).length, 2);
 });
 
 test('duration formatting is human-readable in Home and Library in EN and RU', () => {
