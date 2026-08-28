@@ -88,18 +88,18 @@ const journeyStatusDescriptions: Record<AppLanguage, Record<JourneyStatusId, str
   }
 };
 
-function journeyRequirementText(requirement: JourneyRequirement, language: AppLanguage) {
-  const { key, current, target, remaining } = requirement;
+function journeyRequirementText(requirement: JourneyRequirement, nextName: string, language: AppLanguage) {
+  const { key, remaining } = requirement;
   if (language === 'en') {
-    if (key === 'completedMeditations') return `${remaining} more ${remaining === 1 ? 'meditation' : 'meditations'} · ${current}/${target}`;
-    if (key === 'longestStreak') return `${remaining} more ${remaining === 1 ? 'day' : 'days'} in your best streak · ${current}/${target}`;
-    if (key === 'unlockedAchievements') return `${remaining} more ${remaining === 1 ? 'achievement' : 'achievements'} · ${current}/${target}`;
-    return `${remaining} more garden ${remaining === 1 ? 'level' : 'levels'} · ${current}/${target}`;
+    if (key === 'completedMeditations') return `${remaining} more ${remaining === 1 ? 'meditation' : 'meditations'} to ${nextName}`;
+    if (key === 'longestStreak') return `${remaining} more best-streak ${remaining === 1 ? 'day' : 'days'} to ${nextName}`;
+    if (key === 'unlockedAchievements') return `${remaining} more ${remaining === 1 ? 'achievement' : 'achievements'} to ${nextName}`;
+    return `${remaining} more garden ${remaining === 1 ? 'level' : 'levels'} to ${nextName}`;
   }
-  if (key === 'completedMeditations') return `Ещё ${remaining} ${russianNoun(remaining, 'медитация', 'медитации', 'медитаций')} · ${current}/${target}`;
-  if (key === 'longestStreak') return `Ещё ${remaining} ${russianNoun(remaining, 'день', 'дня', 'дней')} в лучшем стрике · ${current}/${target}`;
-  if (key === 'unlockedAchievements') return `Ещё ${remaining} ${russianNoun(remaining, 'достижение', 'достижения', 'достижений')} · ${current}/${target}`;
-  return `Ещё ${remaining} ${russianNoun(remaining, 'уровень', 'уровня', 'уровней')} сада · ${current}/${target}`;
+  if (key === 'completedMeditations') return `Ещё ${remaining} ${russianNoun(remaining, 'медитация', 'медитации', 'медитаций')} до статуса «${nextName}»`;
+  if (key === 'longestStreak') return `Ещё ${remaining} ${russianNoun(remaining, 'день', 'дня', 'дней')} лучшего стрика до статуса «${nextName}»`;
+  if (key === 'unlockedAchievements') return `Ещё ${remaining} ${russianNoun(remaining, 'достижение', 'достижения', 'достижений')} до статуса «${nextName}»`;
+  return `Ещё ${remaining} ${russianNoun(remaining, 'уровень', 'уровня', 'уровней')} сада до статуса «${nextName}»`;
 }
 
 function JourneyStatusHero({ profile, language }: { profile: ProfileStats | null; language: AppLanguage }) {
@@ -136,7 +136,7 @@ function JourneyStatusHero({ profile, language }: { profile: ProfileStats | null
           <div className="progress-v5-status-progress-label"><span>{language === 'en' ? 'Next status' : 'Следующий статус'}</span><strong>{nextName}</strong><b>{next.progressPercent}%</b></div>
           <div className="progress-v5-status-progress-track" aria-label={`${next.progressPercent}%`}><span style={{ width: `${next.progressPercent}%` }} /></div>
           <div className="progress-v5-status-requirements">
-            {next.remaining.slice(0, 3).map((requirement) => <span key={requirement.key}>{journeyRequirementText(requirement, language)}</span>)}
+            {next.remaining.slice(0, 3).map((requirement) => <span key={requirement.key}>{journeyRequirementText(requirement, nextName ?? name, language)}</span>)}
           </div>
         </div>
       ) : (

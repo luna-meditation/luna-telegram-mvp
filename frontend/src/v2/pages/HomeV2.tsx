@@ -87,7 +87,6 @@ type HomeV2Props = {
   hasPremium: boolean;
   homeScreenMessage: string;
   homeScreenStatus: 'idle' | 'added' | 'unsupported';
-  assistantMessage: string;
   stats: V2Stat[];
   labels: HomeV2Labels;
   language: AppLanguage;
@@ -207,10 +206,10 @@ export function HomeV2(props: HomeV2Props) {
       <V2PracticeTiles
         breathTitle={props.labels.breathTitle}
         breathBody={props.labels.breathBody}
+        breathAction={props.labels.begin}
         askTitle={props.labels.askLunaTitle}
         askBody={props.labels.askLunaBody}
         askAction={props.labels.askLunaAction}
-        askMessage={props.assistantMessage}
         onBreath={props.onBreath}
         onAsk={props.onAskLuna}
       />

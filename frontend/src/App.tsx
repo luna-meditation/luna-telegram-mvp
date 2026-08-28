@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Bot,
@@ -1495,15 +1495,15 @@ function homeRecommendationReason(profile: ProfileStats | null, wellness: Wellne
 
   if (goal && goalLabels[goal]) {
     return language === 'en'
-      ? `Chosen for your goal: ${goalLabels[goal].en}`
-      : `Выбрано для цели: ${goalLabels[goal].ru}`;
+      ? `For your goal: ${goalLabels[goal].en}`
+      : `Для цели: ${goalLabels[goal].ru}`;
   }
   if (wellness?.todayCheckin && heroMood) {
     return language === 'en'
-      ? `Based on today’s ${homeMoodLabel(heroMood, language).toLowerCase()} check-in`
-      : `По сегодняшнему чек-ину: ${homeMoodLabel(heroMood, language).toLowerCase()}`;
+      ? `For today’s ${homeMoodLabel(heroMood, language).toLowerCase()} check-in`
+      : `Для состояния: ${homeMoodLabel(heroMood, language).toLowerCase()}`;
   }
-  return language === 'en' ? 'Chosen for this time of day' : 'Выбрано с учётом времени дня';
+  return language === 'en' ? 'For this moment' : 'Для этого момента';
 }
 
 function availableMoonSeeds(profile: ProfileStats | null) {
@@ -1926,6 +1926,7 @@ function App() {
   const launchStartParam = miniAppStartParam();
   const sceneAudioRef = useRef<HTMLAudioElement | null>(null);
   const moonGardenAudioRef = useRef<HTMLAudioElement | null>(null);
+  const appShellRef = useRef<HTMLElement | null>(null);
   const sceneListenSecondsRef = useRef(0);
   const sceneMoonSeedAwardedRef = useRef(false);
   const [initialLibraryCache] = useState(() => readLibraryCache());
@@ -1934,6 +1935,25 @@ function App() {
   const paymentOperationRef = useRef(false);
   const [language, setLanguage] = useState<AppLanguage>(() => initialLanguage(user));
   const [page, setPage] = useState<Page>(() => initialPageFromLaunch(launchStartParam));
+  const resetPrimaryScroll = useCallback(() => {
+    if (typeof document === 'undefined') return;
+    const targets = [document.scrollingElement, document.documentElement, document.body, appShellRef.current];
+    for (const target of targets) {
+      if (target) target.scrollTop = 0;
+    }
+  }, []);
+  const navigatePrimaryPage = useCallback((nextPage: Page) => {
+    setPage(nextPage);
+    resetPrimaryScroll();
+    window.requestAnimationFrame(resetPrimaryScroll);
+  }, [resetPrimaryScroll]);
+
+  useLayoutEffect(() => {
+    if (!['home', 'library', 'luna', 'progress', 'profile'].includes(page)) return;
+    resetPrimaryScroll();
+    const frame = window.requestAnimationFrame(resetPrimaryScroll);
+    return () => window.cancelAnimationFrame(frame);
+  }, [page, resetPrimaryScroll]);
   const [libraryMode, setLibraryMode] = useState<LibraryMode>('meditations');
   const [mood, setMood] = useState<MoodChip>('Calm');
   const [moodSelectedByUser, setMoodSelectedByUser] = useState(false);
@@ -1957,7 +1977,6 @@ function App() {
   const [sceneAudioUrl, setSceneAudioUrl] = useState('');
   const [homeScreenMessage, setHomeScreenMessage] = useState('');
   const [homeScreenStatus, setHomeScreenStatus] = useState<'idle' | 'added' | 'unsupported'>('idle');
-  const [assistantMessage, setAssistantMessage] = useState('');
   const [moonGardenAmbiencePlaying, setMoonGardenAmbiencePlaying] = useState(false);
   const [moonGardenVolume, setMoonGardenVolume] = useState(readMoonGardenVolume);
   const [moonGardenAmbienceError, setMoonGardenAmbienceError] = useState(false);
@@ -2500,7 +2519,6 @@ function App() {
   };
 
   const openLunaAssistant = () => {
-    setAssistantMessage('');
     setPage('luna');
   };
 
@@ -2939,7 +2957,7 @@ function App() {
   return (
     <main className={`app-root overflow-x-clip bg-night text-cream ${page === 'home' ? 'home-v2-shell' : ''}`}>
       <div className="fixed inset-0 luna-bg" />
-      <section className={`app-shell ${page === 'luna' ? 'app-shell-chat' : ''} ${page === 'admin' || (page === 'profile' && profileNestedActive) ? 'app-shell-no-nav' : ''}`}>
+      <section ref={appShellRef} data-page={page} className={`app-shell ${page === 'luna' ? 'app-shell-chat' : ''} ${page === 'admin' || (page === 'profile' && profileNestedActive) ? 'app-shell-no-nav' : ''}`}>
         {page !== 'luna' && <AppHeader statusLabel={(profile?.currentStreak ?? 0) > 0 ? streakLabel(profile?.currentStreak ?? 0, language) : planLabel(access.plan, language)} language={language} languageLabel={copy[language].language} onLanguageChange={changeLanguage} />}
         {appNotice && <div className="fixed left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+12px)] z-50 mx-auto max-w-md rounded-full border border-gold/20 bg-night/90 px-4 py-3 text-center text-xs font-semibold text-cream shadow-glow backdrop-blur-xl luna-fade" role="status">{appNotice}</div>}
 
@@ -2976,7 +2994,6 @@ function App() {
             onAddHome={addLunaToHomeScreen}
             homeScreenMessage={homeScreenMessage}
             homeScreenStatus={homeScreenStatus}
-            assistantMessage={assistantMessage}
             stats={[
               { label: copy[language].statStreak, value: profile ? String(profile.currentStreak ?? 0) : '—', secondary: profile ? ((profile.currentStreak ?? 0) === 1 ? copy[language].statDay : copy[language].statDays) : undefined, kind: 'streak' },
               { label: copy[language].statCheckins, value: wellness ? `${wellness.weeklyCheckinCount ?? 0}/7` : '—/7', kind: 'checkins' },
@@ -3232,7 +3249,7 @@ function App() {
         {page !== 'admin' && !(page === 'profile' && profileNestedActive) && (
           <BottomNavigation
             active={page}
-            onChange={setPage}
+            onChange={navigatePrimaryPage}
             labels={{
               home: copy[language].navHome,
               luna: copy[language].navLuna,
@@ -3272,9 +3289,21 @@ function LibraryPage(props: {
   const filteredMantras = props.mantras.filter((mantra) =>
     [mantra.title[props.language], mantra.subtitle[props.language], mantra.category, ...mantra.tags].join(' ').toLowerCase().includes(props.query.toLowerCase())
   );
+  const resultCount = props.mode === 'meditations' ? props.meditations.length : props.mode === 'breathing' ? 1 : filteredMantras.length;
+  const resultLabel = props.language === 'en'
+    ? props.mode === 'meditations'
+      ? `${resultCount} ${resultCount === 1 ? 'meditation' : 'meditations'}`
+      : props.mode === 'breathing'
+        ? '1 breathing practice'
+        : `${resultCount} ${resultCount === 1 ? 'mantra' : 'mantras'}`
+    : props.mode === 'meditations'
+      ? `Медитаций: ${resultCount}`
+      : props.mode === 'breathing'
+        ? 'Дыхательная практика: 1'
+        : `Мантр: ${resultCount}`;
   return (
-    <div className="luna-page space-y-3 pb-6">
-      <PageHeader title={t.libraryTitle} trailing={<span className="rounded-full border border-white/10 bg-white/[0.045] px-2.5 py-1 text-[10px] text-lavender">{props.meditations.length}</span>} />
+    <div className="luna-page library-page space-y-3 pb-6">
+      <PageHeader title={t.libraryTitle} trailing={<span className="library-result-count">{resultLabel}</span>} />
       <SegmentedTabs
         value={props.mode}
         onChange={props.setMode}
@@ -3285,7 +3314,7 @@ function LibraryPage(props: {
           { id: 'mantras', label: t.mantrasTab }
         ]}
       />
-      <div className="flex items-center gap-2 rounded-[18px] border border-white/10 bg-white/[0.04] px-3.5 py-2.5 backdrop-blur-md">
+      <div className="library-search">
         <Search size={16} className="text-lavender/80" />
         <input value={props.query} onChange={(event) => props.setQuery(event.target.value)} placeholder={t.searchByTitle} className="w-full bg-transparent text-sm outline-none placeholder:text-cream/45" />
       </div>
@@ -3305,12 +3334,12 @@ function LibraryPage(props: {
             </div>
           ) : props.meditations.length ? (
             <section className="space-y-0.5">
-              {props.meditations.map((meditation, index) => (
+              {props.meditations.map((meditation) => (
                 <MeditationCard
                   key={meditation.id}
                   meditation={meditation}
                   locked={meditation.premium && !props.hasPremium}
-                  showPopular={index < 2 && meditation.play_count >= 20}
+                  showPopular={meditation.play_count >= 20}
                   onOpen={props.onOpen}
                   onFavorite={props.onFavorite}
                   onUnlock={props.onUnlock}
@@ -3324,7 +3353,7 @@ function LibraryPage(props: {
         </>
       ) : props.mode === 'breathing' ? (
         <section className="space-y-3">
-          <button onClick={props.onBreath} className="relative w-full overflow-hidden rounded-[24px] border border-white/10 bg-[radial-gradient(circle_at_88%_12%,rgba(212,175,55,.16),transparent_32%),linear-gradient(145deg,rgba(26,36,78,.44),rgba(7,12,30,.62))] p-4 text-left shadow-glow">
+          <button onClick={props.onBreath} className="library-breathing-card">
             <div className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full border border-gold/25 bg-gold/10 text-gold">
               <Sparkles size={19} />
             </div>
@@ -5199,15 +5228,6 @@ function ProfilePage({
   const localizedPlanStatus = planStatus;
   const goalsLabel = goalsCountLabel(goals.length, language);
   const notificationLabel = notificationStatusLabel(notificationPrefs, language);
-  const restoreLabel = restoreState === 'loading'
-    ? (language === 'en' ? 'Checking…' : 'Проверка…')
-    : restoreState === 'success'
-      ? (language === 'en' ? 'Access restored' : 'Доступ восстановлен')
-      : restoreState === 'empty'
-        ? (language === 'en' ? 'No purchase found' : 'Покупка не найдена')
-        : restoreState === 'error'
-          ? (language === 'en' ? 'Try again' : 'Повторить')
-          : (language === 'en' ? 'Checks Telegram Stars' : 'Проверит Telegram Stars');
   const companionStatus = companionAvailable === null
     ? (language === 'en' ? 'Checking' : 'Проверка')
     : companionAvailable
@@ -5656,7 +5676,7 @@ function ProfilePage({
     <div className="luna-page space-y-4">
       <PageHeader title={copy[language].profile} />
 
-      <section className="flex items-center gap-4 px-1">
+      <section className="profile-identity">
         <button
           onClick={() => setAvatarActionsOpen(true)}
           className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border border-gold/30 bg-white/[0.045] shadow-glow focus:outline-none focus:ring-2 focus:ring-gold/35"
@@ -5669,7 +5689,7 @@ function ProfilePage({
         </button>
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-[25px] font-semibold leading-tight tracking-[-0.04em] text-cream">{firstName}</h3>
-          <p className="mt-1 text-sm font-semibold text-gold">{access.hasPremium ? `◆ ${localizedPlanStatus}` : localizedPlanStatus}</p>
+          <p className={`profile-plan-status ${access.hasPremium ? 'is-premium' : ''}`}>{localizedPlanStatus}</p>
           <p className="mt-0.5 truncate text-xs text-lavender">{username ? `@${username}` : copy[language].member}</p>
         </div>
       </section>
@@ -5685,8 +5705,10 @@ function ProfilePage({
         <ProfileSettingsRow icon={Globe2} title={copy[language].language} value={languageLabel} onClick={() => setView('language')} />
         <ProfileSettingsRow icon={Lock} title={language === 'en' ? 'Privacy & Data' : 'Приватность и данные'} value="" onClick={() => setView('privacy')} />
         <ProfileSettingsRow icon={Heart} title={language === 'en' ? 'Support' : 'Поддержка'} value={language === 'en' ? 'Send a request' : 'Отправить запрос'} onClick={() => { setSupportCategory('problem'); setSettingsMessage(''); setView('support'); }} />
+      </section>
+
+      <section className="luna-surface profile-secondary-action rounded-[22px] p-2">
         <ProfileSettingsRow icon={Upload} title={copy[language].addHomeTitle} value={homeScreenMessage || ''} onClick={onAddHome} />
-        <ProfileSettingsRow icon={CreditCard} title={copy[language].restore} value={restoreLabel} onClick={() => void restorePurchases()} />
       </section>
 
       {showAdminButton && (
@@ -5695,7 +5717,7 @@ function ProfilePage({
         </section>
       )}
 
-      {showAdminButton && <ProductionDiagnostics
+      {import.meta.env.DEV && showAdminButton && <ProductionDiagnostics
         backendVersion={backendVersion}
         runtimeDiagnostics={runtimeDiagnostics}
         telegramUserId={telegramUserId}

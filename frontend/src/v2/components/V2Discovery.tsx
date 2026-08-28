@@ -52,19 +52,19 @@ export function V2Discovery({ title, viewAllLabel, meditations, onViewAll, onOpe
 export function V2PracticeTiles({
   breathTitle,
   breathBody,
+  breathAction,
   askTitle,
   askBody,
   askAction,
-  askMessage,
   onBreath,
   onAsk
 }: {
   breathTitle: string;
   breathBody: string;
+  breathAction: string;
   askTitle: string;
   askBody: string;
   askAction: string;
-  askMessage?: string;
   onBreath: () => void;
   onAsk: () => void;
 }) {
@@ -74,13 +74,13 @@ export function V2PracticeTiles({
         <Sparkles size={18} />
         <strong>{breathTitle}</strong>
         <span>{breathBody}</span>
+        <small>{breathAction} <ArrowRight size={13} /></small>
       </button>
       <button type="button" onClick={onAsk} className="home-v2-practice-tile home-v2-ask-tile">
         <MessageCircle size={18} />
         <strong>{askTitle}</strong>
         <span>{askBody}</span>
-        <small>{askAction} <ArrowRight size={11} /></small>
-        {askMessage ? <em>{askMessage}</em> : null}
+        <small>{askAction} <ArrowRight size={13} /></small>
       </button>
     </section>
   );

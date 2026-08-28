@@ -22,7 +22,7 @@ test('completed check-in uses a timed hero toast and a compact editable settled 
 test('Home preserves backend personalization order and masks sound chips only on real overflow', () => {
   assert.match(app, /goal\/check-in\/time-aware ranking/);
   assert.match(app, /return stableMeditations\[0\]/);
-  assert.match(app, /Chosen for your goal/);
+  assert.match(app, /For your goal/);
   assert.match(home, /scrollWidth > chooser\.clientWidth/);
   assert.match(home, /home-v2-sound-chooser-overflow/);
 });
@@ -32,8 +32,15 @@ test('Home sound chooser keeps compact typography without overriding component f
   const soundChoice = homeStyles.match(/\.home-v2-choice\s*\{([^}]*)\}/)?.[1] ?? '';
   assert.match(buttonReset, /font-family:\s*inherit/);
   assert.doesNotMatch(buttonReset, /font:\s*inherit/);
-  assert.match(soundChoice, /font-size:\s*9px/);
+  assert.match(soundChoice, /font-size:\s*var\(--type-body-small-size\)/);
   assert.match(soundChoice, /font-weight:\s*580/);
+});
+
+test('Home recommendation context wraps cleanly instead of inheriting single-line truncation', () => {
+  const recommendationContext = homeStyles.match(/\.home-v2-section-heading-row span\s*\{([^}]*)\}/)?.[1] ?? '';
+  assert.match(recommendationContext, /white-space:\s*normal/);
+  assert.match(recommendationContext, /-webkit-line-clamp:\s*2/);
+  assert.match(recommendationContext, /text-overflow:\s*clip/);
 });
 
 test('a previously verified admin keeps navigation during transient backend failures', () => {

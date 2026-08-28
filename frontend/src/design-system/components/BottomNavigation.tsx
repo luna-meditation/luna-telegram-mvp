@@ -28,7 +28,7 @@ export function BottomNavigation({ active, onChange, labels }: BottomNavigationP
             key={item.page}
             type="button"
             onClick={() => onChange(item.page)}
-            className={`bottom-navigation-item type-navigation ${item.page === 'luna' ? 'bottom-navigation-item-luna' : ''}`}
+            className="bottom-navigation-item type-navigation"
             aria-current={selected ? 'page' : undefined}
             aria-label={labels[item.key]}
           >
