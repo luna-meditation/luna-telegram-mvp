@@ -19,6 +19,10 @@ interface TelegramWebApp {
   };
   ready: () => void;
   expand: () => void;
+  colorScheme?: 'light' | 'dark';
+  setHeaderColor?: (color: string) => void;
+  setBackgroundColor?: (color: string) => void;
+  setBottomBarColor?: (color: string) => void;
   openTelegramLink: (url: string) => void;
   addToHomeScreen?: () => void;
   checkHomeScreenStatus?: (callback: (status: 'unsupported' | 'unknown' | 'added' | 'missed' | 'available') => void) => void;

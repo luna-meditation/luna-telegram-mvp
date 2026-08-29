@@ -48,7 +48,7 @@
 .journey-hub-garden {
   display: grid;
   gap: 14px;
-  border-top: 1px solid rgba(230, 236, 255, 0.08);
+  border-top: 1px solid var(--border-subtle);
   padding-top: 5px;
 }
 
@@ -81,13 +81,13 @@
   align-items: center;
   gap: 5px;
   margin: 0;
-  color: rgba(201, 197, 223, 0.68);
+  color: var(--text-secondary);
   font-size: var(--type-body-small-size);
   line-height: 1.45;
 }
 
-.journey-garden-meta i { color: rgba(240, 207, 116, 0.5); font-style: normal; }
-.journey-garden-meta strong { width: 100%; color: rgba(240, 207, 116, 0.88); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.journey-garden-meta i { color: var(--accent-gold-text); font-style: normal; opacity: .6; }
+.journey-garden-meta strong { width: 100%; color: var(--accent-gold-text); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 
 .journey-garden-next-row {
   display: grid;
@@ -97,14 +97,14 @@
   border: 1px solid var(--v2-line);
   border-radius: 17px;
   padding: 9px 10px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-subtle);
 }
 
-.journey-garden-next-icon { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 14px; background: rgba(240, 207, 116, 0.09); }
+.journey-garden-next-icon { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 14px; background: var(--surface-selected); }
 .journey-garden-next-row > div { display: grid; min-width: 0; gap: 1px; }
-.journey-garden-next-row > div > span { color: rgba(240, 207, 116, 0.72); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.journey-garden-next-row > div > span { color: var(--accent-gold-text); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
 .journey-garden-next-row > div > strong { overflow: hidden; color: var(--v2-ivory); font-size: 0.875rem; text-overflow: ellipsis; white-space: nowrap; }
-.journey-garden-next-row > div > small { color: rgba(201, 197, 223, 0.55); font-size: 0.6875rem; }
+.journey-garden-next-row > div > small { color: var(--text-muted); font-size: 0.6875rem; }
 .journey-garden-next-action button { min-height: 36px; max-width: 118px; border-radius: 999px; padding: 6px 11px; font-size: 0.75rem; font-weight: 700; }
 
 .journey-garden-journey-link {
@@ -113,33 +113,33 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  border: 1px solid rgba(230, 236, 255, 0.09);
+  border: 1px solid var(--border-subtle);
   border-radius: 15px;
-  background: rgba(255, 255, 255, 0.028);
+  background: var(--surface-subtle);
   color: var(--v2-gold);
   font-size: var(--type-body-small-size);
   font-weight: 680;
 }
 
 .journey-garden-sheet { position: fixed; z-index: 122; inset: 0; display: grid; align-items: end; }
-.journey-garden-sheet-backdrop { position: absolute; inset: 0; border: 0; background: rgba(2, 4, 14, 0.72); backdrop-filter: blur(10px); }
+.journey-garden-sheet-backdrop { position: absolute; inset: 0; border: 0; background: var(--overlay-bg); backdrop-filter: blur(10px); }
 .journey-garden-sheet-panel {
   position: relative;
   width: min(100%, 680px);
   max-height: 92dvh;
   margin: 0 auto;
   overflow-y: auto;
-  border: 1px solid rgba(230, 236, 255, 0.12);
+  border: 1px solid var(--border-strong);
   border-bottom: 0;
   border-radius: 28px 28px 0 0;
   padding: 20px 16px calc(28px + env(safe-area-inset-bottom));
-  background: linear-gradient(180deg, #141b3f, #080c22 74%);
-  box-shadow: 0 -24px 80px rgba(0, 0, 0, 0.46);
+  background: linear-gradient(180deg, var(--surface-elevated), var(--bg-secondary) 74%);
+  box-shadow: var(--shadow-glass);
   animation: journeyGardenSheetUp 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 .journey-garden-sheet-panel > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
 .journey-garden-sheet-panel h2 { margin: 5px 0 0; color: var(--v2-ivory); font-family: var(--font-sans); font-size: 23px; line-height: 1.15; }
-.journey-garden-sheet-panel header > button { display: grid; width: 42px; height: 42px; flex: 0 0 42px; place-items: center; border: 1px solid var(--v2-line); border-radius: 999px; background: rgba(255, 255, 255, 0.05); color: var(--v2-ivory); }
+.journey-garden-sheet-panel header > button { display: grid; width: 42px; height: 42px; flex: 0 0 42px; place-items: center; border: 1px solid var(--v2-line); border-radius: 999px; background: var(--surface-subtle); color: var(--v2-ivory); }
 
 .journey-garden-stage-grid {
   display: grid;
@@ -152,9 +152,9 @@
   position: relative;
   min-width: 0;
   overflow: hidden;
-  border: 1px solid rgba(230, 236, 255, 0.09);
+  border: 1px solid var(--border-subtle);
   border-radius: 18px;
-  background: rgba(14, 22, 52, 0.54);
+  background: var(--surface-primary);
 }
 
 .journey-garden-stage-card.is-current { border-color: rgba(212, 175, 55, 0.5); box-shadow: 0 12px 28px rgba(212, 175, 55, 0.12); }
@@ -163,7 +163,7 @@
 .journey-garden-stage-card img { display: block; width: 100%; height: auto; object-fit: contain; }
 .journey-garden-stage-card div { display: grid; gap: 2px; padding: 9px 10px 11px; }
 .journey-garden-stage-card span { color: var(--luna-gold-soft); font-size: 9px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; }
-.journey-garden-stage-card strong { color: rgba(247, 242, 234, 0.9); font-size: 11px; line-height: 1.35; }
+.journey-garden-stage-card strong { color: var(--text-primary); font-size: 11px; line-height: 1.35; }
 
 @keyframes journeyStoryEnter {
   from { opacity: 0; transform: translateY(7px); }

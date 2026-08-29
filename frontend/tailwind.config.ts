@@ -5,20 +5,21 @@ export default {
   theme: {
     extend: {
       colors: {
-        cream: '#F5F1E9',
-        beige: '#C9BFD6',
-        lavender: '#B7BDD8',
-        gold: '#D4AF37',
-        lightgold: '#F4D67A',
-        night: '#1A1026',
-        ink: '#241334',
-        surface: '#4B2D6B',
-        success: '#79D99E',
-        danger: '#FF7575'
+        white: 'rgb(var(--surface-highlight-rgb) / <alpha-value>)',
+        cream: 'rgb(var(--text-primary-rgb) / <alpha-value>)',
+        beige: 'rgb(var(--text-secondary-rgb) / <alpha-value>)',
+        lavender: 'rgb(var(--text-secondary-rgb) / <alpha-value>)',
+        gold: 'rgb(var(--accent-gold-rgb) / <alpha-value>)',
+        lightgold: 'rgb(var(--accent-gold-rgb) / <alpha-value>)',
+        night: 'rgb(var(--bg-secondary-rgb) / <alpha-value>)',
+        ink: 'rgb(var(--text-primary-rgb) / <alpha-value>)',
+        surface: 'rgb(var(--surface-elevated-rgb) / <alpha-value>)',
+        success: 'rgb(var(--status-success-rgb) / <alpha-value>)',
+        danger: 'rgb(var(--status-danger-rgb) / <alpha-value>)'
       },
       boxShadow: {
-        glow: '0 24px 70px rgba(0, 0, 0, 0.28)',
-        gold: '0 18px 50px rgba(212, 175, 55, 0.18)'
+        glow: 'var(--shadow-glass)',
+        gold: 'var(--shadow-gold)'
       },
       fontFamily: {
         serif: ['"Playfair Display"', 'Georgia', 'serif'],
