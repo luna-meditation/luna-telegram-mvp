@@ -182,7 +182,7 @@
 
 .home-v2-mood-pill-active span {
   background: linear-gradient(135deg, var(--color-gold-soft), var(--color-gold));
-  color: #161024;
+  color: var(--text-inverse);
 }
 
 .home-v2-recommendation-section {
@@ -309,7 +309,7 @@
   place-items: center;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--color-gold-soft), var(--color-gold));
-  color: #161024;
+  color: var(--text-inverse);
   box-shadow: var(--shadow-gold);
 }
 
@@ -854,3 +854,36 @@
 ) {
   box-shadow: var(--shadow-soft);
 }
+
+/* The image-led hero remains nocturnal; surrounding Home UI follows the selected theme. */
+:root[data-theme="light"] .home-v2-shell .luna-bg {
+  background:
+    radial-gradient(circle at 22% 4%, var(--page-glow-primary), transparent 17rem),
+    radial-gradient(circle at 84% 2%, var(--page-glow-gold), transparent 15rem),
+    radial-gradient(ellipse at 50% 116%, var(--page-glow-bottom), transparent 30rem),
+    linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 46%, var(--bg-tertiary) 100%);
+}
+
+:root[data-theme="light"] .home-v2-atmosphere-copy h1,
+:root[data-theme="light"] .home-v2-feature-tile strong { color: #fbf7ef; }
+:root[data-theme="light"] .home-v2-greeting,
+:root[data-theme="light"] .home-v2-feature-tile small { color: rgba(251, 247, 239, .7); }
+:root[data-theme="light"] .home-v2-recommendation,
+:root[data-theme="light"] .home-v2-mini-row,
+:root[data-theme="light"] .home-v2-continue-card,
+:root[data-theme="light"] .home-v2-practice-tile,
+:root[data-theme="light"] .home-v2-home-action {
+  border-color: var(--border-strong);
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-soft);
+}
+:root[data-theme="light"] .home-v2-practice-breath { background: radial-gradient(circle at 82% 18%, color-mix(in srgb, var(--accent-gold) 11%, transparent), transparent 34%), var(--surface-primary); }
+:root[data-theme="light"] .home-v2-sound-ribbon,
+:root[data-theme="light"] .home-v2-choice { border-color: var(--border-strong); background: var(--surface-subtle); }
+:root[data-theme="light"] .home-v2-choice-active { border-color: var(--border-accent); background: var(--surface-selected); }
+:root[data-theme="light"] .home-v2-summary,
+:root[data-theme="light"] .home-v2-summary dl > div + div { border-color: var(--border-subtle); }
+:root[data-theme="light"] .home-v2-recommendation-copy small,
+:root[data-theme="light"] .home-v2-recommendation-copy em,
+:root[data-theme="light"] .home-v2-section-heading-row span,
+:root[data-theme="light"] .home-v2-home-action small { color: var(--text-muted); }

@@ -13,6 +13,8 @@ import {
   Heart,
   Image as ImageIcon,
   Lock,
+  Monitor,
+  Moon,
   Pause,
   Play,
   Search,
@@ -21,6 +23,8 @@ import {
   SkipBack,
   SkipForward,
   Sparkles,
+  Sun,
+  SunMoon,
   Target,
   Timer,
   Upload,
@@ -110,6 +114,7 @@ import { MeditationCard as SharedMeditationCard } from './design-system/componen
 import { PageHeader } from './design-system/components/PageHeader';
 import { SegmentedTabs } from './design-system/components/SegmentedTabs';
 import { useAppViewport } from './hooks/useChatViewport';
+import { THEME_STORAGE_KEY, useThemePreference, type ResolvedTheme, type ThemePreference } from './hooks/useTheme';
 import { formatMeditationDuration } from './utils/duration';
 import { breathCycleSeconds, breathPhaseAt, breathPhaseLabel, breathPractices, type BreathPracticeId } from './features/breathing/practices';
 import { HomeV2 } from './v2/pages/HomeV2';
@@ -1919,6 +1924,7 @@ function durationLabel(value: DailyCheckin['available_minutes'] | null | undefin
 
 function App() {
   useAppViewport(true);
+  const { themePreference, resolvedTheme, setThemePreference } = useThemePreference();
   const telegram = getTelegram();
   const runtimeDiagnostics = useRuntimeDiagnostics();
   const user = telegram?.initDataUnsafe.user ?? fallbackUser;
@@ -1999,6 +2005,18 @@ function App() {
   const [showCheckin, setShowCheckin] = useState(false);
   const [pendingMeditationId, setPendingMeditationId] = useState(() => meditationIdFromStartParam(launchStartParam));
   const [openedStartMeditationId, setOpenedStartMeditationId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const headerColor = resolvedTheme === 'dark' ? '#030612' : '#f8f5f1';
+    const backgroundColor = resolvedTheme === 'dark' ? '#071024' : '#f1edf3';
+    try {
+      telegram?.setHeaderColor?.(headerColor);
+      telegram?.setBackgroundColor?.(backgroundColor);
+      telegram?.setBottomBarColor?.(backgroundColor);
+    } catch {
+      // Older Telegram clients do not expose Mini App chrome color controls.
+    }
+  }, [resolvedTheme, telegram]);
 
   const refreshAccount = async () => {
     if (accountRefreshRef.current) return accountRefreshRef.current;
@@ -2959,7 +2977,7 @@ function App() {
       <div className="fixed inset-0 luna-bg" />
       <section ref={appShellRef} data-page={page} className={`app-shell ${page === 'luna' ? 'app-shell-chat' : ''} ${page === 'admin' || (page === 'profile' && profileNestedActive) ? 'app-shell-no-nav' : ''}`}>
         {page !== 'luna' && <AppHeader statusLabel={(profile?.currentStreak ?? 0) > 0 ? streakLabel(profile?.currentStreak ?? 0, language) : planLabel(access.plan, language)} language={language} languageLabel={copy[language].language} onLanguageChange={changeLanguage} />}
-        {appNotice && <div className="fixed left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+12px)] z-50 mx-auto max-w-md rounded-full border border-gold/20 bg-night/90 px-4 py-3 text-center text-xs font-semibold text-cream shadow-glow backdrop-blur-xl luna-fade" role="status">{appNotice}</div>}
+        {appNotice && <div className="theme-floating fixed left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+12px)] z-50 mx-auto max-w-md rounded-full border border-gold/20 px-4 py-3 text-center text-xs font-semibold text-cream shadow-glow backdrop-blur-xl luna-fade" role="status">{appNotice}</div>}
 
         {page === 'home' && (
           <HomeV2
@@ -3143,6 +3161,9 @@ function App() {
             runtimeDiagnostics={runtimeDiagnostics}
             telegramUserId={user.id}
             onRefreshDiagnostics={refreshProductionDiagnostics}
+            themePreference={themePreference}
+            resolvedTheme={resolvedTheme}
+            onThemePreferenceChange={setThemePreference}
           />
         )}
 
@@ -3815,7 +3836,7 @@ function SceneMiniPlayer({ scene, playing, volume, onToggle, onOpen, onClose, on
 }) {
   const [expanded, setExpanded] = useState(false);
   return (
-    <div className="fixed inset-x-3 bottom-[calc(82px+env(safe-area-inset-bottom))] z-20 mx-auto max-w-md overflow-hidden rounded-[20px] border border-white/10 bg-night/80 shadow-glow backdrop-blur-2xl">
+    <div className="theme-floating fixed inset-x-3 bottom-[calc(82px+env(safe-area-inset-bottom))] z-20 mx-auto max-w-md overflow-hidden rounded-[20px] border border-white/10 shadow-glow backdrop-blur-2xl">
       <div className="flex min-h-[60px] items-center gap-2 px-3 py-2">
         <button onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left">
           <img src={scene.cover} alt="" className="h-10 w-10 shrink-0 rounded-[14px] object-cover" />
@@ -3895,8 +3916,8 @@ function DailyCheckinSheet({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end bg-night/70 px-4 pb-[calc(16px+env(safe-area-inset-bottom))] backdrop-blur-sm">
-      <section className="max-h-[min(760px,calc(100dvh-24px))] w-full overflow-y-auto rounded-[30px] border border-white/10 bg-ink p-5 pb-[calc(20px+env(safe-area-inset-bottom))] shadow-glow luna-fade">
+    <div className="theme-overlay fixed inset-0 z-[100] flex items-end px-4 pb-[calc(16px+env(safe-area-inset-bottom))] backdrop-blur-sm">
+      <section className="theme-sheet max-h-[min(760px,calc(100dvh-24px))] w-full overflow-y-auto rounded-[30px] border border-white/10 p-5 pb-[calc(20px+env(safe-area-inset-bottom))] shadow-glow luna-fade">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-gold">{t.checkinKicker}</p>
@@ -5070,7 +5091,7 @@ function resizeAvatarImage(file: File) {
   });
 }
 
-type ProfileSettingsView = 'main' | 'goals' | 'notifications' | 'language' | 'subscription' | 'privacy' | 'privacy-policy' | 'support' | 'terms' | 'disclaimer';
+type ProfileSettingsView = 'main' | 'appearance' | 'goals' | 'notifications' | 'language' | 'subscription' | 'privacy' | 'privacy-policy' | 'support' | 'terms' | 'disclaimer';
 type RestoreState = 'idle' | 'loading' | 'success' | 'empty' | 'error';
 
 const APP_VERSION = import.meta.env.VITE_APP_VERSION ?? '0.1.0';
@@ -5139,7 +5160,10 @@ function ProfilePage({
   backendVersion,
   runtimeDiagnostics,
   telegramUserId,
-  onRefreshDiagnostics
+  onRefreshDiagnostics,
+  themePreference,
+  resolvedTheme,
+  onThemePreferenceChange
 }: {
   profile: ProfileStats | null;
   access: AccessState;
@@ -5164,6 +5188,9 @@ function ProfilePage({
   runtimeDiagnostics: RuntimeDiagnostics;
   telegramUserId: number;
   onRefreshDiagnostics: () => void | Promise<void>;
+  themePreference: ThemePreference;
+  resolvedTheme: ResolvedTheme;
+  onThemePreferenceChange: (preference: ThemePreference) => void;
 }) {
   const [view, setView] = useState<ProfileSettingsView>('main');
   const [avatarActionsOpen, setAvatarActionsOpen] = useState(false);
@@ -5301,7 +5328,7 @@ function ProfilePage({
 
   const closeLocalSession = () => {
     Object.keys(window.localStorage)
-      .filter((key) => key.startsWith('luna.'))
+      .filter((key) => key.startsWith('luna.') && key !== THEME_STORAGE_KEY)
       .forEach((key) => window.localStorage.removeItem(key));
     setLogoutOpen(false);
     window.location.reload();
@@ -5352,6 +5379,56 @@ function ProfilePage({
       setAvatarBusy(false);
     }
   };
+
+  if (view === 'appearance') {
+    const systemEnabled = themePreference === 'system';
+    const resolvedLabel = resolvedTheme === 'light'
+      ? (language === 'en' ? 'Light' : 'Светлая')
+      : (language === 'en' ? 'Dark' : 'Тёмная');
+    return (
+      <ProfileChildScreen title={language === 'en' ? 'Appearance' : 'Оформление'} onBack={() => setView('main')} language={language}>
+        <p className="text-sm leading-6 text-lavender">
+          {language === 'en'
+            ? 'Choose the atmosphere that feels most comfortable. Luna keeps its artwork natural in every mode.'
+            : 'Выбери оформление, в котором тебе комфортнее. Иллюстрации Luna сохраняют свой естественный вид в любом режиме.'}
+        </p>
+        <div className="appearance-theme-grid" role="radiogroup" aria-label={language === 'en' ? 'Color theme' : 'Цветовая тема'}>
+          <button type="button" className={`appearance-theme-card ${themePreference === 'light' ? 'is-selected' : ''}`} aria-pressed={themePreference === 'light'} onClick={() => onThemePreferenceChange('light')}>
+            <span className="appearance-preview appearance-preview-light" aria-hidden="true">
+              <i className="appearance-preview-header"><b /><em /></i>
+              <i className="appearance-preview-hero"><b /><em /></i>
+              <i className="appearance-preview-row"><b /><em /></i>
+            </span>
+            <span className="appearance-theme-label"><Sun size={17} /><strong>{language === 'en' ? 'Light' : 'Светлая'}</strong></span>
+            <small>{language === 'en' ? 'Warm ivory and soft lavender' : 'Тёплая слоновая кость и лаванда'}</small>
+          </button>
+          <button type="button" className={`appearance-theme-card ${themePreference === 'dark' ? 'is-selected' : ''}`} aria-pressed={themePreference === 'dark'} onClick={() => onThemePreferenceChange('dark')}>
+            <span className="appearance-preview appearance-preview-dark" aria-hidden="true">
+              <i className="appearance-preview-header"><b /><em /></i>
+              <i className="appearance-preview-hero"><b /><em /></i>
+              <i className="appearance-preview-row"><b /><em /></i>
+            </span>
+            <span className="appearance-theme-label"><Moon size={17} /><strong>{language === 'en' ? 'Dark' : 'Тёмная'}</strong></span>
+            <small>{language === 'en' ? 'Deep navy and moonlight' : 'Глубокий синий и лунный свет'}</small>
+          </button>
+        </div>
+        <section className="luna-surface rounded-[24px] p-2">
+          <ProfileToggleRow
+            title={language === 'en' ? 'Use device setting' : 'Как на устройстве'}
+            checked={systemEnabled}
+            onChange={(checked) => onThemePreferenceChange(checked ? 'system' : resolvedTheme)}
+          />
+        </section>
+        <div className="appearance-system-note">
+          <Monitor size={16} />
+          <p>
+            <strong>{systemEnabled ? (language === 'en' ? `System · ${resolvedLabel}` : `Системная · ${resolvedLabel}`) : resolvedLabel}</strong>
+            <span>{language === 'en' ? 'System mode updates instantly when your device appearance changes.' : 'Системный режим сразу меняется вместе с оформлением устройства.'}</span>
+          </p>
+        </div>
+      </ProfileChildScreen>
+    );
+  }
 
   if (view === 'goals') {
     return (
@@ -5498,7 +5575,7 @@ function ProfilePage({
         <p className="text-sm leading-6 text-lavender">{language === 'en' ? 'Send a secure request to the Luna support inbox.' : 'Отправь безопасный запрос во входящие поддержки Luna.'}</p>
         <label className="grid gap-2 text-xs font-semibold text-lavender">
           {language === 'en' ? 'Category' : 'Категория'}
-          <select value={supportCategory} onChange={(event) => setSupportCategory(event.currentTarget.value as SupportCategory)} className="min-h-[48px] rounded-[16px] border border-white/10 bg-[#111936] px-3 text-sm text-cream">
+          <select value={supportCategory} onChange={(event) => setSupportCategory(event.currentTarget.value as SupportCategory)} className="theme-input min-h-[48px] rounded-[16px] border border-white/10 px-3 text-sm text-cream">
             {categories.map((category) => <option key={category.id} value={category.id}>{language === 'en' ? category.en : category.ru}</option>)}
           </select>
         </label>
@@ -5702,6 +5779,7 @@ function ProfilePage({
         <ProfileSettingsRow icon={Bell} title={language === 'en' ? 'Notifications' : 'Уведомления'} value={notificationLabel} onClick={() => setView('notifications')} />
         <ProfileSettingsRow icon={Bot} title={language === 'en' ? 'AI Companion' : 'AI-компаньон'} value={companionStatus} onClick={onLuna} />
         <ProfileSettingsRow icon={CreditCard} title={language === 'en' ? 'Subscription' : 'Подписка'} value={localizedPlanStatus} onClick={() => setView('subscription')} />
+        <ProfileSettingsRow icon={SunMoon} title={language === 'en' ? 'Appearance' : 'Оформление'} value={themePreference === 'system' ? (language === 'en' ? 'System' : 'Системная') : themePreference === 'light' ? (language === 'en' ? 'Light' : 'Светлая') : (language === 'en' ? 'Dark' : 'Тёмная')} onClick={() => setView('appearance')} />
         <ProfileSettingsRow icon={Globe2} title={copy[language].language} value={languageLabel} onClick={() => setView('language')} />
         <ProfileSettingsRow icon={Lock} title={language === 'en' ? 'Privacy & Data' : 'Приватность и данные'} value="" onClick={() => setView('privacy')} />
         <ProfileSettingsRow icon={Heart} title={language === 'en' ? 'Support' : 'Поддержка'} value={language === 'en' ? 'Send a request' : 'Отправить запрос'} onClick={() => { setSupportCategory('problem'); setSettingsMessage(''); setView('support'); }} />
@@ -5731,8 +5809,8 @@ function ProfilePage({
       <p className="text-center text-[11px] text-cream/38">Luna Meditation · Version {APP_VERSION}</p>
 
       {logoutOpen && (
-        <div className="fixed inset-0 z-[100] grid place-items-end bg-night/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#111936] p-4 shadow-glow">
+        <div className="theme-overlay fixed inset-0 z-[100] grid place-items-end p-4 backdrop-blur-sm">
+          <div className="theme-sheet w-full max-w-md rounded-[28px] border border-white/10 p-4 shadow-glow">
             <h3 className="text-lg font-semibold text-cream">{language === 'en' ? 'Log out of Luna?' : 'Выйти из Luna?'}</h3>
             <p className="mt-2 text-sm leading-6 text-lavender">{language === 'en' ? 'This clears local app data on this device. Your Luna account and purchases stay safe.' : 'Это очистит локальные данные приложения на этом устройстве. Аккаунт Luna и покупки сохранятся.'}</p>
             <button onClick={closeLocalSession} className="mt-4 w-full rounded-[18px] border border-gold/20 bg-gold/10 px-4 py-3 text-sm font-semibold text-gold">{language === 'en' ? 'Log out' : 'Выйти'}</button>
@@ -5742,8 +5820,8 @@ function ProfilePage({
       )}
 
       {avatarActionsOpen && (
-        <div className="fixed inset-0 z-[100] grid place-items-end bg-night/60 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-[28px] border border-white/10 bg-[#111936] p-3 shadow-glow">
+        <div className="theme-overlay fixed inset-0 z-[100] grid place-items-end p-4 backdrop-blur-sm">
+          <div className="theme-sheet w-full max-w-md rounded-[28px] border border-white/10 p-3 shadow-glow">
             <button disabled={avatarBusy} onClick={() => chooseInputRef.current?.click()} className="w-full rounded-[18px] px-4 py-3 text-left text-sm font-semibold text-cream">{language === 'en' ? 'Choose photo' : 'Выбрать фото'}</button>
             <button disabled={avatarBusy} onClick={() => cameraInputRef.current?.click()} className="w-full rounded-[18px] px-4 py-3 text-left text-sm font-semibold text-cream">{language === 'en' ? 'Take photo' : 'Сделать фото'}</button>
             {avatarUrl && <button disabled={avatarBusy} onClick={() => void removeAvatar()} className="w-full rounded-[18px] px-4 py-3 text-left text-sm font-semibold text-gold">{language === 'en' ? 'Remove photo' : 'Удалить фото'}</button>}
@@ -5870,8 +5948,8 @@ function ProfileToggleRow({ title, checked, disabled = false, onChange }: {
   return (
     <button disabled={disabled} onClick={() => onChange(!checked)} className="flex min-h-[54px] w-full items-center justify-between rounded-[18px] px-4 text-left text-sm text-cream disabled:opacity-60">
       <span>{title}</span>
-      <span className={`relative h-7 w-12 rounded-full transition ${checked ? 'bg-gold' : 'bg-white/12'}`} aria-hidden="true">
-        <span className={`absolute top-1 h-5 w-5 rounded-full bg-cream transition ${checked ? 'left-6' : 'left-1'}`} />
+      <span className={`profile-toggle-track relative h-7 w-12 rounded-full transition ${checked ? 'is-checked' : ''}`} aria-hidden="true">
+        <span className={`profile-toggle-knob absolute top-1 h-5 w-5 rounded-full transition ${checked ? 'left-6' : 'left-1'}`} />
       </span>
     </button>
   );
