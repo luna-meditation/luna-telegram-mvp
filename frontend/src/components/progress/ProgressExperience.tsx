@@ -21,6 +21,15 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import type { AppLanguage, ProfileStats } from '../../api';
 import { progressCopy, progressText } from './progressCopy';
+import {
+  JourneyStatusMark,
+  StatusProgressionSheet,
+  journeyStatusDescriptions,
+  journeyStatusNames,
+  resolveJourneyStatus
+} from './StatusProgressionSheet';
+
+export { JourneyStatusMark, StatusProgressionSheet, journeyStatusNames, resolveJourneyStatus } from './StatusProgressionSheet';
 
 export type ProgressAchievement = {
   id: string;
@@ -61,58 +70,7 @@ function rhythmSentence(streak: number, language: AppLanguage) {
     : `Ты возвращаешься ${streak} ${russianNoun(streak, 'день', 'дня', 'дней')} подряд.`;
 }
 
-export type JourneyStatusId = NonNullable<ProfileStats['journeyStatus']>['id'];
-export type JourneyStatus = NonNullable<ProfileStats['journeyStatus']>;
 type JourneyRequirement = NonNullable<NonNullable<ProfileStats['journeyStatus']>['next']>['remaining'][number];
-
-export const journeyStatusNames: Record<AppLanguage, Record<JourneyStatusId, string>> = {
-  en: {
-    initiate: 'Initiate', seeker: 'Seeker', adept: 'Adept', guardian: 'Guardian', luminary: 'Luminary',
-    sage: 'Sage', ascendant: 'Ascendant', celestial: 'Celestial', ethereal: 'Ethereal', lunaris: 'Lunaris'
-  },
-  ru: {
-    initiate: 'Посвящённый', seeker: 'Искатель', adept: 'Адепт', guardian: 'Хранитель', luminary: 'Светоч',
-    sage: 'Мудрец', ascendant: 'Возвышенный', celestial: 'Небесный', ethereal: 'Эфирный', lunaris: 'Лунарис'
-  }
-};
-
-export function JourneyStatusMark({ compact = false }: { compact?: boolean }) {
-  return (
-    <span className={`progress-v5-status-seal ${compact ? 'is-compact' : ''}`} aria-hidden="true">
-      <Moon size={compact ? 18 : 28} />
-      <Sparkles size={compact ? 9 : 13} />
-    </span>
-  );
-}
-
-export function resolveJourneyStatus(profile: ProfileStats | null): JourneyStatus {
-  const completedMeditations = Math.max(0, profile?.completedMeditations ?? 0);
-  return profile?.journeyStatus ?? {
-    id: 'initiate',
-    rank: completedMeditations > 0 ? 0 : -1,
-    earned: completedMeditations > 0,
-    eligibleRank: completedMeditations > 0 ? 0 : -1,
-    next: {
-      id: 'initiate',
-      rank: 0,
-      progressPercent: Math.min(100, completedMeditations * 100),
-      remaining: completedMeditations > 0 ? [] : [{ key: 'completedMeditations', current: 0, target: 1, remaining: 1 }]
-    }
-  };
-}
-
-const journeyStatusDescriptions: Record<AppLanguage, Record<JourneyStatusId, string>> = {
-  en: {
-    initiate: 'Your first quiet return.', seeker: 'Calm is becoming a rhythm.', adept: 'Practice is taking root.',
-    guardian: 'You protect space for yourself.', luminary: 'Your consistency carries light.', sage: 'Stillness has become familiar.',
-    ascendant: 'Your practice keeps rising.', celestial: 'A rare rhythm under the moon.', ethereal: 'Calm moves with you.', lunaris: 'The full Luna path is yours.'
-  },
-  ru: {
-    initiate: 'Твоё первое тихое возвращение.', seeker: 'Спокойствие становится ритмом.', adept: 'Практика пускает корни.',
-    guardian: 'Ты бережёшь пространство для себя.', luminary: 'Твоя регулярность несёт свет.', sage: 'Тишина стала знакомой.',
-    ascendant: 'Твоя практика продолжает расти.', celestial: 'Редкий ритм под светом луны.', ethereal: 'Спокойствие остаётся с тобой.', lunaris: 'Полный путь Luna открыт.'
-  }
-};
 
 function journeyRequirementText(requirement: JourneyRequirement, nextName: string, language: AppLanguage) {
   const { key, remaining } = requirement;
@@ -128,16 +86,16 @@ function journeyRequirementText(requirement: JourneyRequirement, nextName: strin
   return `Ещё ${remaining} ${russianNoun(remaining, 'уровень', 'уровня', 'уровней')} сада до статуса «${nextName}»`;
 }
 
-function JourneyStatusHero({ profile, language }: { profile: ProfileStats | null; language: AppLanguage }) {
+function JourneyStatusHero({ profile, language, onOpen }: { profile: ProfileStats | null; language: AppLanguage; onOpen: () => void }) {
   const status = resolveJourneyStatus(profile);
   const next = status.next;
   const name = journeyStatusNames[language][status.id];
   const nextName = next ? journeyStatusNames[language][next.id] : null;
 
   return (
-    <section className="progress-v5-status progress-v3-enter" aria-label={language === 'en' ? `Journey status: ${name}` : `Статус пути: ${name}`}>
+    <button type="button" className="progress-v5-status progress-v3-enter" onClick={onOpen} aria-label={language === 'en' ? `Journey status: ${name}. Open all statuses.` : `Статус пути: ${name}. Открыть все статусы.`}>
       <div className="progress-v5-status-heading">
-        <JourneyStatusMark />
+        <JourneyStatusMark statusId={status.id} />
         <div className="progress-v5-status-copy">
           <p className="progress-v3-eyebrow">{language === 'en' ? 'Your status' : 'Твой статус'}</p>
           <h2>{name}</h2>
@@ -156,7 +114,7 @@ function JourneyStatusHero({ profile, language }: { profile: ProfileStats | null
       ) : (
         <p className="progress-v5-status-complete"><Sparkles size={14} />{language === 'en' ? 'Highest Journey status reached' : 'Высший статус пути достигнут'}</p>
       )}
-    </section>
+    </button>
   );
 }
 
@@ -170,7 +128,8 @@ function CurrentRhythmHero({ profile, language }: { profile: ProfileStats | null
   const ring = Math.min(100, Math.round((streak / 7) * 100));
   return (
     <section className="progress-v3-hero progress-v4-rhythm progress-v3-enter">
-      <img src="/images/progress/progress-bg-01.webp" alt="" className="progress-v3-hero-image" />
+      <img src="/images/progress/progress-bg-01.webp" alt="" className="progress-v3-hero-image progress-v3-rhythm-image-dark" />
+      <img src="/images/home/hero-light.png" alt="" className="progress-v3-hero-image progress-v3-rhythm-image-light" />
       <div className="progress-v3-hero-shade" />
       <span className="progress-v3-moon-glow" aria-hidden="true" />
       <div className="progress-v3-hero-content">
@@ -369,13 +328,15 @@ export function ProgressExperience({
   garden: ReactNode;
   isAdmin: boolean;
 }) {
+  const [statusOpen, setStatusOpen] = useState(false);
   return (
     <main className="progress-v3-page progress-v4-page">
-      <JourneyStatusHero profile={profile} language={language} />
+      <JourneyStatusHero profile={profile} language={language} onOpen={() => setStatusOpen(true)} />
       <CurrentRhythmHero profile={profile} language={language} />
       <div className="journey-hub-garden" aria-label={progressCopy[language].moonGarden}>{garden}</div>
       <AchievementsStory items={achievements} language={language} />
       {import.meta.env.DEV && isAdmin && <ProgressDiagnostics profile={profile} language={language} />}
+      {statusOpen && <StatusProgressionSheet profile={profile} language={language} onClose={() => setStatusOpen(false)} />}
     </main>
   );
 }

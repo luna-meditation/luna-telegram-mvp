@@ -6,17 +6,19 @@ import test from 'node:test';
 const app = readFileSync(resolve(process.cwd(), 'src/App.tsx'), 'utf8');
 const hero = readFileSync(resolve(process.cwd(), 'src/v2/components/V2Hero.tsx'), 'utf8');
 const progress = readFileSync(resolve(process.cwd(), 'src/components/progress/ProgressExperience.tsx'), 'utf8');
+const statuses = readFileSync(resolve(process.cwd(), 'src/components/progress/StatusProgressionSheet.tsx'), 'utf8');
 const progressCopy = readFileSync(resolve(process.cwd(), 'src/components/progress/progressCopy.ts'), 'utf8');
 const styles = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
 const homeStyles = readFileSync(resolve(process.cwd(), 'src/v2/design-system/homeV2.css'), 'utf8');
 
 test('Profile and Journey share one status resolver and one visual mark', () => {
-  assert.match(progress, /export function resolveJourneyStatus/);
-  assert.match(progress, /export function JourneyStatusMark/);
+  assert.match(progress, /export \{ JourneyStatusMark, StatusProgressionSheet, journeyStatusNames, resolveJourneyStatus \}/);
+  assert.match(statuses, /export function resolveJourneyStatus/);
+  assert.match(statuses, /export function JourneyStatusMark/);
   assert.match(progress, /const status = resolveJourneyStatus\(profile\)/);
   assert.match(app, /const journeyStatus = resolveJourneyStatus\(profile\)/);
-  assert.match(app, /<JourneyStatusMark compact/);
-  assert.match(app, /className="profile-journey-status" onClick=\{onJourney\}/);
+  assert.match(app, /<JourneyStatusMark statusId=\{journeyStatus\.id\} compact/);
+  assert.match(app, /className="profile-journey-status" onClick=\{\(\) => setStatusProgressionOpen\(true\)\}/);
   assert.match(styles, /\.profile-journey-status/);
   assert.match(styles, /\.profile-plan-status\.is-premium/);
 });

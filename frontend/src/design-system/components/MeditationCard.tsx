@@ -8,6 +8,7 @@ type MeditationCardProps = {
   metadata: string;
   locked?: boolean;
   favorite?: boolean;
+  favoritePending?: boolean;
   showPopular?: boolean;
   hasProgress?: boolean;
   premiumLabel: string;
@@ -25,6 +26,7 @@ export function MeditationCard({
   metadata,
   locked = false,
   favorite = false,
+  favoritePending = false,
   showPopular = false,
   hasProgress = false,
   premiumLabel,
@@ -68,7 +70,7 @@ export function MeditationCard({
         ) : null}
       </button>
       {onFavorite ? (
-        <button type="button" onClick={onFavorite} className="meditation-card-favorite" aria-label={favorite ? `Remove ${title} from favorites` : `Add ${title} to favorites`} aria-pressed={favorite}>
+        <button type="button" onClick={onFavorite} disabled={favoritePending} aria-busy={favoritePending} className="meditation-card-favorite" aria-label={favorite ? `Remove ${title} from favorites` : `Add ${title} to favorites`} aria-pressed={favorite}>
           <Heart size={17} className={favorite ? 'is-favorite' : ''} aria-hidden="true" />
         </button>
       ) : null}

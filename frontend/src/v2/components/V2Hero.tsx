@@ -142,9 +142,9 @@ export function V2Hero({
         ))}
       </div>
 
-      <div className={`home-v2-atmosphere-copy ${moodSaved ? 'is-checked-in' : ''}`}>
+      <div className="home-v2-atmosphere-copy">
         <p className="home-v2-greeting">{greeting}, {firstName}</p>
-        <h1>{moodSaved ? (language === 'ru' ? 'Сегодняшний чек-ин' : "Today’s check-in") : headline}</h1>
+        <h1>{headline}</h1>
       </div>
 
       {showCheckinToast ? (
@@ -158,8 +158,7 @@ export function V2Hero({
         <div className="home-v2-mood-saved" aria-label={`${language === 'ru' ? 'Сегодня' : 'Today'}: ${moodLabel(activeMood)}`}>
           <span>{selectedMood ? <MoodGlyph kind={selectedMood.visual} /> : null}</span>
           <span className="home-v2-mood-saved-copy">
-            <small>{language === 'ru' ? 'СЕГОДНЯ' : 'TODAY'}</small>
-            <strong>{moodLabel(activeMood)}</strong>
+            <strong><small>{language === 'ru' ? 'Сегодня' : 'Today'}:</small> {moodLabel(activeMood)}</strong>
           </span>
           <div className="home-v2-mood-actions">
             <button type="button" onClick={onCheckinDetails}>{changeLabel} →</button>
