@@ -91,19 +91,34 @@ export type LunaLanguage = 'en' | 'ru';
 const cyrillicPattern = /[\u0400-\u04ff]/g;
 const latinPattern = /[a-z]/gi;
 
-export function detectConversationLanguage(message: string, fallback: LunaLanguage): LunaLanguage {
+function writtenLanguageSignal(message: string): LunaLanguage | null {
   const cyrillic = message.match(cyrillicPattern)?.length ?? 0;
   const latin = message.match(latinPattern)?.length ?? 0;
   if (cyrillic >= 2 && cyrillic >= latin * 0.35) return 'ru';
   if (latin >= 3 && latin > cyrillic * 2) return 'en';
-  return fallback;
+  return null;
 }
 
-export function resolveResponseLanguage(message: string, interfaceLanguage: LunaLanguage): LunaLanguage {
+export function detectConversationLanguage(message: string, fallback: LunaLanguage): LunaLanguage {
+  return writtenLanguageSignal(message) ?? fallback;
+}
+
+export function resolveResponseLanguage(
+  message: string,
+  interfaceLanguage: LunaLanguage,
+  recentMessages: Array<{ role?: string | null; content?: string | null }> = []
+): LunaLanguage {
   const asksForRussian = /(?:reply|answer|respond|write|speak)\s+(?:to me\s+)?in\s+russian|(?:ответь|пиши|говори)\s+(?:мне\s+)?(?:по-)?русски/i.test(message);
   const asksForEnglish = /(?:reply|answer|respond|write|speak)\s+(?:to me\s+)?in\s+english|(?:ответь|пиши|говори)\s+(?:мне\s+)?(?:на\s+)?английск/i.test(message);
   if (asksForRussian && !asksForEnglish) return 'ru';
   if (asksForEnglish && !asksForRussian) return 'en';
+  const currentSignal = writtenLanguageSignal(message);
+  if (currentSignal) return currentSignal;
+  for (const recent of [...recentMessages].reverse()) {
+    if (recent.role && recent.role !== 'user') continue;
+    const signal = writtenLanguageSignal(recent.content ?? '');
+    if (signal) return signal;
+  }
   return interfaceLanguage;
 }
 
@@ -155,7 +170,13 @@ export function hasInternalDataLeak(message: string) {
 
 export function isReadyMeditationRequest(message: string) {
   return /\b(?:recommend|suggest|send|give me|pick|choose|what should i listen|what to listen|meditation|practice from the app|audio practice)\b/i.test(message) ||
-    /(?:пришли|отправь|дай|подбери|посоветуй|выбери|покажи|можешь\s+(?:сюда\s+)?прислать|сюда\s+прислать|можно\s+(?:её\s+)?увидеть|увидеть\s+(?:её\s+)?(?:здесь|в\s+чате)|что\s+(?:мне\s+)?послушать|медитац|практик[ау]\s+из\s+приложения)/i.test(message);
+    /(?:пришли|отправь|дай|подбери|посоветуй|выбери|покажи|можешь\s+(?:сюда\s+)?прислать|сюда\s+прислать|можно\s+(?:её\s+)?увидеть|увидеть\s+(?:её\s+)?(?:здесь|в\s+чате)|что\s+(?:мне\s+)?послушать|медитац|практик[ау]\s+из\s+приложения)/i.test(message) ||
+    isAlternativeRecommendationRequest(message);
+}
+
+export function isAlternativeRecommendationRequest(message: string) {
+  return /\b(?:another|other options?|alternatives?|something else|anything else|different one)\b/i.test(message) ||
+    /(?:а\s+есть\s+ещ[её]|ещ[её]\s+(?:друг|вариант)|друг(?:ая|ие|ой|ую)|что[- ]?нибудь\s+ещ[её]|давай\s+друг)/i.test(message);
 }
 
 export function isVulnerableMessage(message: string) {
@@ -168,8 +189,8 @@ function isExplicitPremiumRequest(message: string) {
 }
 
 export function isInChatGuidanceRequest(message: string) {
-  return /\b(?:guide me here|walk me through|do it with me|right here|in chat|i don't want to open audio|i do not want to open audio)\b/i.test(message) ||
-    /(?:проведи\s+меня\s+сейчас|сделай\s+со\s+мной|прямо\s+здесь|в\s+чате|не\s+хочу\s+открывать\s+аудио|без\s+аудио)/i.test(message);
+  return /\b(?:guide me here|walk me through|do it with me|let's do an? (?:breathing |grounding )?exercise|give me an? (?:breathing |grounding )?exercise|right here|in chat|i don't want to open audio|i do not want to open audio)\b/i.test(message) ||
+    /(?:давай\s+(?:сделаем\s+)?(?:дыхательное\s+|заземляющее\s+)?упражнение|проведи\s+меня\s+сейчас|сделай\s+со\s+мной|прямо\s+здесь|в\s+чате|не\s+хочу\s+открывать\s+аудио|без\s+аудио)/i.test(message);
 }
 
 export function isAmbiguousSleepyTiredContext(message: string) {
@@ -286,6 +307,7 @@ export function rankMeditationRecommendation(input: {
 }): MeditationRecommendationDecision {
   const recentRecommendations = input.recentAssistantRecommendations ?? [];
   const explicitlyRequested = isReadyMeditationRequest(input.message) || Boolean(input.forceRecommendation);
+  const alternativesRequested = isAlternativeRecommendationRequest(input.message);
   const noMatch = (reason: string, intent: string | null = null): MeditationRecommendationDecision => ({
     meditationId: null, intent, score: 0, runnerUpScore: 0, ambiguous: false, reason
   });
@@ -333,7 +355,7 @@ export function rankMeditationRecommendation(input: {
 
   const ranked = available
     .map((item) => ({ item, ...recommendationScoreDetails(item, intent) }))
-    .filter((entry) => entry.score >= 16 && (explicitlyRequested || !recentRecommendations.includes(entry.item.id)))
+    .filter((entry) => entry.score >= 16 && (alternativesRequested ? !recentRecommendations.includes(entry.item.id) : (explicitlyRequested || !recentRecommendations.includes(entry.item.id))))
     .sort((a, b) => b.score - a.score || a.item.title.localeCompare(b.item.title));
 
   const best = ranked[0];

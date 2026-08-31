@@ -29,3 +29,19 @@ test('Breath Circle consumes shared timing and exposes active controls', () => {
   assert.match(styles, /\.breath-practice-guide/);
   assert.match(styles, /prefers-reduced-motion/);
 });
+
+test('Breath Circle uses a clearly visible calm scale range and phase feedback', () => {
+  assert.match(source, /0\.82 \+ progress \* 0\.54/);
+  assert.match(source, /1\.36 - progress \* 0\.48/);
+  assert.match(source, /phase\.kind === 'hold'\s*\? 1\.36/);
+  assert.match(app, /data-phase=\{hasStarted \|\| running \? phase\.kind : 'ready'\}/);
+  assert.match(styles, /data-phase="inhale"/);
+  assert.match(styles, /data-phase="exhale"/);
+  assert.match(styles, /\.breath-circle-orbit::before/);
+});
+
+test('Library breathing result count comes from the configured practices', () => {
+  assert.match(app, /props\.mode === 'breathing' \? breathPractices\.length/);
+  assert.match(app, /guided breathing exercises/);
+  assert.doesNotMatch(app, /9 guided breathing exercises/);
+});

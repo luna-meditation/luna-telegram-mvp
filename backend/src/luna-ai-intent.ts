@@ -1,4 +1,4 @@
-import type { RecommendationCatalogItem } from './luna-ai-policy.js';
+import { isAlternativeRecommendationRequest, isInChatGuidanceRequest, type RecommendationCatalogItem } from './luna-ai-policy.js';
 import type { PendingLunaState } from './luna-ai-pending.js';
 import type { LunaConversationGoal, LunaConversationState } from './luna-ai-state.js';
 
@@ -79,7 +79,8 @@ function nonMeditationIntent(message: string): LunaRuntimeIntent | null {
 }
 
 function recommendationRequest(message: string) {
-  return /\b(?:recommend|suggest|pick|choose|send|show|open|start|meditation|practice)\b|(?:посоветуй|подбери|выбери|пришли|покажи|открой|запусти|начни|медитац|практик)/i.test(message);
+  return /\b(?:recommend|suggest|pick|choose|send|show|open|start|meditation|practice)\b|(?:посоветуй|подбери|выбери|пришли|покажи|открой|запусти|начни|медитац|практик)/i.test(message) ||
+    isAlternativeRecommendationRequest(message);
 }
 
 function directActionRequest(message: string) {
@@ -118,6 +119,14 @@ export function resolveLunaIntent(input: {
       intent: 'open_meditation', goal: input.state.current_goal, topic: 'meditation',
       action: 'open_meditation', meditationId: namedId, confidence: 1, continuation: false,
       reason: 'explicit_catalog_title_action'
+    };
+  }
+
+  if (isInChatGuidanceRequest(input.message)) {
+    return {
+      intent: 'breathing', goal: input.state.current_goal ?? 'breathing', topic: input.state.current_topic ?? 'breathing',
+      action: 'none', meditationId: null, confidence: 0.99, continuation: Boolean(input.state.current_topic),
+      reason: 'guided_exercise_requested_in_chat'
     };
   }
 

@@ -13,6 +13,7 @@ import {
   isAmbiguousSleepyTiredContext,
   isInChatGuidanceRequest,
   isReadyMeditationRequest,
+  isAlternativeRecommendationRequest,
   isVulnerableMessage,
   isCrisisMessage,
   meditationIdMentionedInText,
@@ -21,6 +22,7 @@ import {
   sanitizeMeditationFacts,
   sanitizeVisibleAssistantMessage,
   semanticMeditationRecommendation,
+  rankMeditationRecommendation,
   validatedMeditationId,
   validMemoryCandidates,
   type RecommendationCatalogItem
@@ -131,13 +133,32 @@ test('detects the current message language, including language switches and mixe
   assert.equal(detectConversationLanguage('ok', 'ru'), 'ru');
 });
 
-test('explicit interface locale wins over message history unless the user clearly asks to switch', () => {
+test('latest meaningful user language wins, with recent user turns as ambiguous-message fallback', () => {
   assert.equal(resolveResponseLanguage('I feel anxious today', 'en'), 'en');
   assert.equal(resolveResponseLanguage('Мне тревожно', 'ru'), 'ru');
-  assert.equal(resolveResponseLanguage('Earlier we spoke Russian, but I need help now', 'en'), 'en');
-  assert.equal(resolveResponseLanguage('Earlier we spoke English, но мне нужна помощь', 'ru'), 'ru');
+  assert.equal(resolveResponseLanguage('Мне тревожно', 'en'), 'ru');
+  assert.equal(resolveResponseLanguage('I need help now', 'ru'), 'en');
+  assert.equal(resolveResponseLanguage('ok', 'en', [
+    { role: 'user', content: 'Мне всё ещё тревожно' },
+    { role: 'assistant', content: 'I can help' }
+  ]), 'ru');
+  assert.equal(resolveResponseLanguage('ok', 'en', [{ role: 'user', content: 'still anxious' }]), 'en');
   assert.equal(resolveResponseLanguage('Please answer in Russian', 'en'), 'ru');
   assert.equal(resolveResponseLanguage('Ответь на английском', 'ru'), 'en');
+});
+
+test('an alternative request keeps the active goal and excludes the recent card', () => {
+  assert.equal(isAlternativeRecommendationRequest('А есть ещё другие?'), true);
+  const decision = rankMeditationRecommendation({
+    message: 'А есть ещё другие?',
+    catalog: recommendationCatalog,
+    recentAssistantRecommendations: ['anxiety'],
+    recentMessages: [{ role: 'user', content: 'Мне нужна практика от тревоги' }],
+    intentOverride: 'anxiety',
+    forceRecommendation: true
+  });
+  assert.notEqual(decision.meditationId, 'anxiety');
+  assert.equal(decision.meditationId, 'breath');
 });
 
 test('recognizes forbidden masculine Luna self-references', () => {

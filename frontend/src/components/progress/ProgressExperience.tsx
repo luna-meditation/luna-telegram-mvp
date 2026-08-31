@@ -61,10 +61,11 @@ function rhythmSentence(streak: number, language: AppLanguage) {
     : `Ты возвращаешься ${streak} ${russianNoun(streak, 'день', 'дня', 'дней')} подряд.`;
 }
 
-type JourneyStatusId = NonNullable<ProfileStats['journeyStatus']>['id'];
+export type JourneyStatusId = NonNullable<ProfileStats['journeyStatus']>['id'];
+export type JourneyStatus = NonNullable<ProfileStats['journeyStatus']>;
 type JourneyRequirement = NonNullable<NonNullable<ProfileStats['journeyStatus']>['next']>['remaining'][number];
 
-const journeyStatusNames: Record<AppLanguage, Record<JourneyStatusId, string>> = {
+export const journeyStatusNames: Record<AppLanguage, Record<JourneyStatusId, string>> = {
   en: {
     initiate: 'Initiate', seeker: 'Seeker', adept: 'Adept', guardian: 'Guardian', luminary: 'Luminary',
     sage: 'Sage', ascendant: 'Ascendant', celestial: 'Celestial', ethereal: 'Ethereal', lunaris: 'Lunaris'
@@ -74,6 +75,31 @@ const journeyStatusNames: Record<AppLanguage, Record<JourneyStatusId, string>> =
     sage: 'Мудрец', ascendant: 'Возвышенный', celestial: 'Небесный', ethereal: 'Эфирный', lunaris: 'Лунарис'
   }
 };
+
+export function JourneyStatusMark({ compact = false }: { compact?: boolean }) {
+  return (
+    <span className={`progress-v5-status-seal ${compact ? 'is-compact' : ''}`} aria-hidden="true">
+      <Moon size={compact ? 18 : 28} />
+      <Sparkles size={compact ? 9 : 13} />
+    </span>
+  );
+}
+
+export function resolveJourneyStatus(profile: ProfileStats | null): JourneyStatus {
+  const completedMeditations = Math.max(0, profile?.completedMeditations ?? 0);
+  return profile?.journeyStatus ?? {
+    id: 'initiate',
+    rank: completedMeditations > 0 ? 0 : -1,
+    earned: completedMeditations > 0,
+    eligibleRank: completedMeditations > 0 ? 0 : -1,
+    next: {
+      id: 'initiate',
+      rank: 0,
+      progressPercent: Math.min(100, completedMeditations * 100),
+      remaining: completedMeditations > 0 ? [] : [{ key: 'completedMeditations', current: 0, target: 1, remaining: 1 }]
+    }
+  };
+}
 
 const journeyStatusDescriptions: Record<AppLanguage, Record<JourneyStatusId, string>> = {
   en: {
@@ -103,19 +129,7 @@ function journeyRequirementText(requirement: JourneyRequirement, nextName: strin
 }
 
 function JourneyStatusHero({ profile, language }: { profile: ProfileStats | null; language: AppLanguage }) {
-  const savedStatus = profile?.journeyStatus;
-  const completedMeditations = Math.max(0, profile?.completedMeditations ?? 0);
-  const status = savedStatus ?? {
-    id: 'initiate' as const,
-    rank: completedMeditations > 0 ? 0 : -1,
-    earned: completedMeditations > 0,
-    next: {
-      id: 'initiate' as const,
-      rank: 0,
-      progressPercent: Math.min(100, completedMeditations * 100),
-      remaining: completedMeditations > 0 ? [] : [{ key: 'completedMeditations' as const, current: 0, target: 1, remaining: 1 }]
-    }
-  };
+  const status = resolveJourneyStatus(profile);
   const next = status.next;
   const name = journeyStatusNames[language][status.id];
   const nextName = next ? journeyStatusNames[language][next.id] : null;
@@ -123,7 +137,7 @@ function JourneyStatusHero({ profile, language }: { profile: ProfileStats | null
   return (
     <section className="progress-v5-status progress-v3-enter" aria-label={language === 'en' ? `Journey status: ${name}` : `Статус пути: ${name}`}>
       <div className="progress-v5-status-heading">
-        <div className="progress-v5-status-seal" aria-hidden="true"><Moon size={28} /><Sparkles size={13} /></div>
+        <JourneyStatusMark />
         <div className="progress-v5-status-copy">
           <p className="progress-v3-eyebrow">{language === 'en' ? 'Your status' : 'Твой статус'}</p>
           <h2>{name}</h2>
@@ -178,7 +192,7 @@ function CurrentRhythmHero({ profile, language }: { profile: ProfileStats | null
               <circle cx="60" cy="60" r="52" className="progress-v3-ring-track" />
               <circle cx="60" cy="60" r="52" className="progress-v3-ring-value" pathLength="100" />
             </svg>
-            <div><strong>{streak}</strong><span>{t.dayStreak}</span></div>
+            <div><strong data-digits={Math.min(3, String(streak).length)}>{streak}</strong><span>{t.dayStreak}</span></div>
           </div>
           <div className="progress-v4-rhythm-facts">
             <div><span>{t.longestRhythm}</span><strong>{longest} {language === 'en' ? (longest === 1 ? 'day' : 'days') : 'дн.'}</strong></div>

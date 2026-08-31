@@ -106,7 +106,7 @@ import {
 import { MoonGardenScene as AnimatedMoonGardenScene } from './components/moon-garden/MoonGardenScene';
 import { JourneyHub } from './components/journey/JourneyHub';
 import { LunaChat } from './components/LunaChat';
-import { ProgressExperience, ProgressExperienceSkeleton } from './components/progress/ProgressExperience';
+import { JourneyStatusMark, ProgressExperience, ProgressExperienceSkeleton, journeyStatusNames, resolveJourneyStatus } from './components/progress/ProgressExperience';
 import { AppHeader } from './design-system/components/AppHeader';
 import { BottomNavigation } from './design-system/components/BottomNavigation';
 import { BrandLogo } from './design-system/components/BrandLogo';
@@ -3142,6 +3142,7 @@ function App() {
             firstName={user.first_name ?? 'Luna'}
             username={user.username}
             showAdminButton={adminStatus === 'allowed'}
+            onJourney={() => setPage('progress')}
             onLuna={() => setPage('luna')}
             onSubscription={() => setPage('pricing')}
             onAdmin={() => {
@@ -3310,17 +3311,17 @@ function LibraryPage(props: {
   const filteredMantras = props.mantras.filter((mantra) =>
     [mantra.title[props.language], mantra.subtitle[props.language], mantra.category, ...mantra.tags].join(' ').toLowerCase().includes(props.query.toLowerCase())
   );
-  const resultCount = props.mode === 'meditations' ? props.meditations.length : props.mode === 'breathing' ? 1 : filteredMantras.length;
+  const resultCount = props.mode === 'meditations' ? props.meditations.length : props.mode === 'breathing' ? breathPractices.length : filteredMantras.length;
   const resultLabel = props.language === 'en'
     ? props.mode === 'meditations'
       ? `${resultCount} ${resultCount === 1 ? 'meditation' : 'meditations'}`
       : props.mode === 'breathing'
-        ? '1 breathing practice'
+        ? `${resultCount} guided breathing exercises`
         : `${resultCount} ${resultCount === 1 ? 'mantra' : 'mantras'}`
     : props.mode === 'meditations'
       ? `Медитаций: ${resultCount}`
       : props.mode === 'breathing'
-        ? 'Дыхательная практика: 1'
+        ? `Дыхательных упражнений: ${resultCount}`
         : `Мантр: ${resultCount}`;
   return (
     <div className="luna-page library-page space-y-3 pb-6">
@@ -3381,6 +3382,7 @@ function LibraryPage(props: {
             <p className="text-xs uppercase tracking-[0.18em] text-gold">{t.breathingTab}</p>
             <h3 className="type-section-title mt-1">{t.breathCircle}</h3>
             <p className="mt-2 max-w-[250px] text-sm leading-5 text-cream/75">{t.breathCircleSubtitle}</p>
+            <p className="mt-2 text-xs text-lavender">{props.language === 'en' ? `${resultCount} guided breathing exercises` : `${resultCount} дыхательных упражнений`}</p>
             <p className="mt-3 text-[11px] text-lavender">1 / 3 / 5 min</p>
           </button>
         </section>
@@ -4624,7 +4626,7 @@ function BreathCirclePage({
       </div>
 
       <section className="breath-circle-visual" aria-live="polite">
-        <div className="breath-circle-orbit">
+        <div className={`breath-circle-orbit ${running ? 'is-running' : ''}`} data-phase={hasStarted || running ? phase.kind : 'ready'}>
           <div
             className={`breath-circle-core ${running ? 'is-running' : ''}`}
             style={{ transform: `scale(${hasStarted || running ? phase.scale : 0.9})` }}
@@ -5145,6 +5147,7 @@ function ProfilePage({
   firstName,
   username,
   showAdminButton,
+  onJourney,
   onLuna,
   onSubscription,
   onAdmin,
@@ -5172,6 +5175,7 @@ function ProfilePage({
   firstName: string;
   username?: string;
   showAdminButton: boolean;
+  onJourney: () => void;
   onLuna: () => void;
   onSubscription: () => void;
   onAdmin: () => void;
@@ -5253,6 +5257,9 @@ function ProfilePage({
       : copy[language].premiumActive
     : copy[language].premiumFree;
   const localizedPlanStatus = planStatus;
+  const journeyStatus = resolveJourneyStatus(profile);
+  const journeyStatusName = journeyStatusNames[language][journeyStatus.id];
+  const journeyStatusRank = Math.max(1, journeyStatus.rank + 1);
   const goalsLabel = goalsCountLabel(goals.length, language);
   const notificationLabel = notificationStatusLabel(notificationPrefs, language);
   const companionStatus = companionAvailable === null
@@ -5766,8 +5773,16 @@ function ProfilePage({
         </button>
         <div className="min-w-0 flex-1">
           <h3 className="truncate text-[25px] font-semibold leading-tight tracking-[-0.04em] text-cream">{firstName}</h3>
-          <p className={`profile-plan-status ${access.hasPremium ? 'is-premium' : ''}`}>{localizedPlanStatus}</p>
           <p className="mt-0.5 truncate text-xs text-lavender">{username ? `@${username}` : copy[language].member}</p>
+          <button type="button" className="profile-journey-status" onClick={onJourney} aria-label={language === 'en' ? `Luna status ${journeyStatusName}, ${journeyStatusRank} of 10. Open Journey.` : `Статус Luna: ${journeyStatusName}, ${journeyStatusRank} из 10. Открыть Путь.`}>
+            <JourneyStatusMark compact />
+            <span>
+              <small>{language === 'en' ? 'Luna status' : 'Статус Luna'}</small>
+              <strong>{journeyStatusName} <i>· {journeyStatusRank}/10</i></strong>
+            </span>
+            <ChevronRight size={15} aria-hidden="true" />
+          </button>
+          <p className={`profile-plan-status ${access.hasPremium ? 'is-premium' : ''}`}>{localizedPlanStatus}</p>
         </div>
       </section>
 
