@@ -33,7 +33,13 @@ import {
   type PendingLunaState
 } from './luna-ai-pending.js';
 import { directMeditationResponse, resolveLunaIntent } from './luna-ai-intent.js';
-import { constrainLunaResponse, isLongFormRequest, reviewLunaResponse } from './luna-ai-quality.js';
+import {
+  completeGuidedPracticeFallback,
+  constrainLunaResponse,
+  isGuidedPracticeRequest,
+  isLongFormRequest,
+  reviewLunaResponse
+} from './luna-ai-quality.js';
 import { assistantQuestionHash, recoverConversationState, updateConversationState } from './luna-ai-state.js';
 
 const languageSchema = z.enum(['en', 'ru']);
@@ -888,7 +894,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
   if (!env.AI_CHAT_ENABLED) throw new LunaAiError('chat_disabled', 'Luna AI chat is not enabled.', 503);
   if (!env.OPENAI_API_KEY) throw new LunaAiError('missing_api_key', 'Luna AI is not configured.', 503);
   const input = lunaChatInputSchema.parse(rawInput);
-  const responseLanguage = resolveResponseLanguage(input.message, input.language);
+  let responseLanguage = resolveResponseLanguage(input.message, input.language);
   const telegramId = user.telegram_id;
 
   await upsertUser(user);
@@ -976,6 +982,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     }
 
     const { recent, context, catalog, memoryEnabled, pendingState, conversationState } = await loadContext(telegramId, resolvedConversationId, input.message);
+    responseLanguage = resolveResponseLanguage(input.message, input.language, recent);
     console.info('[Luna AI pending state loaded]', {
       user: userHash(telegramId),
       requestId: input.requestId,
@@ -1059,6 +1066,11 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       || intentResolution.action === 'open_meditation'
       || intentResolution.action === 'recommend_meditation'
     ) ? resolvedRuntimeMeditation : null;
+    const guidedPracticeRequested = isGuidedPracticeRequest(input.message)
+      || (intentResolution.intent === 'breathing' && intentResolution.action === 'none');
+    const responseTokenBudget = guidedPracticeRequested
+      ? Math.min(8192, Math.max(env.AI_MAX_OUTPUT_TOKENS, 2600))
+      : env.AI_MAX_OUTPUT_TOKENS;
     console.info('[Luna AI pending state resolved]', {
       user: userHash(telegramId),
       requestId: input.requestId,
@@ -1095,6 +1107,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     });
     const modelContext = {
       ...context,
+      userGoals: Array.isArray(context.profile?.goals) ? context.profile.goals : [],
       runtimeDecision: intentResolution,
       runtimeRecommendation: runtimeRecommendation ? {
         intent: runtimeRecommendation.intent,
@@ -1151,7 +1164,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
             catalog: catalogForModel,
             context: modelContext,
             recent,
-            maxOutputTokens: env.AI_MAX_OUTPUT_TOKENS
+            maxOutputTokens: responseTokenBudget
           }),
           signal: controller.signal,
           telegramId,
@@ -1174,12 +1187,12 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
         }
 
         if (shouldRetryOpenAiResponse(openAiResponse, extracted)) {
-          const retryTokens = retryMaxOutputTokens(env.AI_MAX_OUTPUT_TOKENS);
+          const retryTokens = retryMaxOutputTokens(responseTokenBudget);
           console.warn('[Luna AI OpenAI retry]', {
             user: userHash(telegramId),
             conversationId: resolvedConversationId,
             reason: openAiResponse.incomplete_details?.reason,
-            firstMaxOutputTokens: env.AI_MAX_OUTPUT_TOKENS,
+            firstMaxOutputTokens: responseTokenBudget,
             retryMaxOutputTokens: retryTokens,
             reasoningEffort: env.AI_REASONING_EFFORT
           });
@@ -1221,12 +1234,14 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       parsed = normalizeOpenAiModelResult(extracted, responseLanguage, { telegramId, requestId: input.requestId });
     }
     const clarificationAllowed = conversationState.assistant_messages_since_question >= 3;
+    const completionRequired = guidedPracticeRequested || parsed.detectedIntent === 'request_in_chat_exercise';
     let responseReview = reviewLunaResponse({
       message: parsed.message,
       language: responseLanguage,
       state: conversationState,
       clarificationAllowed,
-      userRequestedDepth: isLongFormRequest(input.message)
+      userRequestedDepth: isLongFormRequest(input.message),
+      completionRequired
     });
     console.info('[Luna AI response review]', {
       user: userHash(telegramId),
@@ -1249,14 +1264,16 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
             context: {
               ...modelContext,
               responseReview: {
-                instruction: 'Rewrite the draft once so a thoughtful human would naturally say it next. Preserve truth, safety, intent, and valid actions. Do not mention this review.',
+                instruction: completionRequired
+                  ? 'Rewrite the draft once so a thoughtful human would naturally guide the complete practice next. Include every inhale, pause if relevant, exhale, repetition count, and a calm finish. Preserve truth and safety. Do not mention this review.'
+                  : 'Rewrite the draft once so a thoughtful human would naturally say it next. Preserve truth, safety, intent, and valid actions. Do not mention this review.',
                 rejectedDraft: parsed.message,
                 issues: responseReview.issues,
                 clarificationAllowed
               }
             },
             recent,
-            maxOutputTokens: env.AI_MAX_OUTPUT_TOKENS
+            maxOutputTokens: responseTokenBudget
           }),
           signal: reviewController.signal,
           telegramId,
@@ -1273,7 +1290,8 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
           language: responseLanguage,
           state: conversationState,
           clarificationAllowed,
-          userRequestedDepth: isLongFormRequest(input.message)
+          userRequestedDepth: isLongFormRequest(input.message),
+          completionRequired
         });
         console.info('[Luna AI response review regeneration]', {
           user: userHash(telegramId),
@@ -1300,11 +1318,14 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     if (!responseReview.accepted) {
       parsed = modelResultSchema.parse({
         ...parsed,
-        message: constrainLunaResponse({
-          message: parsed.message,
-          language: responseLanguage,
-          clarificationAllowed
-        })
+        message: completionRequired && responseReview.issues.includes('incomplete_guided_breathing_cycle')
+          ? completeGuidedPracticeFallback(responseLanguage)
+          : constrainLunaResponse({
+            message: parsed.message,
+            language: responseLanguage,
+            clarificationAllowed,
+            completionRequired
+          })
       });
     }
     const explicitMeditationRequest = isReadyMeditationRequest(input.message);

@@ -25,7 +25,7 @@ export function buildLunaSystemPrompt(input: { language: 'en' | 'ru'; catalog: u
     productCapabilitiesPrompt,
     meditationPolicyPrompt,
     responseContractPrompt,
-    `The detected response language is ${input.language === 'ru' ? 'Russian' : 'English'}. Known user identity fields may be used only as provided; otherwise use gender-neutral language for the user.`,
+    `The detected response language is ${input.language === 'ru' ? 'Russian' : 'English'}. Known user identity fields may be used only as provided; otherwise use gender-neutral language for the user. USER_CONTEXT.userGoals contains the user's selected product goals; use them quietly when relevant, never recite or mention them in every response.`,
     `VERIFIED_PRODUCT_CAPABILITIES:\n${JSON.stringify(lunaProductCapabilities)}`,
     `USER_CONTEXT:\n${JSON.stringify(input.context)}`,
     `CATALOG:\n${JSON.stringify(input.catalog)}`

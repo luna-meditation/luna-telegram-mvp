@@ -3,7 +3,7 @@ import test from 'node:test';
 import { directMeditationResponse, resolveLunaIntent } from './luna-ai-intent.js';
 import { createPendingClarification } from './luna-ai-pending.js';
 import { rankMeditationRecommendation, type RecommendationCatalogItem } from './luna-ai-policy.js';
-import { reviewLunaResponse } from './luna-ai-quality.js';
+import { completeGuidedPracticeFallback, isGuidedPracticeRequest, reviewLunaResponse } from './luna-ai-quality.js';
 import { normalizeConversationState, updateConversationState } from './luna-ai-state.js';
 
 const catalog: RecommendationCatalogItem[] = [
@@ -124,6 +124,44 @@ test('non-meditation topics do not create promotional meditation actions', () =>
   assert.equal(result.action, 'none');
 });
 
+test('in-chat exercise follows the established context without opening a card', () => {
+  const state = {
+    ...normalizeConversationState(null),
+    current_topic: 'anxiety',
+    current_goal: 'anxiety' as const,
+    current_intent: 'anxiety'
+  };
+  const result = resolveLunaIntent({ message: 'Давай упражнение', state, pendingState: null, catalog });
+  assert.equal(isGuidedPracticeRequest('Давай упражнение'), true);
+  assert.equal(result.intent, 'breathing');
+  assert.equal(result.goal, 'anxiety');
+  assert.equal(result.action, 'none');
+  assert.equal(result.continuation, true);
+});
+
+test('alternative request keeps the persisted goal and selects a different practice', () => {
+  const state = {
+    ...normalizeConversationState(null),
+    current_topic: 'anxiety',
+    current_goal: 'anxiety' as const,
+    current_intent: 'anxiety',
+    current_meditation_id: 'anxiety',
+    current_recommendation_id: 'anxiety'
+  };
+  const intent = resolveLunaIntent({ message: 'А есть ещё другие?', state, pendingState: null, catalog });
+  const recommendation = rankMeditationRecommendation({
+    message: 'А есть ещё другие?',
+    catalog,
+    intentOverride: intent.goal,
+    recentAssistantRecommendations: ['anxiety'],
+    forceRecommendation: intent.action === 'recommend_meditation'
+  });
+  assert.equal(intent.continuation, true);
+  assert.equal(intent.goal, 'anxiety');
+  assert.equal(intent.action, 'recommend_meditation');
+  assert.equal(recommendation.meditationId, 'reset');
+});
+
 test('direct responses stay concise and use the latest-message language', () => {
   const english = directMeditationResponse({ language: 'en', intent: 'sleep', title: 'Deep Sleep', continuation: false });
   const russian = directMeditationResponse({ language: 'ru', intent: 'focus', title: 'Focused Calm', continuation: false });
@@ -160,6 +198,30 @@ test('response review blocks repeated clarifications and excessive questions', (
   assert.equal(review.accepted, false);
   assert.ok(review.issues.includes('repeated_clarification'));
   assert.ok(review.issues.includes('question_too_soon'));
+});
+
+test('guided breathing review rejects half a cycle and accepts a complete localized fallback', () => {
+  const incomplete = reviewLunaResponse({
+    message: 'Вдохни на четыре счёта и мягко задержи дыхание.',
+    language: 'ru',
+    state: normalizeConversationState(null),
+    clarificationAllowed: true,
+    completionRequired: true
+  });
+  assert.equal(incomplete.accepted, false);
+  assert.ok(incomplete.issues.includes('incomplete_guided_breathing_cycle'));
+
+  const complete = completeGuidedPracticeFallback('ru');
+  assert.match(complete, /Вдохни/i);
+  assert.match(complete, /выдохни/i);
+  assert.match(complete, /Повтори/i);
+  assert.equal(reviewLunaResponse({
+    message: complete,
+    language: 'ru',
+    state: normalizeConversationState(null),
+    clarificationAllowed: true,
+    completionRequired: true
+  }).accepted, true);
 });
 
 test('conversation state persists the topic, goal, recommendation, question, and last decision', () => {

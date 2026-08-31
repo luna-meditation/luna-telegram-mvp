@@ -12,9 +12,12 @@ const homeStyles = readFileSync(resolve(process.cwd(), 'src/v2/design-system/hom
 test('completed check-in uses a timed hero toast and a compact editable settled state', () => {
   assert.match(app, /setCheckinConfirmationVisible\(true\)/);
   assert.match(app, /}, 2600\)/);
-  assert.match(app, /Checked in today ✓/);
   assert.match(hero, /home-v2-checkin-toast/);
   assert.match(hero, /onCheckinDetails/);
+  assert.match(hero, /moodLabel\(activeMood\)/);
+  assert.match(hero, /TODAY/);
+  assert.match(hero, /MoodGlyph/);
+  assert.doesNotMatch(hero, /Checked in today/);
   assert.doesNotMatch(hero, /detailsLabel/);
   assert.match(homeStyles, /background: rgba\(18, 17, 46, 0\.48\)/);
 });

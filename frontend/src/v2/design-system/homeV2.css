@@ -95,6 +95,8 @@
 }
 
 .home-v2-atmosphere-art img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -102,6 +104,8 @@
   opacity: 0.92;
   filter: saturate(0.82) contrast(0.95) brightness(0.9);
 }
+
+.home-v2-hero-light { display: none; }
 
 .home-v2-atmosphere-copy {
   position: relative;
@@ -125,6 +129,12 @@
   font-weight: 720;
   letter-spacing: -0.026em;
   line-height: 1.02;
+}
+
+.home-v2-atmosphere-copy.is-checked-in h1 {
+  max-width: 280px;
+  font-size: clamp(1.25rem, 5.8vw, 1.5rem);
+  line-height: 1.08;
 }
 
 .home-v2-mood-row {
@@ -161,6 +171,18 @@
   color: rgba(251, 247, 239, 0.9);
   font-size: 14px;
   line-height: 1;
+}
+
+.home-v2-mood-pill svg,
+.home-v2-mood-saved svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.55;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
 }
 
 .home-v2-mood-pill small {
@@ -797,20 +819,22 @@
   position: relative;
   z-index: 3;
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
+  grid-template-columns: 32px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   margin: 0 14px 14px;
-  min-height: 48px;
-  padding: 6px 8px;
+  min-height: 54px;
+  padding: 7px 8px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 18px;
   background: rgba(18, 17, 46, 0.48);
   backdrop-filter: blur(18px);
 }
 
-.home-v2-mood-saved > span { display: grid; place-items: center; color: rgba(245, 241, 233, 0.75); }
-.home-v2-mood-saved strong { overflow: hidden; font-size: 12px; font-weight: 600; color: rgba(245, 241, 233, 0.9); text-overflow: ellipsis; white-space: nowrap; }
+.home-v2-mood-saved > span:first-child { display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid rgba(244, 214, 122, .22); border-radius: 999px; background: rgba(244, 214, 122, .08); color: #f4d67a; }
+.home-v2-mood-saved-copy { display: grid; min-width: 0; gap: 1px; }
+.home-v2-mood-saved-copy small { color: rgba(244, 214, 122, .72); font-size: 9px; font-weight: 760; letter-spacing: .12em; }
+.home-v2-mood-saved strong { overflow: hidden; color: rgba(245, 241, 233, 0.94); font-size: 14px; font-weight: 680; text-overflow: ellipsis; white-space: nowrap; }
 .home-v2-mood-saved button { min-height: 36px; padding: 0 10px; border-radius: 12px; color: #d9b85f; font-size: 11px; font-weight: 700; }
 .home-v2-mood-actions { display: flex; align-items: center; }
 .home-v2-mood-actions button:first-child { color: #d9b85f; }
@@ -855,13 +879,30 @@
   box-shadow: var(--shadow-soft);
 }
 
-/* The image-led hero remains nocturnal; surrounding Home UI follows the selected theme. */
+/* Home artwork follows the app theme without recoloring either source composition. */
 :root[data-theme="light"] .home-v2-shell .luna-bg {
   background:
     radial-gradient(circle at 22% 4%, var(--page-glow-primary), transparent 17rem),
     radial-gradient(circle at 84% 2%, var(--page-glow-gold), transparent 15rem),
     radial-gradient(ellipse at 50% 116%, var(--page-glow-bottom), transparent 30rem),
     linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 46%, var(--bg-tertiary) 100%);
+}
+
+:root[data-theme="light"] .home-v2-hero-dark { display: none; }
+:root[data-theme="light"] .home-v2-hero-light {
+  display: block;
+  object-position: 38% center;
+  opacity: 1;
+  filter: saturate(1.02) contrast(1.01) brightness(.99);
+}
+:root[data-theme="light"] .home-v2-atmosphere {
+  border-color: color-mix(in srgb, var(--accent-gold) 24%, var(--border-strong));
+  background: #d8c8e7;
+}
+:root[data-theme="light"] .home-v2-atmosphere::after {
+  background:
+    linear-gradient(115deg, rgba(31, 39, 63, .42) 0%, rgba(31, 39, 63, .18) 42%, transparent 72%),
+    linear-gradient(180deg, transparent 42%, rgba(35, 43, 68, .28) 100%);
 }
 
 :root[data-theme="light"] .home-v2-atmosphere-copy h1,
@@ -887,3 +928,22 @@
 :root[data-theme="light"] .home-v2-recommendation-copy em,
 :root[data-theme="light"] .home-v2-section-heading-row span,
 :root[data-theme="light"] .home-v2-home-action small { color: var(--text-muted); }
+
+@media (max-width: 430px) {
+  .home-v2-recommendation-section .home-v2-section-heading-row {
+    display: grid;
+    justify-content: stretch;
+    gap: 4px;
+  }
+
+  .home-v2-recommendation-section .home-v2-section-heading-row h2 {
+    font-size: clamp(1.2rem, 5.5vw, 1.4rem);
+    line-height: 1.12;
+  }
+
+  .home-v2-recommendation-section .home-v2-section-heading-row span {
+    max-width: 100%;
+    text-align: left;
+    -webkit-line-clamp: 1;
+  }
+}

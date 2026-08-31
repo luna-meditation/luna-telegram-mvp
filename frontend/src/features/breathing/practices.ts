@@ -126,18 +126,20 @@ export function breathPhaseAt(practice: BreathPractice, elapsedSeconds: number) 
     const end = cursor + phase.seconds;
     if (offset < end) {
       const progress = Math.min(1, Math.max(0, (offset - cursor) / phase.seconds));
-      const scale = phase.kind === 'inhale' || phase.kind === 'inhale_top'
-        ? 0.86 + progress * 0.18
-        : phase.kind === 'exhale'
-          ? 1.04 - progress * 0.18
-          : phase.kind === 'hold'
-            ? 1.04
-            : 0.86;
+      const scale = phase.kind === 'inhale'
+        ? 0.82 + progress * 0.54
+        : phase.kind === 'inhale_top'
+          ? 1.22 + progress * 0.14
+          : phase.kind === 'exhale'
+            ? 1.36 - progress * 0.48
+            : phase.kind === 'hold'
+              ? 1.36
+              : 0.88;
       return { ...phase, progress, remaining: Math.max(1, Math.ceil(end - offset)), scale };
     }
     cursor = end;
   }
-  return { ...practice.phases[0], progress: 0, remaining: practice.phases[0]?.seconds ?? 1, scale: 0.86 };
+  return { ...practice.phases[0], progress: 0, remaining: practice.phases[0]?.seconds ?? 1, scale: 0.82 };
 }
 
 export function breathPhaseLabel(kind: BreathPhaseKind, language: AppLanguage) {
