@@ -106,7 +106,7 @@ import {
 import { MoonGardenScene as AnimatedMoonGardenScene } from './components/moon-garden/MoonGardenScene';
 import { JourneyHub } from './components/journey/JourneyHub';
 import { LunaChat } from './components/LunaChat';
-import { JourneyStatusMark, ProgressExperience, ProgressExperienceSkeleton, journeyStatusNames, resolveJourneyStatus } from './components/progress/ProgressExperience';
+import { JourneyStatusMark, ProgressExperience, ProgressExperienceSkeleton, StatusProgressionSheet, journeyStatusNames, resolveJourneyStatus } from './components/progress/ProgressExperience';
 import { AppHeader } from './design-system/components/AppHeader';
 import { BottomNavigation } from './design-system/components/BottomNavigation';
 import { BrandLogo } from './design-system/components/BrandLogo';
@@ -1972,6 +1972,10 @@ function App() {
   const [libraryLoading, setLibraryLoading] = useState(!initialLibraryCache?.meditations.length);
   const [history, setHistory] = useState<PlaybackHistory[]>(() => initialAccountCache?.history ?? []);
   const [favorites, setFavorites] = useState<Meditation[]>(() => initialAccountCache?.favorites ?? []);
+  const favoritesRef = useRef<Meditation[]>(favorites);
+  const [favoritePendingIds, setFavoritePendingIds] = useState<Set<string>>(() => new Set());
+  const favoritePendingRef = useRef<Set<string>>(new Set());
+  const favoriteOverridesRef = useRef<Map<string, boolean>>(new Map());
   const [access, setAccess] = useState<AccessState>(() => initialAccountCache?.access ?? { hasPremium: false, plan: 'Free' });
   const [profile, setProfile] = useState<ProfileStats | null>(() => initialAccountCache?.profile ?? null);
   const [profileNestedActive, setProfileNestedActive] = useState(false);
@@ -2035,7 +2039,22 @@ function App() {
         ]);
         const nextProfile = profileStats ?? profile ?? initialAccountCache?.profile ?? null;
         const nextHistory = historyList ?? history;
-        const nextFavorites = favoriteList ?? favorites;
+        let nextFavorites = favoriteList ?? favoritesRef.current;
+        for (const [meditationId, desiredFavorite] of favoriteOverridesRef.current) {
+          const serverMatches = favoriteList !== null && favoriteList.some((item) => item.id === meditationId) === desiredFavorite;
+          if (serverMatches) {
+            favoriteOverridesRef.current.delete(meditationId);
+            continue;
+          }
+          if (desiredFavorite) {
+            const source = nextFavorites.find((item) => item.id === meditationId)
+              ?? favoritesRef.current.find((item) => item.id === meditationId)
+              ?? meditations.find((item) => item.id === meditationId);
+            if (source) nextFavorites = [{ ...source, favorite: true }, ...nextFavorites.filter((item) => item.id !== meditationId)];
+          } else {
+            nextFavorites = nextFavorites.filter((item) => item.id !== meditationId);
+          }
+        }
         const nextWellness = wellnessSummary ?? wellness ?? initialAccountCache?.wellness ?? null;
         setAccess(accessState);
         setAccessVerified(true);
@@ -2047,6 +2066,7 @@ function App() {
           saveStoredLanguage(savedLanguage);
         }
         setHistory(nextHistory);
+        favoritesRef.current = nextFavorites;
         setFavorites(nextFavorites);
         setWellness(nextWellness);
         writeAccountCache(user.id, {
@@ -2264,7 +2284,7 @@ function App() {
   const decoratedMeditations = useMemo(() => {
     return meditations.filter((meditation) => !isDemoMeditation(meditation)).map((meditation) => ({
       ...meditation,
-      favorite: favoriteIds.has(meditation.id) || meditation.favorite,
+      favorite: favoriteIds.has(meditation.id),
       history: historyByMeditation.get(meditation.id) ?? meditation.history ?? null
     }));
   }, [favoriteIds, historyByMeditation, meditations]);
@@ -2621,21 +2641,39 @@ function App() {
   }, [decoratedMeditations, libraryLoading, openedStartMeditationId, pendingMeditationId]);
 
   const toggleFavorite = async (meditation: Meditation) => {
-    const next = !favoriteIds.has(meditation.id);
-    const previousFavorites = favorites;
-    setFavorites((current) => next
-      ? [{ ...meditation, favorite: true }, ...current.filter((item) => item.id !== meditation.id)]
-      : current.filter((item) => item.id !== meditation.id));
+    if (favoritePendingRef.current.has(meditation.id)) return;
+
+    const currentFavorites = favoritesRef.current;
+    const wasFavorite = currentFavorites.some((item) => item.id === meditation.id);
+    const next = !wasFavorite;
+    const nextFavorites = next
+      ? [{ ...meditation, favorite: true }, ...currentFavorites.filter((item) => item.id !== meditation.id)]
+      : currentFavorites.filter((item) => item.id !== meditation.id);
+
+    favoritePendingRef.current.add(meditation.id);
+    favoriteOverridesRef.current.set(meditation.id, next);
+    setFavoritePendingIds(new Set(favoritePendingRef.current));
+    favoritesRef.current = nextFavorites;
+    setFavorites(nextFavorites);
     telegram?.HapticFeedback?.impactOccurred('light');
     showNotice(next ? copy[language].favoriteSaved : copy[language].favoriteRemoved);
 
     try {
       await setFavorite(meditation.id, next, initData);
-      void refreshAccount();
+      writeAccountCache(user.id, { access, profile, history, favorites: favoritesRef.current, wellness });
     } catch (error) {
-      setFavorites(previousFavorites);
+      favoriteOverridesRef.current.delete(meditation.id);
+      const revertedFavorites = wasFavorite
+        ? [{ ...meditation, favorite: true }, ...favoritesRef.current.filter((item) => item.id !== meditation.id)]
+        : favoritesRef.current.filter((item) => item.id !== meditation.id);
+      favoritesRef.current = revertedFavorites;
+      setFavorites(revertedFavorites);
+      writeAccountCache(user.id, { access, profile, history, favorites: revertedFavorites, wellness });
       showNotice(language === 'en' ? 'Could not update favorites. Please try again.' : 'Не удалось обновить избранное. Попробуй ещё раз.');
       console.info('[Luna favorite update failed]', error instanceof Error ? error.message : 'Favorite update failed.');
+    } finally {
+      favoritePendingRef.current.delete(meditation.id);
+      setFavoritePendingIds(new Set(favoritePendingRef.current));
     }
   };
 
@@ -3085,13 +3123,14 @@ function App() {
             onBreath={openBreathCircle}
             onOpenMantra={openMantra}
             onFavorite={toggleFavorite}
+            favoritePendingIds={favoritePendingIds}
             onUnlock={() => setPage('pricing')}
             language={language}
           />
         )}
 
         {page === 'favorites' && (
-          <FavoritesPage meditations={decoratedMeditations.filter((item) => favoriteIds.has(item.id))} onOpen={openMeditation} onFavorite={toggleFavorite} language={language} />
+          <FavoritesPage meditations={decoratedMeditations.filter((item) => favoriteIds.has(item.id))} favoritePendingIds={favoritePendingIds} onOpen={openMeditation} onFavorite={toggleFavorite} language={language} />
         )}
 
         {page === 'pricing' && (
@@ -3142,7 +3181,6 @@ function App() {
             firstName={user.first_name ?? 'Luna'}
             username={user.username}
             showAdminButton={adminStatus === 'allowed'}
-            onJourney={() => setPage('progress')}
             onLuna={() => setPage('luna')}
             onSubscription={() => setPage('pricing')}
             onAdmin={() => {
@@ -3173,6 +3211,7 @@ function App() {
             meditation={selectedMeditation}
             nextMeditation={nextMeditation}
             favorite={favoriteIds.has(selectedMeditation.id)}
+            favoritePending={favoritePendingIds.has(selectedMeditation.id)}
             onFavorite={() => toggleFavorite(selectedMeditation)}
             onSave={(position, duration, completed, sessionId) =>
               saveHistory({ meditation_id: selectedMeditation.id, last_position: position, duration, completed, session_id: sessionId, local_date: todayLocalDate() }, initData).then(async (result) => {
@@ -3304,6 +3343,7 @@ function LibraryPage(props: {
   onBreath: () => void;
   onOpenMantra: (mantra: MantraDefinition) => void;
   onFavorite: (meditation: Meditation) => void;
+  favoritePendingIds: Set<string>;
   onUnlock: () => void;
   language: AppLanguage;
 }) {
@@ -3364,6 +3404,7 @@ function LibraryPage(props: {
                   showPopular={meditation.play_count >= 20}
                   onOpen={props.onOpen}
                   onFavorite={props.onFavorite}
+                  favoritePending={props.favoritePendingIds.has(meditation.id)}
                   onUnlock={props.onUnlock}
                   language={props.language}
                 />
@@ -3619,10 +3660,11 @@ function buildAchievementViews(profile: ProfileStats | null, language: AppLangua
   }));
 }
 
-function MeditationCard({ meditation, locked, showPopular, onOpen, onFavorite, onUnlock, language }: {
+function MeditationCard({ meditation, locked, showPopular, favoritePending = false, onOpen, onFavorite, onUnlock, language }: {
   meditation: Meditation;
   locked: boolean;
   showPopular?: boolean;
+  favoritePending?: boolean;
   onOpen: (meditation: Meditation) => void;
   onFavorite: (meditation: Meditation) => void;
   onUnlock: () => void;
@@ -3638,6 +3680,7 @@ function MeditationCard({ meditation, locked, showPopular, onOpen, onFavorite, o
       metadata={`${translateCategory(meditation.category, language)} · ${formatMeditationDuration(meditation.duration, language)}${!localized.hasSelectedLanguageAudio ? ` · ${copy[language].availableInEnglish}` : ''}`}
       locked={locked}
       favorite={Boolean(meditation.favorite)}
+      favoritePending={favoritePending}
       showPopular={showPopular}
       hasProgress={hasProgress}
       premiumLabel={copy[language].premium}
@@ -3870,7 +3913,7 @@ function SceneMiniPlayer({ scene, playing, volume, onToggle, onOpen, onClose, on
   );
 }
 
-function FavoritesPage({ meditations, onOpen, onFavorite, language }: { meditations: Meditation[]; onOpen: (meditation: Meditation) => void; onFavorite: (meditation: Meditation) => void; language: AppLanguage }) {
+function FavoritesPage({ meditations, favoritePendingIds, onOpen, onFavorite, language }: { meditations: Meditation[]; favoritePendingIds: Set<string>; onOpen: (meditation: Meditation) => void; onFavorite: (meditation: Meditation) => void; language: AppLanguage }) {
   return (
     <div className="luna-page space-y-4">
       <div>
@@ -3879,7 +3922,7 @@ function FavoritesPage({ meditations, onOpen, onFavorite, language }: { meditati
         <p className="mt-1 text-sm text-lavender">{copy[language].savedSubtitle}</p>
       </div>
       {meditations.length ? meditations.map((meditation) => (
-        <MeditationCard key={meditation.id} meditation={meditation} locked={false} onOpen={onOpen} onFavorite={onFavorite} onUnlock={() => undefined} language={language} />
+        <MeditationCard key={meditation.id} meditation={meditation} locked={false} favoritePending={favoritePendingIds.has(meditation.id)} onOpen={onOpen} onFavorite={onFavorite} onUnlock={() => undefined} language={language} />
       )) : <EmptyState title={copy[language].savedEmptyTitle} body={copy[language].savedEmptyBody} />}
     </div>
   );
@@ -4121,10 +4164,11 @@ function PlanCard(props: { badge?: string; title: string; price: string; period:
   );
 }
 
-function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, onHome, onProgress, onPlaybackStart, onPlaybackSessionStart, onPlaybackHeartbeat, onContinue, language }: {
+function PlayerPage({ meditation, nextMeditation, favorite, favoritePending, onFavorite, onSave, onHome, onProgress, onPlaybackStart, onPlaybackSessionStart, onPlaybackHeartbeat, onContinue, language }: {
   meditation: Meditation;
   nextMeditation?: Meditation;
   favorite: boolean;
+  favoritePending: boolean;
   onFavorite: () => void;
   onSave: (position: number, duration: number, completed?: boolean, sessionId?: string) => Promise<unknown>;
   onHome: () => void;
@@ -4525,7 +4569,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, onFavorite, onSave, 
         )}
 
         <div className="mt-5 flex items-center justify-center gap-3">
-          <button onClick={onFavorite} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 text-xs backdrop-blur"><Heart className={favorite ? 'fill-gold text-gold' : ''} size={16} />{copy[language].favorite}</button>
+          <button onClick={onFavorite} disabled={favoritePending} aria-busy={favoritePending} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 text-xs backdrop-blur disabled:opacity-65"><Heart className={favorite ? 'fill-gold text-gold' : ''} size={16} />{copy[language].favorite}</button>
           <button onClick={() => void shareMeditation()} disabled={meditation.premium} className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 text-xs text-lavender backdrop-blur disabled:cursor-not-allowed disabled:opacity-50"><Share2 size={16} />{copy[language].share}</button>
           <div className="inline-flex min-h-11 items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 text-xs text-lavender backdrop-blur"><Timer size={16} />{formatTime(Math.max(0, duration - position))}</div>
         </div>
@@ -5147,7 +5191,6 @@ function ProfilePage({
   firstName,
   username,
   showAdminButton,
-  onJourney,
   onLuna,
   onSubscription,
   onAdmin,
@@ -5175,7 +5218,6 @@ function ProfilePage({
   firstName: string;
   username?: string;
   showAdminButton: boolean;
-  onJourney: () => void;
   onLuna: () => void;
   onSubscription: () => void;
   onAdmin: () => void;
@@ -5197,6 +5239,7 @@ function ProfilePage({
   onThemePreferenceChange: (preference: ThemePreference) => void;
 }) {
   const [view, setView] = useState<ProfileSettingsView>('main');
+  const [statusProgressionOpen, setStatusProgressionOpen] = useState(false);
   const [avatarActionsOpen, setAvatarActionsOpen] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarProgress, setAvatarProgress] = useState(0);
@@ -5767,24 +5810,26 @@ function ProfilePage({
           aria-label={language === 'en' ? 'Change profile photo' : 'Изменить фото профиля'}
         >
           {avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : <BrandLogo size={80} className="h-full w-full border-0" />}
-          <span className="absolute -bottom-1 -right-1 grid h-11 w-11 place-items-center rounded-full border border-white/15 bg-night/90 text-gold shadow-glow backdrop-blur">
+          <span className="absolute bottom-0 right-0 grid h-8 w-8 place-items-center rounded-full border border-white/15 bg-night/90 text-gold shadow-glow backdrop-blur">
             <Camera size={17} />
           </span>
         </button>
-        <div className="min-w-0 flex-1">
+        <div className="profile-identity-copy">
           <h3 className="truncate text-[25px] font-semibold leading-tight tracking-[-0.04em] text-cream">{firstName}</h3>
           <p className="mt-0.5 truncate text-xs text-lavender">{username ? `@${username}` : copy[language].member}</p>
-          <button type="button" className="profile-journey-status" onClick={onJourney} aria-label={language === 'en' ? `Luna status ${journeyStatusName}, ${journeyStatusRank} of 10. Open Journey.` : `Статус Luna: ${journeyStatusName}, ${journeyStatusRank} из 10. Открыть Путь.`}>
-            <JourneyStatusMark compact />
-            <span>
-              <small>{language === 'en' ? 'Luna status' : 'Статус Luna'}</small>
-              <strong>{journeyStatusName} <i>· {journeyStatusRank}/10</i></strong>
-            </span>
-            <ChevronRight size={15} aria-hidden="true" />
-          </button>
           <p className={`profile-plan-status ${access.hasPremium ? 'is-premium' : ''}`}>{localizedPlanStatus}</p>
         </div>
+        <button type="button" className="profile-journey-status" onClick={() => setStatusProgressionOpen(true)} aria-label={language === 'en' ? `Luna status ${journeyStatusName}, ${journeyStatusRank} of 10. Open all statuses.` : `Статус Luna: ${journeyStatusName}, ${journeyStatusRank} из 10. Открыть все статусы.`}>
+          <JourneyStatusMark statusId={journeyStatus.id} compact />
+          <span>
+            <small>Luna</small>
+            <strong>{journeyStatusName}</strong>
+            <i>{journeyStatusRank}/10</i>
+          </span>
+        </button>
       </section>
+
+      {statusProgressionOpen && <StatusProgressionSheet profile={profile} language={language} onClose={() => setStatusProgressionOpen(false)} />}
 
       {avatarMessage && <p className="rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-2 text-xs text-lavender" role="status">{avatarMessage}</p>}
       {avatarBusy && <div className="h-1 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gold transition-all" style={{ width: `${Math.max(8, avatarProgress)}%` }} /></div>}

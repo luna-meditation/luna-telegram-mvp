@@ -15,11 +15,11 @@ test('completed check-in uses a timed hero toast and a compact editable settled 
   assert.match(hero, /home-v2-checkin-toast/);
   assert.match(hero, /onCheckinDetails/);
   assert.match(hero, /moodLabel\(activeMood\)/);
-  assert.match(hero, /TODAY/);
+  assert.match(hero, /language === 'ru' \? 'Сегодня' : 'Today'/);
   assert.match(hero, /MoodGlyph/);
   assert.doesNotMatch(hero, /Checked in today/);
   assert.doesNotMatch(hero, /detailsLabel/);
-  assert.match(homeStyles, /background: rgba\(18, 17, 46, 0\.48\)/);
+  assert.match(homeStyles, /background: rgba\(18, 17, 46, 0\.4\)/);
 });
 
 test('Home preserves backend personalization order and masks sound chips only on real overflow', () => {

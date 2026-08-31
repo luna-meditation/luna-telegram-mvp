@@ -145,6 +145,9 @@
 .meditation-card-favorite svg { color: var(--color-text-secondary); }
 .meditation-card-favorite svg { position: relative; z-index: 1; }
 .meditation-card-favorite svg.is-favorite { fill: var(--color-gold-soft); color: var(--color-gold-soft); }
+.meditation-card-favorite:disabled { cursor: wait; opacity: .62; }
+:root[data-theme="light"] .meditation-card-favorite svg { color: var(--text-secondary); }
+:root[data-theme="light"] .meditation-card-favorite svg.is-favorite { fill: var(--accent-gold-text); color: var(--accent-gold-text); }
 .meditation-card-tile { position: relative; width: 142px; aspect-ratio: 4 / 3; flex: 0 0 auto; overflow: hidden; border: 1px solid var(--color-border-card); border-radius: var(--radius-md); background: var(--color-bg-night); text-align: left; scroll-snap-align: start; }
 .meditation-card-tile > img { width: 100%; height: 100%; object-fit: cover; opacity: .74; }
 .meditation-card-tile::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 24%, rgba(3,6,18,.9)); }

@@ -5,6 +5,7 @@ import test from 'node:test';
 
 const appSource = readFileSync(resolve(process.cwd(), 'src/App.tsx'), 'utf8');
 const progressSource = readFileSync(resolve(process.cwd(), 'src/components/progress/ProgressExperience.tsx'), 'utf8');
+const statusSource = readFileSync(resolve(process.cwd(), 'src/components/progress/StatusProgressionSheet.tsx'), 'utf8');
 const progressCopySource = readFileSync(resolve(process.cwd(), 'src/components/progress/progressCopy.ts'), 'utf8');
 const stylesSource = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
 const homeStyles = readFileSync(resolve(process.cwd(), 'src/v2/design-system/homeV2.css'), 'utf8');
@@ -74,7 +75,7 @@ test('Journey shows a three-icon achievement preview and uses one shared bottom 
 
 test('Journey status hero includes all ten permanent status names and localized progress copy', () => {
   for (const name of ['Initiate', 'Seeker', 'Adept', 'Guardian', 'Luminary', 'Sage', 'Ascendant', 'Celestial', 'Ethereal', 'Lunaris']) {
-    assert.match(progressSource, new RegExp(name));
+    assert.match(statusSource, new RegExp(name));
   }
   assert.match(progressSource, /Your status/);
   assert.match(progressSource, /Твой статус/);
