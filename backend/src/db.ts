@@ -9,10 +9,12 @@ import {
 } from './plans.js';
 import {
   applyPlaybackHeartbeat,
+  countCompletedMeditationSessions,
   mergePlaybackRanges,
   normalizePlaybackSeconds,
   playbackCoverageSeconds,
   playbackRewardDecision,
+  qualifiesForPlaybackCompletion,
   PlaybackInputError
 } from './playback-security.js';
 import {
@@ -455,6 +457,43 @@ export async function startPlaybackSession(telegramId: number, meditationId: str
   return data;
 }
 
+async function claimPlaybackSessionCompletion(input: {
+  telegramId: number;
+  sessionId: string;
+  completedAt?: string | null;
+  listenedSeconds: number;
+  duration: number;
+}) {
+  const qualified = qualifiesForPlaybackCompletion({
+    listenedSeconds: input.listenedSeconds,
+    duration: input.duration
+  });
+  if (!qualified || input.completedAt) {
+    return {
+      qualified,
+      completed: Boolean(input.completedAt),
+      newlyCompleted: false
+    };
+  }
+
+  const completedAt = new Date().toISOString();
+  const { data: claimed, error } = await supabase
+    .from('playback_sessions')
+    .update({ completed_at: completedAt })
+    .eq('id', input.sessionId)
+    .eq('telegram_id', input.telegramId)
+    .is('completed_at', null)
+    .select('id')
+    .maybeSingle();
+
+  if (error) throw error;
+  return {
+    qualified,
+    completed: true,
+    newlyCompleted: Boolean(claimed)
+  };
+}
+
 export async function heartbeatPlaybackSession(telegramId: number, sessionId: string, lastPosition: unknown) {
   const requestedPosition = normalizePlaybackSeconds(lastPosition, {
     field: 'last_position',
@@ -463,7 +502,7 @@ export async function heartbeatPlaybackSession(telegramId: number, sessionId: st
 
   const { data: session, error: sessionError } = await supabase
     .from('playback_sessions')
-    .select('id, meditation_id, last_heartbeat_at, listened_seconds, last_position, listened_ranges, local_date')
+    .select('id, meditation_id, last_heartbeat_at, listened_seconds, last_position, listened_ranges, local_date, completed_at')
     .eq('id', sessionId)
     .eq('telegram_id', telegramId)
     .maybeSingle();
@@ -505,8 +544,22 @@ export async function heartbeatPlaybackSession(telegramId: number, sessionId: st
     .eq('telegram_id', telegramId);
 
   if (error) throw error;
+  const completion = await claimPlaybackSessionCompletion({
+    telegramId,
+    sessionId,
+    completedAt: session.completed_at,
+    listenedSeconds: coverage.listenedSeconds,
+    duration
+  });
   await claimPlaybackPracticeDay(telegramId, sessionId, session.local_date, coverage.listenedSeconds);
-  return { ok: true, listened_seconds: coverage.listenedSeconds, intervalAccepted: coverage.accepted };
+  return {
+    ok: true,
+    listened_seconds: coverage.listenedSeconds,
+    intervalAccepted: coverage.accepted,
+    completionQualified: completion.qualified,
+    completed: completion.completed,
+    newlyCompleted: completion.newlyCompleted
+  };
 }
 
 export async function upsertFavorite(telegramId: number, meditationId: string, favorite: boolean) {
@@ -555,7 +608,7 @@ export async function upsertHistory(telegramId: number, input: HistoryInput) {
   }));
   const savedPosition = Math.min(requestedPosition, duration);
   let sessionRanges: Array<[number, number]> = [];
-  let sessionCompletedBeforeRequest = false;
+  let sessionQualifiesForCompletion = false;
 
   if (input.session_id) {
     const { data: session, error: sessionError } = await supabase
@@ -584,7 +637,6 @@ export async function upsertHistory(telegramId: number, input: HistoryInput) {
         duration
       });
       sessionRanges = finalCoverage.ranges;
-      sessionCompletedBeforeRequest = Boolean(session.completed_at);
       await supabase
         .from('playback_sessions')
         .update({
@@ -595,6 +647,14 @@ export async function upsertHistory(telegramId: number, input: HistoryInput) {
         })
         .eq('id', input.session_id)
         .eq('telegram_id', telegramId);
+      const completion = await claimPlaybackSessionCompletion({
+        telegramId,
+        sessionId: input.session_id,
+        completedAt: session.completed_at,
+        listenedSeconds: finalCoverage.listenedSeconds,
+        duration
+      });
+      sessionQualifiesForCompletion = completion.qualified;
       await claimPlaybackPracticeDay(telegramId, input.session_id, session.local_date ?? input.local_date, finalCoverage.listenedSeconds);
     }
   }
@@ -611,26 +671,12 @@ export async function upsertHistory(telegramId: number, input: HistoryInput) {
   const listenedRanges = mergePlaybackRanges(existing?.listened_ranges, sessionRanges, duration);
   const trustedListenedSeconds = playbackCoverageSeconds(listenedRanges);
   const completion = Math.min(100, Math.round((trustedListenedSeconds / duration) * 100));
-  const qualifiesForCompletion = Boolean(input.completed && completion >= 90);
-  const completed = Boolean(existing?.completed || qualifiesForCompletion);
-  let newlyCompletedSession = false;
-  if (qualifiesForCompletion && input.session_id && !sessionCompletedBeforeRequest) {
-    const { data: claimedSession, error: claimError } = await supabase
-      .from('playback_sessions')
-      .update({ completed_at: new Date().toISOString() })
-      .eq('id', input.session_id)
-      .eq('telegram_id', telegramId)
-      .is('completed_at', null)
-      .select('id')
-      .maybeSingle();
-    if (claimError) throw claimError;
-    newlyCompletedSession = Boolean(claimedSession);
-  }
+  const completed = Boolean(existing?.completed || sessionQualifiesForCompletion);
 
   const rewards = playbackRewardDecision({
     trustedListenedSeconds,
     previouslyAwardedPosition: Number(existing?.seed_awarded_position ?? 0),
-    newlyCompletedSession,
+    completionBonusEligible: sessionQualifiesForCompletion,
     completionBonusAlreadyAwarded: Boolean(existing?.completion_seed_bonus_awarded)
   });
   const { nextAwardedPosition, completionBonusAwarded, moonSeedsAwarded } = rewards;
@@ -670,7 +716,7 @@ export async function upsertHistory(telegramId: number, input: HistoryInput) {
     await awardMoonSeeds(telegramId, moonSeedsAwarded);
   }
 
-  if (completed) {
+  if (sessionQualifiesForCompletion) {
     await updateStreak(telegramId, input.local_date);
   }
 
@@ -1506,9 +1552,10 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     logBackendError(breathError, { endpoint: 'database breath session stats', telegramId });
   }
 
-  const verifiedCompletedSessions = safePlaybackSessions.filter((item) => item.completed_at).length;
-  const legacyCompletedMeditations = (history ?? []).filter((item) => item.completed).length;
-  const completedMeditations = Math.max(verifiedCompletedSessions, legacyCompletedMeditations) + (legacyProgress?.length ?? 0);
+  const completedMeditations = countCompletedMeditationSessions({
+    history: history ?? [],
+    playbackSessions: safePlaybackSessions
+  }) + (legacyProgress?.length ?? 0);
   const completedBreathSessions = safeBreathSessions.length;
   const completed = completedMeditations + completedBreathSessions;
   const verifiedMeditationSeconds = safePlaybackSessions.reduce((sum, item) => sum + Number(item.listened_seconds ?? 0), 0);
@@ -2068,6 +2115,7 @@ export async function getAdminDashboard() {
     { data: payments, error: paymentsError },
     { data: meditations, error: meditationsError },
     { data: history, error: historyError },
+    { data: playbackSessions, error: playbackSessionsError },
     { data: streaks, error: streaksError },
     { data: checkins, error: checkinsError }
   ] = await Promise.all([
@@ -2075,6 +2123,7 @@ export async function getAdminDashboard() {
     supabase.from('payments').select('telegram_id, plan, amount_stars, status, created_at').order('created_at', { ascending: false }),
     supabase.from('meditations').select('id, title, category, premium, published, play_count, duration, created_at, updated_at').order('created_at', { ascending: false }),
     supabase.from('history').select('telegram_id, meditation_id, last_played, play_count, completion_percent, last_position, completed'),
+    supabase.from('playback_sessions').select('telegram_id, meditation_id, completed_at'),
     supabase.from('streaks').select('telegram_id, current_streak, longest_streak'),
     supabase.from('daily_checkins').select('telegram_id, sleep_range, mood, available_minutes, local_date, created_at').order('created_at', { ascending: false })
   ]);
@@ -2083,6 +2132,7 @@ export async function getAdminDashboard() {
   if (paymentsError) throw paymentsError;
   if (meditationsError) throw meditationsError;
   if (historyError) throw historyError;
+  if (playbackSessionsError) throw playbackSessionsError;
   if (streaksError) throw streaksError;
   if (checkinsError) throw checkinsError;
 
@@ -2090,6 +2140,7 @@ export async function getAdminDashboard() {
   const paymentRows = (payments ?? []).filter((payment) => payment.status === 'paid');
   const meditationRows = meditations ?? [];
   const historyRows = history ?? [];
+  const playbackSessionRows = playbackSessions ?? [];
   const streakRows = streaks ?? [];
   const checkinRows = checkins ?? [];
   const now = Date.now();
@@ -2123,6 +2174,7 @@ export async function getAdminDashboard() {
 
   const adminUsers = userRows.map((user) => {
     const userHistory = historyRows.filter((item) => item.telegram_id === user.telegram_id);
+    const userPlaybackSessions = playbackSessionRows.filter((item) => item.telegram_id === user.telegram_id);
     const userPayments = paymentRows.filter((payment) => payment.telegram_id === user.telegram_id);
     const activeUntil = user.active_until ? new Date(user.active_until).getTime() : 0;
     const premiumStatus = user.lifetime_access ? 'lifetime' : activeUntil > now ? 'monthly' : activeUntil ? 'expired' : 'free';
@@ -2138,7 +2190,10 @@ export async function getAdminDashboard() {
       lifetime_access: user.lifetime_access,
       premiumStatus,
       totalMinutesListened: Math.round(userHistory.reduce((sum, item) => sum + (item.last_position ?? 0), 0) / 60),
-      completedMeditations: userHistory.filter((item) => item.completed).length,
+      completedMeditations: countCompletedMeditationSessions({
+        history: userHistory,
+        playbackSessions: userPlaybackSessions
+      }),
       currentStreak: streakByTelegramId.get(user.telegram_id)?.current_streak ?? 0,
       longestStreak: streakByTelegramId.get(user.telegram_id)?.longest_streak ?? 0,
       totalStars: userPayments.reduce((sum, payment) => sum + payment.amount_stars, 0)
