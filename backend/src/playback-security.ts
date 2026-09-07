@@ -1,5 +1,7 @@
 export type PlaybackRange = [number, number];
 
+export const PLAYBACK_COMPLETION_PERCENT = 90;
+
 export class PlaybackInputError extends Error {
   readonly code = 'invalid_playback_input';
 
@@ -89,6 +91,56 @@ export function playbackCoverageSeconds(ranges: PlaybackRange[]) {
   return Math.max(0, Math.floor(ranges.reduce((sum, [start, end]) => sum + Math.max(0, end - start), 0)));
 }
 
+export function playbackCompletionThresholdSeconds(duration: unknown) {
+  const normalizedDuration = Math.max(1, normalizePlaybackSeconds(duration, {
+    field: 'duration',
+    required: true
+  }));
+  return Math.ceil(normalizedDuration * (PLAYBACK_COMPLETION_PERCENT / 100));
+}
+
+export function qualifiesForPlaybackCompletion(input: {
+  listenedSeconds: unknown;
+  duration: unknown;
+}) {
+  const duration = Math.max(1, normalizePlaybackSeconds(input.duration, {
+    field: 'duration',
+    required: true
+  }));
+  const listenedSeconds = normalizePlaybackSeconds(input.listenedSeconds, {
+    field: 'listened_seconds',
+    duration,
+    fallback: 0
+  });
+  return listenedSeconds >= playbackCompletionThresholdSeconds(duration);
+}
+
+export function countCompletedMeditationSessions(input: {
+  history: Array<{ meditation_id?: string | null; completed?: boolean | null }>;
+  playbackSessions: Array<{ meditation_id?: string | null; completed_at?: string | null }>;
+}) {
+  const completedByMeditation = new Map<string, { legacy: boolean; verifiedSessions: number }>();
+
+  for (const item of input.history) {
+    if (!item.completed || !item.meditation_id) continue;
+    const current = completedByMeditation.get(item.meditation_id) ?? { legacy: false, verifiedSessions: 0 };
+    current.legacy = true;
+    completedByMeditation.set(item.meditation_id, current);
+  }
+
+  for (const session of input.playbackSessions) {
+    if (!session.completed_at || !session.meditation_id) continue;
+    const current = completedByMeditation.get(session.meditation_id) ?? { legacy: false, verifiedSessions: 0 };
+    current.verifiedSessions += 1;
+    completedByMeditation.set(session.meditation_id, current);
+  }
+
+  return [...completedByMeditation.values()].reduce(
+    (total, item) => total + Math.max(item.legacy ? 1 : 0, item.verifiedSessions),
+    0
+  );
+}
+
 export function mergePlaybackRanges(left: unknown, right: unknown, duration: number) {
   return normalizePlaybackRanges([
     ...normalizePlaybackRanges(left, duration),
@@ -136,7 +188,7 @@ export function applyPlaybackHeartbeat(input: {
 export function playbackRewardDecision(input: {
   trustedListenedSeconds: number;
   previouslyAwardedPosition: number;
-  newlyCompletedSession: boolean;
+  completionBonusEligible: boolean;
   completionBonusAlreadyAwarded: boolean;
 }) {
   const trustedListenedSeconds = Math.max(0, Math.floor(input.trustedListenedSeconds));
@@ -145,7 +197,7 @@ export function playbackRewardDecision(input: {
   const listeningSeedsAwarded = trustedListenedSeconds >= 60
     ? Math.max(0, Math.floor((nextAwardedPosition - previouslyAwardedPosition) / 60))
     : 0;
-  const completionBonusAwarded = input.newlyCompletedSession && !input.completionBonusAlreadyAwarded ? 2 : 0;
+  const completionBonusAwarded = input.completionBonusEligible && !input.completionBonusAlreadyAwarded ? 2 : 0;
 
   return {
     nextAwardedPosition,

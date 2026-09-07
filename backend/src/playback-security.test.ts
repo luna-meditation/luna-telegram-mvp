@@ -1,11 +1,16 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   applyPlaybackHeartbeat,
+  countCompletedMeditationSessions,
   mergePlaybackRanges,
   normalizePlaybackSeconds,
+  playbackCompletionThresholdSeconds,
   playbackCoverageSeconds,
-  playbackRewardDecision
+  playbackRewardDecision,
+  qualifiesForPlaybackCompletion
 } from './playback-security.js';
 
 test('normalizes fractional playback seconds before persistence', () => {
@@ -41,6 +46,27 @@ test('seeking directly to the end does not create listened coverage', () => {
   });
   assert.equal(result.accepted, false);
   assert.equal(result.listenedSeconds, 0);
+});
+
+test('completion requires ninety percent of trusted per-session coverage', () => {
+  assert.equal(playbackCompletionThresholdSeconds(629), 567);
+  assert.equal(qualifiesForPlaybackCompletion({ listenedSeconds: 566, duration: 629 }), false);
+  assert.equal(qualifiesForPlaybackCompletion({ listenedSeconds: 567, duration: 629 }), true);
+});
+
+test('completed meditation count preserves legacy completions and counts verified repeats', () => {
+  assert.equal(countCompletedMeditationSessions({
+    history: [
+      { meditation_id: 'calm', completed: true },
+      { meditation_id: 'sleep', completed: true }
+    ],
+    playbackSessions: [
+      { meditation_id: 'calm', completed_at: '2026-09-01T10:00:00Z' },
+      { meditation_id: 'calm', completed_at: '2026-09-02T10:00:00Z' },
+      { meditation_id: 'sleep', completed_at: null },
+      { meditation_id: 'focus', completed_at: '2026-09-03T10:00:00Z' }
+    ]
+  }), 4);
 });
 
 test('repeated seeks and overlapping playback are not double-counted', () => {
@@ -86,11 +112,11 @@ test('a long inactive heartbeat gap does not mint background listening credit', 
   assert.equal(result.listenedSeconds, 20);
 });
 
-test('replaying a completed meditation does not repeat listening or completion rewards', () => {
+test('replaying a completed meditation does not repeat listening or one-time completion rewards', () => {
   const reward = playbackRewardDecision({
     trustedListenedSeconds: 600,
     previouslyAwardedPosition: 600,
-    newlyCompletedSession: true,
+    completionBonusEligible: true,
     completionBonusAlreadyAwarded: true
   });
   assert.equal(reward.moonSeedsAwarded, 0);
@@ -100,15 +126,31 @@ test('a duplicate completion request cannot repeat its completion bonus', () => 
   const first = playbackRewardDecision({
     trustedListenedSeconds: 600,
     previouslyAwardedPosition: 600,
-    newlyCompletedSession: true,
+    completionBonusEligible: true,
     completionBonusAlreadyAwarded: false
   });
   const duplicate = playbackRewardDecision({
     trustedListenedSeconds: 600,
     previouslyAwardedPosition: first.nextAwardedPosition,
-    newlyCompletedSession: false,
+    completionBonusEligible: true,
     completionBonusAlreadyAwarded: true
   });
   assert.equal(first.completionBonusAwarded, 2);
   assert.equal(duplicate.moonSeedsAwarded, 0);
+});
+
+test('database completion flow uses current session coverage instead of the client ended flag', () => {
+  const databaseSource = readFileSync(resolve(process.cwd(), 'src/db.ts'), 'utf8');
+  assert.match(databaseSource, /sessionQualifiesForCompletion = completion\.qualified/);
+  assert.match(databaseSource, /completed = Boolean\(existing\?\.completed \|\| sessionQualifiesForCompletion\)/);
+  assert.doesNotMatch(databaseSource, /input\.completed && completion >= 90/);
+  assert.match(databaseSource, /countCompletedMeditationSessions\(\{/);
+});
+
+test('verified repeat completion migration is additive, idempotent, and anti-seek based', () => {
+  const migration = readFileSync(resolve(process.cwd(), '../database/migrations/012_verified_repeat_completions.sql'), 'utf8');
+  assert.match(migration, /playback\.completed_at is null/i);
+  assert.match(migration, /playback\.listened_seconds >= ceil\(meditation\.duration \* 0\.90\)/i);
+  assert.match(migration, /greatest\(history\.completion_percent, 90\)/i);
+  assert.doesNotMatch(migration, /\b(delete|truncate|drop)\b/i);
 });

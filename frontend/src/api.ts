@@ -502,7 +502,14 @@ export async function startPlaybackSession(meditationId: string, localDate: stri
 }
 
 export async function heartbeatPlaybackSession(sessionId: string, lastPosition: number, initData?: string) {
-  return request<{ ok: boolean; listened_seconds: number; intervalAccepted: boolean }>('/api/history/session/heartbeat', {
+  return request<{
+    ok: boolean;
+    listened_seconds: number;
+    intervalAccepted: boolean;
+    completionQualified: boolean;
+    completed: boolean;
+    newlyCompleted: boolean;
+  }>('/api/history/session/heartbeat', {
     method: 'POST',
     body: JSON.stringify({ session_id: sessionId, last_position: lastPosition })
   }, initData);
