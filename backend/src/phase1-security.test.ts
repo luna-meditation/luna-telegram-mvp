@@ -50,6 +50,8 @@ test('canonical and runtime definitions cannot reopen the audited grants', () =>
 
 test('automatic migrations and every Phase 1 backend flag default to disabled', () => {
   assert.match(config, /RUN_MIGRATIONS: envBoolean\.default\(false\)/);
+  const server = readFileSync(resolve(process.cwd(), 'src/server.ts'), 'utf8');
+  assert.doesNotMatch(server, /runMigrations/);
   for (const key of ['NEW_NAVIGATION', 'TAROT_DAILY', 'TAROT_SPREADS', 'ASTROLOGY', 'MOON_SEEDS_WALLET_V2', 'MOON_SEEDS_PURCHASES', 'BREATHWORK_AUDIO']) {
     assert.match(config, new RegExp(`FEATURE_${key}: envBoolean\\.default\\(false\\)`));
     assert.match(envExample, new RegExp(`^FEATURE_${key}=false$`, 'm'));

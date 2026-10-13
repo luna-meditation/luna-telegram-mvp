@@ -46,7 +46,6 @@ import {
   type DailyCheckinInput,
   type MeditationInput
 } from './db.js';
-import { runMigrations } from './migrations.js';
 import { isPlanId, isValidTelegramInvoiceUrl, plans } from './plans.js';
 import { paymentEligibility } from './payment-policy.js';
 import { logBackendError, type RequestWithId } from './error-logging.js';
@@ -1008,7 +1007,6 @@ app.use((error: unknown, req: express.Request, res: express.Response, next: expr
 
 app.listen(env.PORT, async () => {
   console.log(`Luna backend listening on ${env.PORT}`);
-  await runMigrations();
   await configureTelegramBot();
 
   if (env.WEBHOOK_URL) {

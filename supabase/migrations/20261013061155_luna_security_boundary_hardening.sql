@@ -2,8 +2,15 @@
 -- other tables, functions, grants, policies, or data in the shared project.
 -- Prepared for review in Phase 1; do not apply without production approval.
 
+begin;
+set local lock_timeout = '5s';
+set local statement_timeout = '30s';
+
 do $$
 begin
+  if not exists (select 1 from pg_roles where rolname = 'service_role' and rolbypassrls) then
+    raise exception 'Required backend role service_role must retain BYPASSRLS';
+  end if;
   if to_regclass('public.playback_sessions') is null then
     raise exception 'Required Luna relation public.playback_sessions does not exist';
   end if;
@@ -41,3 +48,4 @@ revoke all privileges on function public.reserve_luna_chat_request(bigint, text,
 grant execute on function public.reserve_luna_chat_request(bigint, text, integer, uuid) to service_role;
 
 notify pgrst, 'reload schema';
+commit;

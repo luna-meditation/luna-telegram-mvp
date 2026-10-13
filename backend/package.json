@@ -12,6 +12,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test": "node --import tsx --test src/*.test.ts",
+    "test:phase1-db": "node --import tsx test/phase1-database-review.mjs",
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit"
   },

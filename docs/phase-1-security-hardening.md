@@ -23,6 +23,7 @@ The shared-project review also found `public.claim_legacy_workspace(uuid)` and `
 5. Sets an empty `search_path` on both Luna `SECURITY DEFINER` functions.
 6. Removes direct and inherited execute access from `PUBLIC`, `anon`, and `authenticated`, and explicitly grants execution to `service_role`.
 7. Does not update rows or touch unrelated schemas, tables, functions, policies, or grants.
+8. Runs atomically with a 5-second lock timeout and a 30-second statement timeout, and fails before changing permissions if `service_role` no longer has `BYPASSRLS`.
 
 The migration is prepared only. It must not be executed in production until separately approved.
 
@@ -53,6 +54,9 @@ Then run backend RPC integration tests with a dedicated non-production QA user. 
 The following restores the previous operational access for `anon`, `authenticated`, and `service_role` while intentionally leaving generic `PUBLIC` execution revoked. It deliberately reopens the audited client-role risks and should be used only if an approved production rollout causes a confirmed backend outage and the safer forward fix cannot be applied quickly.
 
 ```sql
+begin;
+set local lock_timeout = '5s';
+set local statement_timeout = '30s';
 drop policy if exists "Playback sessions are server managed" on public.playback_sessions;
 alter table public.playback_sessions disable row level security;
 grant all privileges on table public.playback_sessions to anon, authenticated, service_role;
@@ -66,6 +70,7 @@ alter function public.reserve_luna_chat_request(bigint, text, integer, uuid)
 grant execute on function public.reserve_luna_chat_request(bigint, text, integer, uuid) to anon, authenticated, service_role;
 
 notify pgrst, 'reload schema';
+commit;
 ```
 
 After rollback, capture the error, restore service through a corrected forward migration, and reapply the least-privilege state. No data rollback is required because the hardening migration changes no rows.

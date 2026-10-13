@@ -23,7 +23,7 @@ export function BottomNavigation({ active, onChange, labels, newNavigation = fal
   const navigationItems = primaryNavigation(newNavigation);
 
   return (
-    <nav className="bottom-navigation" aria-label="Primary" data-testid="bottom-navigation">
+    <nav className="bottom-navigation" aria-label="Primary" data-testid="bottom-navigation" style={{ gridTemplateColumns: `repeat(${navigationItems.length}, minmax(0, 1fr))` }}>
       {navigationItems.map((item) => {
         const Icon = icons[item.page];
         const label = newNavigation
