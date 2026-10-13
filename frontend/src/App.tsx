@@ -17,6 +17,7 @@ import {
   Moon,
   Pause,
   Play,
+  Route,
   Search,
   Settings,
   Share2,
@@ -115,12 +116,20 @@ import { PageHeader } from './design-system/components/PageHeader';
 import { SegmentedTabs } from './design-system/components/SegmentedTabs';
 import { useAppViewport } from './hooks/useChatViewport';
 import { THEME_STORAGE_KEY, useThemePreference, type ResolvedTheme, type ThemePreference } from './hooks/useTheme';
+import { featureFlags } from './config/featureFlags';
+import {
+  initialPageFromLaunch,
+  meditationIdFromStartParam,
+  primaryNavigation,
+  type AppPage
+} from './navigation/navigationModel';
+import { useAppRouteState } from './navigation/useAppRouteState';
 import { formatMeditationDuration } from './utils/duration';
 import { breathCycleSeconds, breathPhaseAt, breathPhaseLabel, breathPractices, type BreathPracticeId } from './features/breathing/practices';
 import { HomeV2 } from './v2/pages/HomeV2';
 import { frontendBuildMetadata, recordPaymentStage, useRuntimeDiagnostics, type RuntimeDiagnostics } from './runtime-diagnostics';
 
-type Page = 'home' | 'luna' | 'library' | 'progress' | 'favorites' | 'profile' | 'pricing' | 'player' | 'scenePlayer' | 'mantraPlayer' | 'breathCircle' | 'moonGarden' | 'admin';
+type Page = AppPage;
 type Mood = 'Calm' | 'Stressed' | 'Tired' | 'Anxious' | 'Focused';
 type MoodChip = 'Sleep' | 'Calm' | 'Focus' | 'Anxiety' | 'Breath' | 'Energy';
 type LibraryMode = 'meditations' | 'breathing' | 'mantras';
@@ -1862,37 +1871,6 @@ function miniAppStartParam() {
   );
 }
 
-function pageFromStartParam(startParam: string): Page {
-  const normalized = startParam.trim().toLowerCase();
-  if (normalized === 'luna') return 'luna';
-  if (normalized === 'library') return 'library';
-  if (normalized === 'saved') return 'library';
-  if (normalized === 'progress') return 'progress';
-  if (normalized === 'journey') return 'progress';
-  if (normalized === 'premium') return 'pricing';
-  if (normalized === 'profile') return 'profile';
-  if (normalized === 'moon-garden') return 'moonGarden';
-  if (normalized === 'garden') return 'moonGarden';
-  return 'home';
-}
-
-function initialPageFromLaunch(startParam: string): Page {
-  if (window.location.pathname === '/admin' || window.location.hash === '#admin') return 'admin';
-  return pageFromStartParam(startParam);
-}
-
-function meditationIdFromStartParam(startParam: string) {
-  if (!startParam.startsWith('meditation_')) return null;
-  const id = startParam.slice('meditation_'.length);
-  if (!id) return null;
-
-  try {
-    return decodeURIComponent(id);
-  } catch {
-    return null;
-  }
-}
-
 async function copyText(text: string) {
   if (navigator.clipboard?.writeText) {
     await navigator.clipboard.writeText(text);
@@ -1940,7 +1918,10 @@ function App() {
   const accountRefreshRef = useRef<Promise<AccessState | void> | null>(null);
   const paymentOperationRef = useRef(false);
   const [language, setLanguage] = useState<AppLanguage>(() => initialLanguage(user));
-  const [page, setPage] = useState<Page>(() => initialPageFromLaunch(launchStartParam));
+  const initialPage = initialPageFromLaunch(window.location.pathname, window.location.hash, launchStartParam);
+  const { page, setPage, navigatePrimary } = useAppRouteState(initialPage, {
+    newNavigation: featureFlags.new_navigation
+  });
   const resetPrimaryScroll = useCallback(() => {
     if (typeof document === 'undefined') return;
     const targets = [document.scrollingElement, document.documentElement, document.body, appShellRef.current];
@@ -1949,13 +1930,13 @@ function App() {
     }
   }, []);
   const navigatePrimaryPage = useCallback((nextPage: Page) => {
-    setPage(nextPage);
+    navigatePrimary(nextPage);
     resetPrimaryScroll();
     window.requestAnimationFrame(resetPrimaryScroll);
-  }, [resetPrimaryScroll]);
+  }, [navigatePrimary, resetPrimaryScroll]);
 
   useLayoutEffect(() => {
-    if (!['home', 'library', 'luna', 'progress', 'profile'].includes(page)) return;
+    if (!primaryNavigation(featureFlags.new_navigation).some((item) => item.page === page)) return;
     resetPrimaryScroll();
     const frame = window.requestAnimationFrame(resetPrimaryScroll);
     return () => window.cancelAnimationFrame(frame);
@@ -3182,6 +3163,8 @@ function App() {
             username={user.username}
             showAdminButton={adminStatus === 'allowed'}
             onLuna={() => setPage('luna')}
+            onJourney={() => setPage('progress')}
+            showJourneyEntry={featureFlags.new_navigation}
             onSubscription={() => setPage('pricing')}
             onAdmin={() => {
               window.history.pushState({}, '', '/admin');
@@ -3311,12 +3294,16 @@ function App() {
           <BottomNavigation
             active={page}
             onChange={navigatePrimaryPage}
+            newNavigation={featureFlags.new_navigation}
             labels={{
               home: copy[language].navHome,
               luna: copy[language].navLuna,
               library: copy[language].navLibrary,
               progress: copy[language].navProgress,
-              profile: copy[language].navProfile
+              profile: copy[language].navProfile,
+              explore: language === 'en' ? 'Explore' : 'Обзор',
+              lunaAi: 'Luna AI',
+              journey: copy[language].navProgress
             }}
           />
         )}
@@ -5192,6 +5179,8 @@ function ProfilePage({
   username,
   showAdminButton,
   onLuna,
+  onJourney,
+  showJourneyEntry,
   onSubscription,
   onAdmin,
   onRestore,
@@ -5219,6 +5208,8 @@ function ProfilePage({
   username?: string;
   showAdminButton: boolean;
   onLuna: () => void;
+  onJourney: () => void;
+  showJourneyEntry: boolean;
   onSubscription: () => void;
   onAdmin: () => void;
   onRestore: () => AccessState | void | Promise<AccessState | void>;
@@ -5265,6 +5256,26 @@ function ProfilePage({
     onNestedChange(view !== 'main');
     return () => onNestedChange(false);
   }, [onNestedChange, view]);
+
+  useEffect(() => {
+    const hasNestedSurface = view !== 'main' || statusProgressionOpen || avatarActionsOpen || logoutOpen;
+    const backButton = window.Telegram?.WebApp?.BackButton;
+    if (!hasNestedSurface || !backButton) return;
+
+    const closeNestedSurface = () => {
+      if (logoutOpen) setLogoutOpen(false);
+      else if (avatarActionsOpen) setAvatarActionsOpen(false);
+      else if (statusProgressionOpen) setStatusProgressionOpen(false);
+      else setView('main');
+    };
+
+    backButton.onClick(closeNestedSurface);
+    backButton.show();
+    return () => {
+      backButton.offClick(closeNestedSurface);
+      backButton.hide();
+    };
+  }, [avatarActionsOpen, logoutOpen, statusProgressionOpen, view]);
 
   useEffect(() => {
     setGoals(profile?.user?.profile_goals ?? []);
@@ -5835,6 +5846,7 @@ function ProfilePage({
       {avatarBusy && <div className="h-1 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gold transition-all" style={{ width: `${Math.max(8, avatarProgress)}%` }} /></div>}
 
       <section className="luna-surface rounded-[26px] p-2">
+        {showJourneyEntry && <ProfileSettingsRow icon={Route} title={language === 'en' ? 'Journey' : 'Путь'} value={language === 'en' ? 'Streaks, achievements & Moon Garden' : 'Серии, достижения и Лунный сад'} onClick={onJourney} />}
         <ProfileSettingsRow icon={Target} title={language === 'en' ? 'Goals' : 'Цели'} value={goalsLabel} onClick={() => setView('goals')} />
         <ProfileSettingsRow icon={Bell} title={language === 'en' ? 'Notifications' : 'Уведомления'} value={notificationLabel} onClick={() => setView('notifications')} />
         <ProfileSettingsRow icon={Bot} title={language === 'en' ? 'AI Companion' : 'AI-компаньон'} value={companionStatus} onClick={onLuna} />

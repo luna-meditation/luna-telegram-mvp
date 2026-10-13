@@ -47,7 +47,7 @@ returns table(
 )
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = ''
 as $$
 declare
   existing public.ai_chat_requests%rowtype;
@@ -150,13 +150,14 @@ end;
 $$;
 
 revoke all on function public.reserve_luna_chat_request(bigint, text, integer, uuid) from public;
+revoke all on function public.reserve_luna_chat_request(bigint, text, integer, uuid) from anon, authenticated;
 grant execute on function public.reserve_luna_chat_request(bigint, text, integer, uuid) to service_role;
 
 create or replace function public.increment_meditation_play_count(meditation_uuid uuid)
 returns void
 language sql
 security definer
-set search_path = public, pg_temp
+set search_path = ''
 as $$
   update public.meditations
   set play_count = play_count + 1,
@@ -165,6 +166,7 @@ as $$
 $$;
 
 revoke all on function public.increment_meditation_play_count(uuid) from public;
+revoke all on function public.increment_meditation_play_count(uuid) from anon, authenticated;
 grant execute on function public.increment_meditation_play_count(uuid) to service_role;
 
 notify pgrst, 'reload schema';

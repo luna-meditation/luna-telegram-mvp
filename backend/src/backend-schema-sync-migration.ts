@@ -89,5 +89,12 @@ create index if not exists idx_history_last_played on public.history(last_played
 create index if not exists idx_playback_sessions_user on public.playback_sessions(telegram_id, created_at desc);
 create index if not exists idx_daily_checkins_telegram_date on public.daily_checkins(telegram_id, local_date desc);
 
+alter table public.playback_sessions enable row level security;
+drop policy if exists "Playback sessions are server managed" on public.playback_sessions;
+create policy "Playback sessions are server managed" on public.playback_sessions
+  as restrictive for all to anon, authenticated using (false) with check (false);
+revoke all privileges on table public.playback_sessions from public, anon, authenticated, service_role;
+grant select, insert, update on table public.playback_sessions to service_role;
+
 ${lunaAiRpcMigration}
 `;

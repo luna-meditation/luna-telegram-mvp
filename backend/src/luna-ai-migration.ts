@@ -67,7 +67,7 @@ create unique index if not exists idx_ai_messages_request_role on public.ai_mess
 
 create or replace function public.reserve_luna_chat_request(p_telegram_id bigint, p_client_request_id text, p_daily_limit integer, p_conversation_id uuid default null)
 returns table(status text, quota_charged boolean, remaining integer, attempt_count integer, acquired boolean)
-language plpgsql security definer set search_path = public as $$
+language plpgsql security definer set search_path = '' as $$
 declare existing public.ai_chat_requests%rowtype; used_count integer; had_existing boolean := false;
 begin
   perform pg_advisory_xact_lock(p_telegram_id);
@@ -91,6 +91,7 @@ begin
   return query select existing.status, existing.quota_charged, greatest(0, p_daily_limit-used_count), existing.attempt_count, true;
 end; $$;
 revoke all on function public.reserve_luna_chat_request(bigint,text,integer,uuid) from public;
+revoke all on function public.reserve_luna_chat_request(bigint,text,integer,uuid) from anon, authenticated;
 grant execute on function public.reserve_luna_chat_request(bigint,text,integer,uuid) to service_role;
 
 alter table public.ai_conversations enable row level security;

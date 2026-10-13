@@ -1,4 +1,5 @@
 import { env } from './config.js';
+import { backendFeatureFlags } from './feature-flags.js';
 
 function firstDefined(...values: Array<string | undefined>) {
   return values.find((value) => Boolean(value?.trim()))?.trim() ?? 'unknown';
@@ -12,6 +13,7 @@ export function getBackendVersion() {
     serviceName: firstDefined(process.env.RAILWAY_SERVICE_NAME, 'luna-backend'),
     apiVersion: 'v1',
     aiChatEnabled: env.AI_CHAT_ENABLED,
-    aiModel: env.AI_CHAT_MODEL
+    aiModel: env.AI_CHAT_MODEL,
+    featureFlags: backendFeatureFlags
   };
 }

@@ -819,6 +819,15 @@ export type BackendVersion = {
   apiVersion: string;
   aiChatEnabled: boolean;
   aiModel: string;
+  featureFlags: {
+    new_navigation: boolean;
+    tarot_daily: boolean;
+    tarot_spreads: boolean;
+    astrology: boolean;
+    moon_seeds_wallet_v2: boolean;
+    moon_seeds_purchases: boolean;
+    breathwork_audio: boolean;
+  };
 };
 
 export async function getBackendVersion(initData?: string) {
