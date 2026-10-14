@@ -8,6 +8,7 @@ import { V2Hero, V2HeroFallback } from '../components/V2Hero';
 import { V2Recommendation } from '../components/V2Recommendation';
 import { V2Sound } from '../components/V2Sound';
 import { V2Stats, type V2Stat } from '../components/V2Stats';
+import { HomeDiscovery, HomeProgress, HomeLunaGuide } from '../../luna2/HomeDiscovery';
 import '../design-system/homeV2.css';
 
 type MoodChip = 'Sleep' | 'Calm' | 'Focus' | 'Anxiety' | 'Breath' | 'Energy';
@@ -64,6 +65,13 @@ type HomeV2Labels = {
 };
 
 type HomeV2Props = {
+  newNavigation?: boolean;
+  tarotEnabled?: boolean;
+  gardenLevel?: number;
+  onTarot: () => void;
+  onJourney: () => void;
+  onGarden: () => void;
+  onPersonalize?: () => void;
   firstName: string;
   greeting: string;
   mood?: MoodChip;
@@ -141,8 +149,8 @@ export function HomeV2(props: HomeV2Props) {
   }
 
   return (
-    <div className="home-v2">
-      {props.daily ? (
+    <div className={`home-v2 ${props.newNavigation ? 'luna2-home' : ''}`}>
+      {props.daily || props.newNavigation ? (
         <V2Hero
           greeting={props.greeting}
           firstName={props.firstName}
@@ -166,6 +174,9 @@ export function HomeV2(props: HomeV2Props) {
         <V2HeroFallback title={props.labels.firstPracticeTitle} body={props.labels.firstPracticeBody} />
       )}
 
+      {props.newNavigation && <HomeLunaGuide language={props.language} onTalk={props.onAskLuna} onPersonalize={props.onPersonalize}/>}
+      {props.newNavigation && <HomeDiscovery language={props.language} tarotEnabled={Boolean(props.tarotEnabled)} onTarot={props.onTarot} onMeditate={props.onLibrary} onBreathe={props.onBreath} />}
+
       {props.daily ? (
         <V2Recommendation
           title={props.labels.todayRecommendation}
@@ -181,9 +192,9 @@ export function HomeV2(props: HomeV2Props) {
         />
       ) : null}
 
-      <V2Stats stats={props.stats} />
+      {props.newNavigation ? <HomeProgress language={props.language} streak={props.stats[0]?.value ?? '—'} checkins={props.stats[1]?.value ?? '—/7'} gardenLevel={props.gardenLevel} onJourney={props.onJourney} onGarden={props.onGarden} /> : <V2Stats stats={props.stats} />}
 
-      <V2Discovery
+      {!props.newNavigation && <V2Discovery
         title={props.labels.moreToExplore}
         viewAllLabel={props.labels.viewAll}
         meditations={discoveryItems}
@@ -193,7 +204,7 @@ export function HomeV2(props: HomeV2Props) {
         categoryLabel={props.categoryLabel}
         durationLabel={props.durationLabel}
         premiumLabel={props.labels.premium}
-      />
+      />}
 
       <V2Continue
         title={props.labels.continueListening}
@@ -203,7 +214,7 @@ export function HomeV2(props: HomeV2Props) {
         durationLabel={props.durationLabel}
       />
 
-      <V2PracticeTiles
+      {!props.newNavigation && <V2PracticeTiles
         breathTitle={props.labels.breathTitle}
         breathBody={props.labels.breathBody}
         breathAction={props.labels.begin}
@@ -212,7 +223,7 @@ export function HomeV2(props: HomeV2Props) {
         askAction={props.labels.askLunaAction}
         onBreath={props.onBreath}
         onAsk={props.onAskLuna}
-      />
+      />}
 
       <section className="home-v2-sound-section">
         {activeScene ? (

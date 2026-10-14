@@ -26,6 +26,16 @@ export class ApiRequestError extends Error {
 
 const inFlightRequests = new Map<string, Promise<unknown>>();
 
+export type PersonalProfile={display_name?:string|null;interests:Array<'tarot'|'astrology'|'wellbeing'|'meditation'>;preferences:string;birth_date:string|null;birth_time:string|null;birth_place:string|null;ai_context_consent:boolean};
+export const getPersonalProfile=(initData?:string)=>request<PersonalProfile>('/api/personalization',undefined,initData);
+export const savePersonalProfile=(profile:PersonalProfile,initData?:string)=>request<PersonalProfile>('/api/personalization',{method:'PUT',body:JSON.stringify(profile)},initData);
+export const deletePersonalProfile=(initData?:string)=>request<{ok:boolean}>('/api/personalization',{method:'DELETE'},initData);
+export type TarotInterpretation={summary:string;cardMeaning:string;context:string;reflection:string;question:string;continuation:string|null};
+export type TarotReading={id:string;client_reading_id:string;card_id:string;orientation:'upright'|'reversed';intention:'general'|'love'|'career'|'growth';question:string;language:AppLanguage;interpretation:TarotInterpretation|null;status:'local'|'processing'|'ready'|'fallback'|'safety';fallback_reason:string|null;created_at:string;updated_at:string};
+export const saveTarotReading=(input:{clientReadingId:string;cardId:string;orientation:TarotReading['orientation'];intention:TarotReading['intention'];question:string;language:AppLanguage;generate:boolean},initData?:string)=>request<{reading:TarotReading;reason:string|null}>('/api/tarot/readings',{method:'POST',body:JSON.stringify(input)},initData);
+export const listTarotReadings=(offset=0,initData?:string)=>request<{readings:TarotReading[];nextOffset:number|null}>(`/api/tarot/readings?offset=${offset}`,undefined,initData);
+export const deleteTarotReading=(id:string,initData?:string)=>request<{ok:boolean}>(`/api/tarot/readings/${id}`,{method:'DELETE'},initData);
+
 export type AccessState = {
   hasPremium: boolean;
   plan: string;
@@ -174,6 +184,7 @@ export type ProfileStats = {
   plantedElementsCount?: number;
   lastMoonSeedEarnedAt?: string | null;
   gardenLevel?: number;
+  gardenAtomicReady?:boolean;
   streakDays?: number;
   lastPracticeDate?: string | null;
   purchasedPlan: string;
@@ -701,6 +712,8 @@ export async function getLunaConversation(conversationId: string, initData?: str
 }
 
 export async function sendLunaMessage(input: {
+  mode?:'companion'|'tarot'|'wellbeing'|'meditation';
+  readingId?:string;
   conversationId?: string;
   message: string;
   language: AppLanguage;
@@ -819,6 +832,15 @@ export type BackendVersion = {
   apiVersion: string;
   aiChatEnabled: boolean;
   aiModel: string;
+  featureFlags: {
+    new_navigation: boolean;
+    tarot_daily: boolean;
+    tarot_spreads: boolean;
+    astrology: boolean;
+    moon_seeds_wallet_v2: boolean;
+    moon_seeds_purchases: boolean;
+    breathwork_audio: boolean;
+  };
 };
 
 export async function getBackendVersion(initData?: string) {

@@ -86,7 +86,7 @@ function journeyRequirementText(requirement: JourneyRequirement, nextName: strin
   return `Ещё ${remaining} ${russianNoun(remaining, 'уровень', 'уровня', 'уровней')} сада до статуса «${nextName}»`;
 }
 
-function JourneyStatusHero({ profile, language, onOpen }: { profile: ProfileStats | null; language: AppLanguage; onOpen: () => void }) {
+export function JourneyStatusHero({ profile, language, onOpen }: { profile: ProfileStats | null; language: AppLanguage; onOpen: () => void }) {
   const status = resolveJourneyStatus(profile);
   const next = status.next;
   const name = journeyStatusNames[language][status.id];
@@ -231,9 +231,9 @@ function AchievementCard({ item, language, compact = false }: { item: ProgressAc
   );
 }
 
-function AchievementsStory({ items, language }: { items: ProgressAchievement[]; language: AppLanguage }) {
+export function AchievementsStory({ items, language, initiallyOpen = false, onClose }: { items: ProgressAchievement[]; language: AppLanguage; initiallyOpen?: boolean; onClose?: () => void }) {
   const t = progressCopy[language];
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initiallyOpen);
   const [statusFilter, setStatusFilter] = useState<AchievementFilter>('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const unlocked = items.filter((item) => item.unlocked).sort((left, right) => String(right.unlockedAt ?? '').localeCompare(String(left.unlockedAt ?? '')));
@@ -264,7 +264,7 @@ function AchievementsStory({ items, language }: { items: ProgressAchievement[]; 
         <div className="progress-v4-achievements-page" role="dialog" aria-modal="true" aria-label={t.allAchievements}>
           <header>
             <div><p className="progress-v3-eyebrow">{t.achievements}</p><h2>{t.allAchievements}</h2><span>{progressText(language, 'unlockedCount', { unlocked: unlocked.length, total: items.length })}</span></div>
-            <button type="button" onClick={() => setOpen(false)} aria-label={t.close}><X size={20} /></button>
+            <button type="button" onClick={() => { setOpen(false); onClose?.(); }} aria-label={t.close}><X size={20} /></button>
           </header>
           <div className="progress-v4-status-filters">
             {([['all', t.all], ['unlocked', t.unlocked], ['progress', t.inProgress], ['locked', t.locked]] as Array<[AchievementFilter, string]>).map(([id, label]) => (

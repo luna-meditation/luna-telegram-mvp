@@ -1,0 +1,30 @@
+// Format conversion of the supplied artwork only; no crop, resize or source writes.
+import assert from 'node:assert/strict';
+import {readFile,writeFile,mkdir,lstat,realpath} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {dirname,resolve} from 'node:path';
+import {fileURLToPath,pathToFileURL} from 'node:url';
+assert.equal(process.versions.node.split('.')[0],'22','Use Node.js 22');
+const index=process.argv.indexOf('--source');
+assert.ok(index>=0&&process.argv[index+1],'Pass --source /absolute/path/cover-tarot.png');
+const source=await realpath(process.argv[index+1]);
+const frontend=resolve(dirname(fileURLToPath(import.meta.url)),'..');
+const output=resolve(frontend,'public/assets/tarot/card-back.webp');
+assert.notEqual(source,output);
+const hash=bytes=>createHash('sha256').update(bytes).digest('hex');
+const original=await readFile(source);
+const {default:sharp}=await import(process.env.TAROT_SHARP_MODULE?pathToFileURL(process.env.TAROT_SHARP_MODULE).href:'sharp');
+const info=await sharp(original).metadata();
+assert.equal(info.format,'png');assert.equal(info.width,1024);assert.equal(info.height,1536);
+const optimized=await sharp(original).toColourspace('srgb').webp({quality:86,effort:6,smartSubsample:true}).toBuffer();
+const webp=await sharp(optimized).metadata();
+assert.equal(webp.width,info.width);assert.equal(webp.height,info.height);assert.equal(webp.exif,undefined);
+await mkdir(dirname(output),{recursive:true});
+assert.equal(await realpath(dirname(output)),dirname(output),'Refuse an output-directory symlink');
+const existing=await lstat(output).catch(error=>{if(error.code==='ENOENT')return null;throw error;});
+if(existing){assert.ok(existing.isFile()&&!existing.isSymbolicLink());assert.equal(hash(await readFile(output)),hash(optimized),'Refuse to replace different artwork');}
+else await writeFile(output,optimized,{flag:'wx'});
+assert.equal(hash(await readFile(source)),hash(original),'The original must remain unchanged');
+const report={image:'/assets/tarot/card-back.webp',sourceFile:'cover-tarot.png',width:info.width,height:info.height,sourceBytes:original.length,optimizedBytes:optimized.length,sourceSha256:hash(original),sha256:hash(optimized),crop:false,resize:false,originalUnchanged:true};
+await writeFile(resolve(frontend,'src/features/tarot/cover-asset.json'),JSON.stringify(report,null,2)+'\n');
+console.log(JSON.stringify(report,null,2));

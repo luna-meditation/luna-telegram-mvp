@@ -40,7 +40,7 @@ SUPABASE_SERVICE_ROLE_KEY=
 ADMIN_TELEGRAM_ID=
 TELEGRAM_AUTH_MAX_AGE_SECONDS=86400
 ALLOW_UNVERIFIED_TELEGRAM_WEBAPP=false
-RUN_MIGRATIONS=true
+RUN_MIGRATIONS=false
 PORT=4000
 ```
 
@@ -55,7 +55,7 @@ Notes:
 - `ADMIN_TELEGRAM_ID` is your numeric Telegram user ID.
 - `TELEGRAM_AUTH_MAX_AGE_SECONDS` controls how long Telegram WebApp auth data is accepted.
 - Keep `ALLOW_UNVERIFIED_TELEGRAM_WEBAPP=false` in production.
-- Keep `RUN_MIGRATIONS=true` so the backend applies Luna database table migrations on startup.
+- Keep `RUN_MIGRATIONS=false`. Backend startup no longer invokes the legacy migration runner, even if Railway still has an old explicit `true` value. Apply only separately approved, named SQL migrations before deploying code that requires new schema. Do not use backend restarts as a migration workflow.
 - Supabase Storage is not seeded during backend startup. Create the `meditations` bucket with `database/schema.sql` or `database/migrations/001_meditation_platform.sql`; files are uploaded only from the hidden admin page.
 
 ### Luna AI RPC synchronization
@@ -66,15 +66,15 @@ The backend calls the server-only function `public.reserve_luna_chat_request(big
 database/migrations/006_luna_ai_rpc_sync.sql
 ```
 
-With `RUN_MIGRATIONS=true` and a valid `DATABASE_URL`, the backend applies this migration contract during startup and sends `NOTIFY pgrst, 'reload schema'` so PostgREST refreshes its function cache. If automatic migration cannot be confirmed in Railway logs, open Supabase Dashboard -> SQL Editor, paste the complete contents of `database/migrations/006_luna_ai_rpc_sync.sql`, run it once, then redeploy the backend. Do not run destructive resets or modify existing user data.
+Migration 006 is a historical schema contract. The backend does not apply it during startup. Do not replay historical migrations as part of a routine deployment: they can restore outdated grants or run data backfills. First compare the current schema with the backend contract, then apply only an explicitly approved forward migration. Phase 1 security hardening uses `supabase/migrations/20261013061155_luna_security_boundary_hardening.sql`; its reviewed plan and rollback are in `docs/phase-1-security-hardening.md`.
 
-For the current production schema drift hotfix, run the complete additive migration below if Railway logs show missing columns such as `history.listened_seconds`:
+Historical schema drift migration (review against the current schema before any approved use):
 
 ```text
 database/migrations/007_backend_schema_sync.sql
 ```
 
-It adds missing playback/history/check-in fields, makes legacy `sleep_range` optional with a neutral `6_8` default, recreates the RPC contract, and reloads PostgREST. It is safe to rerun and does not recreate or delete existing tables/data. After startup, Railway should show `[Database migration] Backend schema synchronization applied`.
+It adds playback/history/check-in fields and recreates RPCs. Its historical permissions are superseded by Phase 1 hardening. It is not a routine deployment step and is not invoked at startup.
 
 If Railway reports `42702 column reference "quota_charged" is ambiguous`, apply the next additive migration:
 
@@ -82,7 +82,7 @@ If Railway reports `42702 column reference "quota_charged" is ambiguous`, apply 
 database/migrations/008_fix_luna_rpc_ambiguous_quota.sql
 ```
 
-This keeps the public RPC signature unchanged while qualifying all quota/request columns. The backend applies it automatically after migrations 006 and 007 and logs `[Database migration] Luna RPC ambiguity fix applied`.
+This historical migration keeps the public RPC signature unchanged while qualifying quota/request columns. It is not invoked at startup; the current production RPC already matches this contract.
 
 ### Frontend Mini App
 

@@ -1,0 +1,526 @@
+{
+  "majorContent": [
+    [
+      "The Fool",
+      "Шут",
+      "A fresh beginning invites curiosity and a small, thoughtful step.",
+      "Новое начало приглашает к любопытству и небольшому осознанному шагу.",
+      "Slow down before a leap; freedom works best with awareness.",
+      "Перед новым шагом замедлись: свобода лучше сочетается с осознанностью."
+    ],
+    [
+      "The Magician",
+      "Маг",
+      "Use the skills and resources already within your reach.",
+      "Используй навыки и ресурсы, которые уже есть у тебя.",
+      "Bring scattered intentions into one honest, achievable action.",
+      "Собери разрозненные намерения в одно честное и посильное действие."
+    ],
+    [
+      "The High Priestess",
+      "Верховная Жрица",
+      "Make room for quiet intuition before seeking outside answers.",
+      "Дай место тихой интуиции, прежде чем искать ответы вовне.",
+      "Notice what noise or assumptions may be hiding your own voice.",
+      "Заметь, не мешают ли шум и предположения услышать свой голос."
+    ],
+    [
+      "The Empress",
+      "Императрица",
+      "Nurture creativity, comfort and the things you want to grow.",
+      "Поддержи творчество, заботу и то, что хочешь вырастить.",
+      "Care for your own needs rather than giving beyond your capacity.",
+      "Позаботься о себе, вместо того чтобы отдавать больше своих сил."
+    ],
+    [
+      "The Emperor",
+      "Император",
+      "Gentle structure and clear boundaries can create steadiness.",
+      "Бережная структура и ясные границы помогают обрести устойчивость.",
+      "Check whether control or rigid rules are crowding out flexibility.",
+      "Проверь, не вытесняют ли контроль и жёсткие правила гибкость."
+    ],
+    [
+      "The Hierophant",
+      "Иерофант",
+      "Consider the guidance, values and traditions that support you.",
+      "Подумай о наставлениях, ценностях и традициях, которые тебя поддерживают.",
+      "Ask which inherited expectations still feel true to you.",
+      "Спроси себя, какие привычные ожидания по-прежнему тебе близки."
+    ],
+    [
+      "The Lovers",
+      "Влюблённые",
+      "Choose connection and actions that align with your values.",
+      "Выбирай близость и действия, согласованные с твоими ценностями.",
+      "A mismatch may call for an honest conversation with yourself or another.",
+      "Несогласованность может стать поводом для честного разговора с собой или другим."
+    ],
+    [
+      "The Chariot",
+      "Колесница",
+      "Bring your energy together and choose a clear direction.",
+      "Собери свою энергию и выбери ясное направление.",
+      "Pause the rush and reconnect with the reason behind your goal.",
+      "Останови спешку и вспомни, почему эта цель для тебя важна."
+    ],
+    [
+      "Strength",
+      "Сила",
+      "Quiet courage and compassion can be stronger than force.",
+      "Тихое мужество и сострадание могут быть сильнее давления.",
+      "Be gentle with self-doubt; strength does not require constant toughness.",
+      "Отнесись бережно к сомнениям: сила не требует постоянной жёсткости."
+    ],
+    [
+      "The Hermit",
+      "Отшельник",
+      "A little solitude may help you hear what matters to you.",
+      "Немного уединения может помочь услышать то, что для тебя важно.",
+      "Notice whether solitude is restorative or becoming disconnection.",
+      "Заметь, помогает ли уединение восстановиться или превращается в отдаление."
+    ],
+    [
+      "Wheel of Fortune",
+      "Колесо Фортуны",
+      "Life moves in cycles; focus on the choices available now.",
+      "Жизнь меняется циклами: сосредоточься на доступных сейчас выборах.",
+      "Loosen your grip on what cannot be controlled and choose your next step.",
+      "Ослабь хватку на том, что нельзя контролировать, и выбери следующий шаг."
+    ],
+    [
+      "Justice",
+      "Справедливость",
+      "Seek clarity, fairness and responsibility for your choices.",
+      "Ищи ясность, справедливость и ответственность за свои решения.",
+      "Look honestly at assumptions or imbalances before deciding.",
+      "Прежде чем решать, честно посмотри на предположения и перекосы."
+    ],
+    [
+      "The Hanged Man",
+      "Повешенный",
+      "A pause can reveal a perspective that effort alone could not.",
+      "Пауза может открыть взгляд, который не даётся одним усилием.",
+      "Consider whether waiting is useful or keeping you from a small action.",
+      "Подумай, помогает ли ожидание или мешает небольшому действию."
+    ],
+    [
+      "Death",
+      "Смерть",
+      "An ending can make space for change and a new chapter.",
+      "Завершение может освободить место для перемен и нового этапа.",
+      "Let change happen at a humane pace; notice what is hard to release.",
+      "Позволь переменам идти в бережном темпе и заметь, что трудно отпустить."
+    ],
+    [
+      "Temperance",
+      "Умеренность",
+      "Find a sustainable rhythm through patience and balance.",
+      "Найди устойчивый ритм через терпение и равновесие.",
+      "Adjust extremes gently instead of demanding perfect balance.",
+      "Мягко скорректируй крайности, не требуя идеального равновесия."
+    ],
+    [
+      "The Devil",
+      "Дьявол",
+      "Notice habits or attachments that limit your freedom.",
+      "Заметь привычки или привязанности, которые ограничивают свободу.",
+      "A small honest choice can help loosen an unhelpful pattern.",
+      "Небольшой честный выбор помогает ослабить непродуктивный сценарий."
+    ],
+    [
+      "The Tower",
+      "Башня",
+      "A disrupted assumption may reveal what needs rebuilding.",
+      "Пошатнувшееся убеждение может показать, что стоит выстроить заново.",
+      "Seek steady support while making room for necessary change.",
+      "Ищи устойчивую поддержку, освобождая место для необходимых перемен."
+    ],
+    [
+      "The Star",
+      "Звезда",
+      "Reconnect with hope, inspiration and a gentler outlook.",
+      "Вернись к надежде, вдохновению и более бережному взгляду.",
+      "Let hope be small and practical when optimism feels distant.",
+      "Пусть надежда будет небольшой и практичной, когда оптимизм кажется далёким."
+    ],
+    [
+      "The Moon",
+      "Луна",
+      "Uncertainty invites patience; separate feelings from assumptions.",
+      "Неопределённость приглашает к терпению: отдели чувства от предположений.",
+      "Name what is unclear and seek grounded information without rushing.",
+      "Назови то, что пока неясно, и ищи достоверную информацию без спешки."
+    ],
+    [
+      "The Sun",
+      "Солнце",
+      "Notice simple joy, warmth and what gives you energy.",
+      "Заметь простую радость, тепло и то, что даёт тебе энергию.",
+      "Allow imperfect good moments; joy need not be a performance.",
+      "Разреши себе несовершенные хорошие моменты: радость не должна быть показной."
+    ],
+    [
+      "Judgement",
+      "Суд",
+      "Reflect on what you have learned and how you want to move forward.",
+      "Подумай, чему ты научился и как хочешь двигаться дальше.",
+      "Replace harsh self-judgment with an honest, compassionate review.",
+      "Замени суровый самосуд честным и сочувственным взглядом на свой опыт."
+    ],
+    [
+      "The World",
+      "Мир",
+      "Recognize a completed chapter and the growth it holds.",
+      "Признай завершённый этап и рост, который он принёс.",
+      "An unfinished detail may need attention before you feel ready to move on.",
+      "Незавершённой детали может понадобиться внимание, прежде чем идти дальше."
+    ]
+  ],
+  "minorContent": {
+    "wands": [
+      [
+        "A spark of inspiration is ready for a small beginning.",
+        "Искра вдохновения готова стать небольшим началом.",
+        "Give a stalled idea space rather than forcing enthusiasm.",
+        "Дай застрявшей идее пространство, не вынуждая себя воодушевляться."
+      ],
+      [
+        "Explore your options and choose a direction with intention.",
+        "Исследуй варианты и осознанно выбери направление.",
+        "Bring a distant plan back to one practical next step.",
+        "Верни далёкий план к одному практичному следующему шагу."
+      ],
+      [
+        "Notice progress and make room for a wider perspective.",
+        "Заметь прогресс и дай место более широкому взгляду.",
+        "Revisit expectations when progress feels slower than hoped.",
+        "Пересмотри ожидания, если продвижение медленнее, чем хотелось."
+      ],
+      [
+        "Celebrate connection, belonging and a place to feel at ease.",
+        "Отметь близость, принадлежность и место, где тебе спокойно.",
+        "Consider what would make your sense of belonging more secure.",
+        "Подумай, что сделает твоё чувство принадлежности устойчивее."
+      ],
+      [
+        "Different opinions can clarify what matters when handled with respect.",
+        "Разные мнения помогают прояснить важное, если обсуждать их с уважением.",
+        "Step out of needless competition and return to a shared purpose.",
+        "Выйди из ненужного соперничества и вернись к общей цели."
+      ],
+      [
+        "Acknowledge effort and accept recognition without comparison.",
+        "Признай свои усилия и принимай признание без сравнения с другими.",
+        "Let your own values guide you when approval feels uncertain.",
+        "Пусть твои ценности направляют тебя, когда одобрение кажется ненадёжным."
+      ],
+      [
+        "Stand by your values with clear, calm boundaries.",
+        "Поддержи свои ценности ясными и спокойными границами.",
+        "Protect your energy; not every challenge needs a response.",
+        "Береги энергию: не каждый вызов требует ответа."
+      ],
+      [
+        "Energy is moving; choose where to direct it thoughtfully.",
+        "Энергия движется: осознанно выбери, куда её направить.",
+        "Slow the pace enough to avoid scattered or rushed decisions.",
+        "Замедлись достаточно, чтобы избежать разрозненных и поспешных решений."
+      ],
+      [
+        "Your experience can support resilience and wise boundaries.",
+        "Твой опыт может поддержать стойкость и разумные границы.",
+        "Rest is part of persistence, especially when vigilance becomes tiring.",
+        "Отдых — часть настойчивости, особенно когда постоянная бдительность утомляет."
+      ],
+      [
+        "Notice your responsibilities and what can be shared or simplified.",
+        "Заметь свои обязанности и то, что можно разделить или упростить.",
+        "Release a burden that does not need to be carried alone.",
+        "Отпусти нагрузку, которую не обязательно нести в одиночку."
+      ],
+      [
+        "Curiosity can open a playful path to learning.",
+        "Любопытство может открыть лёгкий путь к новому опыту.",
+        "Try a small experiment when enthusiasm feels uncertain.",
+        "Попробуй небольшой эксперимент, если воодушевление пока неустойчиво."
+      ],
+      [
+        "Move with courage while keeping your purpose in view.",
+        "Двигайся смело, не теряя из виду свою цель.",
+        "Let passion settle before acting on an impulse.",
+        "Дай страсти улечься, прежде чем действовать под влиянием импульса."
+      ],
+      [
+        "Trust your presence, creativity and independence.",
+        "Доверься своей уверенности, творчеству и самостоятельности.",
+        "Reconnect with confidence without hiding vulnerability.",
+        "Вернись к уверенности, не пряча уязвимость."
+      ],
+      [
+        "Lead with a clear vision and make space for others.",
+        "Веди за собой с ясным видением и оставляй место другим.",
+        "Balance ambition with listening and a realistic pace.",
+        "Сочетай амбиции с умением слушать и реалистичным темпом."
+      ]
+    ],
+    "cups": [
+      [
+        "Make space for a fresh feeling, connection or creative impulse.",
+        "Дай место новому чувству, близости или творческому импульсу.",
+        "Attend to feelings that need care before giving more of yourself.",
+        "Позаботься о чувствах, прежде чем отдавать ещё больше себя."
+      ],
+      [
+        "Mutual respect and openness can deepen connection.",
+        "Взаимное уважение и открытость могут углубить близость.",
+        "Consider where expectations or communication feel out of balance.",
+        "Заметь, где ожидания или общение теряют равновесие."
+      ],
+      [
+        "Enjoy friendship and the support of shared moments.",
+        "Насладись дружбой и поддержкой общих моментов.",
+        "Choose connections that feel genuine rather than obligatory.",
+        "Выбирай связи, которые ощущаются искренними, а не обязательными."
+      ],
+      [
+        "A quiet pause may help you notice what you really need.",
+        "Тихая пауза может помочь понять, что тебе действительно нужно.",
+        "Look again at an opportunity you may have overlooked.",
+        "Ещё раз посмотри на возможность, которую мог не заметить."
+      ],
+      [
+        "Honor disappointment while noticing what still supports you.",
+        "Признай разочарование и заметь то, что всё ещё тебя поддерживает.",
+        "A gentle step toward acceptance can leave room for something new.",
+        "Бережный шаг к принятию может оставить место для нового."
+      ],
+      [
+        "Kind memories can remind you of simple generosity.",
+        "Тёплые воспоминания могут напомнить о простой доброте.",
+        "Let the past inform you without keeping you from the present.",
+        "Пусть прошлое помогает тебе, не удерживая от настоящего."
+      ],
+      [
+        "Many possibilities invite discernment rather than a rushed choice.",
+        "Множество возможностей приглашает к вдумчивости, а не поспешному выбору.",
+        "Bring a wish back to reality and choose what feels grounded.",
+        "Верни желание к реальности и выбери то, что имеет опору."
+      ],
+      [
+        "Consider what no longer fits and what you want to seek instead.",
+        "Подумай, что больше не подходит и что хочешь искать вместо этого.",
+        "Explore whether staying is a choice or a fear of leaving.",
+        "Исследуй, остаёшься ли ты по своему выбору или из страха уйти."
+      ],
+      [
+        "Appreciate satisfaction and the good already present.",
+        "Оцени удовлетворение и хорошее, которое уже есть рядом.",
+        "Look beyond a desired outcome to the need underneath it.",
+        "Посмотри за желаемый результат на потребность, которая за ним стоит."
+      ],
+      [
+        "Nurture belonging and the relationships that feel like home.",
+        "Поддержи чувство принадлежности и отношения, в которых тебе по-домашнему.",
+        "Let a real connection matter more than an ideal picture of happiness.",
+        "Пусть настоящая близость будет важнее идеальной картинки счастья."
+      ],
+      [
+        "Stay open to a gentle creative or emotional surprise.",
+        "Оставайся открытым к мягкому творческому или эмоциональному открытию.",
+        "Give a tender feeling room before deciding what it means.",
+        "Дай хрупкому чувству место, прежде чем решать, что оно значит."
+      ],
+      [
+        "Approach feelings and connection with sincerity and imagination.",
+        "Подходи к чувствам и близости с искренностью и воображением.",
+        "Check whether a beautiful idea is supported by real actions.",
+        "Проверь, подкреплена ли красивая идея реальными действиями."
+      ],
+      [
+        "Compassion and attentive listening can guide your response.",
+        "Сострадание и внимательное слушание могут направить твой отклик.",
+        "Include your own emotional needs in the care you offer.",
+        "Включи собственные эмоциональные потребности в заботу, которую предлагаешь."
+      ],
+      [
+        "Hold feelings with steadiness, kindness and perspective.",
+        "Отнесись к чувствам с устойчивостью, добротой и широтой взгляда.",
+        "Notice emotions being held back and express them with care.",
+        "Заметь сдерживаемые эмоции и вырази их бережно."
+      ]
+    ],
+    "swords": [
+      [
+        "A clear thought can cut through confusion and reveal a next step.",
+        "Ясная мысль может рассеять путаницу и показать следующий шаг.",
+        "Check the facts and give a forming idea time to become clear.",
+        "Проверь факты и дай зарождающейся мысли время проясниться."
+      ],
+      [
+        "Create space to consider both sides of a difficult choice.",
+        "Создай пространство, чтобы рассмотреть обе стороны трудного выбора.",
+        "Name the decision you are avoiding and what information is missing.",
+        "Назови решение, которого избегаешь, и недостающую информацию."
+      ],
+      [
+        "Acknowledge hurt honestly and make room for a kind response.",
+        "Честно признай боль и дай место бережному отклику.",
+        "Release the demand to recover on a particular schedule.",
+        "Отпусти требование прийти в себя в определённый срок."
+      ],
+      [
+        "Rest and reflection can make room for clearer thinking.",
+        "Отдых и размышление могут освободить место для ясного мышления.",
+        "Notice whether you need more rest or a gentle return to action.",
+        "Заметь, нужен ли тебе ещё отдых или мягкое возвращение к действию."
+      ],
+      [
+        "Consider the cost of conflict, not just the wish to win.",
+        "Подумай о цене конфликта, а не только о желании победить.",
+        "Choose repair or a boundary over continuing an unhelpful argument.",
+        "Выбери восстановление связи или границу вместо непродуктивного спора."
+      ],
+      [
+        "A steady transition can carry you toward a calmer place.",
+        "Постепенный переход может привести тебя к более спокойному состоянию.",
+        "Give unfinished feelings attention while taking a manageable step.",
+        "Удели внимание незавершённым чувствам и сделай посильный шаг."
+      ],
+      [
+        "Think strategically while staying honest about your intentions.",
+        "Мысли стратегически, оставаясь честным относительно своих намерений.",
+        "Bring a hidden concern into a safe, honest conversation.",
+        "Вынеси скрытую тревогу в безопасный и честный разговор."
+      ],
+      [
+        "Notice which limits are real and which may be assumptions.",
+        "Заметь, какие ограничения реальны, а какие могут быть предположениями.",
+        "Try one small choice that restores your sense of agency.",
+        "Попробуй небольшой выбор, возвращающий чувство самостоятельности."
+      ],
+      [
+        "Name a worry gently instead of treating every thought as a fact.",
+        "Бережно назови тревогу, не принимая каждую мысль за факт.",
+        "Let support and a kinder perspective interrupt a cycle of worry.",
+        "Позволь поддержке и более доброму взгляду прервать круг тревожных мыслей."
+      ],
+      [
+        "A difficult ending can mark the boundary of an old chapter.",
+        "Трудное завершение может обозначить границу старого этапа.",
+        "Make space for renewal without denying what was painful.",
+        "Дай место обновлению, не отрицая того, что было болезненным."
+      ],
+      [
+        "Ask thoughtful questions and stay curious about new information.",
+        "Задавай вдумчивые вопросы и сохраняй любопытство к новой информации.",
+        "Pause before reacting to an assumption or an unverified message.",
+        "Остановись, прежде чем реагировать на предположение или непроверенное сообщение."
+      ],
+      [
+        "Direct your determination toward a clear and considered aim.",
+        "Направь решимость к ясной и продуманной цели.",
+        "Slow a hurried response enough to notice its consequences.",
+        "Замедли поспешный отклик, чтобы заметить его последствия."
+      ],
+      [
+        "Clarity and kind boundaries can coexist.",
+        "Ясность и добрые границы могут сосуществовать.",
+        "Leave room for feeling alongside analysis and independence.",
+        "Оставь место чувствам рядом с анализом и самостоятельностью."
+      ],
+      [
+        "Use reason, fairness and clear communication to guide a choice.",
+        "Используй разум, справедливость и ясное общение для принятия решения.",
+        "Check whether certainty is leaving enough room for other perspectives.",
+        "Проверь, оставляет ли уверенность место другим точкам зрения."
+      ]
+    ],
+    "pentacles": [
+      [
+        "A practical opportunity can begin with one grounded action.",
+        "Практичная возможность может начаться с одного конкретного действия.",
+        "Look at what preparation or resources a new step needs.",
+        "Посмотри, какая подготовка или ресурсы нужны новому шагу."
+      ],
+      [
+        "Balance your priorities with flexibility rather than perfection.",
+        "Сочетай приоритеты с гибкостью, а не стремлением к совершенству.",
+        "Simplify competing demands and choose what needs attention first.",
+        "Упрости конкурирующие задачи и выбери, чему уделить внимание сначала."
+      ],
+      [
+        "Shared skills and cooperation can support meaningful progress.",
+        "Общие навыки и сотрудничество помогают значимому продвижению.",
+        "Clarify roles or ask for feedback when teamwork feels uneven.",
+        "Уточни роли или попроси обратную связь, если сотрудничество неравномерно."
+      ],
+      [
+        "Consider what helps you feel secure and what you want to protect.",
+        "Подумай, что помогает чувствовать опору и что ты хочешь защитить.",
+        "Notice where holding too tightly is limiting ease or generosity.",
+        "Заметь, где слишком сильная хватка мешает спокойствию или щедрости."
+      ],
+      [
+        "Acknowledge a difficult need and look for available support.",
+        "Признай непростую потребность и ищи доступную поддержку.",
+        "Let a small offer of help challenge the feeling of being alone.",
+        "Позволь небольшой помощи пошатнуть чувство одиночества."
+      ],
+      [
+        "Give and receive with care, dignity and balance.",
+        "Давай и принимай с заботой, достоинством и равновесием.",
+        "Check whether generosity is freely chosen or creating pressure.",
+        "Проверь, свободно ли выбрана щедрость или она создаёт давление."
+      ],
+      [
+        "Review your effort patiently and notice what is slowly growing.",
+        "Терпеливо оцени усилия и заметь то, что постепенно растёт.",
+        "Reconsider an investment of time that no longer serves your values.",
+        "Пересмотри вложение времени, которое больше не служит твоим ценностям."
+      ],
+      [
+        "Steady practice and attention to craft can deepen skill.",
+        "Постоянная практика и внимание к делу углубляют мастерство.",
+        "Balance dedication with rest and a realistic standard.",
+        "Сочетай усердие с отдыхом и реалистичной планкой."
+      ],
+      [
+        "Enjoy the independence and ease your effort has helped create.",
+        "Насладись самостоятельностью и спокойствием, созданными твоими усилиями.",
+        "Let your worth exist beyond productivity or appearances.",
+        "Пусть твоя ценность существует вне продуктивности и внешнего впечатления."
+      ],
+      [
+        "Consider the support, community and values you want to sustain.",
+        "Подумай о поддержке, сообществе и ценностях, которые хочешь сохранить.",
+        "Review inherited expectations and what lasting security means to you.",
+        "Пересмотри привычные ожидания и своё понимание долгосрочной устойчивости."
+      ],
+      [
+        "A small learning goal can turn possibility into practice.",
+        "Небольшая учебная цель может превратить возможность в практику.",
+        "Choose one manageable task when preparation becomes procrastination.",
+        "Выбери посильную задачу, когда подготовка превращается в откладывание."
+      ],
+      [
+        "Patient, consistent steps can support a dependable rhythm.",
+        "Терпеливые и последовательные шаги помогают надёжному ритму.",
+        "Make room for flexibility when routine begins to feel stuck.",
+        "Дай место гибкости, если привычный порядок начинает сковывать."
+      ],
+      [
+        "Practical care can nurture both comfort and independence.",
+        "Практичная забота поддерживает и комфорт, и самостоятельность.",
+        "Include your own rest and resources in caring for others.",
+        "Включи свой отдых и ресурсы в заботу о других."
+      ],
+      [
+        "Build steadiness through responsible, thoughtful use of resources.",
+        "Создавай устойчивость через ответственное и осознанное обращение с ресурсами.",
+        "Balance security with generosity instead of defining yourself by control.",
+        "Сочетай опору со щедростью, не определяя себя через контроль."
+      ]
+    ]
+  }
+}

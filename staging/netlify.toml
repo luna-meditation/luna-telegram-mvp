@@ -1,0 +1,40 @@
+# Used explicitly for the separate private luna-staging-itfl site only.
+# Production netlify.toml remains unchanged. No secrets or automatic migrations.
+[build]
+  publish = "frontend/dist-staging"
+
+[functions]
+  directory = "backend/staging/functions"
+  node_bundler = "esbuild"
+  included_files = ["backend/dist/tarot-catalog.json"]
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Cache-Control = "private, no-cache"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/luna-staging/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/health"
+  to = "/.netlify/functions/luna-staging/health"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/telegram/*"
+  to = "/.netlify/functions/luna-staging/telegram/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

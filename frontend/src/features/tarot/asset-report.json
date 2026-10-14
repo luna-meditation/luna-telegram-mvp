@@ -1,0 +1,715 @@
+{
+  "sourceFiles": 78,
+  "optimizedFiles": 78,
+  "sourceBytes": 202849027,
+  "optimizedBytes": 25383284,
+  "reductionPercent": 87.49,
+  "preserveResolution": true,
+  "crop": false,
+  "exifRemoved": true,
+  "originalsUnchanged": true,
+  "cards": [
+    {
+      "id": "eight-of-pentacles",
+      "image": "/assets/tarot/cards/eight-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 319178,
+      "sha256": "4c8b1e9564c16a4b752071dccd6b52f94fa9e02561a15250c5118d76b526a5d3",
+      "sourceSha256": "4ea987e0c3699cef98a95a626aa0bed27a57c042dd2af66c1c41fc00eebada95"
+    },
+    {
+      "id": "ace-of-swords",
+      "image": "/assets/tarot/cards/ace-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 246452,
+      "sha256": "f011e1dd96f17ef7cbb19ae4510aab8e9eaaa2619c632f88dd107ecbca7365dd",
+      "sourceSha256": "62624bd151abce5a322c16b7e7bc57bc7eaa65552fc45e0cf760e9457edbc651"
+    },
+    {
+      "id": "queen-of-cups",
+      "image": "/assets/tarot/cards/queen-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 292484,
+      "sha256": "1e1b026ad1349677f964586f834d9c4c3eadb9109b075f36139599ceac9fb342",
+      "sourceSha256": "3e04a3d8e5bac8088a63a472c88f2ee6114494e817318c5eda0f761f25e616c6"
+    },
+    {
+      "id": "seven-of-cups",
+      "image": "/assets/tarot/cards/seven-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 280702,
+      "sha256": "f0d3abf16cd001e6e5f57a46783c52e9aa819d40b75f74440fea53f1fbbf28d6",
+      "sourceSha256": "aab4111aff26512b849de90243b92d7d061894be2a67902427e85b1e3c14ccca"
+    },
+    {
+      "id": "three-of-wands",
+      "image": "/assets/tarot/cards/three-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 335266,
+      "sha256": "83f6b5b1031c2bc8ea15e05bf5e5c92c88ec4524da55c3b7a5707ed19836eff5",
+      "sourceSha256": "20d046f2d27bfd1086286c854b81332a0c146b54cd1ef9ba8daa51950e90cba8"
+    },
+    {
+      "id": "six-of-swords",
+      "image": "/assets/tarot/cards/six-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 217298,
+      "sha256": "39e32dcd6e9d493666daab05b3d5be38c9f60434f1a80d64a86fd5d13054aa30",
+      "sourceSha256": "81b15ebd9ad448b358d24113baee6203ec9038d11e35e7cffed729237af8275d"
+    },
+    {
+      "id": "the-empress",
+      "image": "/assets/tarot/cards/the-empress.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 409346,
+      "sha256": "c9df69b2e1007273d684a2f3f7a9150cc7e031c6614afeb8398f4e7d94b5d894",
+      "sourceSha256": "beb70729c8b7802e426e197ba4eef0d323894471eaf67a06c23b33d6479a85ab"
+    },
+    {
+      "id": "the-emperor",
+      "image": "/assets/tarot/cards/the-emperor.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 371616,
+      "sha256": "1459c86f92c4a98bdb11563100940329e4bb87578d78610d8230aae527d2265e",
+      "sourceSha256": "bc85aff05d4b389420fb3e5ab6a4732863d4a05815f51d424149544a427314ee"
+    },
+    {
+      "id": "six-of-cups",
+      "image": "/assets/tarot/cards/six-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 313346,
+      "sha256": "4fc1a9126be761bb30da45c0dac0e61615ac2f1b0b2b70bc81b75c81b7a31bca",
+      "sourceSha256": "fcd343510c0e99d9d3cee5d1d6eb2869d79ae9fe6468d358d74396d0590127bb"
+    },
+    {
+      "id": "ten-of-pentacles",
+      "image": "/assets/tarot/cards/ten-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 396556,
+      "sha256": "539332588cd8a0ad486638d92d2b92cf843449ea49f17c2c5f0e8f26168f69a3",
+      "sourceSha256": "7d3088bef33c1fa8df52d8e048c0b43d1f940252189240a9328801a8de382d44"
+    },
+    {
+      "id": "justice",
+      "image": "/assets/tarot/cards/justice.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 331198,
+      "sha256": "a6df46111b37e21acd10feb545ce39567f2b53e35745fa2561637afc61d6596b",
+      "sourceSha256": "bb59b0bfead49a92cc0bf43ed18726ac33a94973e612a9870dffd10c316404ce"
+    },
+    {
+      "id": "nine-of-wands",
+      "image": "/assets/tarot/cards/nine-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 332430,
+      "sha256": "d8dbaa22ff4e089835db3bc8802cd8b05b9259bc8bc2a4b86664b3f04420c9a2",
+      "sourceSha256": "041bed18b1150600a3e1900dbfe0229b705060c6dfbcdcb245b4d90e48464d35"
+    },
+    {
+      "id": "three-of-swords",
+      "image": "/assets/tarot/cards/three-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 256872,
+      "sha256": "9c36374e978cb0f77cf638c35eb00686c1d349df2c91643ec1a7333aa37a4b9a",
+      "sourceSha256": "d9b74e43230b46d38cf554ada2bb64e80ff4a13e54aaaace8d6d9b3899dd3866"
+    },
+    {
+      "id": "king-of-pentacles",
+      "image": "/assets/tarot/cards/king-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 392876,
+      "sha256": "1ca2dad064bd26c64d5e16ddc18fd17790f0bdd303b3e48b4e53ded60bc11b2f",
+      "sourceSha256": "062670d78975498cd8f3591f17992bccd0e351245de211c9d222c4ce785f6e1e"
+    },
+    {
+      "id": "four-of-swords",
+      "image": "/assets/tarot/cards/four-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 242660,
+      "sha256": "1b3dc01665a0b59efb71e1ed18db570c3926b984ff5991cd1e06ba3f04fdc0db",
+      "sourceSha256": "e790607904e909d7b65409174a63a6978b313bcb6af3ebec0c7a076cecd19b73"
+    },
+    {
+      "id": "ten-of-swords",
+      "image": "/assets/tarot/cards/ten-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 256602,
+      "sha256": "c1fc22712123dee30486db7aedfa8a005efab7dbc6e8f768d9710b05e5c96e0c",
+      "sourceSha256": "544403e8aa19548ec31c6bdc7b47e827c96815074b3b53a7f697232099e2d9b5"
+    },
+    {
+      "id": "four-of-wands",
+      "image": "/assets/tarot/cards/four-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 387208,
+      "sha256": "faeab211058511a90b8645fb3950e270d518196671fa095a70420d7bdb29efaa",
+      "sourceSha256": "50ffd73cbc48ca2d20fc8f9cba2ada8fc6f5fa35f6398edc2797cc61dc01de10"
+    },
+    {
+      "id": "the-world",
+      "image": "/assets/tarot/cards/the-world.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 393522,
+      "sha256": "2ec5b93e2344b1c7dc0a51c9e9b3885ada4c90fea67e614db8f82a567101eff8",
+      "sourceSha256": "e81cd763f8a2299a68697c0ab5697342d2134a7b4ff424a2d0ed5cacf8ee220f"
+    },
+    {
+      "id": "eight-of-wands",
+      "image": "/assets/tarot/cards/eight-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 289402,
+      "sha256": "2f74d1a0ea343dd70747a2233cca91f33fcc969f367cce6a305054c0fb2e343a",
+      "sourceSha256": "4af00bde189c3091b741b468e8f0853d93d24e77f568468b6da706637d066b24"
+    },
+    {
+      "id": "king-of-cups",
+      "image": "/assets/tarot/cards/king-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 309504,
+      "sha256": "e25fb58edeb3d01843199912858266f18860370b105360ce4227339bae1d7869",
+      "sourceSha256": "f226f7fd62c5cee447153809b703e40e9832159ae5b26e9a3e95db2bcd1d3123"
+    },
+    {
+      "id": "two-of-pentacles",
+      "image": "/assets/tarot/cards/two-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 334606,
+      "sha256": "7f87ea8c65c5f0e5fec71e0577e4a8d3211088ebd4e6edd63782a09873c4248e",
+      "sourceSha256": "3728bd1e93c5e3a7b5bfc67587febd8c5ee2c735b0e28bfe820f1045a511c64c"
+    },
+    {
+      "id": "the-sun",
+      "image": "/assets/tarot/cards/the-sun.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 323588,
+      "sha256": "d49e55e42febff4802504bd42b6869a5c8d981f197b88264b88c916f1c8ab469",
+      "sourceSha256": "260dc4c53a157b3c65a38d4c4365f48d2b88d5ec09536084b6a3a9f590a5c4cd"
+    },
+    {
+      "id": "knight-of-wands",
+      "image": "/assets/tarot/cards/knight-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 329478,
+      "sha256": "b621dfc77255e913e03f8e10d0800d0a4345d3fd4a811924bda1bf508c8bc46b",
+      "sourceSha256": "ca53c95d1cde13e9aeb666e3bb3e144f48fd30dcf5160b3a84b7862c173b4619"
+    },
+    {
+      "id": "ace-of-cups",
+      "image": "/assets/tarot/cards/ace-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 333970,
+      "sha256": "dedec28eba2ee37af8f57215503a2ef68c7f1ada402ddfe44447984cba9ccabd",
+      "sourceSha256": "5ad3ceee0fe4f3917bc5a22f0dc66d804d643e577a500e20595fcf45ace9f1d2"
+    },
+    {
+      "id": "five-of-pentacles",
+      "image": "/assets/tarot/cards/five-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 390700,
+      "sha256": "3bb1037fba76e04c9e164f23b930da6f6b90ad62b352c4c6bdd850c46b2120ae",
+      "sourceSha256": "78e79b9c5c15e11e09b129e1b4b67aa1c11373dec8e74655841b1c4b7aa59ada"
+    },
+    {
+      "id": "queen-of-wands",
+      "image": "/assets/tarot/cards/queen-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 331862,
+      "sha256": "977bbc8800f81c92f38ff742a17a15340ff2c3b0ba43111b95c4b1d52a613705",
+      "sourceSha256": "16e84b170084f9f3a289792490d2c71b50d72435472e54dcb07f2a7a358e8fd7"
+    },
+    {
+      "id": "temperance",
+      "image": "/assets/tarot/cards/temperance.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 335792,
+      "sha256": "560a68b34db4c50da66c9741d128751e87cfd96049a8ed2163840e61b630b901",
+      "sourceSha256": "a59203ec2dfa0987d517a81b86b9b12109703b5478f2e4641c0aefe2880322cc"
+    },
+    {
+      "id": "the-high-priestess",
+      "image": "/assets/tarot/cards/the-high-priestess.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 353414,
+      "sha256": "0dcc773482d0ae38d719ed42b90a1ce11a76ff18f52bce5e9fcf0c12cce1b0a6",
+      "sourceSha256": "8c8fadd1c3d74ae6d4cf3b36261ac3a774aab4385c989ad40bec476eb39212bd"
+    },
+    {
+      "id": "ace-of-pentacles",
+      "image": "/assets/tarot/cards/ace-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 358830,
+      "sha256": "5e5209466db5bc196c007f2b4fadb9f52e34070693f6d3ab58b2a8d1749249b9",
+      "sourceSha256": "1557191534daba4f76f993a8f4be93b1ad38b510135858cd8f68c4ef62d9c24e"
+    },
+    {
+      "id": "three-of-pentacles",
+      "image": "/assets/tarot/cards/three-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 338684,
+      "sha256": "e90cd66363a449078e93bda0f8e7bdee947a81576b44f9c7f4323188d45e568d",
+      "sourceSha256": "2a9f1cd9a1c1a13b6ebd20f54c78c2938bfd5a726f23094d99255a9694bfd423"
+    },
+    {
+      "id": "six-of-pentacles",
+      "image": "/assets/tarot/cards/six-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 371410,
+      "sha256": "c92f58787279443c828e451260758d6eda9b36ae6c716bc7a12602651b91e249",
+      "sourceSha256": "09c78bf89b29d92aba6e737e459220cd3a1844dff6c61ef84d14743c18078a27"
+    },
+    {
+      "id": "page-of-pentacles",
+      "image": "/assets/tarot/cards/page-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 360078,
+      "sha256": "f34f0982e23bd825f7ef2ea478d786f42ec7220a42227397b75cfb01069e341f",
+      "sourceSha256": "0e1bd1cb1171c0aa839e28405200fa7ad67190425702ab36ac0e5300a0862df5"
+    },
+    {
+      "id": "the-chariot",
+      "image": "/assets/tarot/cards/the-chariot.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 386288,
+      "sha256": "271e9fca90d5bc4ad54cb548a8dfd7e3dcde2f721d16934681c98f208a6032f9",
+      "sourceSha256": "c2c2f14b038cb556cd93c9d176d078d9b0b5d4bec23b29ccd37c0b943fd27b0b"
+    },
+    {
+      "id": "five-of-cups",
+      "image": "/assets/tarot/cards/five-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 276672,
+      "sha256": "bb659e758baa098bbe5de853c72b4a48a8d95de38fe271d822618664b1af9eea",
+      "sourceSha256": "6e41b9ecd814ff680eaa80545b46a8af82dbaedf521a00f0350fe273fd0bc1f2"
+    },
+    {
+      "id": "two-of-cups",
+      "image": "/assets/tarot/cards/two-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 276706,
+      "sha256": "29cdff1417b3287c2006cf5fbc7f462502c7d444f0e6f6f9c136407c59184840",
+      "sourceSha256": "cfa13448cf99a410d795818c23efee2d15533dfff239aa206f3e56abcf90ac31"
+    },
+    {
+      "id": "two-of-swords",
+      "image": "/assets/tarot/cards/two-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 240968,
+      "sha256": "47baf7f03910ff394a01026e510c4816c0eaf191896224f0716f4e14034e87c2",
+      "sourceSha256": "095ce644374bf230a3fc788371fd7908b6c20e332aa54be7230e1f8b30ffff44"
+    },
+    {
+      "id": "the-lovers",
+      "image": "/assets/tarot/cards/the-lovers.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 396952,
+      "sha256": "1dd10931c0d767b5d9e8c62f484dc22b5d5d7b957cce4e3b32c239c351f4da07",
+      "sourceSha256": "045c56839ee2108c99fa2b49f7f697c6cd5941a8e311eb7dac2f9dbf07c382be"
+    },
+    {
+      "id": "the-magician",
+      "image": "/assets/tarot/cards/the-magician.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 384508,
+      "sha256": "95da32c1cb9caaba999912f4fcedc715e558fa4e7558a9fe368a9e6b0a64da63",
+      "sourceSha256": "5f26f7a2d5b484c935bace7fd262419b5e3181c4945fd5fbd73f471811b7b9aa"
+    },
+    {
+      "id": "five-of-swords",
+      "image": "/assets/tarot/cards/five-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 233146,
+      "sha256": "53da317b7c42a7d4703bacb2a89b422cc51d5df6a484d988660bc7a963dd3bf2",
+      "sourceSha256": "009160a78f9b8ed075fb9e0bf812564ad9485d2ea2f49231c602ba7d50a2b090"
+    },
+    {
+      "id": "ace-of-wands",
+      "image": "/assets/tarot/cards/ace-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 319364,
+      "sha256": "cd6d527aa15ae50514d122d5f28e1fdd7ce034efea22390e914ee4ef1b828be0",
+      "sourceSha256": "1e08a5a7452a500035242f601425c30cb64eaae19d02ef451381aa9c2eac543a"
+    },
+    {
+      "id": "king-of-swords",
+      "image": "/assets/tarot/cards/king-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 300944,
+      "sha256": "f6459faff63c577e25bea93051ad6872d1f160992754fa51f8b32bc5019dfbd4",
+      "sourceSha256": "5fda8dd917ff76d35e3dc4b376076182a9093ec228e3b678ac27beb4b33c1b86"
+    },
+    {
+      "id": "the-moon",
+      "image": "/assets/tarot/cards/the-moon.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 332346,
+      "sha256": "49c290eaabc481ec3575ca117a153387808af40bf389b662d36918e06e46175b",
+      "sourceSha256": "fa3e66e9e1681265fff8dbc1f26015fc5bbba415140515cf8eeb2a9b2ad7bf05"
+    },
+    {
+      "id": "ten-of-cups",
+      "image": "/assets/tarot/cards/ten-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 301978,
+      "sha256": "db61366e6fb84db2fb02678229618996ae47a3576c26dc593ce0241a491cdcb7",
+      "sourceSha256": "84f334983ad83b84af00a79ae1881c390913226a24144249ed40f232a011fab8"
+    },
+    {
+      "id": "knight-of-pentacles",
+      "image": "/assets/tarot/cards/knight-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 331808,
+      "sha256": "fa712702eb99ef3d772713dae937245bd570fcb00f0ca52b8751912506b2f60e",
+      "sourceSha256": "d3a41d1b078ee2d7812bfc13ae3da530646f0fa83980e2b0ceb88c368f7474fe"
+    },
+    {
+      "id": "four-of-cups",
+      "image": "/assets/tarot/cards/four-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 276114,
+      "sha256": "ac8b0c656ea7d45b673c959058b8259b9873e0f73e10fc6e137cd8d0ae419894",
+      "sourceSha256": "5da2b200134eee077d4503a6ba47a42767c1836a9aa944ddc7b27a50775daac7"
+    },
+    {
+      "id": "seven-of-pentacles",
+      "image": "/assets/tarot/cards/seven-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 379836,
+      "sha256": "685d4dfbb7b43773c0b8a40dd52c61a88cc077e0d88557a0ace00a10b835f86b",
+      "sourceSha256": "9109f531b67847aa18b44df5c2fa1f32281c2b5c921e92d0e615125e2ff89629"
+    },
+    {
+      "id": "nine-of-swords",
+      "image": "/assets/tarot/cards/nine-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 195566,
+      "sha256": "c931cc768e087f8586e5b4caae37d8ec575766f1096897e5d1945cac884974e0",
+      "sourceSha256": "f220d73f3b0f289885bc6af53e8f11c1acfa427e4dd28e79a7b1d4780ac8e799"
+    },
+    {
+      "id": "two-of-wands",
+      "image": "/assets/tarot/cards/two-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 334246,
+      "sha256": "d55a501718e37d1da17fd6a7d0f0a383a1d46a3c97deda27ed772d8774b5938f",
+      "sourceSha256": "71800d0c63f295d1e1ab607a74a27c3e09e1bdd7df65f0824f86dbf2988843cf"
+    },
+    {
+      "id": "knight-of-cups",
+      "image": "/assets/tarot/cards/knight-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 313676,
+      "sha256": "44a3b68717ae5880d40a36aff8035ed305d66fd0a12d5d8de4b7f7216b8e9e0d",
+      "sourceSha256": "0c90996123487775303c1785d49656255850be7f69d211d8384ba2cea2afdb38"
+    },
+    {
+      "id": "the-hermit",
+      "image": "/assets/tarot/cards/the-hermit.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 349836,
+      "sha256": "cbd6b1be9e672d2f7af49b9ea21e9a490ae589021e873bc391c8432f40c4ce73",
+      "sourceSha256": "e0359c9fe14362423e510051fc522326222d41ee6eb4b20343dcb9ffe84f1d01"
+    },
+    {
+      "id": "four-of-pentacles",
+      "image": "/assets/tarot/cards/four-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 347636,
+      "sha256": "f4b01de0677357f40d46a8c81b24dd4156ba9461ad489b0a534f5968d2c829ee",
+      "sourceSha256": "15a78d9dbdbcc31f595778cb8e87069102d295c0824bc8959b4c18ada0974bdd"
+    },
+    {
+      "id": "ten-of-wands",
+      "image": "/assets/tarot/cards/ten-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 365338,
+      "sha256": "7d781642af50cc7f0b2263ba3debc4e98433c3781840a95a721b59df15d2c4d4",
+      "sourceSha256": "a4e579f27415bd3003942ed442dd78a51f8ce8e59236521bc70df7774f567823"
+    },
+    {
+      "id": "the-devil",
+      "image": "/assets/tarot/cards/the-devil.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 308214,
+      "sha256": "24aa22f49871339314068f53198f64288509964aa8df88487b9bcb21e5545076",
+      "sourceSha256": "31888d52b08390d7a46bac0e130bf29a5f59543667fe5953ed99263248c6f1c4"
+    },
+    {
+      "id": "page-of-wands",
+      "image": "/assets/tarot/cards/page-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 327914,
+      "sha256": "c0567bc638c24c43a4e34eb10b3485f540194baf8e2ada5c2ec35bbd2ff49de6",
+      "sourceSha256": "b4619f5d57e4c256a4b0df8b8ca5f977a1f5866e337878464542d3deb37d1913"
+    },
+    {
+      "id": "judgement",
+      "image": "/assets/tarot/cards/judgement.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 323068,
+      "sha256": "f0507c273e6247509e4a8d1e4f4a52b9cce356b0f1d508a69e7f74b9b59d1529",
+      "sourceSha256": "230b68f0d91c2225442c279ff0c48ecd83c25c2813c3c0c3762cd3ab6c47adda"
+    },
+    {
+      "id": "the-hierophant",
+      "image": "/assets/tarot/cards/the-hierophant.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 388280,
+      "sha256": "0bc13bc6a5bd3eb1d9c1d7f4291bc0b86b3ff7e20a0ffa9db496bc694d5c0660",
+      "sourceSha256": "24237892e7af1023317f640e16c8d0b45c6c0ccb20c238e91607b801b4823e09"
+    },
+    {
+      "id": "king-of-wands",
+      "image": "/assets/tarot/cards/king-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 320268,
+      "sha256": "cbeda8c94c4619cbe529f40a0adf3dd866cef92ce2ddc8d8fa95c39cbf1ca3c5",
+      "sourceSha256": "71dd066388a2bbb132c803b4dbace5e85ff7de8030e4fd3fb04c10003fded97e"
+    },
+    {
+      "id": "seven-of-wands",
+      "image": "/assets/tarot/cards/seven-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 304686,
+      "sha256": "7ad00b4b5adedef6e34eb155e761c94786ea1d3ffc8580290a7d62f0366d37b9",
+      "sourceSha256": "b943733b8e6b33ac41cad998ec10e114ab673cd20251e57e2df9c87abd9efc0b"
+    },
+    {
+      "id": "six-of-wands",
+      "image": "/assets/tarot/cards/six-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 314662,
+      "sha256": "fad2db7cfebbde76d0a1e9bb971c9397099b1bf24034fb953f72b24468277e17",
+      "sourceSha256": "b0c28a825165d8a1c7a0b86d44d4d8323d356778e6fdc577f4507b012a881682"
+    },
+    {
+      "id": "nine-of-cups",
+      "image": "/assets/tarot/cards/nine-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 293436,
+      "sha256": "2371032caa41e219837567b7b6f2dbfe85ab0e05e7733d397966c7f29b976100",
+      "sourceSha256": "0e2ce1ed0d27e22b0b058d04a951c387f1ad5ac4952b76a7c7ede8708e44a83d"
+    },
+    {
+      "id": "page-of-swords",
+      "image": "/assets/tarot/cards/page-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 257252,
+      "sha256": "68a76346cbc211225808c2de84782c4d6da5b94beecaf29c4585976588ac8ec9",
+      "sourceSha256": "f213662df585226d73359edaa223ca45456aa86920d022196f4f5ac2ea5b3c22"
+    },
+    {
+      "id": "the-tower",
+      "image": "/assets/tarot/cards/the-tower.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 301186,
+      "sha256": "b3f957cf3cd2c194dd0959ae76028004bf4762702f32d00bcfc89dfc25ef90b3",
+      "sourceSha256": "0b106eb281b02ba6e6236e9acf81c9d09521413fd69116aec1ff1b5dc073d0ea"
+    },
+    {
+      "id": "knight-of-swords",
+      "image": "/assets/tarot/cards/knight-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 286008,
+      "sha256": "acf499f27b231c7a3cfb4126e3812a1fb0436ea26e8ba3ce351110861952a7f4",
+      "sourceSha256": "4107ba8209e6b142b9485f854b35fa6f4f508f7681cace2a3ff58456e7670dbb"
+    },
+    {
+      "id": "the-fool",
+      "image": "/assets/tarot/cards/the-fool.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 513402,
+      "sha256": "cec6f63d576b62aed7a1ee8054d71c82d51f1c1eb4807ec1beac46b154020c4e",
+      "sourceSha256": "1ffcd09c8cba5ab2bb63ff250a9f1177ff22baa205515dc28685a7b97f3e6f31"
+    },
+    {
+      "id": "queen-of-swords",
+      "image": "/assets/tarot/cards/queen-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 292020,
+      "sha256": "d02d7af6316dd983c1eb92962501d2c20acb8dacb9584b62ecf985d1592b556e",
+      "sourceSha256": "c465ddeaad942746e659848b3336980fdc151c47ec4bdd43ba91f752b4454070"
+    },
+    {
+      "id": "strength",
+      "image": "/assets/tarot/cards/strength.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 372458,
+      "sha256": "3f4f8287a26b89376c379b8dec84914385b4ca0ed5734a189a91faaf1d9e8459",
+      "sourceSha256": "d984a0890d50f1a5acd226c0ec6335f3e4a1acf37221ef44a46bde259eb22656"
+    },
+    {
+      "id": "page-of-cups",
+      "image": "/assets/tarot/cards/page-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 272418,
+      "sha256": "1e3c8112e5aaf172ee9537d048212ce71fc2f4f7b7a643f0060460c24a06fba9",
+      "sourceSha256": "abfd50d7d692402cd6cf974e5933b95379a2d406052bd37d5a0ecd71cede0d33"
+    },
+    {
+      "id": "five-of-wands",
+      "image": "/assets/tarot/cards/five-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 379990,
+      "sha256": "09535ad0058fe01487a2ea67b1efc6877a206c9caf72b9b0f7b3e842a4f1afcd",
+      "sourceSha256": "eb90375eb7a0fbd68639e416b3d12a0099bc5b416a0c1ff621422ac1fcbeb4ae"
+    },
+    {
+      "id": "seven-of-swords",
+      "image": "/assets/tarot/cards/seven-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 221314,
+      "sha256": "f42da0341b32b9b8ecc2fcf10c0d972c12f627b967d4ee7d87720485b27596fe",
+      "sourceSha256": "26b47e7d12397e848da99ed483a9d4c106364a2f80dbe990d929d1470977d427"
+    },
+    {
+      "id": "the-star",
+      "image": "/assets/tarot/cards/the-star.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 333782,
+      "sha256": "3a707ca87e757323e6631b8b640d3c25321be924f585763b9a7f03db331e327f",
+      "sourceSha256": "15a519b2ecb6764471b0f95fa6bb61c68e03fa6fa85f5aead54dc71dbf687023"
+    },
+    {
+      "id": "eight-of-swords",
+      "image": "/assets/tarot/cards/eight-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 237398,
+      "sha256": "7763267dacb460f511396c17dcda641e5dc4d3683fe1bb7cc26eeaa537db4186",
+      "sourceSha256": "fdaa0b9c26d7348018a0dc48aa2130762d07f57142dc8b28e58080441d47b906"
+    },
+    {
+      "id": "death",
+      "image": "/assets/tarot/cards/death.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 336046,
+      "sha256": "b4695832a160492ca251bd65d017f04a1b1dc6fcffb1f69f229afbf410c13379",
+      "sourceSha256": "e6214121366a466bac78fb26b91e5095141883230bf3c59927b66db56c20c71c"
+    },
+    {
+      "id": "nine-of-pentacles",
+      "image": "/assets/tarot/cards/nine-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 396798,
+      "sha256": "b228dba2c19afdc5c5710f3440890cc7a74a7cdab6165270710f6a75b9630bf4",
+      "sourceSha256": "c0be56adb65026314d8fad49ab2c70fb84bf6a01f0cada815d018e35ac41b8c8"
+    },
+    {
+      "id": "three-of-cups",
+      "image": "/assets/tarot/cards/three-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 297270,
+      "sha256": "2e803413f7bf5807660c43aa0e5f099f8c22fe121bbf02a563a6517ddfe0656d",
+      "sourceSha256": "1faa5d5d27b381bb56d0b178459217a6b4c617909af090cdb8aa69f71642120e"
+    },
+    {
+      "id": "eight-of-cups",
+      "image": "/assets/tarot/cards/eight-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 268254,
+      "sha256": "e3b395f7d264da08a6ee18a2e590c1428618f1efeeea247d3ebad0b712a5a642",
+      "sourceSha256": "c0dc5ee767507bb0f6e7803a53f20b825bb12c4c312b2a5e189345bf9b1e929d"
+    },
+    {
+      "id": "the-hanged-man",
+      "image": "/assets/tarot/cards/the-hanged-man.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 344968,
+      "sha256": "7fc635886ba7e06e2d40c31772f82c4caafd23a0707d5fb3ef973e0b4e478e76",
+      "sourceSha256": "7568d1da5cc43833f63035e98563992bb843ebef7b71a5a681ff3fe26bb24f55"
+    },
+    {
+      "id": "wheel-of-fortune",
+      "image": "/assets/tarot/cards/wheel-of-fortune.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 429998,
+      "sha256": "c9e0d5bd227a96545bd22b1bf43a28be32cc64bc7ba6a119daf772c2309387ca",
+      "sourceSha256": "31ce6d03d2c8381590d6437844f5de22780e666bf1de368af5cf340498035d5a"
+    },
+    {
+      "id": "queen-of-pentacles",
+      "image": "/assets/tarot/cards/queen-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "bytes": 381336,
+      "sha256": "00fb140e27423d6c17bfe68611fdf3397f3c42e149b2545881fe8f58eb5b5907",
+      "sourceSha256": "ed972b1aa4dceae6dd0115d0872b827ade96408a424494bec5284ffcd03732f7"
+    }
+  ]
+}

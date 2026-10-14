@@ -6,8 +6,14 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc && vite build",
+    "build:production": "node scripts/build-production.mjs",
+    "build:staging": "node scripts/build-staging.mjs",
     "preview": "vite preview --host 0.0.0.0",
+    "preview:phase2": "node scripts/phase2-preview.mjs",
+    "preview:tarot": "node scripts/phase2-preview.mjs --tarot",
     "test": "node --test test/*.test.mjs",
+    "test:phase1-browser": "node scripts/phase1-browser-review.mjs",
+    "test:phase2-browser": "node scripts/phase2-browser-review.mjs",
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit"
   },

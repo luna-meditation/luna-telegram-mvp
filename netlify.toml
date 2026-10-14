@@ -6,6 +6,19 @@
   NODE_VERSION = "22"
   PNPM_VERSION = "9.15.0"
 
+# Only the approved frontend Tarot release. Development defaults stay disabled.
+[context.production]
+  command = "pnpm --filter @luna/frontend build:production"
+
+[context.production.environment]
+  VITE_FEATURE_NEW_NAVIGATION = "true"
+  VITE_FEATURE_TAROT_DAILY = "true"
+  VITE_FEATURE_TAROT_SPREADS = "false"
+  VITE_FEATURE_ASTROLOGY = "false"
+  VITE_FEATURE_MOON_SEEDS_WALLET_V2 = "false"
+  VITE_FEATURE_MOON_SEEDS_PURCHASES = "false"
+  VITE_FEATURE_BREATHWORK_AUDIO = "false"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"

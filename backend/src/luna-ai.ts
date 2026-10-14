@@ -4,6 +4,10 @@ import { env } from './config.js';
 import { getUserAccess, supabase, upsertUser, type TelegramUserInput } from './db.js';
 import { logBackendError } from './error-logging.js';
 import { buildLunaSystemPrompt, detectedIntents, recommendationGoals } from './luna/prompts/index.js';
+import {requestLunaResponse} from './luna/ai-provider.js';
+import {lunaModeSchema,buildModeInstructions,boundedModeContext} from './luna/modes.js';
+import {getPersonalProfile,FoundationError} from './personalization.js';
+import {permittedPersonalContext} from './personalization-policy.js';
 import {
   memoryCandidateSchema,
   memoryCategories,
@@ -90,6 +94,8 @@ const tolerantModelResultSchema = z.object({
 });
 
 export const lunaChatInputSchema = z.object({
+  mode:lunaModeSchema.optional(),
+  readingId:z.string().uuid().optional(),
   conversationId: z.string().uuid().optional(),
   message: z.string().trim().min(1).max(env.AI_MAX_MESSAGE_LENGTH),
   language: languageSchema,
@@ -401,9 +407,9 @@ function classifyOpenAiHttpError(status: number, body: string, context?: { teleg
 
 let providerHealthCache: { expiresAt: number; value: { available: boolean; enabled: boolean; model: string; errorClass: string | null } } | null = null;
 
-export async function getLunaProviderHealth(context: { requestId?: string; telegramId?: number } = {}) {
+export async function getLunaProviderHealth(context: { requestId?: string; telegramId?: number; stagingTarot?: boolean } = {}) {
   const base = { enabled: env.AI_CHAT_ENABLED, model: env.AI_CHAT_MODEL };
-  if (!env.AI_CHAT_ENABLED) return { ...base, available: false, errorClass: 'disabled' };
+  if (!env.AI_CHAT_ENABLED && !(env.STAGING_MODE && env.FEATURE_TAROT_AI && context.stagingTarot)) return { ...base, available: false, errorClass: 'disabled' };
   if (!env.OPENAI_API_KEY) return { ...base, available: false, errorClass: 'missing_api_key' };
   if (providerHealthCache && providerHealthCache.expiresAt > Date.now()) return providerHealthCache.value;
 
@@ -573,12 +579,16 @@ export function buildLunaOpenAiRequest(input: {
   recent: Array<{ role: string; content: string }>;
   maxOutputTokens?: number;
 }) {
+  const context=input.context as {modeContext?:{mode:unknown;personalContext?:unknown;readingContext?:unknown}}|null;
+  const selected=lunaModeSchema.safeParse(context?.modeContext?.mode);
+  const mode=env.FEATURE_AI_MODES&&selected.success?selected.data:null;
+  const modeContext=mode?boundedModeContext(context?.modeContext):null;
   return {
     model: env.AI_CHAT_MODEL,
     store: false,
     reasoning: { effort: env.AI_REASONING_EFFORT },
-    instructions: systemPrompt(input.language, JSON.stringify(input.catalog), JSON.stringify(input.context)),
-    input: input.recent.map((message) => ({ role: message.role, content: message.content })),
+    instructions: mode?systemPrompt(input.language,JSON.stringify(input.catalog.slice(0,8)),JSON.stringify(modeContext))+'\n\n'+buildModeInstructions(mode,input.language,modeContext):systemPrompt(input.language, JSON.stringify(input.catalog), JSON.stringify(input.context)),
+    input: (mode?input.recent.slice(-8):input.recent).map((message,index,array) => ({ role: message.role, content: mode?message.content.slice(0,index===array.length-1?2000:1000):message.content })),
     max_output_tokens: input.maxOutputTokens ?? env.AI_MAX_OUTPUT_TOKENS,
     text: lunaStructuredTextFormat()
   };
@@ -603,12 +613,7 @@ async function callOpenAiResponses(input: {
 
   let response: Response;
   try {
-    response = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      signal: input.signal,
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${env.OPENAI_API_KEY}` },
-      body: JSON.stringify(input.requestBody)
-    });
+    response = await requestLunaResponse(input.requestBody,input.signal);
   } catch (error) {
     logBackendError(error, { endpoint: 'POST https://api.openai.com/v1/responses', telegramId: input.telegramId, requestId: input.requestId });
     if (error instanceof Error && error.name === 'AbortError') throw error;
@@ -896,6 +901,16 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
   const input = lunaChatInputSchema.parse(rawInput);
   let responseLanguage = resolveResponseLanguage(input.message, input.language);
   const telegramId = user.telegram_id;
+  if(input.mode&&!env.FEATURE_AI_MODES)throw new FoundationError(503,'mode_disabled','This Luna mode is not enabled.');
+  if(input.mode==='astrology')throw new FoundationError(503,'astrology_unavailable','Calculated astrology is not available yet.');
+  const personal=input.mode&&env.FEATURE_PERSONALIZATION?permittedPersonalContext(await getPersonalProfile(telegramId)):null;
+  let readingContext:unknown=null;
+  if(input.readingId){
+    if(!env.FEATURE_TAROT_HISTORY||input.mode!=='tarot')throw new FoundationError(503,'reading_context_unavailable','Reading context is unavailable.');
+    const {data,error}=await supabase.from('luna_tarot_readings').select('card_id,orientation,intention,question,language,interpretation').eq('id',input.readingId).eq('telegram_id',telegramId).maybeSingle();
+    if(error||!data)throw new FoundationError(404,'reading_not_found','Reading not found.');
+    readingContext=data;
+  }
 
   await upsertUser(user);
   await pruneExpiredLunaConversations(telegramId, input.conversationId);
@@ -982,6 +997,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     }
 
     const { recent, context, catalog, memoryEnabled, pendingState, conversationState } = await loadContext(telegramId, resolvedConversationId, input.message);
+    const allowMeditationActions = !input.mode || input.mode === 'meditation';
     responseLanguage = resolveResponseLanguage(input.message, input.language, recent);
     console.info('[Luna AI pending state loaded]', {
       user: userHash(telegramId),
@@ -1038,11 +1054,11 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     const validatedIntentMeditation = intentResolution.meditationId
       ? catalogForPolicy.find((item) => item.id === intentResolution.meditationId && item.published !== false)?.id ?? null
       : null;
-    const latestMood = typeof context.latestCheckin === 'object' && context.latestCheckin
+    const latestMood = (!input.mode || personal !== null) && typeof context.latestCheckin === 'object' && context.latestCheckin
       && 'mood' in context.latestCheckin && typeof context.latestCheckin.mood === 'string'
       ? context.latestCheckin.mood
       : null;
-    const memorySignals = context.memories.map((memory) => memory.memory_value);
+    const memorySignals = !input.mode ? context.memories.map((memory) => memory.memory_value) : personal?.preferences ? [personal.preferences] : [];
     const runtimeRecommendation = intentResolution.action === 'recommend_meditation' && !resolvedPendingMeditation && !validatedIntentMeditation
       ? rankMeditationRecommendation({
         message: input.message,
@@ -1061,7 +1077,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       ?? validatedIntentMeditation
       ?? runtimeRecommendation?.meditationId
       ?? null;
-    const directActionMeditationId = resolvedRuntimeMeditation && (
+    const directActionMeditationId = allowMeditationActions && resolvedRuntimeMeditation && (
       Boolean(resolvedPendingMeditation)
       || intentResolution.action === 'open_meditation'
       || intentResolution.action === 'recommend_meditation'
@@ -1107,6 +1123,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     });
     const modelContext = {
       ...context,
+      ...(input.mode?{modeContext:{mode:input.mode,personalContext:personal,readingContext}}:{}),
       userGoals: Array.isArray(context.profile?.goals) ? context.profile.goals : [],
       runtimeDecision: intentResolution,
       runtimeRecommendation: runtimeRecommendation ? {
@@ -1343,9 +1360,9 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
         catalogSize: catalogForPolicy.length
       });
     }
-    const recommendationRequested = effectiveExplicitRequest || Boolean(parsed.meditationAction) || (
+    const recommendationRequested = allowMeditationActions && (effectiveExplicitRequest || Boolean(parsed.meditationAction) || (
       parsed.recommendationIntent.needed && !recentAssistantRecommendations.slice(-3).some(Boolean)
-    );
+    ));
     const finalRecommendationDecision = directActionMeditationId
       ? runtimeRecommendation ?? {
         meditationId: directActionMeditationId,
@@ -1393,6 +1410,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       });
     }
     const actionFailed = Boolean(parsed.meditationAction) && !validatedAction;
+    if (!allowMeditationActions) recommendedMeditationId = null;
     console.info('[Luna AI resolved meditation]', {
       user: userHash(telegramId),
       requestId: input.requestId,
@@ -1528,7 +1546,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     }).eq('id', resolvedConversationId).eq('telegram_id', telegramId);
     if (conversationError) throw conversationError;
 
-    if (memoryEnabled && userMessage?.id) await saveMemories(telegramId, resolvedConversationId, userMessage.id, parsed.memoryCandidates, input.message);
+    if (memoryEnabled && !input.mode && userMessage?.id) await saveMemories(telegramId, resolvedConversationId, userMessage.id, parsed.memoryCandidates, input.message);
     await saveUsage({
       telegramId,
       conversationId: resolvedConversationId,

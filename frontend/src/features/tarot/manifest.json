@@ -1,0 +1,1177 @@
+{
+  "schemaVersion": 1,
+  "cardCount": 78,
+  "numberConvention": "Major: 0–21 (Strength VIII, Justice XI); Minor: Ace 1 through Ten 10, Page 11, Knight 12, Queen 13, King 14. Court numbers are sort ranks, not printed numerals.",
+  "cards": [
+    {
+      "id": "the-fool",
+      "name": {
+        "en": "The Fool",
+        "ru": "Шут"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 0,
+      "rank": null,
+      "image": "/assets/tarot/cards/the-fool.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "C42E9C0D-B29B-4E74-9B11-7C8B27261D91.PNG"
+    },
+    {
+      "id": "the-magician",
+      "name": {
+        "en": "The Magician",
+        "ru": "Маг"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 1,
+      "rank": null,
+      "image": "/assets/tarot/cards/the-magician.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "6FBD4305-1046-44D6-B1ED-CD2ACCFEA4C5.PNG"
+    },
+    {
+      "id": "the-high-priestess",
+      "name": {
+        "en": "The High Priestess",
+        "ru": "Верховная Жрица"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 2,
+      "rank": null,
+      "image": "/assets/tarot/cards/the-high-priestess.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "53CF446D-40F0-4503-BEB0-41B43299280B.PNG"
+    },
+    {
+      "id": "the-empress",
+      "name": {
+        "en": "The Empress",
+        "ru": "Императрица"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 3,
+      "rank": null,
+      "image": "/assets/tarot/cards/the-empress.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "106DAF54-E3C1-4C6B-AF7B-53DFEABE09E2.PNG"
+    },
+    {
+      "id": "the-emperor",
+      "name": {
+        "en": "The Emperor",
+        "ru": "Император"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 4,
+      "rank": null,
+      "image": "/assets/tarot/cards/the-emperor.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "135930D1-3F9F-47E7-88A5-D5750A633AEA.PNG"
+    },
+    {
+      "id": "the-hierophant",
+      "name": {
+        "en": "The Hierophant",
+        "ru": "Иерофант"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 5,
+      "rank": null,
+      "image": "/assets/tarot/cards/the-hierophant.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "A61799C7-0617-4E33-A55C-0770B594DAE7.PNG"
+    },
+    {
+      "id": "the-lovers",
+      "name": {
+        "en": "The Lovers",
+        "ru": "Влюблённые"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 6,
+      "rank": null,
+      "image": "/assets/tarot/cards/the-lovers.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "6E00CA7B-E408-43DD-AA9C-48F8A6DB31F5.PNG"
+    },
+    {
+      "id": "the-chariot",
+      "name": {
+        "en": "The Chariot",
+        "ru": "Колесница"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 7,
+      "rank": null,
+      "image": "/assets/tarot/cards/the-chariot.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "5987FE15-4388-485E-852C-A3A0A2E0C9B6.PNG"
+    },
+    {
+      "id": "strength",
+      "name": {
+        "en": "Strength",
+        "ru": "Сила"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 8,
+      "rank": null,
+      "image": "/assets/tarot/cards/strength.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "CA81BCC8-6B3E-46F0-B4C7-2F701C949702.PNG"
+    },
+    {
+      "id": "the-hermit",
+      "name": {
+        "en": "The Hermit",
+        "ru": "Отшельник"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 9,
+      "rank": null,
+      "image": "/assets/tarot/cards/the-hermit.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "953F75CD-E3AC-421D-9E00-C9BDA8C067F7.PNG"
+    },
+    {
+      "id": "wheel-of-fortune",
+      "name": {
+        "en": "Wheel of Fortune",
+        "ru": "Колесо Фортуны"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 10,
+      "rank": null,
+      "image": "/assets/tarot/cards/wheel-of-fortune.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "F26A46FA-8396-49D6-8A7B-F96774FB1938.PNG"
+    },
+    {
+      "id": "justice",
+      "name": {
+        "en": "Justice",
+        "ru": "Справедливость"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 11,
+      "rank": null,
+      "image": "/assets/tarot/cards/justice.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "1BA4BEBC-CAE2-4EC0-9A0B-D3DA559E0EA1.PNG"
+    },
+    {
+      "id": "the-hanged-man",
+      "name": {
+        "en": "The Hanged Man",
+        "ru": "Повешенный"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 12,
+      "rank": null,
+      "image": "/assets/tarot/cards/the-hanged-man.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "EF6FE07F-410E-4985-91FA-D5C2F420FBA3.PNG"
+    },
+    {
+      "id": "death",
+      "name": {
+        "en": "Death",
+        "ru": "Смерть"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 13,
+      "rank": null,
+      "image": "/assets/tarot/cards/death.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "E4BA9928-041D-488F-94BE-4AC754818ED5.PNG"
+    },
+    {
+      "id": "temperance",
+      "name": {
+        "en": "Temperance",
+        "ru": "Умеренность"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 14,
+      "rank": null,
+      "image": "/assets/tarot/cards/temperance.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "52CD1638-80D2-447D-AF88-10C18BFC4326.PNG"
+    },
+    {
+      "id": "the-devil",
+      "name": {
+        "en": "The Devil",
+        "ru": "Дьявол"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 15,
+      "rank": null,
+      "image": "/assets/tarot/cards/the-devil.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "9B3DCB74-5FBD-4F5F-93B8-DDCAF116F123.PNG"
+    },
+    {
+      "id": "the-tower",
+      "name": {
+        "en": "The Tower",
+        "ru": "Башня"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 16,
+      "rank": null,
+      "image": "/assets/tarot/cards/the-tower.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "B89C964A-D303-45C6-9659-BA0C5517B793.PNG"
+    },
+    {
+      "id": "the-star",
+      "name": {
+        "en": "The Star",
+        "ru": "Звезда"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 17,
+      "rank": null,
+      "image": "/assets/tarot/cards/the-star.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "D6C2285F-525F-4E33-91EE-970718115D94.PNG"
+    },
+    {
+      "id": "the-moon",
+      "name": {
+        "en": "The Moon",
+        "ru": "Луна"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 18,
+      "rank": null,
+      "image": "/assets/tarot/cards/the-moon.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "7F13EF22-B085-4D83-AFB9-681BA8D2029A.PNG"
+    },
+    {
+      "id": "the-sun",
+      "name": {
+        "en": "The Sun",
+        "ru": "Солнце"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 19,
+      "rank": null,
+      "image": "/assets/tarot/cards/the-sun.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "40C95F5F-7161-4230-BF2D-3B4AC12F052E.PNG"
+    },
+    {
+      "id": "judgement",
+      "name": {
+        "en": "Judgement",
+        "ru": "Суд"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 20,
+      "rank": null,
+      "image": "/assets/tarot/cards/judgement.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "A1BF6431-C16E-4FB7-86FB-68B5F4584CB0.PNG"
+    },
+    {
+      "id": "the-world",
+      "name": {
+        "en": "The World",
+        "ru": "Мир"
+      },
+      "arcana": "major",
+      "suit": null,
+      "number": 21,
+      "rank": null,
+      "image": "/assets/tarot/cards/the-world.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "299AF44E-0F35-47CB-B416-C8334B708285.PNG"
+    },
+    {
+      "id": "ace-of-wands",
+      "name": {
+        "en": "Ace of Wands",
+        "ru": "Туз жезлов"
+      },
+      "arcana": "minor",
+      "suit": "wands",
+      "number": 1,
+      "rank": "ace",
+      "image": "/assets/tarot/cards/ace-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "731FC2E0-740D-4F2E-B8D1-E376C433A720.PNG"
+    },
+    {
+      "id": "two-of-wands",
+      "name": {
+        "en": "Two of Wands",
+        "ru": "Двойка жезлов"
+      },
+      "arcana": "minor",
+      "suit": "wands",
+      "number": 2,
+      "rank": "two",
+      "image": "/assets/tarot/cards/two-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "9238F1C0-F74A-4FBC-90FC-7DF70C1FCE08.PNG"
+    },
+    {
+      "id": "three-of-wands",
+      "name": {
+        "en": "Three of Wands",
+        "ru": "Тройка жезлов"
+      },
+      "arcana": "minor",
+      "suit": "wands",
+      "number": 3,
+      "rank": "three",
+      "image": "/assets/tarot/cards/three-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "093819DC-F53C-423F-B420-9A709DFCA68A.PNG"
+    },
+    {
+      "id": "four-of-wands",
+      "name": {
+        "en": "Four of Wands",
+        "ru": "Четвёрка жезлов"
+      },
+      "arcana": "minor",
+      "suit": "wands",
+      "number": 4,
+      "rank": "four",
+      "image": "/assets/tarot/cards/four-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "298E6EC6-D2AF-4556-8DED-F2D55292FDE4.PNG"
+    },
+    {
+      "id": "five-of-wands",
+      "name": {
+        "en": "Five of Wands",
+        "ru": "Пятёрка жезлов"
+      },
+      "arcana": "minor",
+      "suit": "wands",
+      "number": 5,
+      "rank": "five",
+      "image": "/assets/tarot/cards/five-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "CFDA0023-EE05-481A-BFB3-C6DC422B90F5.PNG"
+    },
+    {
+      "id": "six-of-wands",
+      "name": {
+        "en": "Six of Wands",
+        "ru": "Шестёрка жезлов"
+      },
+      "arcana": "minor",
+      "suit": "wands",
+      "number": 6,
+      "rank": "six",
+      "image": "/assets/tarot/cards/six-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "ADCB4711-57CB-47A8-B691-6A07FA830B1C.PNG"
+    },
+    {
+      "id": "seven-of-wands",
+      "name": {
+        "en": "Seven of Wands",
+        "ru": "Семёрка жезлов"
+      },
+      "arcana": "minor",
+      "suit": "wands",
+      "number": 7,
+      "rank": "seven",
+      "image": "/assets/tarot/cards/seven-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "ADAE96B7-0DA2-4950-80AE-7E01BFDC9023.PNG"
+    },
+    {
+      "id": "eight-of-wands",
+      "name": {
+        "en": "Eight of Wands",
+        "ru": "Восьмёрка жезлов"
+      },
+      "arcana": "minor",
+      "suit": "wands",
+      "number": 8,
+      "rank": "eight",
+      "image": "/assets/tarot/cards/eight-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "363FD07B-9572-4246-A1A6-817E9D3D9F37.PNG"
+    },
+    {
+      "id": "nine-of-wands",
+      "name": {
+        "en": "Nine of Wands",
+        "ru": "Девятка жезлов"
+      },
+      "arcana": "minor",
+      "suit": "wands",
+      "number": 9,
+      "rank": "nine",
+      "image": "/assets/tarot/cards/nine-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "1E708C7B-8B33-4541-9BF8-D603416F4CC8.PNG"
+    },
+    {
+      "id": "ten-of-wands",
+      "name": {
+        "en": "Ten of Wands",
+        "ru": "Десятка жезлов"
+      },
+      "arcana": "minor",
+      "suit": "wands",
+      "number": 10,
+      "rank": "ten",
+      "image": "/assets/tarot/cards/ten-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "9A7A4996-2C45-4C0C-B15A-E15658573345.PNG"
+    },
+    {
+      "id": "page-of-wands",
+      "name": {
+        "en": "Page of Wands",
+        "ru": "Паж жезлов"
+      },
+      "arcana": "minor",
+      "suit": "wands",
+      "number": 11,
+      "rank": "page",
+      "image": "/assets/tarot/cards/page-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "9ED720A7-4A58-44B0-97AA-C4A6714F2349.PNG"
+    },
+    {
+      "id": "knight-of-wands",
+      "name": {
+        "en": "Knight of Wands",
+        "ru": "Рыцарь жезлов"
+      },
+      "arcana": "minor",
+      "suit": "wands",
+      "number": 12,
+      "rank": "knight",
+      "image": "/assets/tarot/cards/knight-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "44B50DEF-B3D9-44C6-82CF-CB7CB8167116.PNG"
+    },
+    {
+      "id": "queen-of-wands",
+      "name": {
+        "en": "Queen of Wands",
+        "ru": "Королева жезлов"
+      },
+      "arcana": "minor",
+      "suit": "wands",
+      "number": 13,
+      "rank": "queen",
+      "image": "/assets/tarot/cards/queen-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "4F35734F-121D-4A52-8F71-2A254BF1847B.PNG"
+    },
+    {
+      "id": "king-of-wands",
+      "name": {
+        "en": "King of Wands",
+        "ru": "Король жезлов"
+      },
+      "arcana": "minor",
+      "suit": "wands",
+      "number": 14,
+      "rank": "king",
+      "image": "/assets/tarot/cards/king-of-wands.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "A8BE38DE-DD36-402B-A796-47CC200F2E06.PNG"
+    },
+    {
+      "id": "ace-of-cups",
+      "name": {
+        "en": "Ace of Cups",
+        "ru": "Туз кубков"
+      },
+      "arcana": "minor",
+      "suit": "cups",
+      "number": 1,
+      "rank": "ace",
+      "image": "/assets/tarot/cards/ace-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "4CA1587D-412A-4A89-8670-135235FC6614.PNG"
+    },
+    {
+      "id": "two-of-cups",
+      "name": {
+        "en": "Two of Cups",
+        "ru": "Двойка кубков"
+      },
+      "arcana": "minor",
+      "suit": "cups",
+      "number": 2,
+      "rank": "two",
+      "image": "/assets/tarot/cards/two-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "65688B6B-5ACE-44D3-939A-A9822A40F15B.PNG"
+    },
+    {
+      "id": "three-of-cups",
+      "name": {
+        "en": "Three of Cups",
+        "ru": "Тройка кубков"
+      },
+      "arcana": "minor",
+      "suit": "cups",
+      "number": 3,
+      "rank": "three",
+      "image": "/assets/tarot/cards/three-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "E7055E94-A2C9-411C-BDCC-0D55F4A003AE.PNG"
+    },
+    {
+      "id": "four-of-cups",
+      "name": {
+        "en": "Four of Cups",
+        "ru": "Четвёрка кубков"
+      },
+      "arcana": "minor",
+      "suit": "cups",
+      "number": 4,
+      "rank": "four",
+      "image": "/assets/tarot/cards/four-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "875C24FA-AB19-4C8C-AFB1-CE8D8F5D30FA.PNG"
+    },
+    {
+      "id": "five-of-cups",
+      "name": {
+        "en": "Five of Cups",
+        "ru": "Пятёрка кубков"
+      },
+      "arcana": "minor",
+      "suit": "cups",
+      "number": 5,
+      "rank": "five",
+      "image": "/assets/tarot/cards/five-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "64EF5666-D99E-46AA-AB0F-25316249A608.PNG"
+    },
+    {
+      "id": "six-of-cups",
+      "name": {
+        "en": "Six of Cups",
+        "ru": "Шестёрка кубков"
+      },
+      "arcana": "minor",
+      "suit": "cups",
+      "number": 6,
+      "rank": "six",
+      "image": "/assets/tarot/cards/six-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "1A5E8A3B-DD98-451C-9C33-4C2D3E917CC8.PNG"
+    },
+    {
+      "id": "seven-of-cups",
+      "name": {
+        "en": "Seven of Cups",
+        "ru": "Семёрка кубков"
+      },
+      "arcana": "minor",
+      "suit": "cups",
+      "number": 7,
+      "rank": "seven",
+      "image": "/assets/tarot/cards/seven-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "07C618A3-4BE7-4155-B7F7-6E001BC1F53D.PNG"
+    },
+    {
+      "id": "eight-of-cups",
+      "name": {
+        "en": "Eight of Cups",
+        "ru": "Восьмёрка кубков"
+      },
+      "arcana": "minor",
+      "suit": "cups",
+      "number": 8,
+      "rank": "eight",
+      "image": "/assets/tarot/cards/eight-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "EAA2BD5F-13CC-4635-AF18-FDE2F0F8AB5B.PNG"
+    },
+    {
+      "id": "nine-of-cups",
+      "name": {
+        "en": "Nine of Cups",
+        "ru": "Девятка кубков"
+      },
+      "arcana": "minor",
+      "suit": "cups",
+      "number": 9,
+      "rank": "nine",
+      "image": "/assets/tarot/cards/nine-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "B405C36D-D09E-47CE-8315-F9D37E3E497F.PNG"
+    },
+    {
+      "id": "ten-of-cups",
+      "name": {
+        "en": "Ten of Cups",
+        "ru": "Десятка кубков"
+      },
+      "arcana": "minor",
+      "suit": "cups",
+      "number": 10,
+      "rank": "ten",
+      "image": "/assets/tarot/cards/ten-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "7F7BDA93-5933-473C-9836-7F99897BFC97.PNG"
+    },
+    {
+      "id": "page-of-cups",
+      "name": {
+        "en": "Page of Cups",
+        "ru": "Паж кубков"
+      },
+      "arcana": "minor",
+      "suit": "cups",
+      "number": 11,
+      "rank": "page",
+      "image": "/assets/tarot/cards/page-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "CF69058C-7998-41E7-8EA1-19E684E88681.PNG"
+    },
+    {
+      "id": "knight-of-cups",
+      "name": {
+        "en": "Knight of Cups",
+        "ru": "Рыцарь кубков"
+      },
+      "arcana": "minor",
+      "suit": "cups",
+      "number": 12,
+      "rank": "knight",
+      "image": "/assets/tarot/cards/knight-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "925135C6-0F0E-4F12-BB0A-28D18146A38D.PNG"
+    },
+    {
+      "id": "queen-of-cups",
+      "name": {
+        "en": "Queen of Cups",
+        "ru": "Королева кубков"
+      },
+      "arcana": "minor",
+      "suit": "cups",
+      "number": 13,
+      "rank": "queen",
+      "image": "/assets/tarot/cards/queen-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "07463B20-7A78-49B7-9664-551CDF6ABBBA.PNG"
+    },
+    {
+      "id": "king-of-cups",
+      "name": {
+        "en": "King of Cups",
+        "ru": "Король кубков"
+      },
+      "arcana": "minor",
+      "suit": "cups",
+      "number": 14,
+      "rank": "king",
+      "image": "/assets/tarot/cards/king-of-cups.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "387B1519-E6EB-4B92-A3FC-B4AAFCC9749B.PNG"
+    },
+    {
+      "id": "ace-of-swords",
+      "name": {
+        "en": "Ace of Swords",
+        "ru": "Туз мечей"
+      },
+      "arcana": "minor",
+      "suit": "swords",
+      "number": 1,
+      "rank": "ace",
+      "image": "/assets/tarot/cards/ace-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "043FB4D3-24A8-4876-8D2E-05C0F14ED582.PNG"
+    },
+    {
+      "id": "two-of-swords",
+      "name": {
+        "en": "Two of Swords",
+        "ru": "Двойка мечей"
+      },
+      "arcana": "minor",
+      "suit": "swords",
+      "number": 2,
+      "rank": "two",
+      "image": "/assets/tarot/cards/two-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "6596D138-DC4E-487F-A2DF-3F0DDCBAEF48.PNG"
+    },
+    {
+      "id": "three-of-swords",
+      "name": {
+        "en": "Three of Swords",
+        "ru": "Тройка мечей"
+      },
+      "arcana": "minor",
+      "suit": "swords",
+      "number": 3,
+      "rank": "three",
+      "image": "/assets/tarot/cards/three-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "1F71DC4F-A242-4B50-88DC-A2FD7A2DC3BD.PNG"
+    },
+    {
+      "id": "four-of-swords",
+      "name": {
+        "en": "Four of Swords",
+        "ru": "Четвёрка мечей"
+      },
+      "arcana": "minor",
+      "suit": "swords",
+      "number": 4,
+      "rank": "four",
+      "image": "/assets/tarot/cards/four-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "2195EE2D-C94C-43C1-A3B5-E11FD8EA5347.PNG"
+    },
+    {
+      "id": "five-of-swords",
+      "name": {
+        "en": "Five of Swords",
+        "ru": "Пятёрка мечей"
+      },
+      "arcana": "minor",
+      "suit": "swords",
+      "number": 5,
+      "rank": "five",
+      "image": "/assets/tarot/cards/five-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "71481972-EB3C-4113-848F-1C29C80B5DBB.PNG"
+    },
+    {
+      "id": "six-of-swords",
+      "name": {
+        "en": "Six of Swords",
+        "ru": "Шестёрка мечей"
+      },
+      "arcana": "minor",
+      "suit": "swords",
+      "number": 6,
+      "rank": "six",
+      "image": "/assets/tarot/cards/six-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "0FB10D27-44FE-4849-A6B4-5092F8E4EE07.PNG"
+    },
+    {
+      "id": "seven-of-swords",
+      "name": {
+        "en": "Seven of Swords",
+        "ru": "Семёрка мечей"
+      },
+      "arcana": "minor",
+      "suit": "swords",
+      "number": 7,
+      "rank": "seven",
+      "image": "/assets/tarot/cards/seven-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "D42EF9E4-397B-423C-9DC2-A8011AA0E296.PNG"
+    },
+    {
+      "id": "eight-of-swords",
+      "name": {
+        "en": "Eight of Swords",
+        "ru": "Восьмёрка мечей"
+      },
+      "arcana": "minor",
+      "suit": "swords",
+      "number": 8,
+      "rank": "eight",
+      "image": "/assets/tarot/cards/eight-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "DA4C95E0-E91B-4573-A00B-7DFB4979F79D.PNG"
+    },
+    {
+      "id": "nine-of-swords",
+      "name": {
+        "en": "Nine of Swords",
+        "ru": "Девятка мечей"
+      },
+      "arcana": "minor",
+      "suit": "swords",
+      "number": 9,
+      "rank": "nine",
+      "image": "/assets/tarot/cards/nine-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "8FEE5B9E-8F18-4084-BB8D-C5717A21B67E.PNG"
+    },
+    {
+      "id": "ten-of-swords",
+      "name": {
+        "en": "Ten of Swords",
+        "ru": "Десятка мечей"
+      },
+      "arcana": "minor",
+      "suit": "swords",
+      "number": 10,
+      "rank": "ten",
+      "image": "/assets/tarot/cards/ten-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "2409B94F-B745-46D9-9D78-3FB9D93059C2.PNG"
+    },
+    {
+      "id": "page-of-swords",
+      "name": {
+        "en": "Page of Swords",
+        "ru": "Паж мечей"
+      },
+      "arcana": "minor",
+      "suit": "swords",
+      "number": 11,
+      "rank": "page",
+      "image": "/assets/tarot/cards/page-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "B4104C5F-D6BD-4759-905B-4CE5C3445B76.PNG"
+    },
+    {
+      "id": "knight-of-swords",
+      "name": {
+        "en": "Knight of Swords",
+        "ru": "Рыцарь мечей"
+      },
+      "arcana": "minor",
+      "suit": "swords",
+      "number": 12,
+      "rank": "knight",
+      "image": "/assets/tarot/cards/knight-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "B9E9424E-9055-410F-927E-80ACF56BA9EC.PNG"
+    },
+    {
+      "id": "queen-of-swords",
+      "name": {
+        "en": "Queen of Swords",
+        "ru": "Королева мечей"
+      },
+      "arcana": "minor",
+      "suit": "swords",
+      "number": 13,
+      "rank": "queen",
+      "image": "/assets/tarot/cards/queen-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "C7CB8AD4-880A-4A55-9AFE-4A4EE6FBA29E.PNG"
+    },
+    {
+      "id": "king-of-swords",
+      "name": {
+        "en": "King of Swords",
+        "ru": "Король мечей"
+      },
+      "arcana": "minor",
+      "suit": "swords",
+      "number": 14,
+      "rank": "king",
+      "image": "/assets/tarot/cards/king-of-swords.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "763727CD-5A19-4C71-B20E-83DC2D97C060.PNG"
+    },
+    {
+      "id": "ace-of-pentacles",
+      "name": {
+        "en": "Ace of Pentacles",
+        "ru": "Туз пентаклей"
+      },
+      "arcana": "minor",
+      "suit": "pentacles",
+      "number": 1,
+      "rank": "ace",
+      "image": "/assets/tarot/cards/ace-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "55FBB873-14C4-4C1F-87B9-0EDFCD310C3B.PNG"
+    },
+    {
+      "id": "two-of-pentacles",
+      "name": {
+        "en": "Two of Pentacles",
+        "ru": "Двойка пентаклей"
+      },
+      "arcana": "minor",
+      "suit": "pentacles",
+      "number": 2,
+      "rank": "two",
+      "image": "/assets/tarot/cards/two-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "3C6866A4-7CE7-4239-B5A0-E470968BE2C1.PNG"
+    },
+    {
+      "id": "three-of-pentacles",
+      "name": {
+        "en": "Three of Pentacles",
+        "ru": "Тройка пентаклей"
+      },
+      "arcana": "minor",
+      "suit": "pentacles",
+      "number": 3,
+      "rank": "three",
+      "image": "/assets/tarot/cards/three-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "5731E252-53D7-482E-8B9E-1E0DD9AAA38B.PNG"
+    },
+    {
+      "id": "four-of-pentacles",
+      "name": {
+        "en": "Four of Pentacles",
+        "ru": "Четвёрка пентаклей"
+      },
+      "arcana": "minor",
+      "suit": "pentacles",
+      "number": 4,
+      "rank": "four",
+      "image": "/assets/tarot/cards/four-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "9A68EB22-512A-4FB7-B2BB-3482240D89D6.PNG"
+    },
+    {
+      "id": "five-of-pentacles",
+      "name": {
+        "en": "Five of Pentacles",
+        "ru": "Пятёрка пентаклей"
+      },
+      "arcana": "minor",
+      "suit": "pentacles",
+      "number": 5,
+      "rank": "five",
+      "image": "/assets/tarot/cards/five-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "4D59A663-E5BD-4B1A-8BD0-0016E47D9C2E.PNG"
+    },
+    {
+      "id": "six-of-pentacles",
+      "name": {
+        "en": "Six of Pentacles",
+        "ru": "Шестёрка пентаклей"
+      },
+      "arcana": "minor",
+      "suit": "pentacles",
+      "number": 6,
+      "rank": "six",
+      "image": "/assets/tarot/cards/six-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "5909D8F0-B114-44AA-B30D-4F9022BE9CC8.PNG"
+    },
+    {
+      "id": "seven-of-pentacles",
+      "name": {
+        "en": "Seven of Pentacles",
+        "ru": "Семёрка пентаклей"
+      },
+      "arcana": "minor",
+      "suit": "pentacles",
+      "number": 7,
+      "rank": "seven",
+      "image": "/assets/tarot/cards/seven-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "881C6647-CCD4-4F31-B246-CD05C307F1E2.PNG"
+    },
+    {
+      "id": "eight-of-pentacles",
+      "name": {
+        "en": "Eight of Pentacles",
+        "ru": "Восьмёрка пентаклей"
+      },
+      "arcana": "minor",
+      "suit": "pentacles",
+      "number": 8,
+      "rank": "eight",
+      "image": "/assets/tarot/cards/eight-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "03452790-E9D0-4940-8CC3-3473AD41F9A5.PNG"
+    },
+    {
+      "id": "nine-of-pentacles",
+      "name": {
+        "en": "Nine of Pentacles",
+        "ru": "Девятка пентаклей"
+      },
+      "arcana": "minor",
+      "suit": "pentacles",
+      "number": 9,
+      "rank": "nine",
+      "image": "/assets/tarot/cards/nine-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "E6C91745-75A2-46F9-A773-ED4F6D9C647F.PNG"
+    },
+    {
+      "id": "ten-of-pentacles",
+      "name": {
+        "en": "Ten of Pentacles",
+        "ru": "Десятка пентаклей"
+      },
+      "arcana": "minor",
+      "suit": "pentacles",
+      "number": 10,
+      "rank": "ten",
+      "image": "/assets/tarot/cards/ten-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "1AE27A74-B400-4104-9FF1-7CA32F54134A.PNG"
+    },
+    {
+      "id": "page-of-pentacles",
+      "name": {
+        "en": "Page of Pentacles",
+        "ru": "Паж пентаклей"
+      },
+      "arcana": "minor",
+      "suit": "pentacles",
+      "number": 11,
+      "rank": "page",
+      "image": "/assets/tarot/cards/page-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "593BAAFD-11DB-404B-BCE3-C0BAFF4EB419.PNG"
+    },
+    {
+      "id": "knight-of-pentacles",
+      "name": {
+        "en": "Knight of Pentacles",
+        "ru": "Рыцарь пентаклей"
+      },
+      "arcana": "minor",
+      "suit": "pentacles",
+      "number": 12,
+      "rank": "knight",
+      "image": "/assets/tarot/cards/knight-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "85277607-07E3-4C8B-B5FF-4195E36F4311.PNG"
+    },
+    {
+      "id": "queen-of-pentacles",
+      "name": {
+        "en": "Queen of Pentacles",
+        "ru": "Королева пентаклей"
+      },
+      "arcana": "minor",
+      "suit": "pentacles",
+      "number": 13,
+      "rank": "queen",
+      "image": "/assets/tarot/cards/queen-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "FC9BCD3D-59AB-40E5-B21F-1FE5174783F1.PNG"
+    },
+    {
+      "id": "king-of-pentacles",
+      "name": {
+        "en": "King of Pentacles",
+        "ru": "Король пентаклей"
+      },
+      "arcana": "minor",
+      "suit": "pentacles",
+      "number": 14,
+      "rank": "king",
+      "image": "/assets/tarot/cards/king-of-pentacles.webp",
+      "width": 1024,
+      "height": 1536,
+      "sourceFile": "1FAAFD8C-7872-42A0-A611-85C491F20E97.PNG"
+    }
+  ]
+}

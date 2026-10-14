@@ -166,7 +166,7 @@
   --safe-area-left: max(env(safe-area-inset-left, 0px), var(--tg-content-safe-area-inset-left, 0px));
   --app-viewport-height: var(--tg-viewport-stable-height, 100dvh);
   --app-top-padding: calc(var(--safe-area-top) + 14px);
-  --app-navigation-height: 58px;
+  --app-navigation-height: var(--measured-navigation-height, 58px);
   --app-navigation-offset: 10px;
   --app-navigation-bottom: max(var(--safe-area-bottom), var(--app-navigation-offset));
   --app-navigation-clearance: calc(var(--app-navigation-height) + var(--app-navigation-bottom) + 8px);

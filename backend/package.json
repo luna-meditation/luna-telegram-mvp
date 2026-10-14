@@ -9,9 +9,10 @@
   },
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "build": "tsc && node scripts/package-tarot-catalog.mjs",
     "start": "node dist/server.js",
-    "test": "tsx --test src/auth.test.ts src/error-logging.test.ts src/luna-ai-policy.test.ts src/luna-ai-pending.test.ts src/luna-ai-intent.test.ts src/luna-ai-conversation.e2e.test.ts src/luna-ai-response.test.ts src/luna-ai-reliability.test.ts src/luna-ai-ui.test.ts src/playback-security.test.ts src/progress-model.test.ts src/progress-insights.test.ts src/progress-achievements.test.ts src/journey-status.test.ts src/payment-policy.test.ts src/recommendation-policy.test.ts src/notification-policy.test.ts src/privacy-policy.test.ts src/support-policy.test.ts src/rpc-contract.test.ts src/rpc-integration.test.ts",
+    "test": "node --import tsx --test src/*.test.ts",
+    "test:phase1-db": "node --import tsx test/phase1-database-review.mjs",
     "lint": "eslint \"src/**/*.ts\"",
     "typecheck": "tsc --noEmit"
   },
@@ -21,6 +22,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "pg": "^8.13.1",
+    "serverless-http": "4.0.0",
     "telegraf": "^4.16.3",
     "ws": "^8.21.0",
     "zod": "^3.23.8"

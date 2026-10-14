@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
 import { env } from './config.js';
+import {stagingUserRecord} from './staging-policy.js';
 import {
   paymentPlanDetails,
   payloadPlanFromStoredPayment,
@@ -172,7 +173,7 @@ export async function upsertUser(user: TelegramUserInput) {
     .from('users')
     .upsert(
       {
-        ...user,
+        ...stagingUserRecord(user,env.STAGING_MODE),
         last_seen_at: new Date().toISOString()
       },
       { onConflict: 'telegram_id' }
@@ -1350,8 +1351,15 @@ async function syncAchievements(telegramId: number, stats: AchievementStats) {
   }
 }
 
+async function mutateAtomicGarden(telegramId:number,action:string,element:string|null=null,amount=0,earned=0) {
+  const {data,error}=await supabase.rpc('luna_mutate_garden',{p_telegram_id:telegramId,p_action:action,p_element:element,p_amount:amount,p_earned:earned});
+  if(error)throw error;
+  return data as {status:'ok'|'owned'|'insufficient';garden:{moon_seeds_available:number;moon_seeds_earned_total:number;planted_garden_elements:string[];garden_level:number;last_moon_seed_earned_at:string|null}};
+}
+
 async function awardMoonSeeds(telegramId: number, amount: number) {
   if (amount <= 0) return;
+  if(env.FEATURE_GARDEN_ATOMIC){await mutateAtomicGarden(telegramId,'award',null,amount);return;}
 
   const { data: existing, error: readError } = await supabase
     .from('moon_gardens')
@@ -1392,6 +1400,7 @@ async function awardMoonSeeds(telegramId: number, amount: number) {
 }
 
 async function grantPremiumMoonSeedsBonus(telegramId: number) {
+  if(env.FEATURE_GARDEN_ATOMIC){const result=await mutateAtomicGarden(telegramId,'premium');return result.status==='ok';}
   const { data: existing, error: readError } = await supabase
     .from('moon_gardens')
     .select('*')
@@ -1440,6 +1449,10 @@ async function getMoonGardenState(telegramId: number, input: {
   gardenLevel: number;
 }) {
   const earnedFromPractice = earnedMoonSeeds(input);
+  if(env.FEATURE_GARDEN_ATOMIC){
+    const {garden:g}=await mutateAtomicGarden(telegramId,'sync',null,0,earnedFromPractice);
+    return {moonSeedsAvailable:g.moon_seeds_available,moonSeedsEarnedTotal:g.moon_seeds_earned_total,plantedGardenElements:g.planted_garden_elements,plantedElementsCount:g.planted_garden_elements.length,lastMoonSeedEarnedAt:g.last_moon_seed_earned_at,gardenLevel:g.garden_level};
+  }
   const { data: existing, error } = await supabase
     .from('moon_gardens')
     .select('*')
@@ -1740,6 +1753,7 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     moonSeeds: moonGarden.moonSeedsAvailable,
     moonSeedsAvailable: moonGarden.moonSeedsAvailable,
     moonSeedsEarnedTotal: moonGarden.moonSeedsEarnedTotal,
+    gardenAtomicReady: env.FEATURE_GARDEN_ATOMIC,
     plantedGardenElements: moonGarden.plantedGardenElements,
     plantedElementsCount: moonGarden.plantedElementsCount,
     lastMoonSeedEarnedAt: moonGarden.lastMoonSeedEarnedAt,
@@ -1770,6 +1784,13 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
 
 export async function plantMoonGardenElement(telegramId: number, elementId: string) {
   const normalizedElementId = elementId.replace(/-/g, '_');
+  if(env.FEATURE_GARDEN_ATOMIC){
+    if(!moonGardenElements.some(item=>item.id===normalizedElementId))return {error:'Unknown garden element.' as const,status:400};
+    const result=await mutateAtomicGarden(telegramId,'purchase',normalizedElementId);
+    const profile=await getProfileStats(telegramId);
+    if(result.status==='insufficient')return {error:'Not enough Moon Seeds.' as const,status:400,profile};
+    return {planted:true,alreadyOwned:result.status==='owned',elementId:normalizedElementId,moonSeedsAvailable:result.garden.moon_seeds_available,plantedGardenElements:result.garden.planted_garden_elements,profile};
+  }
   const element = moonGardenElements.find((item) => item.id === normalizedElementId);
   if (process.env.NODE_ENV !== 'production') {
     console.info('[MOON_GARDEN_PLANT_ATTEMPT]', { telegramId, elementId: normalizedElementId });

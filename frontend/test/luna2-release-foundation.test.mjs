@@ -1,0 +1,19 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+test('the personal Luna entry uses the existing chat and optional profile, without an AI avatar',()=>{
+ const home=readFileSync('src/luna2/HomeDiscovery.tsx','utf8');
+ assert.match(home,/A little magic\. A lot of clarity\./);assert.match(home,/Understand yourself\. Find your way\./);
+ assert.match(home,/onTalk/);assert.match(home,/onPersonalize/);assert.doesNotMatch(home,/ai-avatar|generated-avatar/);
+ const app=readFileSync('src/App.tsx','utf8');assert.match(app,/onPersonalize=\{featureFlags.personalization/);assert.match(app,/initialView=\{profileEntry\}/);
+});
+test('optional setup retains Skip, does not ask birth details before astrology, and preserves edits across language switches',()=>{
+ const setup=readFileSync('src/luna2/PersonalizationSettings.tsx','utf8');
+ assert.match(setup,/What should Luna call you/);assert.match(setup,/Preferred language/);assert.match(setup,/What matters to you right now/);
+ assert.match(setup,/Skip \/ return to Profile/);assert.match(setup,/featureFlags.astrology&&/);assert.match(setup,/\},\[initData\]\)/);
+ assert.match(setup,/Birth details are excluded/);assert.doesNotMatch(setup,/telegram_id:/);
+});
+test('Luna 2.0 production profile checks exact SQL review hashes; the old profile stays default',()=>{
+ const script=readFileSync('scripts/build-production.mjs','utf8');assert.match(script,/LUNA_RELEASE_PROFILE\?\?'tarot-phase2'/);assert.match(script,/LUNA_RELEASE_DB_REVIEW/);assert.match(script,/migrationHashes/);assert.match(script,/Migration changed since review/);
+ const flags=readFileSync('src/config/featureFlagDefinitions.ts','utf8');assert.match(flags,/\?\? ''/);
+});

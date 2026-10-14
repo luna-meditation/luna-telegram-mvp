@@ -1,0 +1,1137 @@
+{
+  "schemaVersion": 1,
+  "identityMethod": "Every printed card title was visually reviewed; OCR supports audit only, never determines an ambiguous identity.",
+  "sourceCount": 78,
+  "missing": [],
+  "ambiguousIdentities": [],
+  "exactDuplicates": [],
+  "pixelDuplicates": [],
+  "nearDuplicateThreshold": 5,
+  "nearDuplicates": [],
+  "cards": [
+    {
+      "id": "eight-of-pentacles",
+      "printedTitle": "EIGHT OF PENTACLES",
+      "sourceFile": "03452790-E9D0-4940-8CC3-3473AD41F9A5.PNG",
+      "sourceSha256": "4ea987e0c3699cef98a95a626aa0bed27a57c042dd2af66c1c41fc00eebada95",
+      "sourceBytes": 2535735,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "PRACTICE",
+        "PROGRESS",
+        "EIGHT OF PENTACLES",
+        "MASTERY + DEDICATION + CRAFTSMANSHIP"
+      ]
+    },
+    {
+      "id": "ace-of-swords",
+      "printedTitle": "ACE OF SWORDS",
+      "sourceFile": "043FB4D3-24A8-4876-8D2E-05C0F14ED582.PNG",
+      "sourceSha256": "62624bd151abce5a322c16b7e7bc57bc7eaa65552fc45e0cf760e9457edbc651",
+      "sourceBytes": 2233810,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "ACE OF SWORDS",
+        "CLARITY + TRUTH * BREAKTHROUGH"
+      ]
+    },
+    {
+      "id": "queen-of-cups",
+      "printedTitle": "QUEEN OF CUPS",
+      "sourceFile": "07463B20-7A78-49B7-9664-551CDF6ABBBA.PNG",
+      "sourceSha256": "3e04a3d8e5bac8088a63a472c88f2ee6114494e817318c5eda0f761f25e616c6",
+      "sourceBytes": 2302276,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "QUEEN OF CUPS",
+        "COMPASSION + INTUITION + EMOTIONAL WISDOM"
+      ]
+    },
+    {
+      "id": "seven-of-cups",
+      "printedTitle": "SEVEN OF CUPS",
+      "sourceFile": "07C618A3-4BE7-4155-B7F7-6E001BC1F53D.PNG",
+      "sourceSha256": "aab4111aff26512b849de90243b92d7d061894be2a67902427e85b1e3c14ccca",
+      "sourceBytes": 2221946,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "CHOICES",
+        "SEVEN OF CUPS",
+        "ILLUSIONS",
+        "POSSIBILITIES"
+      ]
+    },
+    {
+      "id": "three-of-wands",
+      "printedTitle": "THREE OF WANDS",
+      "sourceFile": "093819DC-F53C-423F-B420-9A709DFCA68A.PNG",
+      "sourceSha256": "20d046f2d27bfd1086286c854b81332a0c146b54cd1ef9ba8daa51950e90cba8",
+      "sourceBytes": 2399154,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "THREE OF WANDS",
+        "EXPANSION • PROGRESS • FORESIGHT"
+      ]
+    },
+    {
+      "id": "six-of-swords",
+      "printedTitle": "SIX OF SWORDS",
+      "sourceFile": "0FB10D27-44FE-4849-A6B4-5092F8E4EE07.PNG",
+      "sourceSha256": "81b15ebd9ad448b358d24113baee6203ec9038d11e35e7cffed729237af8275d",
+      "sourceBytes": 2031344,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "SIX OF SWORDS",
+        "TRANSITION + HEALING + MOVING FORWARD"
+      ]
+    },
+    {
+      "id": "the-empress",
+      "printedTitle": "THE EMPRESS",
+      "sourceFile": "106DAF54-E3C1-4C6B-AF7B-53DFEABE09E2.PNG",
+      "sourceSha256": "beb70729c8b7802e426e197ba4eef0d323894471eaf67a06c23b33d6479a85ab",
+      "sourceBytes": 2796861,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "THE EMPRESS",
+        "ABUNDANCE • CREATIVITY • NURTURE"
+      ]
+    },
+    {
+      "id": "the-emperor",
+      "printedTitle": "THE EMPEROR",
+      "sourceFile": "135930D1-3F9F-47E7-88A5-D5750A633AEA.PNG",
+      "sourceSha256": "bc85aff05d4b389420fb3e5ab6a4732863d4a05815f51d424149544a427314ee",
+      "sourceBytes": 2678855,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "THE EMPEROR",
+        "STABILITY • AUTHORITY • STRUCTURE"
+      ]
+    },
+    {
+      "id": "six-of-cups",
+      "printedTitle": "SIX OF CUPS",
+      "sourceFile": "1A5E8A3B-DD98-451C-9C33-4C2D3E917CC8.PNG",
+      "sourceSha256": "fcd343510c0e99d9d3cee5d1d6eb2869d79ae9fe6468d358d74396d0590127bb",
+      "sourceBytes": 2362522,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "SIX OF CUPS",
+        "NOSTALGIA + INNOCENCE + KINDNESS"
+      ]
+    },
+    {
+      "id": "ten-of-pentacles",
+      "printedTitle": "TEN OF PENTACLES",
+      "sourceFile": "1AE27A74-B400-4104-9FF1-7CA32F54134A.PNG",
+      "sourceSha256": "7d3088bef33c1fa8df52d8e048c0b43d1f940252189240a9328801a8de382d44",
+      "sourceBytes": 2796395,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "TEN OF PENTACLES",
+        "LEGACY + WEALTH + FAMILY"
+      ]
+    },
+    {
+      "id": "justice",
+      "printedTitle": "JUSTICE",
+      "sourceFile": "1BA4BEBC-CAE2-4EC0-9A0B-D3DA559E0EA1.PNG",
+      "sourceSha256": "bb59b0bfead49a92cc0bf43ed18726ac33a94973e612a9870dffd10c316404ce",
+      "sourceBytes": 3454183,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "• EOUITY",
+        "JUSTICE",
+        "TRUTH • FAIRNESS • BALANCE"
+      ]
+    },
+    {
+      "id": "nine-of-wands",
+      "printedTitle": "NINE OF WANDS",
+      "sourceFile": "1E708C7B-8B33-4541-9BF8-D603416F4CC8.PNG",
+      "sourceSha256": "041bed18b1150600a3e1900dbfe0229b705060c6dfbcdcb245b4d90e48464d35",
+      "sourceBytes": 2340805,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "NINE OF WANDS",
+        "RESILIENCE • BOUNDARIES • DETERMINATION",
+        "=)Ж(—"
+      ]
+    },
+    {
+      "id": "three-of-swords",
+      "printedTitle": "THREE OF SWORDS",
+      "sourceFile": "1F71DC4F-A242-4B50-88DC-A2FD7A2DC3BD.PNG",
+      "sourceSha256": "d9b74e43230b46d38cf554ada2bb64e80ff4a13e54aaaace8d6d9b3899dd3866",
+      "sourceBytes": 2214304,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "THREE OF SWORDS",
+        "HEARTBREAK + SORROW * RELEASE"
+      ]
+    },
+    {
+      "id": "king-of-pentacles",
+      "printedTitle": "KING OF PENTACLES",
+      "sourceFile": "1FAAFD8C-7872-42A0-A611-85C491F20E97.PNG",
+      "sourceSha256": "062670d78975498cd8f3591f17992bccd0e351245de211c9d222c4ce785f6e1e",
+      "sourceBytes": 2712756,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "KING OF PENTACLES",
+        "WEALTH + STABILITY + SUCCESS",
+        "→0(+!"
+      ]
+    },
+    {
+      "id": "four-of-swords",
+      "printedTitle": "FOUR OF SWORDS",
+      "sourceFile": "2195EE2D-C94C-43C1-A3B5-E11FD8EA5347.PNG",
+      "sourceSha256": "e790607904e909d7b65409174a63a6978b313bcb6af3ebec0c7a076cecd19b73",
+      "sourceBytes": 2138346,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "FOUR OF SWORDS",
+        "REST + RECOVERY",
+        "+",
+        "CONTEMPLATION"
+      ]
+    },
+    {
+      "id": "ten-of-swords",
+      "printedTitle": "TEN OF SWORDS",
+      "sourceFile": "2409B94F-B745-46D9-9D78-3FB9D93059C2.PNG",
+      "sourceSha256": "544403e8aa19548ec31c6bdc7b47e827c96815074b3b53a7f697232099e2d9b5",
+      "sourceBytes": 2218048,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "TEN OF SWORDS",
+        "ENDING + BETRAYAL + NEW DAWN"
+      ]
+    },
+    {
+      "id": "four-of-wands",
+      "printedTitle": "FOUR OF WANDS",
+      "sourceFile": "298E6EC6-D2AF-4556-8DED-F2D55292FDE4.PNG",
+      "sourceSha256": "50ffd73cbc48ca2d20fc8f9cba2ada8fc6f5fa35f6398edc2797cc61dc01de10",
+      "sourceBytes": 2611915,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "FOUR OF WANDS",
+        "CELEBRATION • HARMONY • HOME"
+      ]
+    },
+    {
+      "id": "the-world",
+      "printedTitle": "THE WORLD",
+      "sourceFile": "299AF44E-0F35-47CB-B416-C8334B708285.PNG",
+      "sourceSha256": "e81cd763f8a2299a68697c0ab5697342d2134a7b4ff424a2d0ed5cacf8ee220f",
+      "sourceBytes": 2692980,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "THE WORLD",
+        "COMPLETION • WHOLENESS • FULFILLMENT"
+      ]
+    },
+    {
+      "id": "eight-of-wands",
+      "printedTitle": "EIGHT OF WANDS",
+      "sourceFile": "363FD07B-9572-4246-A1A6-817E9D3D9F37.PNG",
+      "sourceSha256": "4af00bde189c3091b741b468e8f0853d93d24e77f568468b6da706637d066b24",
+      "sourceBytes": 2296459,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "EIGHT OF WANDS",
+        "SPEED • MOVEMENT • PROGRESS"
+      ]
+    },
+    {
+      "id": "king-of-cups",
+      "printedTitle": "KING OF CUPS",
+      "sourceFile": "387B1519-E6EB-4B92-A3FC-B4AAFCC9749B.PNG",
+      "sourceSha256": "f226f7fd62c5cee447153809b703e40e9832159ae5b26e9a3e95db2bcd1d3123",
+      "sourceBytes": 2415218,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "KING OF CUPS",
+        "EMOTIONAL BALANCE +",
+        "WISDOM + COMPASSION"
+      ]
+    },
+    {
+      "id": "two-of-pentacles",
+      "printedTitle": "TWO OF PENTACLES",
+      "sourceFile": "3C6866A4-7CE7-4239-B5A0-E470968BE2C1.PNG",
+      "sourceSha256": "3728bd1e93c5e3a7b5bfc67587febd8c5ee2c735b0e28bfe820f1045a511c64c",
+      "sourceBytes": 2563767,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "TWO OF PENTACLES",
+        "BALANCE + ADAPTABILITY + PRIORITIES"
+      ]
+    },
+    {
+      "id": "the-sun",
+      "printedTitle": "THE SUN",
+      "sourceFile": "40C95F5F-7161-4230-BF2D-3B4AC12F052E.PNG",
+      "sourceSha256": "260dc4c53a157b3c65a38d4c4365f48d2b88d5ec09536084b6a3a9f590a5c4cd",
+      "sourceBytes": 2439940,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "THE SUN",
+        "JOY • SUCCESS",
+        "VITALITY"
+      ]
+    },
+    {
+      "id": "knight-of-wands",
+      "printedTitle": "KNIGHT OF WANDS",
+      "sourceFile": "44B50DEF-B3D9-44C6-82CF-CB7CB8167116.PNG",
+      "sourceSha256": "ca53c95d1cde13e9aeb666e3bb3e144f48fd30dcf5160b3a84b7862c173b4619",
+      "sourceBytes": 2412838,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "KNIGHT ÖF WANDS",
+        "ACTION • PASSION • ADVENTURE"
+      ]
+    },
+    {
+      "id": "ace-of-cups",
+      "printedTitle": "ACE OF CUPS",
+      "sourceFile": "4CA1587D-412A-4A89-8670-135235FC6614.PNG",
+      "sourceSha256": "5ad3ceee0fe4f3917bc5a22f0dc66d804d643e577a500e20595fcf45ace9f1d2",
+      "sourceBytes": 2485652,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "ACE OF CUPS",
+        "LOVE * EMOTIONAL BEGINNINGS • INTUITION"
+      ]
+    },
+    {
+      "id": "five-of-pentacles",
+      "printedTitle": "FIVE OF PENTACLES",
+      "sourceFile": "4D59A663-E5BD-4B1A-8BD0-0016E47D9C2E.PNG",
+      "sourceSha256": "78e79b9c5c15e11e09b129e1b4b67aa1c11373dec8e74655841b1c4b7aa59ada",
+      "sourceBytes": 2757115,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "FIVE OF PENTACLES",
+        "HARDSHIP",
+        "ISOLATION + NEED"
+      ]
+    },
+    {
+      "id": "queen-of-wands",
+      "printedTitle": "QUEEN OF WANDS",
+      "sourceFile": "4F35734F-121D-4A52-8F71-2A254BF1847B.PNG",
+      "sourceSha256": "16e84b170084f9f3a289792490d2c71b50d72435472e54dcb07f2a7a358e8fd7",
+      "sourceBytes": 2395545,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "QUEEN OF WANDS",
+        "CONFIDENCE • CHARISMA • INDEPENDENCE"
+      ]
+    },
+    {
+      "id": "temperance",
+      "printedTitle": "TEMPERANCE",
+      "sourceFile": "52CD1638-80D2-447D-AF88-10C18BFC4326.PNG",
+      "sourceSha256": "a59203ec2dfa0987d517a81b86b9b12109703b5478f2e4641c0aefe2880322cc",
+      "sourceBytes": 3524448,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "TEMPERANCE",
+        "BALANCE • HARMONY • PATIENCE",
+        "→)V—"
+      ]
+    },
+    {
+      "id": "the-high-priestess",
+      "printedTitle": "THE HIGH PRIESTESS",
+      "sourceFile": "53CF446D-40F0-4503-BEB0-41B43299280B.PNG",
+      "sourceSha256": "8c8fadd1c3d74ae6d4cf3b36261ac3a774aab4385c989ad40bec476eb39212bd",
+      "sourceBytes": 2659289,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "THE HIGH PRIESTESS",
+        "INTUITION • MYSTERY • WISDOM",
+        "+)0(+"
+      ]
+    },
+    {
+      "id": "ace-of-pentacles",
+      "printedTitle": "ACE OF PENTACLES",
+      "sourceFile": "55FBB873-14C4-4C1F-87B9-0EDFCD310C3B.PNG",
+      "sourceSha256": "1557191534daba4f76f993a8f4be93b1ad38b510135858cd8f68c4ef62d9c24e",
+      "sourceBytes": 2625437,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "ACE OF PENTACLES",
+        "PROSPERITY + OPPORTUNITY + ABUNDANCE"
+      ]
+    },
+    {
+      "id": "three-of-pentacles",
+      "printedTitle": "THREE OF PENTACLES",
+      "sourceFile": "5731E252-53D7-482E-8B9E-1E0DD9AAA38B.PNG",
+      "sourceSha256": "2a9f1cd9a1c1a13b6ebd20f54c78c2938bfd5a726f23094d99255a9694bfd423",
+      "sourceBytes": 2614449,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "THREE OF PENTACLES",
+        "TEAMWORK + SKILL + COLLABORATION"
+      ]
+    },
+    {
+      "id": "six-of-pentacles",
+      "printedTitle": "SIX OF PENTACLES",
+      "sourceFile": "5909D8F0-B114-44AA-B30D-4F9022BE9CC8.PNG",
+      "sourceSha256": "09c78bf89b29d92aba6e737e459220cd3a1844dff6c61ef84d14743c18078a27",
+      "sourceBytes": 2637779,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "SIX OF PENTACLES",
+        "GENEROSITY + CHARITY + BALANCE"
+      ]
+    },
+    {
+      "id": "page-of-pentacles",
+      "printedTitle": "PAGE OF PENTACLES",
+      "sourceFile": "593BAAFD-11DB-404B-BCE3-C0BAFF4EB419.PNG",
+      "sourceSha256": "0e1bd1cb1171c0aa839e28405200fa7ad67190425702ab36ac0e5300a0862df5",
+      "sourceBytes": 2615350,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "PAGE OF PENTACLES",
+        "AMBITION + LEARNING + OPPORTUNITY"
+      ]
+    },
+    {
+      "id": "the-chariot",
+      "printedTitle": "THE CHARIOT",
+      "sourceFile": "5987FE15-4388-485E-852C-A3A0A2E0C9B6.PNG",
+      "sourceSha256": "c2c2f14b038cb556cd93c9d176d078d9b0b5d4bec23b29ccd37c0b943fd27b0b",
+      "sourceBytes": 3572909,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "THE CHARIOT",
+        "WILLPOWER • VICTORY • DIRECTION"
+      ]
+    },
+    {
+      "id": "five-of-cups",
+      "printedTitle": "FIVE OF CUPS",
+      "sourceFile": "64EF5666-D99E-46AA-AB0F-25316249A608.PNG",
+      "sourceSha256": "6e41b9ecd814ff680eaa80545b46a8af82dbaedf521a00f0350fe273fd0bc1f2",
+      "sourceBytes": 2181812,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "FIVE OF CUPS",
+        "LOSS",
+        "GRIEF",
+        "ACCEPTANCE"
+      ]
+    },
+    {
+      "id": "two-of-cups",
+      "printedTitle": "TWO OF CUPS",
+      "sourceFile": "65688B6B-5ACE-44D3-939A-A9822A40F15B.PNG",
+      "sourceSha256": "cfa13448cf99a410d795818c23efee2d15533dfff239aa206f3e56abcf90ac31",
+      "sourceBytes": 2213186,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "TWO OF CUPS",
+        "PARTNERSHIP * CONNECTION * MUTUAL LOVE",
+        "→)*}(+"
+      ]
+    },
+    {
+      "id": "two-of-swords",
+      "printedTitle": "TWO OF SWORDS",
+      "sourceFile": "6596D138-DC4E-487F-A2DF-3F0DDCBAEF48.PNG",
+      "sourceSha256": "095ce644374bf230a3fc788371fd7908b6c20e332aa54be7230e1f8b30ffff44",
+      "sourceBytes": 2199574,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "TWO OF SWORDS",
+        "DECISION +",
+        "- STALEMATE + INNER CONFLICI"
+      ]
+    },
+    {
+      "id": "the-lovers",
+      "printedTitle": "THE LOVERS",
+      "sourceFile": "6E00CA7B-E408-43DD-AA9C-48F8A6DB31F5.PNG",
+      "sourceSha256": "045c56839ee2108c99fa2b49f7f697c6cd5941a8e311eb7dac2f9dbf07c382be",
+      "sourceBytes": 2817428,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "THE LOVERS",
+        "LOVE • HARMONY • CHOICE",
+        "•_)∞(—"
+      ]
+    },
+    {
+      "id": "the-magician",
+      "printedTitle": "THE MAGICIAN",
+      "sourceFile": "6FBD4305-1046-44D6-B1ED-CD2ACCFEA4C5.PNG",
+      "sourceSha256": "5f26f7a2d5b484c935bace7fd262419b5e3181c4945fd5fbd73f471811b7b9aa",
+      "sourceBytes": 2768712,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "THE MAGICIAN",
+        "WILL • SKILL • MANIFESTATION"
+      ]
+    },
+    {
+      "id": "five-of-swords",
+      "printedTitle": "FIVE OF SWORDS",
+      "sourceFile": "71481972-EB3C-4113-848F-1C29C80B5DBB.PNG",
+      "sourceSha256": "009160a78f9b8ed075fb9e0bf812564ad9485d2ea2f49231c602ba7d50a2b090",
+      "sourceBytes": 2159051,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "FIVE OF SWORDS",
+        "CONFLICT + DEFEAT +",
+        "CONSEQUENCES"
+      ]
+    },
+    {
+      "id": "ace-of-wands",
+      "printedTitle": "ACE OF WANDS",
+      "sourceFile": "731FC2E0-740D-4F2E-B8D1-E376C433A720.PNG",
+      "sourceSha256": "1e08a5a7452a500035242f601425c30cb64eaae19d02ef451381aa9c2eac543a",
+      "sourceBytes": 2289155,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "ACE OF WANDS",
+        "INSPIRATION • NEW BEGINNINGS • POTENTIAL"
+      ]
+    },
+    {
+      "id": "king-of-swords",
+      "printedTitle": "KING OF SWORDS",
+      "sourceFile": "763727CD-5A19-4C71-B20E-83DC2D97C060.PNG",
+      "sourceSha256": "5fda8dd917ff76d35e3dc4b376076182a9093ec228e3b678ac27beb4b33c1b86",
+      "sourceBytes": 2541406,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "KING OF SWORDS",
+        "AUTHORITY + LOGIC + TRUTH"
+      ]
+    },
+    {
+      "id": "the-moon",
+      "printedTitle": "THE MOON",
+      "sourceFile": "7F13EF22-B085-4D83-AFB9-681BA8D2029A.PNG",
+      "sourceSha256": "fa3e66e9e1681265fff8dbc1f26015fc5bbba415140515cf8eeb2a9b2ad7bf05",
+      "sourceBytes": 3234540,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "THE MOON",
+        "INTUITION • ILLUSION • SUBCONSCIOUS"
+      ]
+    },
+    {
+      "id": "ten-of-cups",
+      "printedTitle": "TEN OF CUPS",
+      "sourceFile": "7F7BDA93-5933-473C-9836-7F99897BFC97.PNG",
+      "sourceSha256": "84f334983ad83b84af00a79ae1881c390913226a24144249ed40f232a011fab8",
+      "sourceBytes": 2315640,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "TEN OF CUPS",
+        "HARMONY + FAMILY + FULFILLMENT"
+      ]
+    },
+    {
+      "id": "knight-of-pentacles",
+      "printedTitle": "KNIGHT OF PENTACLES",
+      "sourceFile": "85277607-07E3-4C8B-B5FF-4195E36F4311.PNG",
+      "sourceSha256": "d3a41d1b078ee2d7812bfc13ae3da530646f0fa83980e2b0ceb88c368f7474fe",
+      "sourceBytes": 2473256,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "KNIGHT OF PENTACLES",
+        "PATIENCE + RESPONSIBILITY + PERSISTENCE",
+        "+→+)(*"
+      ]
+    },
+    {
+      "id": "four-of-cups",
+      "printedTitle": "FOUR OF CUPS",
+      "sourceFile": "875C24FA-AB19-4C8C-AFB1-CE8D8F5D30FA.PNG",
+      "sourceSha256": "5da2b200134eee077d4503a6ba47a42767c1836a9aa944ddc7b27a50775daac7",
+      "sourceBytes": 2217759,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "FOUR OF CUPS",
+        "CONTEMPLATION + APATHY * REEVALUATION"
+      ]
+    },
+    {
+      "id": "seven-of-pentacles",
+      "printedTitle": "SEVEN OF PENTACLES",
+      "sourceFile": "881C6647-CCD4-4F31-B246-CD05C307F1E2.PNG",
+      "sourceSha256": "9109f531b67847aa18b44df5c2fa1f32281c2b5c921e92d0e615125e2ff89629",
+      "sourceBytes": 2787275,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "SEVEN OF PENTACLES",
+        "PATIENCE + INVESTMENT + LONG-TERM GROWTH"
+      ]
+    },
+    {
+      "id": "nine-of-swords",
+      "printedTitle": "NINE OF SWORDS",
+      "sourceFile": "8FEE5B9E-8F18-4084-BB8D-C5717A21B67E.PNG",
+      "sourceSha256": "f220d73f3b0f289885bc6af53e8f11c1acfa427e4dd28e79a7b1d4780ac8e799",
+      "sourceBytes": 1925939,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "NINE OF SWORDS",
+        "ANXIETY + NIGHTMARES + WORRY"
+      ]
+    },
+    {
+      "id": "two-of-wands",
+      "printedTitle": "TWO OF WANDS",
+      "sourceFile": "9238F1C0-F74A-4FBC-90FC-7DF70C1FCE08.PNG",
+      "sourceSha256": "71800d0c63f295d1e1ab607a74a27c3e09e1bdd7df65f0824f86dbf2988843cf",
+      "sourceBytes": 2417142,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "TWO OFI",
+        "WANIDS",
+        "PLANNING • VISION • DISCOVERY"
+      ]
+    },
+    {
+      "id": "knight-of-cups",
+      "printedTitle": "KNIGHT OF CUPS",
+      "sourceFile": "925135C6-0F0E-4F12-BB0A-28D18146A38D.PNG",
+      "sourceSha256": "0c90996123487775303c1785d49656255850be7f69d211d8384ba2cea2afdb38",
+      "sourceBytes": 2398191,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "KNIGHT OF CUPS",
+        "ROMANCE +",
+        "IDEALISM +",
+        "EMOTIONAL QUEST"
+      ]
+    },
+    {
+      "id": "the-hermit",
+      "printedTitle": "THE HERMIT",
+      "sourceFile": "953F75CD-E3AC-421D-9E00-C9BDA8C067F7.PNG",
+      "sourceSha256": "e0359c9fe14362423e510051fc522326222d41ee6eb4b20343dcb9ffe84f1d01",
+      "sourceBytes": 3258691,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "THE HERMIT",
+        "INTROSPECTION • WISDOM • SOLITUDE"
+      ]
+    },
+    {
+      "id": "four-of-pentacles",
+      "printedTitle": "FOUR OF PENTACLES",
+      "sourceFile": "9A68EB22-512A-4FB7-B2BB-3482240D89D6.PNG",
+      "sourceSha256": "15a78d9dbdbcc31f595778cb8e87069102d295c0824bc8959b4c18ada0974bdd",
+      "sourceBytes": 2554517,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "FOUR OF PENTACLES",
+        "CONTROL + SECURITY + POSSESSIVENESS"
+      ]
+    },
+    {
+      "id": "ten-of-wands",
+      "printedTitle": "TEN OF WANDS",
+      "sourceFile": "9A7A4996-2C45-4C0C-B15A-E15658573345.PNG",
+      "sourceSha256": "a4e579f27415bd3003942ed442dd78a51f8ce8e59236521bc70df7774f567823",
+      "sourceBytes": 2470004,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "TEN OF Y",
+        "WANDS",
+        "BURDENS • COMMITMENT • ENDURANCE"
+      ]
+    },
+    {
+      "id": "the-devil",
+      "printedTitle": "THE DEVIL",
+      "sourceFile": "9B3DCB74-5FBD-4F5F-93B8-DDCAF116F123.PNG",
+      "sourceSha256": "31888d52b08390d7a46bac0e130bf29a5f59543667fe5953ed99263248c6f1c4",
+      "sourceBytes": 3117071,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "THE DEVIL",
+        "ATTACHMENT • TEMPTATION • SHADOW",
+        "•—)V(—"
+      ]
+    },
+    {
+      "id": "page-of-wands",
+      "printedTitle": "PAGE OF WANDS",
+      "sourceFile": "9ED720A7-4A58-44B0-97AA-C4A6714F2349.PNG",
+      "sourceSha256": "b4619f5d57e4c256a4b0df8b8ca5f977a1f5866e337878464542d3deb37d1913",
+      "sourceBytes": 2334513,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "PAGE OF WANDS",
+        "CURIOSITY • ENTHUSIASM • EXPLORATION"
+      ]
+    },
+    {
+      "id": "judgement",
+      "printedTitle": "JUDGEMENT",
+      "sourceFile": "A1BF6431-C16E-4FB7-86FB-68B5F4584CB0.PNG",
+      "sourceSha256": "230b68f0d91c2225442c279ff0c48ecd83c25c2813c3c0c3762cd3ab6c47adda",
+      "sourceBytes": 2424918,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "JUDGEMENT",
+        "AWAKENING • REBIRTH • CALLING"
+      ]
+    },
+    {
+      "id": "the-hierophant",
+      "printedTitle": "THE HIEROPHANT",
+      "sourceFile": "A61799C7-0617-4E33-A55C-0770B594DAE7.PNG",
+      "sourceSha256": "24237892e7af1023317f640e16c8d0b45c6c0ccb20c238e91607b801b4823e09",
+      "sourceBytes": 3442203,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "THE HIEROPHANT",
+        "TRADITION • WISDOM • GUIDANCE"
+      ]
+    },
+    {
+      "id": "king-of-wands",
+      "printedTitle": "KING OF WANDS",
+      "sourceFile": "A8BE38DE-DD36-402B-A796-47CC200F2E06.PNG",
+      "sourceSha256": "71dd066388a2bbb132c803b4dbace5e85ff7de8030e4fd3fb04c10003fded97e",
+      "sourceBytes": 2350728,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "KING OF WANDS",
+        "LEADERSHIP • VISION • INSPIRATION"
+      ]
+    },
+    {
+      "id": "seven-of-wands",
+      "printedTitle": "SEVEN OF WANDS",
+      "sourceFile": "ADAE96B7-0DA2-4950-80AE-7E01BFDC9023.PNG",
+      "sourceSha256": "b943733b8e6b33ac41cad998ec10e114ab673cd20251e57e2df9c87abd9efc0b",
+      "sourceBytes": 2328275,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "SEVEN OF WANDS",
+        "DEFENSE • COURAGE • PERSEVERANCE"
+      ]
+    },
+    {
+      "id": "six-of-wands",
+      "printedTitle": "SIX OF WANDS",
+      "sourceFile": "ADCB4711-57CB-47A8-B691-6A07FA830B1C.PNG",
+      "sourceSha256": "b0c28a825165d8a1c7a0b86d44d4d8323d356778e6fdc577f4507b012a881682",
+      "sourceBytes": 2397746,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "SIX OF WANDS",
+        "VICTORY • RECOGNITION • CONFIDENCE"
+      ]
+    },
+    {
+      "id": "nine-of-cups",
+      "printedTitle": "NINE OF CUPS",
+      "sourceFile": "B405C36D-D09E-47CE-8315-F9D37E3E497F.PNG",
+      "sourceSha256": "0e2ce1ed0d27e22b0b058d04a951c387f1ad5ac4952b76a7c7ede8708e44a83d",
+      "sourceBytes": 2184155,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "NINE OF CUPS",
+        "SATISFACTION + GRATITUDE *",
+        "WISHES FULFILLED"
+      ]
+    },
+    {
+      "id": "page-of-swords",
+      "printedTitle": "PAGE OF SWORDS",
+      "sourceFile": "B4104C5F-D6BD-4759-905B-4CE5C3445B76.PNG",
+      "sourceSha256": "f213662df585226d73359edaa223ca45456aa86920d022196f4f5ac2ea5b3c22",
+      "sourceBytes": 2334955,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "PAGE OF SWORDS",
+        "CURIOSITY + VIGILANCE + NEW IDEAS"
+      ]
+    },
+    {
+      "id": "the-tower",
+      "printedTitle": "THE TOWER",
+      "sourceFile": "B89C964A-D303-45C6-9659-BA0C5517B793.PNG",
+      "sourceSha256": "0b106eb281b02ba6e6236e9acf81c9d09521413fd69116aec1ff1b5dc073d0ea",
+      "sourceBytes": 3192694,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "THE TOWER",
+        "UPHEAVAL • REVELATION • BREAKTHROUGH"
+      ]
+    },
+    {
+      "id": "knight-of-swords",
+      "printedTitle": "KNIGHT OF SWORDS",
+      "sourceFile": "B9E9424E-9055-410F-927E-80ACF56BA9EC.PNG",
+      "sourceSha256": "4107ba8209e6b142b9485f854b35fa6f4f508f7681cace2a3ff58456e7670dbb",
+      "sourceBytes": 2476251,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "KNIGHT OF SWORDS",
+        "AMBITION + ACTION + DETERMINATION"
+      ]
+    },
+    {
+      "id": "the-fool",
+      "printedTitle": "THE FOOL",
+      "sourceFile": "C42E9C0D-B29B-4E74-9B11-7C8B27261D91.PNG",
+      "sourceSha256": "1ffcd09c8cba5ab2bb63ff250a9f1177ff22baa205515dc28685a7b97f3e6f31",
+      "sourceBytes": 3894443,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "THE FOOL",
+        "NEW BEGINNINGS • TRUST •",
+        "POSSIBILITY"
+      ]
+    },
+    {
+      "id": "queen-of-swords",
+      "printedTitle": "QUEEN OF SWORDS",
+      "sourceFile": "C7CB8AD4-880A-4A55-9AFE-4A4EE6FBA29E.PNG",
+      "sourceSha256": "c465ddeaad942746e659848b3336980fdc151c47ec4bdd43ba91f752b4454070",
+      "sourceBytes": 2491986,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "QUEEN OF SWORDS",
+        "CLARITY + INDEPENDENCE + DISCERNMENT"
+      ]
+    },
+    {
+      "id": "strength",
+      "printedTitle": "STRENGTH",
+      "sourceFile": "CA81BCC8-6B3E-46F0-B4C7-2F701C949702.PNG",
+      "sourceSha256": "d984a0890d50f1a5acd226c0ec6335f3e4a1acf37221ef44a46bde259eb22656",
+      "sourceBytes": 3488587,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "STRENGTH",
+        "COURAGE • COMPASSION • INNER STRENGTH"
+      ]
+    },
+    {
+      "id": "page-of-cups",
+      "printedTitle": "PAGE OF CUPS",
+      "sourceFile": "CF69058C-7998-41E7-8EA1-19E684E88681.PNG",
+      "sourceSha256": "abfd50d7d692402cd6cf974e5933b95379a2d406052bd37d5a0ecd71cede0d33",
+      "sourceBytes": 2219379,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "CREATIVITY",
+        "PAGE OF CUPS",
+        "INTUITION + SURPRISE"
+      ]
+    },
+    {
+      "id": "five-of-wands",
+      "printedTitle": "FIVE OF WANDS",
+      "sourceFile": "CFDA0023-EE05-481A-BFB3-C6DC422B90F5.PNG",
+      "sourceSha256": "eb90375eb7a0fbd68639e416b3d12a0099bc5b416a0c1ff621422ac1fcbeb4ae",
+      "sourceBytes": 2636935,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "FIVE OF WANDS",
+        "COMPETITION • CONFLICT • CHALLENGE"
+      ]
+    },
+    {
+      "id": "seven-of-swords",
+      "printedTitle": "SEVEN OF SWORDS",
+      "sourceFile": "D42EF9E4-397B-423C-9DC2-A8011AA0E296.PNG",
+      "sourceSha256": "26b47e7d12397e848da99ed483a9d4c106364a2f80dbe990d929d1470977d427",
+      "sourceBytes": 2067833,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "SEVEN OF SWORDS",
+        "STRATEGY * SECRECY * DECEPTION"
+      ]
+    },
+    {
+      "id": "the-star",
+      "printedTitle": "THE STAR",
+      "sourceFile": "D6C2285F-525F-4E33-91EE-970718115D94.PNG",
+      "sourceSha256": "15a519b2ecb6764471b0f95fa6bb61c68e03fa6fa85f5aead54dc71dbf687023",
+      "sourceBytes": 3317958,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "THE STAR",
+        "HOPE • INSPIRATION • RENEWAL"
+      ]
+    },
+    {
+      "id": "eight-of-swords",
+      "printedTitle": "EIGHT OF SWORDS",
+      "sourceFile": "DA4C95E0-E91B-4573-A00B-7DFB4979F79D.PNG",
+      "sourceSha256": "fdaa0b9c26d7348018a0dc48aa2130762d07f57142dc8b28e58080441d47b906",
+      "sourceBytes": 2191146,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "EIGHT OF SWORDS",
+        "RESTRICTION + FEAR +",
+        "- SHIF-DOUBT"
+      ]
+    },
+    {
+      "id": "death",
+      "printedTitle": "DEATH",
+      "sourceFile": "E4BA9928-041D-488F-94BE-4AC754818ED5.PNG",
+      "sourceSha256": "e6214121366a466bac78fb26b91e5095141883230bf3c59927b66db56c20c71c",
+      "sourceBytes": 3261487,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "DEATH",
+        "TRANSFORMATION • ENDINGS • REBIRTH"
+      ]
+    },
+    {
+      "id": "nine-of-pentacles",
+      "printedTitle": "NINE OF PENTACLES",
+      "sourceFile": "E6C91745-75A2-46F9-A773-ED4F6D9C647F.PNG",
+      "sourceSha256": "c0be56adb65026314d8fad49ab2c70fb84bf6a01f0cada815d018e35ac41b8c8",
+      "sourceBytes": 2714440,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "NINE OF PENTACLES",
+        "INDEPENDENCE + LUXURY + SELF-SUFFICIENCY"
+      ]
+    },
+    {
+      "id": "three-of-cups",
+      "printedTitle": "THREE OF CUPS",
+      "sourceFile": "E7055E94-A2C9-411C-BDCC-0D55F4A003AE.PNG",
+      "sourceSha256": "1faa5d5d27b381bb56d0b178459217a6b4c617909af090cdb8aa69f71642120e",
+      "sourceBytes": 2276202,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "THREE OF CUPS",
+        "CELEBRATION * FRIENDSHIP * ABUNDANCE"
+      ]
+    },
+    {
+      "id": "eight-of-cups",
+      "printedTitle": "EIGHT OF CUPS",
+      "sourceFile": "EAA2BD5F-13CC-4635-AF18-FDE2F0F8AB5B.PNG",
+      "sourceSha256": "c0dc5ee767507bb0f6e7803a53f20b825bb12c4c312b2a5e189345bf9b1e929d",
+      "sourceBytes": 2188481,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "EIGHT OF CUPS",
+        "LETTING GO + SEEKING + TRANSITION"
+      ]
+    },
+    {
+      "id": "the-hanged-man",
+      "printedTitle": "THE HANGED MAN",
+      "sourceFile": "EF6FE07F-410E-4985-91FA-D5C2F420FBA3.PNG",
+      "sourceSha256": "7568d1da5cc43833f63035e98563992bb843ebef7b71a5a681ff3fe26bb24f55",
+      "sourceBytes": 3303878,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "THE HANGED MAN",
+        "SURRENDER • PERSPECTIVE • PAUSE"
+      ]
+    },
+    {
+      "id": "wheel-of-fortune",
+      "printedTitle": "WHEEL OF FORTUNE",
+      "sourceFile": "F26A46FA-8396-49D6-8A7B-F96774FB1938.PNG",
+      "sourceSha256": "31ce6d03d2c8381590d6437844f5de22780e666bf1de368af5cf340498035d5a",
+      "sourceBytes": 3593269,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "WHEEL OF FORTUNE",
+        "DESTINY",
+        "• CYCLES",
+        "• CHANGE"
+      ]
+    },
+    {
+      "id": "queen-of-pentacles",
+      "printedTitle": "QUEEN OF PENTACLES",
+      "sourceFile": "FC9BCD3D-59AB-40E5-B21F-1FE5174783F1.PNG",
+      "sourceSha256": "ed972b1aa4dceae6dd0115d0872b827ade96408a424494bec5284ffcd03732f7",
+      "sourceBytes": 2637786,
+      "width": 1024,
+      "height": 1536,
+      "evidence": "visible_title_manually_reviewed",
+      "ocrTitleLines": [
+        "QUEEN OF PENTACLES",
+        "NURTURING + ABUNDANCE + PRACTICALITY"
+      ]
+    }
+  ]
+}

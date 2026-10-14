@@ -14,6 +14,7 @@ const backendSource = sourceFiles(resolve(process.cwd(), 'src'))
   .map((path) => readFileSync(path, 'utf8'))
   .join('\n');
 const schema = readFileSync(resolve(process.cwd(), '../database/schema.sql'), 'utf8');
+const additiveMigrations = readdirSync(resolve(process.cwd(), '../supabase/migrations')).filter(name=>name.endsWith('.sql')).map(name=>readFileSync(resolve(process.cwd(),'../supabase/migrations',name),'utf8')).join('\n');
 const rpcMigration = readFileSync(resolve(process.cwd(), '../database/migrations/006_luna_ai_rpc_sync.sql'), 'utf8');
 const schemaSyncMigration = readFileSync(resolve(process.cwd(), '../database/migrations/007_backend_schema_sync.sql'), 'utf8');
 const ambiguityFixMigration = readFileSync(resolve(process.cwd(), '../database/migrations/008_fix_luna_rpc_ambiguous_quota.sql'), 'utf8');
@@ -21,11 +22,11 @@ const dbSource = readFileSync(resolve(process.cwd(), 'src/db.ts'), 'utf8');
 
 test('every backend RPC call has a canonical SQL function definition', () => {
   const rpcNames = [...backendSource.matchAll(/\.rpc\(\s*['"]([^'"]+)['"]/g)].map((match) => match[1]);
-  assert.deepEqual([...new Set(rpcNames)].sort(), ['increment_meditation_play_count', 'reserve_luna_chat_request']);
+  assert.deepEqual([...new Set(rpcNames)].sort(), ['increment_meditation_play_count', 'luna_mutate_garden', 'reserve_luna_chat_request', 'reserve_luna_tarot_reading']);
 
   for (const rpcName of new Set(rpcNames)) {
-    assert.match(schema, new RegExp(`create (?:or replace )?function public\\.${rpcName}\\s*\\(`));
-    assert.match(rpcMigration, new RegExp(`create or replace function public\\.${rpcName}\\s*\\(`));
+    assert.match(schema + additiveMigrations, new RegExp(`create (?:or replace )?function public\\.${rpcName}\\s*\\(`));
+    assert.match(rpcMigration + additiveMigrations, new RegExp(`create or replace function public\\.${rpcName}\\s*\\(`));
   }
 });
 
