@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 test('the personal Luna entry uses the existing chat and optional profile, without an AI avatar',()=>{
  const home=readFileSync('src/luna2/HomeDiscovery.tsx','utf8');
- assert.match(home,/A little magic\. A lot of clarity\./);assert.match(home,/Understand yourself\. Find your way\./);
+ assert.match(home,/A space to find your clarity\./);assert.match(home,/Пространство для твоей ясности\./);
  assert.match(home,/onTalk/);assert.match(home,/onPersonalize/);assert.doesNotMatch(home,/ai-avatar|generated-avatar/);
  const app=readFileSync('src/App.tsx','utf8');assert.match(app,/onPersonalize=\{featureFlags.personalization/);assert.match(app,/initialView=\{profileEntry\}/);
 });

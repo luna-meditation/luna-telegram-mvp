@@ -36,6 +36,7 @@ export type ProgressAchievement = {
   title: string;
   description: string;
   category: string;
+  family?: 'seeker'|'oracle'|'guardian'|'explorer'|'devoted';
   unlocked: boolean;
   unlockedAt?: string | null;
   progress?: number;
@@ -181,6 +182,7 @@ function CurrentRhythmHero({ profile, language }: { profile: ProfileStats | null
 }
 
 function achievementIcon(item: ProgressAchievement): LucideIcon {
+  if(item.id.startsWith('tarot_')||item.id==='first_luna_conversation')return Sparkles;
   if (item.id === 'moon_garden_level_3') return Sprout;
   if (item.id === 'moon_garden_level_5') return Leaf;
   if (item.id === 'moon_garden_level_7') return Moon;
@@ -246,10 +248,10 @@ export function AchievementsStory({ items, language, initiallyOpen = false, onCl
     .slice(0, 3);
   const filtered = items
     .filter((item) => statusFilter === 'all' || achievementStatus(item) === statusFilter)
-    .filter((item) => categoryFilter === 'all' || item.category === categoryFilter)
+    .filter((item) => categoryFilter === 'all' || achievementFamily(item) === categoryFilter)
     .sort((left, right) => Number(right.unlocked) - Number(left.unlocked) || (right.progress ?? 0) - (left.progress ?? 0));
   const categories = [
-    ['all', t.all], ['practice', t.practiceCategory], ['rhythm', t.rhythmCategory], ['wellness', t.wellnessCategory], ['garden', t.gardenCategory], ['premium', t.premiumCategory]
+    ['all', t.all], ['seeker',language==='en'?'The Seeker':'Искатель'],['oracle',language==='en'?'The Oracle':'Оракул'],['guardian',language==='en'?'The Guardian':'Хранитель'],['explorer',language==='en'?'The Explorer':'Исследователь'],['devoted',language==='en'?'The Devoted':'Преданный']
   ];
   return (
     <section className="progress-v4-achievements progress-v3-enter">
@@ -280,6 +282,14 @@ export function AchievementsStory({ items, language, initiallyOpen = false, onCl
       )}
     </section>
   );
+}
+
+function achievementFamily(item:ProgressAchievement){
+ if(item.family)return item.family;
+ if(item.id.startsWith('tarot_'))return 'oracle';
+ if(['deep_sleep_explorer','anxiety_companion','focus_builder','calm_explorer'].includes(item.id))return 'explorer';
+ if(item.category==='rhythm')return 'devoted';
+ return item.category==='practice'||item.category==='garden'?'guardian':'seeker';
 }
 
 function ProgressDiagnostics({ profile, language }: { profile: ProfileStats | null; language: AppLanguage }) {

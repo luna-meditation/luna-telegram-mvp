@@ -907,7 +907,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
   let readingContext:unknown=null;
   if(input.readingId){
     if(!env.FEATURE_TAROT_HISTORY||input.mode!=='tarot')throw new FoundationError(503,'reading_context_unavailable','Reading context is unavailable.');
-    const {data,error}=await supabase.from('luna_tarot_readings').select('card_id,orientation,intention,question,language,interpretation').eq('id',input.readingId).eq('telegram_id',telegramId).maybeSingle();
+    const {data,error}=await supabase.from('luna_tarot_readings').select('card_id,orientation,intention,question,language,interpretation'+(env.FEATURE_TAROT_SPREADS||env.FEATURE_DAILY_CARD_V2?',reading_kind,cards':'')).eq('id',input.readingId).eq('telegram_id',telegramId).maybeSingle();
     if(error||!data)throw new FoundationError(404,'reading_not_found','Reading not found.');
     readingContext=data;
   }

@@ -30,11 +30,20 @@ export type PersonalProfile={display_name?:string|null;interests:Array<'tarot'|'
 export const getPersonalProfile=(initData?:string)=>request<PersonalProfile>('/api/personalization',undefined,initData);
 export const savePersonalProfile=(profile:PersonalProfile,initData?:string)=>request<PersonalProfile>('/api/personalization',{method:'PUT',body:JSON.stringify(profile)},initData);
 export const deletePersonalProfile=(initData?:string)=>request<{ok:boolean}>('/api/personalization',{method:'DELETE'},initData);
-export type TarotInterpretation={summary:string;cardMeaning:string;context:string;reflection:string;question:string;continuation:string|null};
-export type TarotReading={id:string;client_reading_id:string;card_id:string;orientation:'upright'|'reversed';intention:'general'|'love'|'career'|'growth';question:string;language:AppLanguage;interpretation:TarotInterpretation|null;status:'local'|'processing'|'ready'|'fallback'|'safety';fallback_reason:string|null;created_at:string;updated_at:string};
+export type TarotInterpretation={summary:string;cardMeaning:string;context:string;reflection:string;question:string;continuation:string|null;cardInsights?:Array<{cardId:string;text:string}>;links?:string};
+export type TarotSelection={cardId:string;orientation:'upright'|'reversed'};
+export type TarotReading={id:string;client_reading_id:string;card_id:string;orientation:'upright'|'reversed';reading_kind?:'single'|'daily'|'three'|'five';cards?:TarotSelection[];intention:'general'|'love'|'career'|'growth';question:string;language:AppLanguage;interpretation:TarotInterpretation|null;status:'local'|'processing'|'ready'|'fallback'|'safety';fallback_reason:string|null;created_at:string;updated_at:string};
 export const saveTarotReading=(input:{clientReadingId:string;cardId:string;orientation:TarotReading['orientation'];intention:TarotReading['intention'];question:string;language:AppLanguage;generate:boolean},initData?:string)=>request<{reading:TarotReading;reason:string|null}>('/api/tarot/readings',{method:'POST',body:JSON.stringify(input)},initData);
 export const listTarotReadings=(offset=0,initData?:string)=>request<{readings:TarotReading[];nextOffset:number|null}>(`/api/tarot/readings?offset=${offset}`,undefined,initData);
 export const deleteTarotReading=(id:string,initData?:string)=>request<{ok:boolean}>(`/api/tarot/readings/${id}`,{method:'DELETE'},initData);
+export type DailyTarotResult={reading:TarotReading;day:string;timezone:'UTC';resetsAt:string;reason:string|null};
+export const openDailyTarot=(language:AppLanguage,generate=false,initData?:string,expectedDay?:string)=>request<DailyTarotResult>('/api/tarot/daily',{method:'POST',body:JSON.stringify({language,generate,...(expectedDay?{expectedDay}:{})})},initData);
+export const saveTarotSpread=(reading:{clientReadingId:string;kind:'three'|'five';cards:TarotSelection[];intention:TarotReading['intention'];question:string;language:AppLanguage;generate:boolean},initData?:string,orderId?:string)=>request<{reading:TarotReading;reason:string|null}>('/api/tarot/spreads',{method:'POST',body:JSON.stringify({reading,...(orderId?{orderId}:{})})},initData);
+export type ReadingOffer={kind:'single'|'three'|'five';cards:number;seeds:number|null;stars:number};
+export type ReadingOrder={id:string;kind:ReadingOffer['kind'];currency:'SEEDS'|'XTR';amount:number;status:'pending'|'entitled'|'consumed'|'refunded';client_reading_id:string|null};
+export const getReadingOffers=(initData?:string)=>request<{enabled:boolean;offers:ReadingOffer[];premium:{threeDaily:number;fiveDaily:number;monthlyStars:number|null}|null}>('/api/luna21/offers',undefined,initData);
+export const buyReading=(input:{requestId:string;kind:ReadingOffer['kind'];currency:'SEEDS'|'XTR';expectedAmount:number;confirmed:true;termsAccepted:true},initData?:string)=>request<{order:ReadingOrder;invoiceUrl:string|null}>('/api/luna21/orders',{method:'POST',body:JSON.stringify(input)},initData);
+export const getReadingOrder=(id:string,initData?:string)=>request<ReadingOrder>(`/api/luna21/orders/${id}`,undefined,initData);
 
 export type AccessState = {
   hasPremium: boolean;

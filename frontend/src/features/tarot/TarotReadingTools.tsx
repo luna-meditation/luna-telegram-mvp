@@ -28,7 +28,7 @@ export function TarotReadingTools({session,language,initData,dispatch,onContinue
  const ai=reading?.status==='ready'?reading.interpretation:null;
  return <section className="tarot-ai-reflection" data-testid="tarot-ai-reflection" aria-busy={busy}>
   {ai?<><p className="tarot-ai-label"><Sparkles size={16}/>Luna AI · {t.saved}</p>{[ai.summary,ai.cardMeaning,ai.context,ai.reflection,ai.question].map((text,index)=><div key={index}><h3>{t.sections[index]}</h3><p>{text}</p></div>)}{ai.continuation&&<p>{ai.continuation}</p>}{featureFlags.ai_modes&&onContinue&&reading&&<button type="button" className="tarot-draw-button" onClick={()=>onContinue(reading.id)}>{t.continue}<ArrowRight size={18}/></button>}</>:reading?.status==='safety'?<p role="alert">{t.safety}</p>:<>
-   {featureFlags.tarot_ai&&(!reading||reading.status==='local')&&<><p>{t.notice}</p><button type="button" className="tarot-draw-button" disabled={busy||!currentId} onClick={()=>void save(true)}><Sparkles size={18}/>{t.ai}</button></>}
+   {featureFlags.tarot_ai&&(!reading||reading.status==='local')&&<><button type="button" className="tarot-draw-button" disabled={busy||!currentId} onClick={()=>void save(true)}><Sparkles size={18}/>{t.ai}</button><details className="tarot-privacy"><summary>{language==='en'?'Privacy':'Приватность'}</summary><p>{t.notice}</p></details></>}
    {reading?.status==='fallback'&&<p role="status">{t.fallback}</p>}
    {reading?.status==='processing'&&<p role="status">{t.pending}</p>}
    {reading&&reading.status==='local'&&<small>{t.saved}</small>}

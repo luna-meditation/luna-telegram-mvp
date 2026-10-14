@@ -10,15 +10,19 @@
 .luna2-header-seeds { display: inline-flex; min-height: 40px; align-items: center; gap: 5px; border: 1px solid var(--border-accent); border-radius: 15px; padding: 0 9px; color: var(--color-gold-soft); background: var(--surface-subtle); font-size: 14px; font-variant-numeric: tabular-nums; }
 .bottom-navigation-luna2 { height: max(var(--app-navigation-height), 64px); padding: 4px; }
 .bottom-navigation-luna2 .bottom-navigation-item { align-content: center; gap: 1px; font-size: 12px; }
-.bottom-navigation-luna2 .luna2-nav-ai { position: relative; border-color: color-mix(in srgb, var(--accent-violet) 52%, transparent); background: color-mix(in srgb, var(--accent-violet) 19%, var(--nav-bg)); color: var(--color-gold-soft); box-shadow: inset 0 1px 0 rgba(226, 217, 255, .13), 0 0 15px rgba(116, 92, 211, .12); font-weight: 650; }
+.bottom-navigation-luna2 .luna2-nav-ai { position: relative; font-weight: 650; }
+.bottom-navigation-luna2 .luna2-nav-ai:not([aria-current="page"]) { border-color: transparent; background: transparent; color: var(--color-text-secondary); box-shadow: none; }
 .bottom-navigation-luna2 .luna2-nav-ai svg { width: 28px; height: 28px; padding: 3px; overflow: visible; filter: drop-shadow(0 0 6px rgba(165, 135, 255, .4)); }
 .bottom-navigation-luna2 .luna2-nav-ai[aria-current="page"] { border-color: var(--border-accent); background: color-mix(in srgb, var(--accent-violet) 24%, var(--surface-selected)); box-shadow: inset 0 1px 0 rgba(239, 219, 166, .18), 0 0 16px rgba(145, 105, 225, .15); }
 .luna2-home { gap: 18px; }
 .luna2-home .home-v2-atmosphere { min-height: 276px; }
-.luna2-home-guide { display: grid; gap: 10px; border: 1px solid var(--border-accent); border-radius: 24px; padding: 18px; background: var(--surface-primary); box-shadow: var(--shadow-soft); }
+.luna2-home-guide { display: grid; gap: 9px; border: 1px solid var(--border-accent); border-radius: 22px; padding: 15px; background: var(--surface-primary); box-shadow: var(--shadow-soft); }
 .luna2-home-guide > div { display: flex; gap: 10px; align-items: center; color: var(--color-gold-soft); font-size: 13px; }
-.luna2-home-guide h2 { margin: 0; font-size: 21px; font-weight: 620; line-height: 1.25; letter-spacing: -.025em; color: var(--color-text-primary); }
-.luna2-talk-primary { min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 10px; border-radius: 16px; background: #e5c573; color: #172039; font-size: 16px; font-weight: 650; }
+.luna2-home-guide h2 { margin: 0; font-size: 19px; font-weight: 620; line-height: 1.3; letter-spacing: -.025em; color: var(--color-text-primary); }
+.luna2-talk-primary { min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 15px; border: 1px solid rgba(223,190,124,.65); border-radius: 16px; background: #302442; color: #fff6e5; box-shadow: 0 3px 17px rgba(106,71,162,.13); font-size: 16px; font-weight: 600; transition: transform 150ms ease, background 150ms ease; }
+.luna2-talk-primary:active { transform: scale(.985); background: #3d2d55; }
+:root[data-theme="light"] .luna2-talk-primary { background: #514063; }
+.luna2-home-guide .luna2-personalize-entry { min-height: 44px; padding: 0; text-align: left; }
 .luna2-personalize-entry { min-height: 44px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.35; }
 .personalization-settings select { width: 100%; min-height: 44px; padding: 10px; border-radius: 12px; background: var(--surface-primary); color: var(--color-text-primary); border: 1px solid var(--color-border-card); font-size: 16px; }
 .luna2-home .home-v2-hero-dark { object-position: 74% center; filter: saturate(.95) contrast(1); opacity: 1; }
@@ -41,6 +45,12 @@
 .luna2-quick-actions button { display: grid; min-width: 0; min-height: 82px; justify-items: center; align-content: center; gap: 7px; padding: 11px 6px; border: 1px solid var(--color-border-card); border-radius: 20px; background: var(--surface-primary); box-shadow: var(--shadow-soft); color: var(--color-gold-soft); }
 .luna2-quick-actions button span { color: var(--color-text-primary); font-size: 14px; font-weight: 600; }
 .luna2-quick-actions button small { margin-top: -3px; color: var(--color-text-secondary); font-size: 12px; }
+.luna21-home-categories { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.luna21-home-categories button { min-height: 70px; grid-template-columns: 24px minmax(0,1fr); justify-items: start; gap: 4px 10px; padding: 12px 14px; align-items: center; }
+.luna21-home-categories button svg { grid-row: 1/3; }
+.luna21-home-categories button span { font-size: 15px; }
+.luna21-home-categories button small { grid-column: 2; }
+.luna21-home-categories button:disabled { opacity: 1; cursor: default; }
 .luna2-home-progress { overflow: hidden; border: 1px solid var(--color-border-card); border-radius: 22px; background: var(--surface-primary); }
 .luna2-home-progress button { display: flex; width: 100%; min-height: 74px; align-items: center; gap: 12px; padding: 14px 16px; text-align: left; }
 .luna2-home-progress button + button { border-top: 1px solid var(--color-border-card); }

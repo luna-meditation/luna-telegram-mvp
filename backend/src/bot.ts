@@ -13,8 +13,9 @@ import {
   plans,
   type PlanId
 } from './plans.js';
-import { paymentEligibility } from './payment-policy.js';
+import { paymentEligibility,validExistingPlanPayment } from './payment-policy.js';
 import { logBackendError } from './error-logging.js';
+import {validateLuna21Precheckout,fulfillLuna21Payment} from './luna21-commerce.js';
 
 export const bot = new Telegraf(env.BOT_TOKEN);
 
@@ -193,6 +194,7 @@ export async function configureTelegramBot() {
     { command: 'library', description: 'Open practice library' },
     { command: 'profile', description: 'View your Luna profile' },
     { command: 'help', description: 'Show Luna help' },
+    { command: 'paysupport', description: 'Payment support' },
     { command: 'admin', description: 'Admin stats' }
   ]);
 }
@@ -239,6 +241,10 @@ bot.command('help', async (ctx) => {
   await ctx.reply(
     'Luna commands:\n/start - Start Luna\n/app - Open Mini App\n/plans - View access plans\n/library - Open practice library\n/profile - View your access\n/help - Show help'
   );
+});
+bot.command('paysupport',async(ctx)=>{
+ const language=botLanguage(ctx.from?.language_code);
+ await ctx.reply(language==='ru'?'Открой Luna → Профиль → Поддержка и выбери «Платежи». Мы поможем проверить покупку.':'Open Luna → Profile → Support and choose Payments. We will help check your purchase.',Markup.inlineKeyboard([[miniAppButton(language)]]));
 });
 
 bot.command('admin', async (ctx) => {
@@ -292,10 +298,17 @@ bot.action(/^buy_(annual|lifetime)$/, async (ctx) => {
 bot.on('pre_checkout_query', async (ctx) => {
   const payload = ctx.preCheckoutQuery.invoice_payload;
   try {
-    const parsed = JSON.parse(payload) as { plan?: unknown; telegramId?: unknown; requestId?: unknown };
+    const parsed = JSON.parse(payload) as { plan?: unknown; telegramId?: unknown; requestId?: unknown;kind?:unknown };
+    if(parsed.kind==='tarot'){
+      const valid=Boolean(ctx.from)&&await validateLuna21Precheckout(ctx.from!.id,parsed,ctx.preCheckoutQuery.currency,ctx.preCheckoutQuery.total_amount,ctx.preCheckoutQuery.id);
+      await ctx.answerPreCheckoutQuery(valid,valid?undefined:'This Luna reading is unavailable.');return;
+    }
     if (!isPaymentPayloadPlanId(parsed.plan) || typeof parsed.telegramId !== 'number' || !ctx.from || parsed.telegramId !== ctx.from.id) {
       await ctx.answerPreCheckoutQuery(false, 'Invalid Luna payment payload.');
       return;
+    }
+    if(!validExistingPlanPayment(parsed.plan,ctx.preCheckoutQuery.currency,ctx.preCheckoutQuery.total_amount)){
+      await ctx.answerPreCheckoutQuery(false,'Invalid Luna payment amount or currency.');return;
     }
     const access = await getUserAccess(ctx.from.id);
     if (!paymentEligibility(access.plan, parsed.plan).allowed) {
@@ -317,16 +330,24 @@ bot.on('pre_checkout_query', async (ctx) => {
 bot.on('successful_payment', async (ctx) => {
   if (!ctx.from) return;
   const payment = ctx.message.successful_payment;
-  let payload: { plan?: unknown; telegramId?: unknown; requestId?: unknown } | null = null;
+  let payload: { plan?: unknown; telegramId?: unknown; requestId?: unknown;kind?:unknown } | null = null;
 
   try {
     payload = JSON.parse(payment.invoice_payload) as { plan?: unknown; telegramId?: unknown; requestId?: unknown };
+    if(payload?.kind==='tarot'){
+      await fulfillLuna21Payment(ctx.from.id,payload,payment.currency,payment.total_amount,payment.telegram_payment_charge_id);
+      const language=botLanguage(ctx.from.language_code);
+      await ctx.reply(language==='ru'?'Покупка подтверждена. Твой расклад доступен в Luna → Таро.':'Purchase confirmed. Your reading is available in Luna → Tarot.',Markup.inlineKeyboard([[miniAppButton(language)]]));return;
+    }
 
     if (!isPaymentPayloadPlanId(payload.plan) || typeof payload.telegramId !== 'number' || payload.telegramId !== ctx.from.id) {
       console.warn('[Luna payment rejected]', { telegramId: ctx.from.id, reason: 'invalid_payload' });
       return;
     }
 
+    if(!validExistingPlanPayment(payload.plan,payment.currency,payment.total_amount,payment.telegram_payment_charge_id)){
+      console.warn('[Luna payment rejected]',{reason:'invalid_amount_or_currency'});return;
+    }
     const result = await recordSuccessfulPayment({
       telegram_id: ctx.from.id,
       plan: payload.plan,

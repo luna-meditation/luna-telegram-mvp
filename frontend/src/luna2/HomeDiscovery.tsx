@@ -1,29 +1,31 @@
-import { ArrowUpRight, BookOpen, Flame, Flower2, Sparkles, Wind } from 'lucide-react';
+import { ArrowUpRight, BookOpen, Flame, Flower2, Sparkles, Wind,Orbit } from 'lucide-react';
 import type { AppLanguage } from '../api';
 import { CelestialArt } from './ExplorePage';
 import { luna2Copy } from './copy';
 import { tarotCopy } from '../features/tarot/copy';
+import {luna21Flags} from '../config/luna21Flags';
 
 export function HomeLunaGuide({language,onTalk,onPersonalize}:{language:AppLanguage;onTalk:()=>void;onPersonalize?:()=>void}){
  const en=language==='en';
  return <section className="luna2-home-guide" aria-label={en?'Your personal Luna guide':'Твоя персональная Luna'}>
-  <div><Sparkles size={25}/><span>{en?'A little magic. A lot of clarity.':'Немного магии. Больше понимания.'}</span></div>
-  <h2>{en?'Understand yourself. Find your way.':'Пойми себя. Найди свой путь.'}</h2>
+  <div><Sparkles size={22}/><span>Luna AI</span></div>
+  <h2>{en?'A space to find your clarity.':'Пространство для твоей ясности.'}</h2>
   <button type="button" className="luna2-talk-primary" onClick={onTalk}>{en?'Talk to Luna':'Поговорить с Luna'}<ArrowUpRight size={19}/></button>
-  {onPersonalize&&<button type="button" className="luna2-personalize-entry" onClick={onPersonalize}>{en?'Make Luna yours · optional':'Настроить Luna под себя · необязательно'}</button>}
+  {onPersonalize&&<button type="button" className="luna2-personalize-entry" onClick={onPersonalize}>{en?'Personalize your guide':'Настроить своего проводника'}</button>}
  </section>;
 }
 
-export function HomeDiscovery({ language, tarotEnabled, onTarot, onMeditate, onBreathe }: {
-  language: AppLanguage; tarotEnabled: boolean; onTarot: () => void; onMeditate: () => void; onBreathe: () => void;
+export function HomeDiscovery({ language, tarotEnabled, onTarot, onMeditate, onBreathe,onAstrology,onDaily }: {
+  language: AppLanguage; tarotEnabled: boolean; onTarot: () => void; onMeditate: () => void; onBreathe: () => void;onAstrology?:()=>void;onDaily?:()=>void;
 }) {
   const t = luna2Copy[language];
   return <>
-    <button type="button" disabled={!tarotEnabled} onClick={onTarot} className="luna2-daily-card" aria-disabled={!tarotEnabled} data-feature-flag="tarot_daily" data-feature-enabled={tarotEnabled} aria-label={tarotEnabled ? tarotCopy[language].homeTitle : t.dailyTarotNote}>
-      <CelestialArt kind="tarot" /><div><span className="luna2-eyebrow">{tarotEnabled ? tarotCopy[language].homeTitle : t.dailyTarot}</span><h2>{tarotEnabled ? tarotCopy[language].homeBody : t.dailyTarotBody}</h2><p>{tarotEnabled ? tarotCopy[language].noCharge : t.dailyTarotNote}</p></div><span className="luna2-soon">{tarotEnabled ? tarotCopy[language].free : t.soon}</span>
+    <button type="button" disabled={!tarotEnabled} onClick={luna21Flags.daily_card_v2?onDaily??onTarot:onTarot} className="luna2-daily-card" aria-disabled={!tarotEnabled} data-feature-flag="tarot_daily" data-feature-enabled={tarotEnabled} aria-label={luna21Flags.daily_card_v2?(language==='en'?'Card of the day':'Карта дня'):tarotEnabled ? tarotCopy[language].homeTitle : t.dailyTarotNote}>
+      <CelestialArt kind="tarot" /><div><span className="luna2-eyebrow">{luna21Flags.daily_card_v2?(language==='en'?'Card of the day':'Карта дня'):tarotEnabled ? tarotCopy[language].homeTitle : t.dailyTarot}</span><h2>{luna21Flags.daily_card_v2?(language==='en'?'A new perspective for today.':'Новый взгляд на сегодняшний день.'):tarotEnabled ? tarotCopy[language].homeBody : t.dailyTarotBody}</h2><p>{luna21Flags.daily_card_v2?(language==='en'?'Open your free card':'Открыть бесплатную карту'):tarotEnabled ? tarotCopy[language].homeTitle : t.dailyTarotNote}</p></div><span className="luna2-soon">{tarotEnabled ? tarotCopy[language].free : t.soon}</span>
     </button>
-    <section className="luna2-quick-actions" aria-label={t.quickActions}>
+    <section className="luna2-quick-actions luna21-home-categories" aria-label={t.quickActions}>
       <button type="button" onClick={onTarot}><Sparkles size={21} /><span>{t.tarot}</span>{!tarotEnabled && <small>{t.soon}</small>}</button>
+      <button type="button" onClick={onAstrology} disabled={!onAstrology}><Orbit size={21}/><span>{language==='en'?'Astrology':'Астрология'}</span><small>{t.soon}</small></button>
       <button type="button" onClick={onMeditate}><BookOpen size={21} /><span>{t.meditate}</span></button>
       <button type="button" onClick={onBreathe}><Wind size={21} /><span>{t.breathe}</span></button>
     </section>
