@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
+import {dirname,resolve} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {readFileSync} from 'node:fs';
+
+assert.equal(process.versions.node.split('.')[0],'22','Staging requires Node.js 22');
+const frontend=resolve(dirname(fileURLToPath(import.meta.url)),'..');
+const commit=process.env.VITE_COMMIT_SHA;
+assert.match(commit??'',/^[a-f0-9]{40}$/,'Provide the verified development commit SHA');
+const enabled=['NEW_NAVIGATION','TAROT_DAILY','PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI'];
+const disabled=['TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO'];
+// Public fields only: never spread server secrets into the bundler environment.
+const env={PATH:process.env.PATH,HOME:process.env.HOME,TMPDIR:process.env.TMPDIR,
+ NODE_ENV:'production',VITE_API_URL:'',VITE_BOT_USERNAME:process.env.VITE_BOT_USERNAME??'',
+ VITE_COMMIT_SHA:commit,VITE_DEPLOY_ENV:'staging',
+ ...Object.fromEntries(enabled.map(key=>[`VITE_FEATURE_${key}`,'true'])),
+ ...Object.fromEntries(disabled.map(key=>[`VITE_FEATURE_${key}`,'false']))};
+for(const script of ['node_modules/typescript/bin/tsc','node_modules/vite/bin/vite.js']){
+ const child=spawnSync(process.execPath,[resolve(frontend,script),...(script.includes('vite')?['build','--outDir','dist-staging']:[])],{cwd:frontend,env,stdio:'inherit'});
+ assert.equal(child.status,0,'Staging build failed');
+}
+const index=readFileSync(resolve(frontend,'dist-staging/index.html'),'utf8');
+assert.ok(index.includes('https://telegram.org/js/telegram-web-app.js'),'The real Telegram SDK is required');
+assert.ok(!/offline-local-qa|synthetic-local|window\.Telegram\?\?=/.test(index),'Synthetic Telegram bridges are forbidden in real staging');
+console.log('Real staging artifact built locally; no cloud build or deployment started.');

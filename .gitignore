@@ -15,6 +15,12 @@ website/.env
 
 # Build output
 dist/
+dist-phase2/
+dist-tarot-preview/
+dist-refinement/
+dist-refinement-preview/
+dist-staging/
+supabase/.temp/
 build/
 .vite/
 .vercel/

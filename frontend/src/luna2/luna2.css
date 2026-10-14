@@ -1,0 +1,201 @@
+.luna2-shell { --luna2-blue: #3189ff; --luna2-cyan: #98e9ff; }
+.luna2-page { display: grid; gap: 22px; padding-bottom: 16px; }
+.luna2-page-heading > p, .luna2-eyebrow { margin: 0 0 8px; color: var(--color-gold-soft); font-size: 12px; font-weight: 650; letter-spacing: .09em; }
+.luna2-page-heading h1 { max-width: 340px; margin: 0; font-size: clamp(27px, 7.6vw, 32px); line-height: 1.13; letter-spacing: -.035em; font-weight: 620; }
+.luna2-page-heading > span { display: block; margin-top: 12px; max-width: 335px; color: var(--color-text-secondary); font-size: 15px; line-height: 1.55; }
+.luna2-back { display: inline-flex; width: fit-content; min-height: 44px; align-items: center; gap: 8px; margin: 0; color: var(--color-text-secondary); font-size: 14px; }
+.luna2-header { gap: 8px; }
+.luna2-header .app-header-wordmark { display: block; font-size: 18px; letter-spacing: -.03em; text-transform: none; font-weight: 600; }
+.luna2-header .app-header-brand { gap: 7px; min-width: 0; }
+.luna2-header-seeds { display: inline-flex; min-height: 40px; align-items: center; gap: 5px; border: 1px solid var(--border-accent); border-radius: 15px; padding: 0 9px; color: var(--color-gold-soft); background: var(--surface-subtle); font-size: 14px; font-variant-numeric: tabular-nums; }
+.bottom-navigation-luna2 { height: max(var(--app-navigation-height), 64px); padding: 4px; }
+.bottom-navigation-luna2 .bottom-navigation-item { align-content: center; gap: 1px; font-size: 12px; }
+.bottom-navigation-luna2 .luna2-nav-ai { position: relative; border-color: color-mix(in srgb, var(--accent-violet) 52%, transparent); background: color-mix(in srgb, var(--accent-violet) 19%, var(--nav-bg)); color: var(--color-gold-soft); box-shadow: inset 0 1px 0 rgba(226, 217, 255, .13), 0 0 15px rgba(116, 92, 211, .12); font-weight: 650; }
+.bottom-navigation-luna2 .luna2-nav-ai svg { width: 28px; height: 28px; padding: 3px; overflow: visible; filter: drop-shadow(0 0 6px rgba(165, 135, 255, .4)); }
+.bottom-navigation-luna2 .luna2-nav-ai[aria-current="page"] { border-color: var(--border-accent); background: color-mix(in srgb, var(--accent-violet) 24%, var(--surface-selected)); box-shadow: inset 0 1px 0 rgba(239, 219, 166, .18), 0 0 16px rgba(145, 105, 225, .15); }
+.luna2-home { gap: 18px; }
+.luna2-home .home-v2-atmosphere { min-height: 276px; }
+.luna2-home-guide { display: grid; gap: 10px; border: 1px solid var(--border-accent); border-radius: 24px; padding: 18px; background: var(--surface-primary); box-shadow: var(--shadow-soft); }
+.luna2-home-guide > div { display: flex; gap: 10px; align-items: center; color: var(--color-gold-soft); font-size: 13px; }
+.luna2-home-guide h2 { margin: 0; font-size: 21px; font-weight: 620; line-height: 1.25; letter-spacing: -.025em; color: var(--color-text-primary); }
+.luna2-talk-primary { min-height: 48px; display: flex; align-items: center; justify-content: center; gap: 10px; border-radius: 16px; background: #e5c573; color: #172039; font-size: 16px; font-weight: 650; }
+.luna2-personalize-entry { min-height: 44px; color: var(--color-text-secondary); font-size: 13px; line-height: 1.35; }
+.personalization-settings select { width: 100%; min-height: 44px; padding: 10px; border-radius: 12px; background: var(--surface-primary); color: var(--color-text-primary); border: 1px solid var(--color-border-card); font-size: 16px; }
+.luna2-home .home-v2-hero-dark { object-position: 74% center; filter: saturate(.95) contrast(1); opacity: 1; }
+.luna2-home .home-v2-atmosphere-copy { padding-top: 28px; }
+.luna2-home .home-v2-greeting { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.luna2-home .home-v2-atmosphere-copy h1 { max-width: 225px; font-size: 31px; font-weight: 630; line-height: 1.1; }
+/* Slightly wider Anxiety choice preserves the full RU label even with fallback fonts. */
+.luna2-home .home-v2-mood-row { display: grid; grid-template-columns: 1fr 1fr .85fr 1.2fr .85fr; gap: 5px; padding-inline: 10px; }
+.luna2-home .home-v2-mood-pill { width: auto; min-width: 0; min-height: 60px; }
+.luna2-home .home-v2-mood-pill small { font-size: 12px; font-weight: 550; color: rgba(251, 247, 239, .88); }
+.luna2-daily-card { position: relative; display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 13px; align-items: center; min-height: 118px; padding: 15px; border: 1px solid var(--border-accent); border-radius: 24px; background: var(--surface-primary); box-shadow: var(--shadow-soft); }
+.luna2-daily-card { width: 100%; text-align: left; }
+.luna2-daily-card:disabled { opacity: 1; cursor: default; }
+.luna2-daily-card .luna2-tarot-art { width: 72px; height: 82px; margin: 0; object-fit: contain; filter: drop-shadow(0 4px 8px rgba(100, 77, 160, .2)); }
+.luna2-daily-card .luna2-eyebrow { display: block; margin-bottom: 7px; padding-right: 37px; letter-spacing: .03em; }
+.luna2-daily-card h2 { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.35; }
+.luna2-daily-card p { margin: 6px 0 0; color: var(--color-text-secondary); font-size: 13px; line-height: 1.4; }
+.luna2-soon { position: absolute; top: 14px; right: 13px; color: var(--color-gold-soft); font-size: 12px; }
+.luna2-quick-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.luna2-quick-actions button { display: grid; min-width: 0; min-height: 82px; justify-items: center; align-content: center; gap: 7px; padding: 11px 6px; border: 1px solid var(--color-border-card); border-radius: 20px; background: var(--surface-primary); box-shadow: var(--shadow-soft); color: var(--color-gold-soft); }
+.luna2-quick-actions button span { color: var(--color-text-primary); font-size: 14px; font-weight: 600; }
+.luna2-quick-actions button small { margin-top: -3px; color: var(--color-text-secondary); font-size: 12px; }
+.luna2-home-progress { overflow: hidden; border: 1px solid var(--color-border-card); border-radius: 22px; background: var(--surface-primary); }
+.luna2-home-progress button { display: flex; width: 100%; min-height: 74px; align-items: center; gap: 12px; padding: 14px 16px; text-align: left; }
+.luna2-home-progress button + button { border-top: 1px solid var(--color-border-card); }
+.luna2-home-progress button > svg { color: var(--color-gold-soft); flex-shrink: 0; }
+.luna2-home-progress button > svg:last-child { margin-left: auto; width: 17px; color: var(--color-text-muted); }
+.luna2-home-progress strong, .luna2-home-progress small { display: block; }
+.luna2-home-progress strong { font-size: 15px; font-weight: 550; }
+.luna2-home-progress small { margin-top: 5px; font-size: 13px; color: var(--color-text-secondary); }
+.luna2-category-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.luna2-category { position: relative; isolation: isolate; display: flex; min-width: 0; min-height: 250px; gap: 12px; flex-direction: column; overflow: hidden; border: 1px solid var(--color-border-card); border-radius: 25px; padding: 14px; color: var(--color-text-primary); background: var(--surface-primary); text-align: left; box-shadow: var(--shadow-soft); }
+.luna2-category.is-featured { min-height: 265px; border-color: var(--border-accent); }
+.luna2-category-art { position: relative; display: grid; width: 100%; height: 128px; flex-shrink: 0; place-items: center; }
+.luna2-category-art .luna2-celestial-art { width: 100%; height: 140px; object-fit: contain; filter: drop-shadow(0 5px 10px rgba(98, 71, 146, .27)); }
+.luna2-category-art > .luna2-category-landscape { width: 100%; height: 128px; object-fit: cover; object-position: 63% center; border-radius: 15px; }
+.luna2-category-top { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 4px; color: var(--color-gold-soft); }
+.luna2-category-top small { border: 1px solid var(--border-accent); border-radius: 10px; padding: 3px 6px; font-size: 12px; line-height: 1.3; background: var(--surface-subtle); white-space: nowrap; }
+.luna2-category-copy { position: relative; display: grid; gap: 7px; margin-top: auto; }
+.luna2-category-copy strong { font-size: 20px; line-height: 1.15; font-weight: 650; letter-spacing: -.025em; }
+.luna2-category-copy > span { font-size: 13px; line-height: 1.45; color: var(--color-text-secondary); }
+.luna2-celestial-art { display: block; width: 140px; height: 140px; margin: 0 auto; object-fit: contain; }
+.luna2-mini-ring { display: block; width: 99px; height: 99px; border: 3px solid #368eff; border-top-color: #8af0ff; border-right-color: #54c9ff; border-radius: 50%; box-shadow: 0 0 8px #2386ff, inset 0 0 12px rgba(35, 134, 255, .4), 0 0 32px rgba(150, 97, 247, .43); }
+.luna2-preview-hero { display: grid; justify-items: center; padding: 29px 22px; border: 1px solid var(--border-accent); border-radius: 28px; background: var(--surface-primary); text-align: center; }
+.luna2-preview-hero .luna2-celestial-art { width: 190px; height: 190px; margin: 14px 0; filter: drop-shadow(0 8px 14px rgba(108, 73, 155, .18)); }
+.luna2-preview-hero h1 { margin: 12px 0 0; font-size: 29px; letter-spacing: -.025em; line-height: 1.14; }
+.luna2-preview-hero > p:last-child { margin: 16px 0 0; font-size: 15px; color: var(--color-text-secondary); line-height: 1.65; }
+.luna2-preview-details { display: grid; gap: 15px; padding: 0 10px; }
+.luna2-preview-details > span { display: flex; align-items: center; gap: 12px; font-size: 15px; }
+.luna2-preview-details svg { color: var(--color-gold-soft); }
+.luna2-preview-notice { margin: 0; border: 1px solid var(--color-border-card); border-radius: 18px; padding: 15px; background: var(--surface-subtle); color: var(--color-text-secondary); font-size: 14px; line-height: 1.6; }
+.luna2-available-now p { color: var(--color-text-secondary); font-size: 14px; }
+.luna2-available-now button, .luna2-text-action { display: flex; width: 100%; min-height: 50px; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-radius: 18px; background: var(--surface-selected); color: var(--color-gold-soft); font-size: 15px; }
+.luna2-profile-overview { display: grid; gap: 13px; }
+.luna2-profile-overview > button { display: flex; width: 100%; min-height: 82px; align-items: center; gap: 12px; border: 1px solid var(--color-border-card); border-radius: 23px; padding: 16px; background: var(--surface-primary); text-align: left; box-shadow: var(--shadow-soft); }
+.luna2-profile-overview > button > svg { flex-shrink: 0; color: var(--color-gold-soft); }
+.luna2-profile-overview > button > svg:last-child { width: 17px; margin-left: auto; color: var(--color-text-muted); }
+.luna2-profile-overview strong { display: block; font-size: 16px; line-height: 1.3; font-weight: 580; }
+.luna2-profile-overview small { display: block; margin-top: 4px; font-size: 13px; color: var(--color-text-secondary); line-height: 1.4; }
+.luna2-profile-overview b { margin-left: auto; color: var(--color-gold-soft); font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.luna2-profile-overview b small { display: inline; font-size: 13px; }
+.luna2-profile-overview > .luna2-wallet-entry { min-height: 158px; position: relative; overflow: hidden; padding: 20px; border-color: var(--border-accent); background: color-mix(in srgb, var(--accent-violet) 9%, var(--surface-primary)); }
+.luna2-wallet-copy { position: relative; z-index: 1; min-width: 0; flex: 1; }
+.luna2-wallet-label { display: flex; align-items: center; gap: 7px; color: var(--color-gold-soft); margin-bottom: 10px; }
+.luna2-wallet-label strong { font-size: 17px; }
+.luna2-wallet-copy > b { display: block; font-size: clamp(30px, 10vw, 43px); margin: 3px 0 6px; line-height: 1.05; letter-spacing: -.035em; overflow-wrap: anywhere; }
+.luna2-wallet-copy > small { font-size: 13px; }
+.luna2-wallet-emblem { display: grid; width: 81px; height: 81px; flex-shrink: 0; margin-left: auto; place-items: center; border: 1px solid var(--border-accent); border-radius: 50%; color: var(--color-gold-soft); background: var(--surface-selected); box-shadow: 0 0 25px rgba(176, 128, 205, .12), inset 0 0 15px rgba(218, 188, 128, .08); }
+.luna2-profile-overview > .luna2-wallet-entry > svg:last-child { position: absolute; right: 15px; top: 17px; }
+.luna2-shell [data-page="profile"] .profile-identity { padding-bottom: 5px; }
+.luna2-profile-overview > .luna2-journey-entry { border-color: color-mix(in srgb, var(--border-accent) 65%, var(--color-border-card)); }
+.luna2-journey-entry > svg:first-child { width: 27px; height: 27px; filter: drop-shadow(0 0 8px rgba(219, 164, 81, .2)); }
+.luna2-entry-icon { display: grid; width: 43px; height: 43px; flex-shrink: 0; place-items: center; border: 1px solid var(--border-accent); border-radius: 16px; color: var(--color-gold-soft); background: var(--surface-selected); }
+.luna2-profile-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+.luna2-profile-pair button { position: relative; isolation: isolate; display: grid; min-width: 0; min-height: 165px; align-content: end; gap: 7px; overflow: hidden; border: 1px solid var(--color-border-card); border-radius: 23px; padding: 16px 14px; background: var(--surface-primary); text-align: left; box-shadow: var(--shadow-soft); }
+.luna2-profile-pair svg { color: var(--color-gold-soft); }
+.luna2-profile-pair strong { font-size: 15px; }
+.luna2-profile-pair span { color: var(--color-text-secondary); font-size: 13px; }
+.luna2-profile-pair .luna2-achievement-emblem { display: grid; width: 50px; height: 50px; place-items: center; margin-bottom: 7px; border-radius: 18px; border: 1px solid var(--border-accent); background: var(--surface-selected); }
+.luna2-profile-pair .luna2-garden-entry { color: #fff8ee; border-color: rgba(199, 169, 222, .4); }
+.luna2-garden-entry img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 63%; z-index: -2; }
+.luna2-garden-entry::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, rgba(18, 13, 41, .03) 12%, rgba(21, 15, 40, .86) 100%); }
+.luna2-profile-pair .luna2-garden-entry > span { color: #e6d8ed; }
+.luna2-profile-pair .luna2-garden-entry > svg { color: #f1d99e; }
+.luna2-balance-card { display: grid; justify-items: center; gap: 16px; padding: 35px 20px; border: 1px solid var(--border-accent); border-radius: 28px; background: var(--surface-primary); }
+.luna2-balance-card svg { color: var(--color-gold-soft); }
+.luna2-balance-card > span { color: var(--color-text-secondary); font-size: 15px; }
+.luna2-balance-card > strong { color: var(--color-gold-soft); font-size: 64px; font-weight: 560; letter-spacing: -.05em; font-variant-numeric: tabular-nums; line-height: 1; }
+.luna2-balance-card p { margin: 0; font-size: 14px; color: var(--color-text-secondary); }
+.luna2-activity section > h2 { margin: 0 0 13px; font-size: 20px; font-weight: 580; }
+.luna2-activity-row { display: flex; width: 100%; align-items: center; gap: 12px; border-bottom: 1px solid var(--color-border-card); padding: 17px 0; text-align: left; }
+.luna2-activity-row > svg { flex-shrink: 0; color: var(--color-gold-soft); }
+.luna2-activity-row > svg:last-child { margin-left: auto; }
+.luna2-activity-row strong { display: block; font-size: 16px; line-height: 1.4; }
+.luna2-activity-row small, .luna2-empty, .luna2-journal-note { display: block; margin-top: 6px; color: var(--color-text-secondary); font-size: 14px; line-height: 1.55; }
+.luna2-chat .luna-live-empty { position: relative; isolation: isolate; padding: 16px 5px 12px; }
+.luna2-chat .luna-live-empty::before { content: ''; position: absolute; z-index: -1; pointer-events: none; top: 9px; left: 50%; width: 218px; height: 218px; transform: translateX(-50%); border-radius: 50%; border: 1px solid rgba(184, 154, 238, .12); background: radial-gradient(circle, rgba(123, 95, 187, .13), transparent 68%); box-shadow: 0 0 0 20px rgba(153, 128, 211, .025); }
+.luna2-chat .luna-live-empty::after { content: '✦'; position: absolute; top: 45px; right: 17%; color: var(--color-gold-soft); font-size: 14px; opacity: .75; pointer-events: none; }
+.luna2-chat .luna-live-empty > .brand-logo { width: 74px; height: 74px; margin-bottom: 19px; box-shadow: 0 0 35px color-mix(in srgb, var(--accent-violet) 24%, transparent); }
+.luna2-ai-kicker { display: block; color: var(--color-gold-soft); font-size: 12px; letter-spacing: .08em; margin-bottom: 11px; }
+.luna2-chat .luna-live-empty h3 { margin-top: 0; font-size: 29px; line-height: 1.2; font-weight: 620; letter-spacing: -.035em; }
+.luna2-chat .luna-live-empty > p { font-size: 15px; line-height: 1.6; max-width: 315px; }
+.luna2-chat .luna2-ai-actions,
+.luna2-chat .luna-live-empty > .luna2-ai-actions { display: grid; width: 100%; gap: 9px; margin: 20px 0 0; overflow: visible; padding: 0; }
+.luna2-chat .luna2-ai-actions button,
+.luna2-chat .luna-live-empty > .luna2-ai-actions button { display: flex; width: 100%; min-height: 51px; align-items: center; gap: 12px; padding: 11px 13px; border: 1px solid var(--color-border-card); border-radius: 17px; background: var(--surface-primary); color: var(--color-text-primary); font-size: 14px; font-weight: 550; text-align: left; white-space: normal; }
+.luna2-ai-actions button svg { flex-shrink: 0; width: 29px; height: 29px; padding: 5px; border-radius: 10px; color: var(--color-gold-soft); background: var(--surface-selected); }
+.luna2-ai-actions button small { margin-left: auto; flex-shrink: 0; color: var(--color-text-secondary); font-size: 12px; font-weight: 400; }
+.luna2-chat .luna2-ai-actions button:disabled { opacity: 1; color: var(--color-text-secondary); background: var(--surface-subtle); border-style: dashed; cursor: not-allowed; }
+.luna2-ideas-toggle { width: fit-content; min-height: 40px; margin: 8px 0 0; color: var(--color-gold-soft); font-size: 13px; }
+.luna2-chat > .luna2-ai-actions { flex-shrink: 0; margin: 8px 0; max-height: 240px; overflow-y: auto; }
+.luna2-breath { gap: 16px; }
+.luna2-breath.is-practicing .breath-circle-controls,
+.luna2-breath.is-practicing .luna2-audio-modes { display: none; }
+.luna2-breath .breath-circle-header h2 { font-size: 27px; }
+.luna2-breath .breath-circle-header > div > p:last-child { font-size: 13px; line-height: 1.5; margin-top: 5px; }
+.luna2-breath .breath-circle-visual { display: block; min-height: 350px; padding: 12px 15px 20px; border-color: rgba(97, 135, 225, .38); background: #09132c url('/images/home/hero-night.png') 45% 16% / cover; box-shadow: inset 0 0 45px rgba(7, 15, 42, .65), 0 6px 24px rgba(8, 10, 35, .12); }
+.luna2-breath-visual { position: relative; display: grid; width: 100%; height: 278px; place-items: center; isolation: isolate; }
+.luna2-breath-halo { position: absolute; width: 258px; max-width: 98%; aspect-ratio: 1; border: 1px solid rgba(164, 132, 249, .26); border-radius: 50%; background: rgba(6, 15, 40, .66); box-shadow: inset 0 0 45px rgba(30, 90, 180, .18), 0 0 32px rgba(127, 79, 206, .1); z-index: -1; }
+.luna2-breath-ring { position: absolute; width: 228px; height: 228px; border: 4px solid #2483ff; border-top-color: #75eaff; border-right-color: #43c0ff; border-radius: 50%; box-shadow: 0 0 5px #63d5ff, 0 0 17px rgba(32, 130, 255, .95), 0 0 43px rgba(132, 76, 248, .58), 0 0 65px rgba(149, 79, 242, .23), inset 0 0 19px rgba(44, 149, 255, .28); transition: transform 180ms linear; }
+.luna2-breath-ring > span { position: absolute; inset: -3px; border: 1px solid #c5f8ff; border-left-color: transparent; border-bottom-color: transparent; border-radius: 50%; transform: rotate(-25deg); }
+.luna2-breath-readout { position: relative; display: grid; justify-items: center; gap: 6px; color: #fcfaf7; text-align: center; }
+.luna2-breath-readout p { max-width: 145px; margin: 0; font-size: 21px; line-height: 1.2; font-weight: 600; text-shadow: 0 1px 8px #061329; }
+.luna2-breath-readout strong { font-size: 54px; line-height: 1.1; font-weight: 600; letter-spacing: -.04em; font-variant-numeric: tabular-nums; text-shadow: 0 1px 12px #061329; }
+.luna2-breath-readout span { color: #dbe7fa; font-size: 14px; }
+.luna2-breath .breath-circle-session-meta { position: relative; text-align: center; }
+.luna2-breath .breath-circle-session-meta strong { color: #fbf7ee; font-size: 17px; }
+.luna2-breath .breath-circle-session-meta span { color: #e4c987; font-size: 13px; }
+.luna2-breath .breath-circle-session-meta small { color: #d4d9e9; font-size: 13px; }
+.luna2-breath .breath-practice-select > span { font-size: 12px; }
+.luna2-breath .breath-practice-select select { min-height: 50px; background: var(--surface-primary); font-size: 14px; }
+.luna2-breath .breath-circle-controls { gap: 13px; }
+.luna2-breath .breath-practice-guide { background: var(--surface-primary); padding: 14px; border-color: var(--color-border-card); }
+.luna2-breath .breath-practice-guide strong { font-size: 12px; }
+.luna2-breath .breath-practice-guide p { font-size: 14px; line-height: 1.6; }
+.luna2-breath .breath-duration-options button { min-height: 46px; font-size: 14px; }
+.luna2-breath .breath-circle-primary, .luna2-breath .breath-circle-restart { font-size: 15px; min-height: 52px; }
+.luna2-audio-modes > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.luna2-audio-modes button { display: grid; justify-items: center; align-content: center; gap: 5px; min-width: 0; min-height: 70px; border: 1px solid var(--color-border-card); border-radius: 16px; background: var(--surface-primary); color: var(--color-text-secondary); font-size: 13px; }
+.luna2-audio-modes button[aria-pressed="true"] { border-color: var(--border-accent); color: var(--color-gold-soft); }
+.luna2-audio-modes button:disabled { opacity: .65; cursor: not-allowed; }
+.luna2-audio-modes small { font-size: 11px; }
+.luna2-audio-modes > p { margin: 9px 2px 0; font-size: 12px; color: var(--color-text-secondary); line-height: 1.5; }
+:root[data-theme="light"] .luna2-header-seeds { background: #fffbf5; }
+:root[data-theme="light"] .luna2-category { box-shadow: 0 5px 18px rgba(65, 56, 89, .1); }
+:root[data-theme="light"] .luna2-category.is-featured { background: #f7f3fc; }
+:root[data-theme="light"] .luna2-category-breathwork .luna2-category-art { border-radius: 15px; background: #edf1fc; }
+:root[data-theme="light"] .luna2-mini-ring { border-color: #1874e7; border-top-color: #63d9ef; border-right-color: #30adf5; box-shadow: 0 0 9px rgba(18, 122, 255, .5), inset 0 0 12px rgba(76, 132, 214, .18), 0 0 28px rgba(139, 93, 237, .28); }
+:root[data-theme="light"] .luna2-breath .breath-circle-visual { border-color: #cad6f1; background: #edf1fc; box-shadow: var(--shadow-soft); }
+:root[data-theme="light"] .luna2-breath-halo { border-color: rgba(141, 115, 216, .25); background: rgba(249, 251, 255, .9); box-shadow: inset 0 0 45px rgba(88, 132, 214, .07), 0 0 29px rgba(145, 93, 238, .09); }
+:root[data-theme="light"] .luna2-breath-ring { border-color: #176de9; border-top-color: #55d5f4; border-right-color: #24adf3; box-shadow: 0 0 5px rgba(21, 138, 245, .75), 0 0 17px rgba(48, 126, 242, .43), 0 0 38px rgba(129, 81, 226, .36), 0 0 58px rgba(157, 114, 239, .15), inset 0 0 14px rgba(68, 157, 244, .14); }
+:root[data-theme="light"] .luna2-breath-ring > span { border-top-color: #b7f5ff; border-right-color: #b7f5ff; }
+:root[data-theme="light"] .luna2-breath-readout p, :root[data-theme="light"] .luna2-breath-readout strong { text-shadow: none; }
+:root[data-theme="light"] .luna2-breath-readout, :root[data-theme="light"] .luna2-breath .breath-circle-session-meta strong { color: #243858; }
+:root[data-theme="light"] .luna2-breath-readout span, :root[data-theme="light"] .luna2-breath .breath-circle-session-meta small { color: #596e8a; }
+:root[data-theme="light"] .luna2-breath .breath-circle-session-meta span { color: #806939; }
+:root[data-theme="light"] .luna2-chat .luna-live-composer textarea::placeholder { color: var(--color-text-secondary); opacity: .9; }
+:root[data-theme="light"] .luna2-chat .luna-live-empty::before { border-color: rgba(141, 111, 198, .18); background: radial-gradient(circle, rgba(182, 153, 228, .15), transparent 70%); }
+:root[data-theme="light"] .luna2-profile-overview > .luna2-wallet-entry { background: #faf5e9; }
+:root[data-theme="light"] .luna2-wallet-emblem { background: #f4ead3; }
+:root[data-theme="light"] .luna2-home .home-v2-atmosphere-copy { text-shadow: 0 1px 8px rgba(255, 251, 245, .35); }
+:root[data-theme="light"] .luna2-home .home-v2-atmosphere-copy h1 { color: #20364c; }
+:root[data-theme="light"] .luna2-home .home-v2-greeting { color: #29465d; }
+:root[data-theme="light"] .luna2-home .home-v2-atmosphere::after { background: linear-gradient(90deg, rgba(255, 247, 234, .52), rgba(255, 250, 243, .1) 58%, transparent 82%), linear-gradient(0deg, rgba(25, 39, 55, .08), transparent 35%); }
+@media (max-width: 374px) {
+  .luna2-header .app-header-wordmark { font-size: 17px; }
+  .luna2-category-grid { gap: 11px; }
+  .luna2-category { padding: 13px; border-radius: 22px; }
+  .luna2-category-copy strong { font-size: 19px; }
+  .luna2-category-copy > span { font-size: 13px; }
+  .luna2-category-top small { font-size: 12px; padding-inline: 4px; }
+  .luna2-profile-overview > button { padding: 14px 12px; gap: 9px; }
+  .luna2-profile-overview small { font-size: 12px; }
+  .luna2-wallet-emblem { width: 62px; height: 62px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .luna2-breath-ring { transform: scale(.86) !important; transition: none; }
+  .luna2-chat, .luna2-chat .luna-live-message-row { animation: none; }
+  .bottom-navigation-luna2 .bottom-navigation-item { transition: none; }
+}

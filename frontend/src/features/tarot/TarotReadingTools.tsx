@@ -1,0 +1,38 @@
+import {useEffect,useRef,useState,type Dispatch} from 'react';
+import {History,Sparkles,Trash2,ArrowRight} from 'lucide-react';
+import {saveTarotReading,listTarotReadings,deleteTarotReading,type AppLanguage,type TarotReading} from '../../api';
+import {featureFlags} from '../../config/featureFlags';
+import {tarotDeck} from './deck';
+import type {TarotSession,TarotAction} from './session';
+const messages={
+ en:{history:'Reading history',empty:'Your saved readings will appear here.',load:'Load more',error:'Could not connect. Your local reading remains available.',remove:'Delete this reading and its question?',ai:'Reflect with Luna AI',notice:'Your card and question will be sent to OpenAI. Preferences are included only with your profile consent. This free reflection does not spend Moon Seeds.',pending:'Luna is reflecting…',unavailable:'AI is unavailable. The local interpretation is shown below.',limit:'Today’s AI limit is reached. Your local interpretation is still available.',fallback:'Luna could not generate this reflection. The local interpretation is available; this reading will not be generated again.',saved:'Saved privately',local:'Save reading',continue:'Continue with Luna AI',sections:['Your takeaway','The card','Your question in context','A practical thought','A question for you'],safety:'Your safety matters more than a card reading. For immediate danger or a medical emergency, contact your local emergency service and someone you trust. Luna cannot provide emergency care.',loading:'Loading…'},
+ ru:{history:'История раскладов',empty:'Здесь появятся сохранённые расклады.',load:'Загрузить ещё',error:'Не удалось подключиться. Локальный расклад остаётся доступным.',remove:'Удалить этот расклад и вопрос?',ai:'Осмыслить с Luna AI',notice:'Карта и вопрос будут отправлены в OpenAI. Предпочтения добавляются только с вашего согласия в профиле. Этот бесплатный ответ не расходует Moon Seeds.',pending:'Luna размышляет…',unavailable:'AI недоступен. Ниже показана локальная интерпретация.',limit:'Сегодняшний лимит AI исчерпан. Локальное значение остаётся доступным.',fallback:'Luna не смогла подготовить ответ. Доступно локальное значение; повторной генерации этого расклада не будет.',saved:'Сохранено приватно',local:'Сохранить расклад',continue:'Продолжить с Luna AI',sections:['Личный вывод','Значение карты','В контексте вопроса','Практическая мысль','Вопрос для вас'],safety:'Ваша безопасность важнее расклада. При непосредственной опасности или экстренной медицинской ситуации обратитесь в местную экстренную службу и к человеку, которому доверяете. Luna не может оказать экстренную помощь.',loading:'Загрузка…'}
+};
+export function TarotHistory({language,initData,dispatch}:{language:AppLanguage;initData?:string;dispatch:Dispatch<TarotAction>}){
+ const t=messages[language];const [open,setOpen]=useState(false),[rows,setRows]=useState<TarotReading[]>([]),[next,setNext]=useState<number|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ async function load(offset=0){setBusy(true);setError('');try{const result=await listTarotReadings(offset,initData);setRows(current=>offset?[...current,...result.readings]:result.readings);setNext(result.nextOffset);}catch{setError(t.error);}finally{setBusy(false);}}
+ async function remove(row:TarotReading){if(!window.confirm(t.remove))return;setBusy(true);try{await deleteTarotReading(row.id,initData);setRows(current=>current.filter(r=>r.id!==row.id));dispatch({type:'deleted',id:row.id});}catch{setError(t.error);}finally{setBusy(false);}}
+ return <section className="tarot-history"><button type="button" className="tarot-text-button" aria-expanded={open} onClick={()=>{setOpen(!open);if(!open)void load();}}><History size={18}/>{t.history}</button>{open&&<div className="tarot-history-list">{!busy&&!rows.length&&!error&&<p>{t.empty}</p>}{rows.map(row=>{const card=tarotDeck.find(c=>c.id===row.card_id);return card&&<div key={row.id}><button type="button" disabled={busy} onClick={()=>{dispatch({type:'resume',reading:row});setOpen(false);}}><img src={card.image} alt="" loading="lazy" width="48" height="72"/><span><strong>{card.name[language]}</strong><small>{new Intl.DateTimeFormat(language==='ru'?'ru-RU':'en-US',{dateStyle:'medium'}).format(new Date(row.created_at))} · {row.orientation==='upright'?(language==='en'?'Upright':'Прямая'):(language==='en'?'Reversed':'Перевёрнутая')}</small></span></button><button type="button" className="tarot-history-delete" aria-label={`${language==='en'?'Delete':'Удалить'} ${card.name[language]}`} disabled={busy} onClick={()=>void remove(row)}><Trash2 size={18}/></button></div>;})}{busy&&<p role="status">{t.loading}</p>}{error&&<p role="alert">{error}</p>}{next!==null&&<button type="button" className="tarot-text-button" disabled={busy} onClick={()=>void load(next)}>{t.load}</button>}</div>}</section>;
+}
+export function TarotReadingTools({session,language,initData,dispatch,onContinue}:{session:TarotSession;language:AppLanguage;initData?:string;dispatch:Dispatch<TarotAction>;onContinue?:(id:string)=>void}){
+ const t=messages[language];const [busy,setBusy]=useState(false),[error,setError]=useState('');const pending=useRef(false);const reading=session.savedReading;
+ const currentId=session.clientReadingId;
+ async function save(generate:boolean){
+  if(pending.current||!session.result||!currentId)return;
+  pending.current=true;setBusy(true);setError('');
+  try{const result=await saveTarotReading({clientReadingId:currentId,cardId:session.result.cardId,orientation:session.result.orientation,intention:session.intention,question:session.question,language:session.readingLanguage??language,generate},initData);dispatch({type:'saved',reading:result.reading});if(result.reason)setError(result.reason==='daily_limit'?t.limit:t.unavailable);}catch{setError(t.error);}finally{pending.current=false;setBusy(false);}
+ }
+ // Repeat mounts/retries reuse the server idempotency key; only the explicit button generates.
+ useEffect(()=>{if(!reading&&currentId)void save(false);},[currentId]);
+ useEffect(()=>{if(reading?.status!=='processing')return;let polls=0;const timer=window.setInterval(()=>{if(++polls>14){window.clearInterval(timer);return;}void save(false);},2500);return()=>window.clearInterval(timer);},[reading?.status,currentId]);
+ const ai=reading?.status==='ready'?reading.interpretation:null;
+ return <section className="tarot-ai-reflection" data-testid="tarot-ai-reflection" aria-busy={busy}>
+  {ai?<><p className="tarot-ai-label"><Sparkles size={16}/>Luna AI · {t.saved}</p>{[ai.summary,ai.cardMeaning,ai.context,ai.reflection,ai.question].map((text,index)=><div key={index}><h3>{t.sections[index]}</h3><p>{text}</p></div>)}{ai.continuation&&<p>{ai.continuation}</p>}{featureFlags.ai_modes&&onContinue&&reading&&<button type="button" className="tarot-draw-button" onClick={()=>onContinue(reading.id)}>{t.continue}<ArrowRight size={18}/></button>}</>:reading?.status==='safety'?<p role="alert">{t.safety}</p>:<>
+   {featureFlags.tarot_ai&&(!reading||reading.status==='local')&&<><p>{t.notice}</p><button type="button" className="tarot-draw-button" disabled={busy||!currentId} onClick={()=>void save(true)}><Sparkles size={18}/>{t.ai}</button></>}
+   {reading?.status==='fallback'&&<p role="status">{t.fallback}</p>}
+   {reading?.status==='processing'&&<p role="status">{t.pending}</p>}
+   {reading&&reading.status==='local'&&<small>{t.saved}</small>}
+   {!reading&&!busy&&<button type="button" className="tarot-text-button" onClick={()=>void save(false)}>{t.local}</button>}
+  </>}{error&&<p role="alert">{error}</p>}
+ </section>;
+}

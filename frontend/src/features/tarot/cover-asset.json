@@ -1,0 +1,13 @@
+{
+  "image": "/assets/tarot/card-back.webp",
+  "sourceFile": "cover-tarot.png",
+  "width": 1024,
+  "height": 1536,
+  "sourceBytes": 3194522,
+  "optimizedBytes": 440630,
+  "sourceSha256": "985ffcac6799b1b4af0b17e5f45e60c2d5d62287689f153a7267bff0b58b057f",
+  "sha256": "9a79a0783fe2c2e9a657d6d0a0eba6de3e791e5c150b15eab107e075228796ce",
+  "crop": false,
+  "resize": false,
+  "originalUnchanged": true
+}

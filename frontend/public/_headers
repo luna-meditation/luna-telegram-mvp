@@ -1,0 +1,4 @@
+/assets/tarot/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+# Do not make stable card filenames immutable: future art revisions must refresh.

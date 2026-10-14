@@ -1,0 +1,18 @@
+{
+  "generator": "Built-in image_gen",
+  "purpose": "Original decorative illustration for disabled Luna 2.0 previews; not a real reading or calculated chart.",
+  "assets": [
+    {
+      "path": "/images/explore/tarot-celestial-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: premium Luna wellness mobile Explore category illustration, original artwork. Primary request: elegant celestial tarot cards with refined gold details. Three richly illustrated deep midnight-indigo cards lightly fanned, central card depicting a luminous crescent moon over a delicate violet mountain lake and tiny stars, fine gold foil ornamental borders, side cards subtle celestial engravings. High-end editorial fantasy illustration with beautiful material texture, not a generic vector icon. Subject fills central 85% of square canvas; entire card fan visible with small margin. Soft lavender rim light and restrained gold glints. No hands, people, crystals, flowers, text, letters, numbers, trademarks or watermark. Genuinely transparent background around the cards so it works on ivory/lavender and deep navy UI. No rectangular backdrop, no floor, no opaque outer glow. Crisp premium detail remains readable when displayed at 130px. Palette navy, violet, muted warm gold.",
+      "transparent": true,
+      "externalStockAssets": false
+    },
+    {
+      "path": "/images/explore/astrology-zodiac-v1.png",
+      "prompt": "Use case: stylized-concept. Asset type: premium Luna wellness mobile Explore category illustration, original artwork. Primary request: refined luminous zodiac chart, visually coordinated with celestial tarot cards. A beautiful circular celestial wheel viewed nearly straight-on, intricate precise gold and lavender rings with twelve delicate zodiac glyphs around the outer band, tasteful radial divisions, luminous gold star constellation at the centre, subtle midnight-indigo translucent inner disc, blue-violet light around fine engraved gold details. High-end editorial fantasy illustration with exquisite metallic texture, not a generic vector icon. Circle fills central 85% of square canvas, full wheel visible with small margins. No humans, hands, tarot cards, planets floating outside, crystals, text labels, letters, numbers, trademarks or watermark. Genuinely transparent background outside the circular wheel so it works on ivory/lavender and deep navy UI. No square backdrop or floor, no opaque outer glow. Crisp premium detail readable at 130px. Palette navy, violet, muted warm gold.",
+      "transparent": true,
+      "externalStockAssets": false
+    }
+  ]
+}

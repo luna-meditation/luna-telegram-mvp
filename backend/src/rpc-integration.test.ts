@@ -14,7 +14,7 @@ test('reserve_luna_chat_request executes a realistic request and is idempotent',
 
   const client = new Client({
     connectionString: databaseUrl,
-    ssl: databaseUrl.includes('localhost') ? false : { rejectUnauthorized: false }
+    ssl: ['localhost','127.0.0.1','[::1]'].includes(new URL(databaseUrl).hostname) ? false : { rejectUnauthorized: true }
   });
   const requestId = `rpc-regression-${randomUUID()}`;
   const conversationId = process.env.RPC_TEST_CONVERSATION_ID || null;

@@ -14,6 +14,9 @@ import {
 import { BrandLogo } from '../design-system/components/BrandLogo';
 import { ChatMeditationCard } from '../design-system/components/ChatMeditationCard';
 import { recordLunaStage } from '../runtime-diagnostics';
+import { LunaQuickActions } from '../luna2/LunaQuickActions';
+import { luna2Copy } from '../luna2/copy';
+import {featureFlags} from '../config/featureFlags';
 
 type LunaChatProps = {
   firstName: string;
@@ -22,6 +25,10 @@ type LunaChatProps = {
   hasPremium: boolean;
   initData?: string;
   onOpenMeditation: (meditation: Meditation) => void;
+  onTarot?:()=>void;
+  redesigned?: boolean;
+  readingContextId?:string;
+  onClearReadingContext?:()=>void;
 };
 
 const activeConversationKey = 'luna.ai.activeConversation.v1';
@@ -33,6 +40,8 @@ function requestId() {
 }
 
 type FailedTurn = {
+  readingId?:string;
+  mode?:'companion'|'tarot'|'wellbeing'|'meditation';
   clientRequestId: string;
   text: string;
   optimisticMessageId: string;
@@ -105,7 +114,8 @@ function dateLabel(value: string, language: AppLanguage) {
   return new Intl.DateTimeFormat(language === 'ru' ? 'ru-RU' : 'en-US', { month: 'short', day: 'numeric' }).format(date);
 }
 
-export function LunaChat({ firstName, language, meditations, hasPremium, initData, onOpenMeditation }: LunaChatProps) {
+export function LunaChat({ firstName, language, meditations, hasPremium, initData, onOpenMeditation, onTarot, redesigned = false,readingContextId,onClearReadingContext }: LunaChatProps) {
+  const [mode,setMode]=useState<NonNullable<FailedTurn['mode']>|''>(featureFlags.ai_modes?(readingContextId?'tarot':'companion'):'');
   const [conversations, setConversations] = useState<LunaConversationSummary[]>([]);
   const [activeId, setActiveId] = useState('');
   const [messages, setMessages] = useState<LunaMessage[]>([]);
@@ -117,6 +127,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
   const [failedTurn, setFailedTurn] = useState<FailedTurn | null>(null);
   const [quotaExhausted, setQuotaExhausted] = useState(false);
   const [awayFromBottom, setAwayFromBottom] = useState(false);
+  const [ideasOpen, setIdeasOpen] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const nearBottomRef = useRef(true);
@@ -207,6 +218,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
   }, [screen]);
 
   const beginConversation = (seed = '') => {
+    onClearReadingContext?.();setMode('');
     setActiveId('');
     setMessages([]);
     setDraft(seed.replace(/^[^\p{L}\p{N}]+/u, '').trim());
@@ -238,7 +250,9 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
     recordLunaStage('luna_message_sent', { requestId: clientRequestId }, initData);
     recordLunaStage('model_request_started', { requestId: clientRequestId }, initData);
     try {
-      const result = await sendLunaMessage({ conversationId: activeId || undefined, message: clean, language, requestId: clientRequestId }, initData);
+      const selectedMode=retry?retry.mode:mode||undefined;
+      const readingId=retry?retry.readingId:selectedMode==='tarot'?readingContextId:undefined;
+      const result = await sendLunaMessage({ conversationId: activeId || undefined, message: clean, language, requestId: clientRequestId,...(selectedMode?{mode:selectedMode}:{}),...(readingId?{readingId}:{}) }, initData);
       const recommendationId = recommendationIdForMessage(result.message);
       const pendingState = result.message.metadata?.pending_state;
       recordLunaStage('model_result_received', { requestId: clientRequestId, hasAssistantMessage: Boolean(result.message.content) }, initData);
@@ -260,7 +274,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
     } catch (sendError) {
       const details = errorDetails(sendError, language);
       setQuotaExhausted(details.state === 'quota_exhausted');
-      setFailedTurn({ ...details, clientRequestId, text: clean, optimisticMessageId: optimistic.id });
+      setFailedTurn({ ...details, clientRequestId, text: clean, optimisticMessageId: optimistic.id,mode:retry?retry.mode:mode||undefined,readingId:retry?retry.readingId:mode==='tarot'?readingContextId:undefined });
     } finally {
       setThinking(false);
     }
@@ -321,12 +335,20 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
   }
 
   return (
-    <section className="luna-live-chat" aria-busy={thinking}>
+    <section className={`luna-live-chat ${redesigned ? 'luna2-chat' : ''}`} aria-busy={thinking}>
       <header className="luna-live-chat-header">
         <button type="button" onClick={() => { setScreen('overview'); setError(''); }} aria-label={language === 'ru' ? 'История разговоров' : 'Conversation history'}><History size={19} /></button>
         <div><BrandLogo size={28} eager /><span><h2>{activeTitle}</h2><p>{thinking ? (language === 'ru' ? 'Luna думает...' : 'Luna is reflecting...') : (language === 'ru' ? 'Рядом и слушает' : 'Here and listening')}</p></span></div>
         <button type="button" onClick={() => void removeConversation()} disabled={!activeId} aria-label={language === 'ru' ? 'Удалить разговор' : 'Delete conversation'}><Trash2 size={17} /></button>
       </header>
+
+      {featureFlags.ai_modes&&<label className="luna-mode-select">{language==='en'?'Conversation mode':'Режим разговора'}<select disabled={thinking||Boolean(failedTurn)} value={mode} onChange={event=>{setMode(event.target.value as typeof mode);if(event.target.value!=='tarot')onClearReadingContext?.();}}>
+        <option value="">{language==='en'?'Current Luna':'Прежняя Luna'}</option><option value="companion">{language==='en'?'Self-discovery':'Самопознание'}</option><option value="tarot">{language==='en'?'Tarot reflection':'Размышление с Таро'}</option><option value="wellbeing">{language==='en'?'Emotional support':'Эмоциональная поддержка'}</option><option value="meditation">{language==='en'?'Meditation guide':'Гид по медитации'}</option><option value="astrology" disabled>{language==='en'?'Astrology · awaiting chart engine':'Астрология · нужен расчётный модуль'}</option>
+      </select></label>}
+      {featureFlags.ai_modes&&mode==='tarot'&&readingContextId&&<div className="luna-reading-context"><span>{language==='en'?'Your selected reading is attached':'Выбранный расклад добавлен в контекст'}</span><button type="button" disabled={thinking||Boolean(failedTurn)} onClick={onClearReadingContext}>{language==='en'?'Remove':'Убрать'}</button></div>}
+
+      {redesigned && visibleMessages.length > 0 && <button type="button" className="luna2-ideas-toggle" aria-expanded={ideasOpen} onClick={() => setIdeasOpen(value => !value)}>{luna2Copy[language].ideas}</button>}
+      {redesigned && ideasOpen && visibleMessages.length > 0 && <LunaQuickActions language={language} onTarot={onTarot} disabled={thinking || quotaExhausted} onPrompt={(prompt) => { setDraft(prompt); setIdeasOpen(false); textareaRef.current?.focus(); }} />}
 
       <div
         ref={listRef}
@@ -348,9 +370,10 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
         ) : !visibleMessages.length ? (
           <div className="luna-live-empty">
             <BrandLogo size={88} alt={language === 'ru' ? 'Логотип Luna Meditation' : 'Luna Meditation logo'} eager />
+            {redesigned && <span className="luna2-ai-kicker">{luna2Copy[language].aiKicker}</span>}
             <h3>{language === 'ru' ? `Я рядом, ${firstName || 'друг'}.` : `I'm here, ${firstName || 'friend'}.`}</h3>
-            <p>{language === 'ru' ? 'Расскажи, что у тебя на душе. Я выслушаю без осуждения.' : "Tell me what's on your mind. I'll listen without judgment."}</p>
-            <div className="luna-quick-prompts" aria-label={language === 'ru' ? 'Быстрые темы' : 'Quick prompts'}>{prompts.map((prompt) => <button key={prompt} type="button" onClick={() => setDraft(prompt)}>{prompt}</button>)}</div>
+            <p>{redesigned ? luna2Copy[language].aiBody : language === 'ru' ? 'Расскажи, что у тебя на душе. Я выслушаю без осуждения.' : "Tell me what's on your mind. I'll listen without judgment."}</p>
+            {redesigned ? <LunaQuickActions language={language} onTarot={onTarot} disabled={thinking || quotaExhausted} onPrompt={(prompt) => { setDraft(prompt); textareaRef.current?.focus(); }} /> : <div className="luna-quick-prompts" aria-label={language === 'ru' ? 'Быстрые темы' : 'Quick prompts'}>{prompts.map((prompt) => <button key={prompt} type="button" onClick={() => setDraft(prompt)}>{prompt}</button>)}</div>}
           </div>
         ) : visibleMessages.map((message) => {
           const recommendationId = recommendationIdForMessage(message);

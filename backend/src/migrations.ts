@@ -249,12 +249,17 @@ create or replace function public.increment_meditation_play_count(meditation_uui
 returns void
 language sql
 security definer
+set search_path = ''
 as $$
   update public.meditations
   set play_count = play_count + 1,
       updated_at = now()
   where id = meditation_uuid;
 $$;
+
+revoke all on function public.increment_meditation_play_count(uuid) from public;
+revoke all on function public.increment_meditation_play_count(uuid) from anon, authenticated;
+grant execute on function public.increment_meditation_play_count(uuid) to service_role;
 
 update public.meditations
 set translations = jsonb_strip_nulls(jsonb_build_object(
@@ -286,6 +291,7 @@ alter table public.categories enable row level security;
 alter table public.meditations enable row level security;
 alter table public.favorites enable row level security;
 alter table public.history enable row level security;
+alter table public.playback_sessions enable row level security;
 alter table public.streaks enable row level security;
 alter table public.daily_checkins enable row level security;
 alter table public.breath_sessions enable row level security;
@@ -295,12 +301,19 @@ alter table public.practice_days enable row level security;
 
 drop policy if exists "Categories are readable" on public.categories;
 drop policy if exists "Meditations are readable" on public.meditations;
+drop policy if exists "Playback sessions are server managed" on public.playback_sessions;
+
+revoke all privileges on table public.playback_sessions from public, anon, authenticated, service_role;
+grant select, insert, update on table public.playback_sessions to service_role;
 
 create policy "Categories are readable" on public.categories
   for select using (true);
 
 create policy "Meditations are readable" on public.meditations
   for select using (true);
+
+create policy "Playback sessions are server managed" on public.playback_sessions
+  as restrictive for all to anon, authenticated using (false) with check (false);
 
 insert into public.categories (name, slug, sort_order)
 values

@@ -8,7 +8,7 @@ create or replace function public.reserve_luna_chat_request(
 returns table(status text, quota_charged boolean, remaining integer, attempt_count integer, acquired boolean)
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = ''
 as $$
 declare
   v_request public.ai_chat_requests%rowtype;
@@ -123,6 +123,7 @@ end;
 $$;
 
 revoke all on function public.reserve_luna_chat_request(bigint, text, integer, uuid) from public;
+revoke all on function public.reserve_luna_chat_request(bigint, text, integer, uuid) from anon, authenticated;
 grant execute on function public.reserve_luna_chat_request(bigint, text, integer, uuid) to service_role;
 
 notify pgrst, 'reload schema';

@@ -406,7 +406,7 @@ create index if not exists idx_ai_chat_requests_user_daily on public.ai_chat_req
 create or replace function public.reserve_luna_chat_request(
   p_telegram_id bigint, p_client_request_id text, p_daily_limit integer, p_conversation_id uuid default null
 ) returns table(status text, quota_charged boolean, remaining integer, attempt_count integer, acquired boolean)
-language plpgsql security definer set search_path = public, pg_temp as $$
+language plpgsql security definer set search_path = '' as $$
 declare
   v_request public.ai_chat_requests%rowtype;
   v_used_count integer;
@@ -489,13 +489,14 @@ begin
   return query select v_request.status, v_request.quota_charged, greatest(0, p_daily_limit - v_used_count), v_request.attempt_count, true;
 end; $$;
 revoke all on function public.reserve_luna_chat_request(bigint, text, integer, uuid) from public;
+revoke all on function public.reserve_luna_chat_request(bigint, text, integer, uuid) from anon, authenticated;
 grant execute on function public.reserve_luna_chat_request(bigint, text, integer, uuid) to service_role;
 
 create or replace function public.increment_meditation_play_count(meditation_uuid uuid)
 returns void
 language sql
 security definer
-set search_path = public, pg_temp
+set search_path = ''
 as $$
   update public.meditations
   set play_count = play_count + 1,
@@ -504,6 +505,7 @@ as $$
 $$;
 
 revoke all on function public.increment_meditation_play_count(uuid) from public;
+revoke all on function public.increment_meditation_play_count(uuid) from anon, authenticated;
 grant execute on function public.increment_meditation_play_count(uuid) to service_role;
 
 notify pgrst, 'reload schema';
@@ -562,6 +564,9 @@ drop policy if exists "Playback sessions are server managed" on public.playback_
 drop policy if exists "Meditation storage is readable" on storage.objects;
 drop policy if exists "Avatar storage is readable" on storage.objects;
 
+revoke all privileges on table public.playback_sessions from public, anon, authenticated, service_role;
+grant select, insert, update on table public.playback_sessions to service_role;
+
 create policy "Practices are readable" on public.practices
   for select using (true);
 
@@ -572,7 +577,7 @@ create policy "Meditations are readable" on public.meditations
   for select using (true);
 
 create policy "Playback sessions are server managed" on public.playback_sessions
-  for all using (false) with check (false);
+  as restrictive for all to anon, authenticated using (false) with check (false);
 
 create policy "Meditation storage is readable" on storage.objects
   for select using (bucket_id = 'meditations');

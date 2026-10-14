@@ -7,11 +7,16 @@ const appSource = readFileSync(resolve(process.cwd(), 'src/App.tsx'), 'utf8');
 const hubSource = readFileSync(resolve(process.cwd(), 'src/components/journey/JourneyHub.tsx'), 'utf8');
 const hubStyles = readFileSync(resolve(process.cwd(), 'src/components/journey/journeyHub.css'), 'utf8');
 const navSource = readFileSync(resolve(process.cwd(), 'src/design-system/components/BottomNavigation.tsx'), 'utf8');
+const navigationModel = readFileSync(resolve(process.cwd(), 'src/navigation/navigationModel.ts'), 'utf8');
 const primitiveStyles = readFileSync(resolve(process.cwd(), 'src/design-system/primitives.css'), 'utf8');
 const homeStyles = readFileSync(resolve(process.cwd(), 'src/v2/design-system/homeV2.css'), 'utf8');
 
 test('bottom navigation remains five items and labels Progress as Journey and Путь', () => {
-  const pages = [...navSource.matchAll(/\{ page: '([^']+)'/g)].map((match) => match[1]);
+  const legacyNavigation = navigationModel.slice(
+    navigationModel.indexOf('export const legacyPrimaryNavigation'),
+    navigationModel.indexOf('export const luna2PrimaryNavigation')
+  );
+  const pages = [...legacyNavigation.matchAll(/\{ page: '([^']+)'/g)].map((match) => match[1]);
   assert.deepEqual(pages, ['home', 'library', 'luna', 'progress', 'profile']);
   assert.match(appSource, /navProgress: 'Journey'/);
   assert.match(appSource, /navProgress: 'Путь'/);
@@ -24,14 +29,13 @@ test('Journey Hub combines Journey and Garden into one continuous screen', () =>
   assert.doesNotMatch(hubSource, /garden: ReactNode/);
   assert.doesNotMatch(hubSource, /<SegmentedTabs|onTabChange|activeTab/);
   assert.doesNotMatch(hubSource, /V2BottomNav/);
-  assert.match(appSource, /<JourneyHub[\s\S]*journey=\{\([\s\S]*<ProgressPage[\s\S]*garden=\{\([\s\S]*<MoonGardenPage/);
+  assert.match(appSource, /<JourneyHub[\s\S]*journey=\{featureFlags.new_navigation[\s\S]*<CompactJourney[\s\S]*<ProgressPage[\s\S]*garden=\{\([\s\S]*<MoonGardenPage/);
 });
 
 test('Journey is the default route and legacy Garden links open the same unified screen', () => {
-  assert.match(appSource, /normalized === 'journey'\) return 'progress'/);
-  assert.match(appSource, /normalized === 'garden'\) return 'moonGarden'/);
-  assert.match(appSource, /normalized === 'moon-garden'\) return 'moonGarden'/);
-  assert.match(appSource, /\(page === 'progress' \|\| page === 'moonGarden'\)/);
+  assert.match(navigationModel, /normalized === 'progress' \|\| normalized === 'journey'/);
+  assert.match(navigationModel, /normalized === 'moon-garden' \|\| normalized === 'garden'/);
+  assert.match(appSource, /\(page === 'progress' \|\| \(!featureFlags\.new_navigation && page === 'moonGarden'\)\)/);
   assert.doesNotMatch(appSource, /onTabChange=\{\(tab\) => setPage/);
 });
 
@@ -92,7 +96,7 @@ test('Garden keeps one compact upgrade action and moves all eight stages behind 
   assert.match(gardenPage, /journey-garden-next-row/);
   assert.match(gardenPage, /journey-garden-journey-link/);
   assert.match(gardenPage, /journey-garden-sheet/);
-  assert.doesNotMatch(gardenPage, /gardenElements\.map\(/);
+  assert.match(gardenPage, /!embedded[\s\S]*garden-upgrade-rail[\s\S]*gardenElements\.map\(/);
   assert.match(gardenPage, /plantedCount}\/7 upgrades/);
   assert.doesNotMatch(gardenPage, /journey-garden-milestones/);
 });

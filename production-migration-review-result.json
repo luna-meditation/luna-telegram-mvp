@@ -1,0 +1,49 @@
+{
+  "status": "PASS",
+  "schemaCapturedAt": "2026-10-14T09:38:13.605308+00:00",
+  "projectId": "vkcdtasbdoeilgfucoax",
+  "fixtures": "Synthetic only — no production user rows",
+  "postgres": "PostgreSQL 17.6 on x86_64-apple-darwin23.6.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.6), 64-bit",
+  "node": "v22.23.3",
+  "database": "luna_release_synthetic_1791978326694",
+  "checks": [
+    "three additive migrations apply to fresh exact production schema",
+    "hardening applies with service_role BYPASSRLS and existing RPC signatures",
+    "all four migrations are repeatable",
+    "migration DDL preserves users, Lifetime, Moon Seeds, payments and conversations exactly",
+    "unrelated application sentinel schema/RLS/data unchanged",
+    "anon: direct private tables and RPC calls denied",
+    "anon: row_security=off cannot bypass grants/RLS",
+    "authenticated: direct private tables and RPC calls denied",
+    "authenticated: row_security=off cannot bypass grants/RLS",
+    "restrictive playback RLS blocks accidental permissive policy/grant",
+    "service_role: playback, meditation play count and existing AI quota RPC work",
+    "parallel garden purchase charges exactly once; existing price stays 10",
+    "premium garden allocation remains one-time and existing Lifetime entitlement survives",
+    "Tarot acquires one generation and persists a result; no Moon Seeds charge",
+    "changed payload with same reading ID conflicts; daily limit prevents another generation",
+    "deleting reading retains attempt tombstone and counters; cannot regenerate deleted result",
+    "personalization defaults to no consent and is writable by server role only",
+    "personalization safely upgrades an earlier development schema without changing stored preferences",
+    "optional display name never replaces verified Telegram identity",
+    "reviewed security rollback restores operational baseline, then hardening reapplies",
+    "new feature rollback is reversible without dropping data or ledgers",
+    "unrelated application unchanged after all operations and rollback"
+  ],
+  "preparedMigrations": [
+    "20261014034527_luna_garden_atomic_mutations.sql",
+    "20261014035512_luna_personalization_foundation.sql",
+    "20261014041334_luna_tarot_ai_reading_history.sql"
+  ],
+  "migrationHashes": {
+    "20261014034527_luna_garden_atomic_mutations.sql": "3c37e234d5c93e14a542408d96133da345d4641774ef8a2387509ae1e463dd14",
+    "20261014035512_luna_personalization_foundation.sql": "51f7a1e9f87ece9c374cbabdb0f862b843e795d3a94dae4cdfb0d024d84f9969",
+    "20261014041334_luna_tarot_ai_reading_history.sql": "0f1ad83a2f474bf7847ec928ef94008aad56315f10f57c45ef3bb40fbe8730da",
+    "20261013061155_luna_security_boundary_hardening.sql": "179ecc18f9a00745e03b6a0caa892f2b1483c9f790dbfcde1346149965f2d677"
+  },
+  "securityMigration": "20261013061155_luna_security_boundary_hardening.sql",
+  "productionMigrationsApplied": 0,
+  "productionWrites": 0,
+  "apiCalls": 0,
+  "paymentsSent": 0
+}
