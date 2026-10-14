@@ -1449,6 +1449,14 @@ async function getMoonGardenState(telegramId: number, input: {
   gardenLevel: number;
 }) {
   const earnedFromPractice = earnedMoonSeeds(input);
+  if(env.FEATURE_MOON_SEEDS_WALLET_V2){
+    // A wallet can spend outside the Garden. Never reconstruct available balance
+    // from lifetime earnings minus planted upgrades after v2 is activated.
+    const {data:g,error}=await supabase.from('moon_gardens').select('*').eq('telegram_id',telegramId).maybeSingle();
+    if(error)throw error;
+    const planted=plantedElementIds(g?.planted_garden_elements);
+    return {moonSeedsAvailable:g?.moon_seeds_available??0,moonSeedsEarnedTotal:g?.moon_seeds_earned_total??0,plantedGardenElements:planted,plantedElementsCount:planted.length,lastMoonSeedEarnedAt:g?.last_moon_seed_earned_at??null,gardenLevel:g?.garden_level??0};
+  }
   if(env.FEATURE_GARDEN_ATOMIC){
     const {garden:g}=await mutateAtomicGarden(telegramId,'sync',null,0,earnedFromPractice);
     return {moonSeedsAvailable:g.moon_seeds_available,moonSeedsEarnedTotal:g.moon_seeds_earned_total,plantedGardenElements:g.planted_garden_elements,plantedElementsCount:g.planted_garden_elements.length,lastMoonSeedEarnedAt:g.last_moon_seed_earned_at,gardenLevel:g.garden_level};
@@ -1687,7 +1695,14 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     localDate: todayKey(localDate),
     timeZone: notificationPreferences.timezone
   });
+  // Owner-filtered counts only, never copy private questions/messages into progress.
+  const [tarotCount,dailyCount,conversationCount]=await Promise.all([
+    env.FEATURE_TAROT_HISTORY?supabase.from('luna_tarot_readings').select('id',{count:'exact',head:true}).eq('telegram_id',telegramId).eq('status','ready'):Promise.resolve({count:0}),
+    env.FEATURE_DAILY_CARD_V2?supabase.from('luna_tarot_readings').select('id',{count:'exact',head:true}).eq('telegram_id',telegramId).eq('status','ready').eq('reading_kind','daily'):Promise.resolve({count:0}),
+    env.FEATURE_AI_MODES?supabase.from('ai_messages').select('id',{count:'exact',head:true}).eq('telegram_id',telegramId).eq('role','user'):Promise.resolve({count:0})
+  ]);
   const achievements = await syncAchievements(telegramId, {
+    tarotReadings:tarotCount.count??0,dailyCards:dailyCount.count??0,aiConversations:conversationCount.count??0,
     completedMeditations,
     completedBreathSessions,
     completed,
@@ -1984,6 +1999,14 @@ export async function recordSuccessfulPayment(input: {
 }) {
   const plan = paymentPlanDetails(input.plan);
 
+  if(env.FEATURE_PAYMENT_ATOMIC){
+    if(!input.telegram_payment_charge_id)throw new Error('Stars charge ID is required.');
+    const {data,error}=await supabase.rpc('luna21_fulfill_existing_stars',{p_telegram_id:input.telegram_id,p_plan:input.plan,p_currency:'XTR',p_amount:plan.amountStars,p_charge_id:input.telegram_payment_charge_id,p_provider_charge_id:input.provider_payment_charge_id??''});
+    if(error||!data)throw new Error('Stars fulfillment unavailable.');
+    const result=data as {isNewPayment:boolean;seedsGranted:boolean};
+    return {...result,access:await getUserAccess(input.telegram_id)};
+  }
+
   if (input.telegram_payment_charge_id) {
     const { data: existingPayment, error: existingPaymentError } = await supabase
       .from('payments')
@@ -1997,8 +2020,10 @@ export async function recordSuccessfulPayment(input: {
       if (Number(existingPayment.telegram_id) !== input.telegram_id || !recoveredPlan) {
         throw new Error('Telegram payment charge does not match the Luna account.');
       }
-      const recovered = await applySuccessfulPaymentEntitlement(input.telegram_id, recoveredPlan);
-      return { isNewPayment: false, ...recovered };
+      if(recoveredPlan!==input.plan)throw new Error('Telegram payment plan does not match its stored charge.');
+      // A delivered update can be replayed by Telegram. Never extend a fixed-term
+      // entitlement again merely because its historical paid row already exists.
+      return { isNewPayment: false, seedsGranted:false, access:await getUserAccess(input.telegram_id) };
     }
   }
 
@@ -2008,14 +2033,15 @@ export async function recordSuccessfulPayment(input: {
     amount_stars: plan.amountStars,
     currency: 'XTR',
     telegram_payment_charge_id: input.telegram_payment_charge_id,
-    provider_payment_charge_id: input.provider_payment_charge_id,
+    provider_payment_charge_id: input.provider_payment_charge_id || null,
     status: 'paid'
   });
 
   if (paymentError) {
     if ('code' in paymentError && paymentError.code === '23505') {
-      const recovered = await applySuccessfulPaymentEntitlement(input.telegram_id, input.plan);
-      return { isNewPayment: false, ...recovered };
+      const {data:existing,error:lookupError}=await supabase.from('payments').select('telegram_id,plan,amount_stars').eq('telegram_payment_charge_id',input.telegram_payment_charge_id!).maybeSingle();
+      if(lookupError||!existing||Number(existing.telegram_id)!==input.telegram_id||payloadPlanFromStoredPayment(existing.plan,existing.amount_stars)!==input.plan)throw new Error('Telegram payment charge conflict.');
+      return { isNewPayment: false, seedsGranted:false, access:await getUserAccess(input.telegram_id) };
     }
     throw paymentError;
   }

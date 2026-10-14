@@ -9,6 +9,8 @@ import { env } from './config.js';
 import {FoundationError,getPersonalProfile,savePersonalProfile,deletePersonalProfile} from './personalization.js';
 import {tarotRouter} from './tarot-router.js';
 import {runAuthorizedReleaseQa} from './release-qa.js';
+import {runLuna21Qa} from './luna21-qa.js';
+import {luna21CommerceRouter} from './luna21-commerce-router.js';
 import { bot, configureTelegramBot, createStarsInvoiceLink, sendStarsInvoice } from './bot.js';
 import {
   createMeditation,
@@ -53,6 +55,7 @@ import {
 } from './db.js';
 import { isPlanId, isValidTelegramInvoiceUrl, plans } from './plans.js';
 import { paymentEligibility } from './payment-policy.js';
+import {telegramWebhookSecret,requireTelegramWebhookSecret} from './telegram-webhook-policy.js';
 import { logBackendError, type RequestWithId } from './error-logging.js';
 import { PlaybackInputError } from './playback-security.js';
 import { getBackendVersion } from './version.js';
@@ -76,6 +79,7 @@ import {privateStagingGate, stagingQaOnly, stagingTelegramIds} from './staging-p
 import {configureQaBotMenu} from './staging-bot.js';
 
 export const app = express();
+let telegramStartupReady=false;
 app.disable('x-powered-by');
 const stagingFrontend = resolve(process.cwd(), '../frontend/dist-staging');
 const isNetlifyStaging = env.STAGING_MODE && env.STAGING_HOST === 'netlify';
@@ -333,9 +337,10 @@ app.get('/health', async (req, res) => {
     res.json(report);
     return;
   }
-  res.json({ ok: true, service: 'luna-backend',...(env.STAGING_MODE?{runtimeNode:process.versions.node}:{}),runtime:publicRuntimeReadiness({node:process.versions.node,commit:getBackendVersion().commitSha,supabaseUrl:env.SUPABASE_URL,model:env.AI_CHAT_MODEL,aiEnabled:env.AI_CHAT_ENABLED,keyConfigured:Boolean(env.OPENAI_API_KEY),flags:backendFeatureFlags}) });
+  res.json({ ok: true, service: 'luna-backend',...(env.STAGING_MODE?{runtimeNode:process.versions.node}:{}),runtime:publicRuntimeReadiness({node:process.versions.node,commit:getBackendVersion().commitSha,supabaseUrl:env.SUPABASE_URL,model:env.AI_CHAT_MODEL,aiEnabled:env.AI_CHAT_ENABLED,keyConfigured:Boolean(env.OPENAI_API_KEY),flags:backendFeatureFlags}),luna21:{dailyCard:env.FEATURE_DAILY_CARD_V2,spreads:env.FEATURE_TAROT_SPREADS,walletV2:env.FEATURE_MOON_SEEDS_WALLET_V2,rewardsV2:env.FEATURE_ECONOMY_REWARDS_V2,paidReadings:env.FEATURE_TAROT_PAID_READINGS,premiumV2:env.FEATURE_PREMIUM_V2,paymentAtomic:env.FEATURE_PAYMENT_ATOMIC,telegramReady:telegramStartupReady} });
 });
 
+app.use('/api/luna21',rateLimit({max:20,windowMs:60_000}),luna21CommerceRouter);
 app.get('/api/debug/admin', requireTelegramWebApp, (req, res) => {
   if (!assertAdmin(req, res)) return;
 
@@ -949,6 +954,15 @@ app.get('/api/admin/dashboard', requireTelegramWebApp, async (req, res, next) =>
   }
 });
 
+app.get('/api/admin/luna21/analytics',requireTelegramWebApp,async(req,res,next)=>{
+  try{
+    if(!assertAdmin(req,res))return;
+    if(!env.FEATURE_DAILY_CARD_V2){res.status(404).json({error:'Feature disabled.'});return;}
+    const {data,error}=await supabase.rpc('luna21_analytics',{p_days:30});
+    if(error)throw new Error('Luna analytics unavailable.');res.json(data);
+  }catch(error){next(error);}
+});
+
 app.get('/api/admin/support', requireTelegramWebApp, async (req, res, next) => {
   try {
     if (!assertAdmin(req, res)) return;
@@ -1039,7 +1053,10 @@ app.delete('/api/admin/categories/:slug', requireTelegramWebApp, async (req, res
   }
 });
 
-if (!env.STAGING_MODE) app.use(bot.webhookCallback('/telegram/webhook'));
+if (!env.STAGING_MODE) {
+  app.use('/telegram/webhook',requireTelegramWebhookSecret(telegramWebhookSecret(env.BOT_TOKEN)));
+  app.use(bot.webhookCallback('/telegram/webhook'));
+}
 
 if (env.STAGING_MODE && !isNetlifyStaging) {
   app.use(express.static(stagingFrontend, {dotfiles:'deny', index:false}));
@@ -1081,23 +1098,29 @@ app.use((error: unknown, req: express.Request, res: express.Response, next: expr
 if (!isNetlifyStaging) app.listen(env.PORT, async () => {
   console.log(`Luna backend listening on ${env.PORT}`);
   void runAuthorizedReleaseQa().catch(()=>console.error('[Luna release QA] FAIL — no automatic retry; inspect saved reading and usage.'));
+  void runLuna21Qa().catch(()=>console.error('[Luna 2.1 authorized QA] FAIL — no automatic retry; inspect saved reading and usage.'));
   if (env.STAGING_MODE) {
     console.log('Private staging: Telegram bot startup, reminders and payment endpoints disabled.');
     return;
   }
-  await configureTelegramBot();
-
-  if (env.WEBHOOK_URL) {
-    await bot.telegram.setWebhook(`${env.WEBHOOK_URL}/telegram/webhook`, {
-      allowed_updates: ['message', 'callback_query', 'pre_checkout_query']
-    });
-    console.log('Telegram webhook configured.');
-  } else {
-    await bot.launch();
-    console.log('Telegram bot launched with polling.');
+  try{
+    await configureTelegramBot();
+    if (env.WEBHOOK_URL) {
+      await bot.telegram.setWebhook(`${env.WEBHOOK_URL}/telegram/webhook`, {
+        secret_token: telegramWebhookSecret(env.BOT_TOKEN),
+        allowed_updates: ['message', 'callback_query', 'pre_checkout_query']
+      });
+      console.log('Telegram webhook configured.');
+    } else {
+      await bot.launch();
+      console.log('Telegram bot launched with polling.');
+    }
+    telegramStartupReady=true;
+    startReminderScheduler();
+  }catch{
+    // TelegramError includes its request payload; never log secret_token/token.
+    console.error('[Luna Telegram startup] Failed; inspect connectivity. Credentials and request payload withheld.');
   }
-
-  startReminderScheduler();
 });
 
 if (!env.STAGING_MODE) {
