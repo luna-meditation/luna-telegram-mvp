@@ -14,6 +14,9 @@ export type AchievementStats = {
   completedWeeks: number;
   perfectWeeks: number;
   categoryCounts: Record<string, number>;
+  tarotReadings?: number;
+  dailyCards?: number;
+  aiConversations?: number;
 };
 
 export type AchievementCategory = 'practice' | 'rhythm' | 'wellness' | 'garden' | 'premium';
@@ -26,6 +29,14 @@ export type AchievementDefinition = {
   current: (stats: AchievementStats) => number;
   target: number;
 };
+export type AchievementFamily='seeker'|'oracle'|'guardian'|'explorer'|'devoted';
+export function achievementFamily(definition:Pick<AchievementDefinition,'id'|'category'>):AchievementFamily {
+ if(definition.id.startsWith('tarot_'))return 'oracle';
+ if(['deep_sleep_explorer','anxiety_companion','focus_builder','calm_explorer'].includes(definition.id))return 'explorer';
+ if(definition.category==='rhythm')return 'devoted';
+ if(definition.category==='practice'||definition.category==='garden')return 'guardian';
+ return 'seeker';
+}
 
 export type AchievementRow = {
   achievement_id: string;
@@ -43,6 +54,10 @@ const strongestStreak = (stats: AchievementStats) => Math.max(stats.currentStrea
 
 // These definitions are the single backend source for unlock state and in-progress percentages.
 export const achievementDefinitions: AchievementDefinition[] = [
+  { id: 'tarot_first_reading', title: 'First Symbol', description: 'Saved your first completed Tarot reflection.', category: 'wellness', current: (stats) => stats.tarotReadings ?? 0, target: 1 },
+  { id: 'tarot_seven_daily_cards', title: 'Seven Daily Reflections', description: 'Explored seven different daily cards.', category: 'wellness', current: (stats) => stats.dailyCards ?? 0, target: 7 },
+  { id: 'tarot_ten_readings', title: 'The Oracle', description: 'Explored ten completed Tarot reflections.', category: 'wellness', current: (stats) => stats.tarotReadings ?? 0, target: 10 },
+  { id: 'first_luna_conversation', title: 'A Space to Reflect', description: 'Started a conversation with Luna AI.', category: 'wellness', current: (stats) => stats.aiConversations ?? 0, target: 1 },
   { id: 'first_meditation', title: 'First Meditation', description: 'Completed your first Luna meditation.', category: 'practice', current: (stats) => stats.completedMeditations, target: 1 },
   { id: 'first_week', title: 'First Week', description: 'Completed practice days across your first week.', category: 'rhythm', current: (stats) => Math.max(stats.practiceDays, stats.completedWeeks > 0 ? 7 : 0), target: 7 },
   { id: 'first_month', title: 'First Month', description: 'Built a month of Luna returns.', category: 'rhythm', current: (stats) => stats.practiceDays, target: 30 },
@@ -81,16 +96,17 @@ export function buildAchievementItems(stats: AchievementStats, rows: Achievement
   const unlockedById = new Map(rows.map((item) => [item.achievement_id, item]));
   return achievementDefinitions.map((definition) => {
     const current = Math.max(0, definition.current(stats));
-    const unlocked = current >= definition.target;
     const stored = unlockedById.get(definition.id);
+    const unlocked = current >= definition.target||Boolean(stored?.unlocked_at)||Number(stored?.progress)>=100;
     return {
       id: definition.id,
       title: definition.title,
       description: definition.description,
       category: definition.category,
+      family:achievementFamily(definition),
       unlocked,
       unlockedAt: stored?.unlocked_at ?? null,
-      progress: unlocked ? 100 : progressToTarget(current, definition.target),
+      progress: unlocked ? 100 : Math.max(progressToTarget(current, definition.target),Math.min(99,Math.max(0,Number(stored?.progress)||0))),
       current,
       target: definition.target
     };

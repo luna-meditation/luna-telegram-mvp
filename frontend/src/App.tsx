@@ -3043,7 +3043,9 @@ function App() {
             newNavigation={featureFlags.new_navigation}
             tarotEnabled={featureFlags.tarot_daily}
             gardenLevel={profile?.gardenLevel}
-            onTarot={() => setPage('tarot')}
+            onTarot={() => {tarotDispatch({type:'screen',value:'hub'});setPage('tarot');}}
+            onDaily={() => {tarotDispatch({type:'screen',value:'daily'});setPage('tarot');}}
+            onAstrology={() => setPage('astrology')}
             onJourney={() => setPage('progress')}
             onGarden={() => setPage('moonGarden')}
             onPersonalize={featureFlags.personalization?()=>{setProfileEntry('personalization');navigatePrimary('profile');}:undefined}
@@ -3634,6 +3636,10 @@ type AchievementView = {
 };
 
 const achievementCopy: Record<string, Record<AppLanguage, { title: string; description: string }>> = {
+  tarot_first_reading:{en:{title:'First Symbol',description:'Save your first completed Tarot reflection.'},ru:{title:'Первый символ',description:'Сохрани первую завершённую рефлексию Таро.'}},
+  tarot_seven_daily_cards:{en:{title:'Seven Daily Reflections',description:'Explore seven different daily cards.'},ru:{title:'Семь дневных рефлексий',description:'Исследуй семь разных карт дня.'}},
+  tarot_ten_readings:{en:{title:'The Oracle',description:'Explore ten completed Tarot reflections.'},ru:{title:'Оракул',description:'Исследуй десять завершённых рефлексий Таро.'}},
+  first_luna_conversation:{en:{title:'A Space to Reflect',description:'Start a conversation with Luna AI.'},ru:{title:'Пространство рефлексии',description:'Начни разговор с Luna AI.'}},
   first_meditation: { en: { title: 'First Meditation', description: 'Complete your first Luna meditation.' }, ru: { title: 'Первая медитация', description: 'Заверши первую медитацию Luna.' } },
   first_week: { en: { title: 'First Week', description: 'Complete practice days across your first week.' }, ru: { title: 'Первая неделя', description: 'Собери первые семь дней практики.' } },
   first_month: { en: { title: 'First Month', description: 'Build a month of Luna returns.' }, ru: { title: 'Первый месяц', description: 'Создай месяц возвращений к Luna.' } },

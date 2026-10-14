@@ -69,6 +69,8 @@ type HomeV2Props = {
   tarotEnabled?: boolean;
   gardenLevel?: number;
   onTarot: () => void;
+  onDaily?:()=>void;
+  onAstrology?:()=>void;
   onJourney: () => void;
   onGarden: () => void;
   onPersonalize?: () => void;
@@ -175,7 +177,7 @@ export function HomeV2(props: HomeV2Props) {
       )}
 
       {props.newNavigation && <HomeLunaGuide language={props.language} onTalk={props.onAskLuna} onPersonalize={props.onPersonalize}/>}
-      {props.newNavigation && <HomeDiscovery language={props.language} tarotEnabled={Boolean(props.tarotEnabled)} onTarot={props.onTarot} onMeditate={props.onLibrary} onBreathe={props.onBreath} />}
+      {props.newNavigation && <HomeDiscovery language={props.language} tarotEnabled={Boolean(props.tarotEnabled)} onTarot={props.onTarot} onDaily={props.onDaily} onAstrology={props.onAstrology} onMeditate={props.onLibrary} onBreathe={props.onBreath} />}
 
       {props.daily ? (
         <V2Recommendation

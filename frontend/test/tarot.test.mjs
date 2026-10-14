@@ -4,10 +4,11 @@ import {readFileSync,readdirSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 import {createRequire} from 'node:module';
+import {tarotModuleUrl} from './ts-module.mjs';
 const ts=createRequire(import.meta.url)('typescript');
 const src=path=>readFileSync(resolve(process.cwd(),'src',path),'utf8');
 const json=path=>JSON.parse(src('features/tarot/'+path));
-async function module(path){const source=src('features/tarot/'+path).replace("import content from './content.json';",`const content=${JSON.stringify(json('content.json'))};`);const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2022}}).outputText;return import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));}
+async function module(path){if(path==='session.ts')return import(tarotModuleUrl(path));const source=src('features/tarot/'+path).replace("import content from './content.json';",`const content=${JSON.stringify(json('content.json'))};`);const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2022}}).outputText;return import('data:text/javascript;base64,'+Buffer.from(code).toString('base64'));}
 const {randomIndex,drawOneCard,prepareCardChoices}=await module('draw.ts');
 const {createTarotSession,reduceTarotSession,tarotIntentions}=await module('session.ts');
 const {buildTarotInterpretation}=await module('interpretation.ts');
@@ -76,7 +77,7 @@ test('card flip preserves the whole frame, orientation and reduced motion',()=>{
  assert.match(css,/prefers-reduced-motion: reduce[\s\S]*transition: none/);
  assert.match(css,/is-settled \.tarot-card-front \{ transform: none/);
  assert.match(css,/@keyframes tarot-shuffle[^\n]+\* 24px/);
- assert.match(card,/aria-hidden=\{!revealed\}/);assert.match(card,/disabled=\{!ready\|\|failed\}/);
+ assert.match(card,/aria-hidden=\{!revealed\}/);assert.match(card,/disabled=\{!ready\|\|failed\|\|!enabled\}/);assert.match(card,/enabled=true/);
  assert.match(card,/alt=\{revealed\?card.name\[language\]:''\}/);
  assert.match(card,/event.currentTarget.decode\(\)/);
 });

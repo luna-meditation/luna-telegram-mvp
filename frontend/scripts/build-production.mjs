@@ -11,10 +11,10 @@ const api=new URL(process.env.VITE_API_URL?.trim()||'https://invalid.invalid');
 assert.ok(api.protocol==='https:'&&!['invalid.invalid','localhost','127.0.0.1','::1'].includes(api.hostname),'Provide the verified production VITE_API_URL');
 assert.ok(!api.username&&!api.password&&!api.search&&!api.hash,'The public API URL must not carry credentials or tokens');
 const profile=process.env.LUNA_RELEASE_PROFILE??'tarot-phase2';
-assert.ok(['tarot-phase2','luna2'].includes(profile),'Unknown approved release profile');
+assert.ok(['tarot-phase2','luna2','luna21'].includes(profile),'Unknown approved release profile');
 const foundation=['PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI'];
-const required=['NEW_NAVIGATION','TAROT_DAILY',...(profile==='luna2'?foundation:[])];
-const disabled=['TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO',...(profile==='luna2'?[]:foundation)];
+const required=['NEW_NAVIGATION','TAROT_DAILY',...(['luna2','luna21'].includes(profile)?foundation:[]),...(profile==='luna21'?['DAILY_CARD_V2']:[])];
+const disabled=['TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2',...(['luna2','luna21'].includes(profile)?[]:foundation)];
 for(const key of required)assert.equal(process.env[`VITE_FEATURE_${key}`],'true',`${key} must be explicitly enabled for this release`);
 for(const key of disabled)assert.ok(!process.env[`VITE_FEATURE_${key}`]||process.env[`VITE_FEATURE_${key}`]==='false',`${key} is not part of the approved release`);
 if(profile==='luna2'){
@@ -27,6 +27,11 @@ if(profile==='luna2'){
  for(const name of files){const sql=readFileSync(resolve(frontend,'../supabase/migrations',name));assert.equal(createHash('sha256').update(sql).digest('hex'),review.migrationHashes?.[name],`Migration changed since review: ${name}`);}
  // This verifies the local artifact, not live schema installation. Rollout still
  // requires backend-first runtime checks and explicit production SQL verification.
+}
+if(profile==='luna21'){
+ const reviewPath=process.env.LUNA_RELEASE_DB_REVIEW;assert.ok(reviewPath,'Luna 2.1 requires the isolated database review');
+ const review=JSON.parse(readFileSync(reviewPath,'utf8'));assert.equal(review.status,'PASS');assert.equal(review.productionWrites,0);assert.equal(review.projectId,'vkcdtasbdoeilgfucoax');assert.ok(review.checks.length>=23);
+ for(const name of ['20261014141843_luna21_daily_card.sql','20261014141847_luna21_economy_foundation.sql','20261014141850_luna21_atomic_stars_fulfillment.sql','20261014142638_luna21_tarot_spreads.sql'])assert.equal(createHash('sha256').update(readFileSync(resolve(frontend,'../supabase/migrations',name))).digest('hex'),review.migrationHashes?.[name],`Migration changed since review: ${name}`);
 }
 const commit=process.env.VITE_COMMIT_SHA||process.env.COMMIT_REF||process.env.GIT_COMMIT_SHA;
 assert.match(commit??'',/^[a-f0-9]{40}$/,'A verified source commit is required');

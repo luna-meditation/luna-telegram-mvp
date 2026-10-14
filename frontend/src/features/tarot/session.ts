@@ -1,8 +1,12 @@
 import type {TarotOrientation} from './deck';
-import type {TarotReading} from '../../api';
+import type {TarotReading,DailyTarotResult} from '../../api';
+import {createSpreadSession,reduceSpreadSession,type SpreadSession,type SpreadAction,type SpreadKind} from './spreadSession';
 export const tarotIntentions=['general','love','career','growth'] as const;
 export type TarotIntention=typeof tarotIntentions[number];
 export type TarotSession={
+ screen?:'hub'|'single'|'daily'|'three'|'five';
+ daily?:DailyTarotResult;
+ spreads?:Partial<Record<SpreadKind,SpreadSession>>;
  stage:'intention'|'shuffling'|'choose'|'reveal'|'interpretation';
  intention:TarotIntention;
  question:string;
@@ -15,6 +19,9 @@ export type TarotSession={
  savedReading?:TarotReading;
 };
 export type TarotAction=
+ |{type:'screen';value:NonNullable<TarotSession['screen']>}
+ |{type:'daily';value:DailyTarotResult}
+ |{type:'spread';kind:SpreadKind;action:SpreadAction}
  |{type:'intention';value:TarotIntention}
  |{type:'question';value:string}
  |{type:'shuffle';choices:readonly string[];at:number;clientReadingId?:string;language?:'en'|'ru'}
@@ -31,6 +38,9 @@ export function createTarotSession():TarotSession {
 // App-owned state survives tab transitions; optional server history uses the same flow.
 export function reduceTarotSession(state:TarotSession,action:TarotAction):TarotSession {
  switch(action.type){
+  case 'screen': return {...state,screen:action.value};
+  case 'daily': return state.daily?.reading.status==='ready'&&state.daily.reading.id===action.value.reading.id&&action.value.reading.status!=='ready'?state:{...state,daily:action.value};
+  case 'spread':return {...state,spreads:{...state.spreads,[action.kind]:reduceSpreadSession(state.spreads?.[action.kind]??createSpreadSession(action.kind),action.action)}};
   case 'intention': return state.stage==='intention'&&tarotIntentions.includes(action.value)?{...state,intention:action.value}:state;
   case 'question': return state.stage==='intention'?{...state,question:action.value.slice(0,240)}:state;
   case 'shuffle': {
@@ -44,8 +54,17 @@ export function reduceTarotSession(state:TarotSession,action:TarotAction):TarotS
   }
   case 'reveal': return state.stage==='reveal'&&state.result?{...state,stage:'interpretation'}:state;
   case 'saved': return state.clientReadingId===action.reading.client_reading_id&&!(state.savedReading?.status==='ready'&&action.reading.status!=='ready')?{...state,savedReading:action.reading}:state;
-  case 'resume': return {...createTarotSession(),stage:'interpretation',intention:action.reading.intention,question:action.reading.question,clientReadingId:action.reading.client_reading_id,readingLanguage:action.reading.language,savedReading:action.reading,result:{cardId:action.reading.card_id,orientation:action.reading.orientation,slot:0},serial:state.serial+1};
-  case 'deleted': return state.savedReading?.id===action.id?{...createTarotSession(),serial:state.serial+1}:state;
-  case 'reset': return {...createTarotSession(),serial:state.serial+1};
+  case 'resume': {
+   const r=action.reading,kind=r.reading_kind;
+   if((kind==='three'||kind==='five')&&r.cards?.length===(kind==='three'?3:5))return {...state,screen:kind,spreads:{...state.spreads,[kind]:{...createSpreadSession(kind),stage:'interpretation',intention:r.intention,question:r.question,selected:r.cards.map((c,slot)=>({...c,slot})),revealed:r.cards.length,clientReadingId:r.client_reading_id,language:r.language,reading:r}}};
+   return {...createTarotSession(),screen:'single',daily:state.daily,spreads:state.spreads,stage:'interpretation',intention:r.intention,question:r.question,clientReadingId:r.client_reading_id,readingLanguage:r.language,savedReading:r,result:{cardId:r.card_id,orientation:r.orientation,slot:0},serial:state.serial+1};
+  }
+  case 'deleted': {
+   let next=state.savedReading?.id===action.id?{...createTarotSession(),screen:'hub' as const,daily:state.daily,spreads:state.spreads,serial:state.serial+1}:state;
+   if(next.daily?.reading.id===action.id)next={...next,daily:undefined,screen:next.screen==='daily'?'hub':next.screen};
+   for(const kind of ['three','five'] as const)if(next.spreads?.[kind]?.reading?.id===action.id)next={...next,spreads:{...next.spreads,[kind]:createSpreadSession(kind)},screen:next.screen===kind?'hub':next.screen};
+   return next;
+  }
+  case 'reset': return {...createTarotSession(),screen:state.screen,daily:state.daily,spreads:state.spreads,serial:state.serial+1};
  }
 }

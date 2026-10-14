@@ -10,17 +10,19 @@ import { fileURLToPath } from 'node:url';
 assert.equal(process.versions.node.split('.')[0], '22', 'Use Node.js 22');
 const frontend = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const tarotPreview = process.argv.includes('--tarot');
-const refinementPreview=process.argv.includes('--refinement');
+const luna21Preview=process.argv.includes('--luna21');
+const refinementPreview=process.argv.includes('--refinement')||luna21Preview;
 const legacyPreview = process.argv.includes('--legacy');
 assert.ok(!(tarotPreview&&legacyPreview),'Choose either Tarot or legacy preview');
 const outputDirectory = refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
 const output = resolve(frontend, outputDirectory);
-const flagNames = ['NEW_NAVIGATION','TAROT_DAILY','TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI'];
+const flagNames = ['NEW_NAVIGATION','TAROT_DAILY','TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI','DAILY_CARD_V2','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2'];
 const build = spawn(process.execPath,[resolve(frontend,'node_modules/vite/bin/vite.js'),'build','--outDir',outputDirectory],{
-  cwd:frontend, stdio:'inherit', env:{...process.env,...Object.fromEntries(flagNames.map(key=>[`VITE_FEATURE_${key}`,'false'])),...(refinementPreview?Object.fromEntries(['PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI'].map(key=>[`VITE_FEATURE_${key}`,'true'])):{}),VITE_FEATURE_NEW_NAVIGATION:legacyPreview?'false':'true',VITE_FEATURE_TAROT_DAILY:tarotPreview||refinementPreview?'true':'false',VITE_API_URL:'',VITE_BOT_USERNAME:''}
+  cwd:frontend, stdio:'inherit', env:{...process.env,...Object.fromEntries(flagNames.map(key=>[`VITE_FEATURE_${key}`,'false'])),...(refinementPreview?Object.fromEntries(['PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI'].map(key=>[`VITE_FEATURE_${key}`,'true'])):{}),...(luna21Preview?{VITE_FEATURE_DAILY_CARD_V2:'true',VITE_FEATURE_TAROT_SPREADS:'true'}:{}),VITE_FEATURE_NEW_NAVIGATION:legacyPreview?'false':'true',VITE_FEATURE_TAROT_DAILY:tarotPreview||refinementPreview?'true':'false',VITE_API_URL:'',VITE_BOT_USERNAME:''}
 });
 const code = await new Promise(done=>build.once('exit',done));
 assert.equal(code,0,'Preview build failed');
+if(process.argv.includes('--build-only'))process.exit(0);
 const date = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const monday=new Date();monday.setDate(monday.getDate()-((monday.getDay()+6)%7));
 const meditation={id:'00000000-0000-4000-8000-000000000001',title:'A quiet return',subtitle:'Come back to the present moment',description:'Offline QA practice. The audio is a silent local fixture, not a production meditation.',category:'calm',duration:180,cover_image:'/images/home/hero-night.png',audio_file:'/preview-audio.wav',premium:false,published:true,mood:'Calm',play_count:24,created_at:new Date().toISOString(),translations:{ru:{title:'Тихое возвращение',subtitle:'Вернись в настоящий момент',description:'Локальная QA-практика. Аудио — тестовая тишина, не production-медитация.'}}};
@@ -57,6 +59,20 @@ const server=createServer(async(req,res)=>{
         }return json({reading,reason:null});
       }
       if(refinementPreview&&url.pathname.startsWith('/api/tarot/readings/')&&req.method==='DELETE'){for(const[key,value]of readings)if(value.id===url.pathname.split('/').pop())readings.delete(key);return json({ok:true});}
+      if(luna21Preview&&url.pathname==='/api/tarot/daily'){
+        const day=new Date().toISOString().slice(0,10),key=`daily:${day}`;
+        if(body.generate&&body.expectedDay!==day)return json({code:'daily_changed'},409);
+        let reading=readings.get(key);
+        if(!reading){reading={id:randomUUID(),client_reading_id:randomUUID(),card_id:'the-star',orientation:'reversed',reading_kind:'daily',cards:[{cardId:'the-star',orientation:'reversed'}],intention:'general',question:'',language:body.language,status:'local',interpretation:null,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};readings.set(key,reading);}
+        if(body.generate&&reading.status==='local'){reading.status='ready';reading.interpretation={summary:'OFFLINE QA — not a real AI answer.',cardMeaning:'Synthetic daily card layout.',context:'Synthetic context layout.',reflection:'No paid request was sent.',question:'Is this comfortable to read?',continuation:null};}
+        return json({reading,day,timezone:'UTC',resetsAt:new Date(Date.parse(day+'T00:00:00Z')+86400000).toISOString(),reason:null});
+      }
+      if(luna21Preview&&url.pathname==='/api/tarot/spreads'){
+        const input=body.reading;let reading=readings.get(input.clientReadingId);
+        if(!reading){reading={id:randomUUID(),client_reading_id:input.clientReadingId,card_id:input.cards[0].cardId,orientation:input.cards[0].orientation,reading_kind:input.kind,cards:input.cards,intention:input.intention,question:input.question,language:input.language,status:'local',interpretation:null,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};readings.set(input.clientReadingId,reading);}
+        if(input.generate&&reading.status==='local'){reading.status='ready';reading.interpretation={summary:'OFFLINE QA — not a real AI answer.',cardMeaning:'Synthetic connected spread.',context:'Synthetic question context.',reflection:'No payment or OpenAI call was made.',question:'Is the composition readable?',continuation:null,cardInsights:input.cards.map(c=>({cardId:c.cardId,text:'Synthetic card-position text, not an AI interpretation.'})),links:'Synthetic connection text for mobile layout only.'};}
+        return json({reading,reason:null});
+      }
       if(url.pathname==='/api/profile/language'&&req.method==='POST'){
         if(!['en','ru'].includes(body.language))return json({error:'Unsupported preview language'},400);
         user.language_code=body.language;return json({user});

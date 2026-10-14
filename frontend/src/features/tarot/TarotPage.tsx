@@ -11,6 +11,10 @@ import {tarotIntentions,type TarotSession,type TarotAction} from './session';
 import {buildTarotInterpretation} from './interpretation';
 import {featureFlags} from '../../config/featureFlags';
 import {TarotHistory,TarotReadingTools} from './TarotReadingTools';
+import {TarotHub} from './TarotHub';
+import {DailyTarot} from './DailyTarot';
+import {luna21Flags} from '../../config/luna21Flags';
+import {TarotSpread} from './TarotSpread';
 import './tarot.css';
 
 const intentionIcons={general:Compass,love:Heart,career:Briefcase,growth:Leaf};
@@ -24,6 +28,11 @@ export default function TarotPage({language,onBack,session,dispatch,registerBack
  const titles={intention:t.intentionTitle,shuffling:t.shufflingTitle,choose:t.chooseTitle,reveal:t.revealTitle,interpretation:t.reflectionTitle};
  const descriptions={intention:t.intentionBody,shuffling:t.shufflingBody,choose:t.chooseBody,reveal:t.revealBody,interpretation:t.reflectionBody};
  const closeZoom=useCallback(()=>setZoom(false),[]);
+ useEffect(()=>{
+  if(session.screen!=='single'||zoom)return;
+  registerBackHandler(()=>dispatch({type:'screen',value:'hub'}));
+  return ()=>registerBackHandler(null);
+ },[session.screen,zoom,dispatch,registerBackHandler]);
  useEffect(()=>{
   selectionLocked.current=Boolean(session.result);shuffleLocked.current=session.stage!=='intention';
   if(previousStep.current.stage!==session.stage||previousStep.current.serial!==session.serial){heading.current?.focus({preventScroll:true});heading.current?.scrollIntoView({block:'start',behavior:'instant'});}
@@ -46,11 +55,14 @@ export default function TarotPage({language,onBack,session,dispatch,registerBack
  function reset(){setZoom(false);setError(false);selectionLocked.current=false;shuffleLocked.current=false;dispatch({type:'reset'});}
  const reading=card&&session.result?buildTarotInterpretation(card.meaning[language][session.result.orientation],session.intention,language):null;
  const coverProps={attempt:coverAttempt,onError:()=>setCoverFailed(true)};
+ if(session.screen==='daily'&&luna21Flags.daily_card_v2)return <div className="luna2-page tarot-page"><DailyTarot language={language} initData={initData} session={session} dispatch={dispatch} registerBackHandler={registerBackHandler} onContinue={onContinue}/></div>;
+ if((session.screen==='three'||session.screen==='five')&&(featureFlags.tarot_spreads||session.spreads?.[session.screen]?.reading))return <div className="luna2-page tarot-page"><TarotSpread kind={session.screen} language={language} initData={initData} session={session} dispatch={dispatch} registerBackHandler={registerBackHandler} onContinue={onContinue}/></div>;
+ if((!session.screen&&session.stage==='intention')||session.screen==='hub')return <div className="luna2-page tarot-page"><SectionBack language={language} onBack={onBack}/><TarotHub language={language} onOpen={value=>dispatch({type:'screen',value})}/>{featureFlags.tarot_history&&<TarotHistory language={language} initData={initData} dispatch={dispatch}/>}</div>;
  return <div className="luna2-page tarot-page" data-testid="tarot-single-card" data-stage={session.stage} data-feature-flag="tarot_daily" data-feature-enabled="true">
-  <SectionBack language={language} onBack={onBack}/>
+  <SectionBack language={language} onBack={()=>dispatch({type:'screen',value:'hub'})}/>
   {featureFlags.tarot_history&&<TarotHistory language={language} initData={initData} dispatch={dispatch}/>}
-  <header className="luna2-page-heading tarot-heading"><p>{t.eyebrow}<span>{t.step} {step+1} {t.of} 4</span></p><h1 ref={heading} tabIndex={-1}>{titles[session.stage]}</h1><span>{descriptions[session.stage]}</span></header>
-  <ol className="tarot-progress" aria-label={`${t.step} ${step+1} ${t.of} 4`}>{t.steps.map((label,index)=><li key={index} className={index<=step?'is-current':''} aria-current={index===step?'step':undefined}><span aria-hidden="true"/><span>{label}</span></li>)}</ol>
+  <header className="luna2-page-heading tarot-heading"><p>{t.eyebrow}<span>{t.step} {step+1} {t.of} 4</span></p><h1 ref={heading} tabIndex={-1}>{revealed&&card?card.name[language]:titles[session.stage]}</h1>{!revealed&&<span>{descriptions[session.stage]}</span>}</header>
+  {!revealed&&<ol className="tarot-progress" aria-label={`${t.step} ${step+1} ${t.of} 4`}>{t.steps.map((label,index)=><li key={index} className={index<=step?'is-current':''} aria-current={index===step?'step':undefined}><span aria-hidden="true"/><span>{label}</span></li>)}</ol>}
   {session.stage==='intention'&&<section className="tarot-intention" aria-label={t.intentionTitle}>
    <div className="tarot-intention-intro"><div><TarotCardBack {...coverProps}/></div><p>{t.body}<span>{t.deck}</span></p></div>
    <div className="tarot-intention-grid" role="group" aria-label={t.intentionTitle}>{tarotIntentions.map(value=>{const Icon=intentionIcons[value];return <button type="button" key={value} data-intention={value} aria-pressed={session.intention===value} onClick={()=>dispatch({type:'intention',value})}><Icon size={22}/><strong>{t.intentions[value].title}</strong><span>{t.intentions[value].description}</span></button>;})}</div>
@@ -67,13 +79,13 @@ export default function TarotPage({language,onBack,session,dispatch,registerBack
     <article className="tarot-meaning" aria-label={card.name[language]}><div className="tarot-card-meta"><span>{card.suit?t.suits[card.suit]:t.major}</span><span className="tarot-orientation-pill" data-testid="tarot-orientation">{session.result.orientation==='reversed'&&<RotateCcw size={14} aria-hidden="true"/>}{t[session.result.orientation]}</span></div><h2>{card.name[language]}</h2>{session.savedReading?.status!=='ready'&&session.savedReading?.status!=='safety'&&<><h3>{t.meaning}</h3><p>{card.meaning[language][session.result.orientation]}</p></>}
      {session.question&&<div className="tarot-question-summary"><h3>{t.yourQuestion}</h3><p>{session.question}</p></div>}
      {featureFlags.tarot_history&&<TarotReadingTools session={session} language={language} initData={initData} dispatch={dispatch} onContinue={onContinue}/>}
-     {session.savedReading?.status!=='ready'&&session.savedReading?.status!=='safety'&&<><div className="tarot-context"><h3>{t.context}</h3><p>{reading.text}</p></div><div className="tarot-reflection"><Sparkles size={21} aria-hidden="true"/><div><h3>{t.reflection}</h3><p>{reading.reflection}</p></div></div><p className="tarot-local-note">{t.localMeaning}</p></>}
+     {session.savedReading?.status!=='ready'&&session.savedReading?.status!=='safety'&&<><div className="tarot-context"><h3>{t.context}</h3><p>{reading.text}</p></div><div className="tarot-reflection"><Sparkles size={21} aria-hidden="true"/><div><h3>{t.reflection}</h3><p>{reading.reflection}</p></div></div></>}
     </article><button type="button" className="tarot-draw-button" onClick={reset}><RotateCcw size={19}/>{t.again}</button>
    </>}
   </section>}
   {coverFailed&&<div className="tarot-error" role="alert"><p>{t.imageError}</p><button type="button" className="tarot-text-button" onClick={()=>{setCoverFailed(false);setCoverAttempt(value=>value+1);}}>{t.retry}</button></div>}
   {error&&<p className="tarot-error" role="alert">{t.drawError}</p>}
-  <footer className="tarot-footnote"><span>{t.free} · {t.noCharge}</span><p>{t.disclaimer}</p></footer>
+  <footer className="tarot-footnote"><p>{t.disclaimer}</p></footer>
   {zoom&&card&&session.result&&<TarotDetails card={card} orientation={session.result.orientation} language={language} onClose={closeZoom} registerBackHandler={registerBackHandler}/>}
  </div>;
 }
