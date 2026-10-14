@@ -5,9 +5,17 @@ process.env.BOT_TOKEN='test-only';process.env.BOT_USERNAME='test';process.env.MI
 const {spreadInputSchema,spreadRequestHash,buildSpreadAiRequest}=await import('./tarot-spread-policy.js');
 const {generateTarotSpread}=await import('./tarot-spreads.js');
 const {emptyPersonalProfile}=await import('./personalization-policy.js');
+const {qaCacheMatches,qaUsedBudget}=await import('./luna21-qa.js');
 const cards=['the-fool','the-star','the-moon','the-sun','the-world'].map((cardId,index)=>({cardId,orientation:index%2?'reversed':'upright'}));
 const input=spreadInputSchema.parse({clientReadingId:'00000000-0000-4000-8000-000000000021',kind:'three',cards:cards.slice(0,3),intention:'growth',question:'What small next step can I try?',language:'en',generate:true});
 const reflection={summary:'Synthetic test',cardMeaning:'Pattern',context:'Context',reflection:'Practice',question:'A question?',continuation:null,cardInsights:input.cards.map(c=>({cardId:c.cardId,text:'Position specific'})),links:'A connected reflection'};
+test('QA semantic cache ignores JSONB key order; resume carries consumed calls and rejects unknown costs',()=>{
+ assert.equal(qaCacheMatches({summary:'A',context:{a:1,b:2}},{context:{b:2,a:1},summary:'A'}),true);
+ assert.equal(qaCacheMatches({summary:'A'},{summary:'B'}),false);
+ assert.deepEqual(qaUsedBudget([{estimated_cost:'0.000550',request_status:'success',model:'gpt-5-mini-2025-08-07'}]),{spent:.00055,calls:1});
+ assert.throws(()=>qaUsedBudget([{estimated_cost:null,request_status:'success',model:'gpt-5-mini'}]));
+ assert.throws(()=>qaUsedBudget([{estimated_cost:.04,request_status:'success',model:'gpt-5-mini'}]));
+});
 test('3/5-card inputs reject duplicates, wrong sizes, forged owner, invalid orientation and overlong questions',()=>{
  for(const v of [{...input,cards:cards.slice(0,2)},{...input,cards:[cards[0],cards[0],cards[2]]},{...input,kind:'five'},{...input,telegramId:158467796},{...input,cards:[...cards.slice(0,2),{cardId:'invented',orientation:'upright'}]},{...input,question:'x'.repeat(241)}])assert.equal(spreadInputSchema.safeParse(v).success,false);
  assert.equal(spreadInputSchema.parse({...input,kind:'five',cards}).cards.length,5);
