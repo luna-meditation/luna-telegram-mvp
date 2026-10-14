@@ -39,6 +39,7 @@ const envSchema = z.object({
   FEATURE_PREMIUM_V2: envBoolean.default(false),
   FEATURE_PAYMENT_ATOMIC: envBoolean.default(false),
   LUNA21_QA_ENABLED: envBoolean.default(false),
+  LUNA21_QA_RESUME: envBoolean.default(false),
   LUNA21_QA_TELEGRAM_ID: z.coerce.number().int().positive().optional(),
   LUNA21_QA_RUN_ID: z.string().uuid().optional(),
   RELEASE_QA_TAROT_ENABLED: envBoolean.default(false),
