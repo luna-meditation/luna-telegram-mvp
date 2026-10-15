@@ -1,0 +1,139 @@
+/* Luna 2.2: one shared compact mobile language, layered over established components. */
+:root { --section-gap: 16px; --card-padding: 16px; --app-navigation-clearance: calc(var(--app-navigation-height) + var(--app-navigation-bottom) + 12px); }
+.app-root { position: relative; z-index: 1; }
+.app-shell { padding-bottom: 24px; scroll-padding-block: 16px 28px; scrollbar-gutter: stable; }
+.app-shell-chat { padding-bottom: var(--app-navigation-clearance); }
+button, input, select, textarea { font-family: var(--font-sans); }
+button { -webkit-tap-highlight-color: transparent; }
+button:focus-visible,summary:focus-visible { outline: 2px solid var(--accent-luna); outline-offset: 3px; }
+.luna-page,.luna2-page { min-width: 0; }
+.luna2-page-heading h1,.tarot-hub>header h1,.tarot-page .tarot-heading h1 { font: 650 clamp(26px,7vw,29px)/1.16 var(--font-sans); letter-spacing: -.035em; }
+.luna2-page-heading>p,.luna2-eyebrow { font-size: 12px; letter-spacing: .1em; }
+.luna2-page-heading>span { font-size: 15px; line-height: 1.5; }
+.luna-page p.text-xs { font-size: 14px; line-height: 1.55; }
+.luna2-page-heading { gap: 7px; margin-bottom: 2px; }
+.luna-image[data-loaded="false"] { background-color: var(--surface-subtle); }
+.luna-icon-button,.tarot-text-button,.luna2-back { min-height: 44px; min-width: 44px; }
+.bottom-navigation-luna2 { height: 64px; }
+.bottom-navigation-luna2 .bottom-navigation-item { min-height: 54px; border-radius: 16px; gap: 3px; }
+.bottom-navigation-luna2 .bottom-navigation-item svg { width: 24px; height: 24px; }
+.bottom-navigation-luna2 .luna2-nav-ai svg { padding: 1px; }
+.bottom-navigation-luna2 .luna2-nav-ai:not([aria-current]) { background: transparent; box-shadow: none; }
+.premium-ambient { position: fixed; inset: 0; pointer-events: none; overflow: hidden; background: radial-gradient(ellipse at 20% 12%,rgba(94,73,164,.09),transparent 58%); }
+.premium-ambient::before { content: ''; position: absolute; inset: -5%; background: radial-gradient(ellipse at 65% 35%,rgba(88,78,150,.07),transparent 60%); animation: premium-atmosphere 45s ease-in-out infinite alternate; }
+@keyframes premium-atmosphere { from { transform: translate3d(-2%,0,0); opacity: .4; } to { transform: translate3d(2%,3%,0); opacity: .8; } }
+.premium-ambient>span { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #dbc494; opacity: .28; animation: premium-star 12s ease-in-out infinite alternate; }
+.premium-ambient>span:nth-child(1) { left: 9%; top: 13%; }.premium-ambient>span:nth-child(2) { left: 71%; top: 7%; animation-delay: -4s; }.premium-ambient>span:nth-child(3) { left: 90%; top: 36%; animation-delay: -8s; }.premium-ambient>span:nth-child(4) { left: 26%; top: 67%; animation-delay: -2s; }.premium-ambient>span:nth-child(5) { left: 59%; top: 84%; animation-delay: -10s; }.premium-ambient>span:nth-child(6) { left: 13%; top: 91%; animation-delay: -7s; }.premium-ambient>span:nth-child(7) { left: 84%; top: 63%; animation-delay: -3s; }.premium-ambient>span:nth-child(8) { left: 43%; top: 39%; animation-delay: -5s; }
+@keyframes premium-star { from { opacity: .13; transform: translate3d(0,0,0); } to { opacity: .5; transform: translate3d(0,-5px,0); } }
+:root[data-theme="light"] .premium-ambient { opacity: .38; }
+.luna2-home { gap: 16px; }
+.luna2-home .home-v2-atmosphere { min-height: 244px; border-radius: 24px; }
+.luna2-home .home-v2-atmosphere-copy { padding: 22px 20px 20px; }
+.luna2-home .home-v2-atmosphere-copy h1 { font-size: 28px; max-width: 235px; }
+.luna2-home-guide { position: relative; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px 12px; padding: 15px 16px; border-radius: 20px; background: var(--surface-primary); border: 1px solid var(--border-subtle); }
+.luna2-home-guide>div { grid-column: 1; gap: 7px; }
+.luna2-home-guide h2 { grid-column: 1; font: 500 15px/1.45 var(--font-sans); margin: 0; max-width: 240px; }
+.luna2-home-guide .luna2-talk-primary { grid-column: 2; grid-row: 1/3; width: 44px; height: 44px; min-height: 44px; margin: 0; padding: 0; border-radius: 50%; background: var(--surface-selected); color: var(--accent-gold-text); }
+.luna2-talk-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.luna2-home-guide .luna2-personalize-entry { grid-column: 1/-1; min-height: 44px; margin: -2px 0 -8px; text-align: left; font-size: 13px; }
+.luna2-daily-card { min-height: 142px; border-radius: 22px; padding: 18px 16px; }
+.luna2-daily-card h2 { font: 600 19px/1.3 var(--font-sans); max-width: 205px; }
+.luna2-daily-card .luna2-celestial-art { width: 118px; height: 118px; right: -12px; }
+.luna21-home-categories button { min-height: 88px; padding: 12px 5px; gap: 7px; }
+.luna21-home-categories { grid-template-columns: repeat(4,minmax(0,1fr)); gap: 8px; }
+.luna21-home-categories button { grid-template-columns: minmax(0,1fr); justify-items: center; align-content: center; text-align: center; }
+.luna21-home-categories button svg { grid-row: auto; }.luna21-home-categories button small { grid-column: 1; font-size: 12px; }
+.luna21-home-categories button>span { font-size: 13px; }
+.luna2-home-progress { gap: 8px; }
+.luna2-home-progress button { min-height: 64px; border-radius: 18px; padding: 12px; }
+.luna2-category-grid { gap: 12px; }
+.luna2-category { min-height: 244px; border-radius: 23px; padding: 16px; }
+.luna2-category .luna2-category-art { height: 123px; }
+.luna2-category-copy strong { font: 650 18px/1.3 var(--font-sans); }
+.luna2-category-copy>span { font-size: 14px; line-height: 1.4; }
+.luna2-category .luna2-category-top { font-size: 12px; }
+.luna2-category:hover { transform: none; }
+.luna2-category:active { transform: scale(.985); }
+.tarot-hub { gap: 14px; }
+.tarot-hub-daily { padding: 16px; min-height: 190px; border-radius: 22px; }
+.tarot-hub-daily strong { font: 650 22px/1.2 var(--font-sans); }
+.tarot-hub-reading { min-height: 80px; padding: 15px; }
+.tarot-hub-spreads button { min-height: 154px; padding: 15px; gap: 9px; }
+.tarot-hub-spreads button strong { font: 600 17px/1.3 var(--font-sans); }
+.tarot-hub-note { font-size: 13px; line-height: 1.55; }
+.tarot-page .tarot-reading { gap: 12px; }
+.tarot-daily .tarot-card-stage { width: min(42vw,164px); margin-inline: auto; }
+.tarot-daily>.tarot-orientation-pill { width: fit-content; justify-self: center; padding: 4px 10px; }
+.tarot-daily.luna2-page>.tarot-ai-reflection { margin-top: 2px; padding: 14px; gap: 12px; }
+.tarot-daily.luna2-page>.tarot-ai-reflection>div { margin: 0; }
+.tarot-ai-reflection .tarot-ai-takeaway { padding: 16px; border-radius: 19px; border: 1px solid var(--border-accent); background: var(--surface-selected); }
+.tarot-ai-reflection h3 { font: 600 16px/1.4 var(--font-sans); margin: 0 0 6px; }
+.tarot-ai-reflection p { margin: 0; font-size: 15px; line-height: 1.65; }
+.tarot-ai-reflection .tarot-ai-label { font-size: 12px; letter-spacing: .06em; }
+.tarot-ai-reflection .tarot-ai-label { color: var(--accent-gold-text); }
+:root[data-theme="dark"] .luna2-breath .breath-circle-visual { background-image: var(--luna-night-image); }
+.tarot-ai-details { border-top: 1px solid var(--border-subtle); }
+.tarot-ai-details>summary { cursor: pointer; display: flex; align-items: center; min-height: 48px; font-size: 14px; color: var(--accent-gold-text); }
+.tarot-ai-details>div { margin-bottom: 15px; }
+.luna2-chat .luna-live-header { min-height: 56px; padding-block: 8px; }
+.luna2-chat .luna-live-empty { padding-top: 12px; }
+.luna2-chat .luna-live-empty>.brand-logo { width: 60px; height: 60px; margin-bottom: 12px; }
+.luna2-chat .luna-live-empty h3 { font: 650 27px/1.2 var(--font-sans); }
+.luna2-chat .luna-live-empty>.luna2-ai-actions { margin-top: 15px; gap: 8px; }
+.luna2-chat .luna2-ai-actions button { min-height: 48px; padding: 10px 12px; }
+.luna-live-message-content { overflow-wrap: anywhere; font-size: 15px; line-height: 1.65; }
+.luna-live-message-content p { margin-block: 0 12px; }
+.luna-message-bubble p:last-child { margin-bottom: 0; }.luna-message-bubble h4 { font-size: 15px; font-weight: 650; margin: 0 0 8px; }.luna-message-bubble ul { padding-left: 20px; margin: 0 0 12px; }.luna-message-bubble li+li { margin-top: 5px; }
+.luna-mode-select { margin-block: 3px; }
+.luna-mode-select>span { font-size: 12px; }
+.luna-mode-select select { min-height: 44px; font-size: 14px; }
+.luna2-profile-overview { gap: 12px; }
+.profile-identity { padding: 15px 0; gap: 12px; }
+.profile-identity>button:first-child { width: 64px; height: 64px; }
+.profile-identity-copy h3 { font-size: 22px; }
+.profile-journey-status { max-width: 98px; }
+.premium-profile-stats { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 6px; padding: 14px 0; border-block: 1px solid var(--border-subtle); }
+.premium-profile-stats button { display: grid; gap: 4px; justify-items: center; min-height: 54px; }
+.premium-profile-stats strong { font-size: 23px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.premium-profile-stats small { font-size: 12px; color: var(--text-secondary); }
+.premium-profile-stats button:first-child strong { color: var(--accent-gold-text); }
+.premium-profile-links { display: grid; gap: 8px; }
+.premium-profile-link { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 72px; padding: 13px; border-radius: 19px; border: 1px solid var(--border-subtle); background: var(--surface-primary); text-align: left; }
+.premium-profile-link img { width: 52px; height: 52px; object-fit: cover; border-radius: 13px; }
+.premium-profile-link.luna2-garden-entry { position: relative; isolation: isolate; min-height: 78px; text-align: left; justify-items: normal; display: flex; }
+.premium-profile-link.luna2-garden-entry::before,.premium-profile-link.luna2-garden-entry::after { display: none; }
+.premium-profile-link.luna2-garden-entry img { position: static; inset: auto; z-index: auto; width: 52px; height: 52px; flex-shrink: 0; }
+.premium-profile-link span { flex: 1; min-width: 0; }.premium-profile-link strong,.premium-profile-link small { display: block; }.premium-profile-link strong { font-size: 16px; }.premium-profile-link small { font-size: 13px; margin-top: 5px; color: var(--text-secondary); }
+.premium-profile-link>svg { color: var(--accent-gold-text); flex-shrink: 0; }
+.compact-journey .progress-v5-status-heading { gap: 12px; }
+.compact-journey .progress-v5-status-copy h2 { font: 650 25px/1.15 var(--font-sans); }
+.compact-journey .progress-v5-status-progress-label { font-size: 13px; }
+.compact-journey .progress-v5-status-requirements { font-size: 13px; }
+.journal-filters { display: flex; gap: 7px; overflow-x: auto; padding-bottom: 6px; overscroll-behavior-x: contain; }
+.journal-filters button { flex: 0 0 auto; min-height: 44px; padding: 10px 14px; font-size: 14px; border: 1px solid var(--border-subtle); border-radius: 999px; }
+.journal-filters button[aria-pressed="true"] { color: var(--accent-gold-text); background: var(--surface-selected); border-color: var(--border-accent); }
+.journal-timeline { display: grid; gap: 9px; }.journal-timeline .luna2-activity-row { padding: 14px; border: 1px solid var(--border-subtle); border-radius: 19px; background: var(--surface-primary); }
+.journal-timeline time { font-size: 12px; color: var(--text-muted); }.journal-timeline img { width: 40px; height: 60px; object-fit: contain; }.journal-timeline small { font-size: 13px; }
+.garden-management>.moon-garden-scene-immersive { width: 100%; height: auto; aspect-ratio: 4/3; max-height: calc(var(--app-viewport-height) * .51); margin: 0; border-radius: 24px; }
+.garden-management .moon-garden-scene-immersive .moon-garden-scene-image { width: 100%; height: 100%; object-fit: cover; object-position: 50% 54%; }
+.garden-management .journey-garden-meta { justify-content: flex-start; flex-wrap: wrap; margin: 0 0 2px; padding: 0; font-size: 13px; gap: 7px; }
+.garden-management .garden-page-heading { gap: 10px; }
+.garden-management .garden-stage-subtitle { margin: 4px 0 0; color: var(--text-secondary); font-size: 13px; line-height: 1.5; }
+.garden-scene-expand { position: absolute; z-index: 5; bottom: 12px; left: 12px; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; max-width: calc(100% - 24px); padding: 10px 13px; border: 1px solid #dfc59255; border-radius: 14px; color: #f7f2e8; background: #101626d9; font-size: 13px; }
+.garden-scene-expand svg { flex-shrink: 0; }
+.garden-shop-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.garden-shop-heading>span { flex-shrink: 0; color: var(--text-secondary); font-size: 12px; }
+.garden-upgrade-shop { display: grid; gap: 10px; }.garden-upgrade-shop h3 { margin: 0; font-size: 20px; }.garden-upgrade-shop>p { font-size: 14px; color: var(--text-secondary); }
+.garden-upgrade-rail { gap: 10px; align-items: flex-start; margin-right: -4px; padding: 2px 4px 12px 0; }
+.garden-upgrade-rail article { flex-basis: calc((100% - 20px) / 3); min-width: 0; gap: 7px; padding: 7px; border-radius: 16px; align-content: start; }
+.garden-upgrade-rail img { height: 100%; aspect-ratio: 1; object-fit: cover; object-position: 50% 55%; width: 100%; }
+.garden-upgrade-rail .garden-upgrade-preview { min-height: 0; aspect-ratio: 1; width: 100%; padding: 0; overflow: hidden; border-radius: 10px; }
+.garden-upgrade-rail strong { min-height: 2.8em; font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; }.garden-upgrade-rail article>span { font-size: 12px; color: var(--accent-gold-text); }.garden-upgrade-rail button { font-size: 13px; min-height: 44px; }
+.garden-upgrade-preview-panel { position: fixed; z-index: 205; inset: 0; display: grid; place-items: center; padding: max(20px,var(--safe-area-top)) 16px max(20px,var(--safe-area-bottom)); background: var(--overlay-bg); }
+.garden-upgrade-preview-panel>section { display: grid; gap: 12px; width: min(100%,420px); max-height: calc(var(--app-viewport-height) - 48px); overflow-y: auto; padding: 18px; border: 1px solid var(--border-strong); background: var(--surface-elevated); border-radius: 25px; }
+.garden-upgrade-preview-panel header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }.garden-upgrade-preview-panel h3 { font: 650 21px/1.3 var(--font-sans); }.garden-upgrade-preview-panel img { width: 100%; aspect-ratio: 4/3; object-fit: cover; border-radius: 17px; }.garden-upgrade-preview-panel p { font-size: 15px; color: var(--text-secondary); }
+.garden-upgrade-preview-panel .garden-owned { display: flex; align-items: center; gap: 8px; color: var(--accent-gold-text); }
+.journey-garden-stage-grid img { aspect-ratio: 4/3; object-fit: cover; }
+:root[data-app-active="false"] *, :root[data-app-active="false"] *::before, :root[data-app-active="false"] *::after { animation-play-state: paused !important; }
+@media(max-width:350px) { .luna2-category { min-height: 226px; padding: 13px; }.luna2-category-copy strong { font-size: 16px; }.luna2-category-copy>span { font-size: 13px; }.luna2-home-guide h2 { max-width: 210px; }.luna21-home-categories { gap: 5px; }.luna21-home-categories button>span { font-size: 12px; }.profile-journey-status { max-width: 83px; }.profile-journey-status strong { font-size: 12px; } }
+@media(prefers-reduced-motion:reduce) { *,*::before,*::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; }.premium-ambient { display: none; } }

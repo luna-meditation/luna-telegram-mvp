@@ -13,7 +13,9 @@ test('only the approved frontend flags are enabled in the production context',()
 });
 test('stable Tarot image URLs cache without an immutable stale-art trap or frame blocking',()=>{
  const headers=text('public/_headers');assert.match(headers,/\/assets\/tarot\/\*/);assert.match(headers,/max-age=86400/);assert.match(headers,/stale-while-revalidate=604800/);
- assert.doesNotMatch(headers,/Cache-Control:[^\n]*immutable|X-Frame-Options|frame-ancestors/);
+ assert.doesNotMatch(headers.split('/assets/optimized/')[0],/Cache-Control:[^\n]*immutable/);
+ assert.doesNotMatch(headers,/X-Frame-Options|frame-ancestors/);
+ assert.match(headers,/\/assets\/optimized\/\*[\s\S]*immutable/);
 });
 test('production packaging preserves the real Telegram SDK and cannot ship a preview bridge',()=>{
  const build=text('scripts/build-production.mjs');assert.match(build,/Production requires Node.js 22/);assert.match(build,/Provide the verified production VITE_API_URL/);

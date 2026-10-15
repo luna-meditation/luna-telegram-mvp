@@ -2,6 +2,7 @@ import { ArrowLeft, ArrowUpRight, BookOpen, Sparkles, Stars, Wind } from 'lucide
 import type { AppLanguage } from '../api';
 import { luna2Copy } from './copy';
 import { tarotCopy } from '../features/tarot/copy';
+import {OptimizedImage} from '../design-system/components/OptimizedImage';
 
 export type ExploreCategory = 'tarot' | 'astrology' | 'meditations' | 'breathwork';
 export const exploreCategories: readonly ExploreCategory[] = ['tarot', 'astrology', 'meditations', 'breathwork'];
@@ -10,9 +11,9 @@ export function SectionBack({ language, onBack }: { language: AppLanguage; onBac
   return <button type="button" className="luna2-back" onClick={onBack}><ArrowLeft size={18} />{luna2Copy[language].back}</button>;
 }
 
-export function CelestialArt({ kind }: { kind: 'tarot' | 'astrology' }) {
+export function CelestialArt({ kind,sizes='(max-width: 600px) calc((100vw - 70px) / 2), 240px' }: { kind: 'tarot' | 'astrology';sizes?:string }) {
   const source = kind === 'tarot' ? '/images/explore/tarot-celestial-v1.png' : '/images/explore/astrology-zodiac-v1.png';
-  return <img className={`luna2-celestial-art luna2-${kind}-art`} src={source} width={1280} height={1280} alt="" aria-hidden="true" loading="lazy" decoding="async" />;
+  return <OptimizedImage className={`luna2-celestial-art luna2-${kind}-art`} src={source} sizes={sizes} width={1280} height={1280} alt="" aria-hidden="true" />;
 }
 
 export function ExplorePage({ language, tarotEnabled = false, onOpen }: { language: AppLanguage; tarotEnabled?: boolean; onOpen: (category: ExploreCategory) => void }) {
@@ -29,7 +30,7 @@ export function ExplorePage({ language, tarotEnabled = false, onOpen }: { langua
           return <button type="button" key={kind} data-category={kind} className={`luna2-category luna2-category-${kind} ${upcoming ? 'is-featured' : ''}`} onClick={() => onOpen(kind)}>
             <span className="luna2-category-top"><Icon size={18} />{upcoming ? <small>{kind === 'tarot' && tarotEnabled ? tarotCopy[language].free : t.soon}</small> : <ArrowUpRight size={18} />}</span>
             <div className="luna2-category-art" aria-hidden="true">
-              {upcoming ? <CelestialArt kind={kind} /> : kind === 'meditations' ? <img className="luna2-category-landscape" src="/images/home/hero-day.png" alt="" loading="lazy" /> : <span className="luna2-mini-ring" />}
+              {upcoming ? <CelestialArt kind={kind} /> : kind === 'meditations' ? <OptimizedImage className="luna2-category-landscape" src="/images/home/hero-day.png" sizes="45vw" alt="" /> : <span className="luna2-mini-ring" />}
             </div>
             <span className="luna2-category-copy"><strong>{t[kind]}</strong><span>{descriptions[kind]}</span></span>
           </button>;

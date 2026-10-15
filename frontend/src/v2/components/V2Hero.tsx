@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import {OptimizedImage} from '../../design-system/components/OptimizedImage';
+import {useResolvedTheme} from '../../hooks/useResolvedTheme';
 
 type MoodChip = 'Sleep' | 'Calm' | 'Focus' | 'Anxiety' | 'Breath' | 'Energy';
 type MoodVisual = 'great' | 'good' | 'meh' | 'anxious' | 'tired';
@@ -122,18 +124,20 @@ export function V2Hero({
     { mood: 'Sleep', active: ['Sleep'], visual: 'tired', label: { en: 'Tired', ru: 'Устал' } }
   ];
   const [failedImages, setFailedImages] = useState<Record<keyof typeof homeHeroAssets, boolean>>({ dark: false, light: false });
+  const resolvedTheme=useResolvedTheme();
   const selectedMood = activeMood ? visualMoods.find((item) => item.active.includes(activeMood)) : null;
 
   return (
     <section className="home-v2-atmosphere">
       <div className="home-v2-atmosphere-art" aria-hidden="true">
-        {(Object.entries(homeHeroAssets) as Array<[keyof typeof homeHeroAssets, string]>).map(([theme, path]) => failedImages[theme] ? null : (
-          <img
+        {(Object.entries(homeHeroAssets) as Array<[keyof typeof homeHeroAssets, string]>).filter(([theme])=>theme===resolvedTheme).map(([theme, path]) => failedImages[theme] ? null : (
+          <OptimizedImage
             key={theme}
             src={path}
             className={`home-v2-hero-image home-v2-hero-${theme}`}
             alt=""
             loading="eager"
+            fetchPriority="high"
             onError={() => {
               if (import.meta.env.DEV) console.info('[Luna Home V2 hero image missing]', path);
               setFailedImages((current) => ({ ...current, [theme]: true }));

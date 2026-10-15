@@ -1,9 +1,10 @@
-import {useState} from 'react';
+import {useEffect,useState} from 'react';
 import {Flame,Flower2,Trophy,ArrowUpRight} from 'lucide-react';
 import type {AppLanguage,ProfileStats} from '../../api';
 import {JourneyStatusHero,StatusProgressionSheet,type ProgressAchievement} from '../progress/ProgressExperience';
-export function CompactJourney({profile,language,achievements,onGarden,onAchievements}:{profile:ProfileStats|null;language:AppLanguage;achievements:ProgressAchievement[];onGarden:()=>void;onAchievements:()=>void}){
+export function CompactJourney({profile,language,achievements,onGarden,onAchievements,registerBackHandler}:{profile:ProfileStats|null;language:AppLanguage;achievements:ProgressAchievement[];onGarden:()=>void;onAchievements:()=>void;registerBackHandler?:(handler:(()=>void)|null)=>void}){
  const [statuses,setStatuses]=useState(false),en=language==='en';
+ useEffect(()=>{if(!statuses)return;registerBackHandler?.(()=>setStatuses(false));return()=>registerBackHandler?.(null);},[statuses,registerBackHandler]);
  const latest=achievements.filter(item=>item.unlocked).sort((a,b)=>String(b.unlockedAt??'').localeCompare(String(a.unlockedAt??''))).slice(0,3);
  return <section className="compact-journey" data-testid="compact-journey">
   <JourneyStatusHero profile={profile} language={language} onOpen={()=>setStatuses(true)}/>

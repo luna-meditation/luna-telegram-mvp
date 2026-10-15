@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pause, Play, Settings, Volume2 } from 'lucide-react';
+import { Maximize2, Pause, Play, Settings, Volume2 } from 'lucide-react';
 import './moonGardenScene.css';
+import {OptimizedImage} from '../../design-system/components/OptimizedImage';
 
 export type MoonGardenSceneStage = {
   level: number;
@@ -22,6 +23,8 @@ type MoonGardenSceneProps = {
   soundUnavailableLabel: string;
   onToggleSound: () => void;
   onSoundVolumeChange: (volume: number) => void;
+  onExpand?: () => void;
+  expandLabel?: string;
 };
 
 const stars: Array<[number, number, number, number]> = [
@@ -67,27 +70,23 @@ export function MoonGardenScene({
   soundVolumeLabel,
   soundUnavailableLabel,
   onToggleSound,
-  onSoundVolumeChange
+  onSoundVolumeChange,
+  onExpand,
+  expandLabel
 }: MoonGardenSceneProps) {
   const [imageError, setImageError] = useState(false);
-  const [videoError, setVideoError] = useState(false);
-  const [videoReady, setVideoReady] = useState(false);
   const [soundOpen, setSoundOpen] = useState(false);
   const level = Math.max(0, Math.min(7, stage.level));
   const intensity = useMemo(() => (level / 7).toFixed(2), [level]);
 
   useEffect(() => {
     setImageError(false);
-    setVideoError(false);
-    setVideoReady(false);
     setSoundOpen(false);
-  }, [stage.path, stage.videoPath]);
+  }, [stage.path]);
 
   useEffect(() => {
     if (imageError && import.meta.env.DEV) console.info('[Luna Moon Garden image fallback]', stage.path);
   }, [imageError, stage.path]);
-
-  const useVideo = Boolean(stage.videoPath && !videoError);
 
   return (
     <section
@@ -95,25 +94,11 @@ export function MoonGardenScene({
       style={{ '--garden-level': String(level), '--garden-intensity': intensity } as React.CSSProperties}
       aria-label={statusLabel}
     >
-      {useVideo && (
-        <video
-          key={stage.videoPath}
-          src={stage.videoPath}
-          aria-label={statusLabel}
-          autoPlay
-          muted
-          loop
-          playsInline
-          onCanPlay={() => setVideoReady(true)}
-          onError={() => setVideoError(true)}
-          className={'moon-garden-scene-image moon-garden-scene-video ' + (videoReady ? 'moon-garden-scene-video-ready' : '')}
-        />
-      )}
-      {imageError && !useVideo ? (
+      {imageError ? (
         <div className="moon-garden-scene-fallback" role="img" aria-label={statusLabel} />
-      ) : !imageError ? (
-        <img src={stage.path} alt={statusLabel} draggable={false} onError={() => setImageError(true)} className="moon-garden-scene-image" />
-      ) : null}
+      ) : (
+        <OptimizedImage src={stage.path} alt={statusLabel} draggable={false} loading="eager" onError={() => setImageError(true)} className="moon-garden-scene-image" />
+      )}
       <div className="moon-garden-scene-vignette" aria-hidden="true" />
       <StarsLayer level={level} />
       <div className="moon-garden-water-shimmer" aria-hidden="true" />
@@ -127,7 +112,7 @@ export function MoonGardenScene({
       {level >= 6 && <div className="moon-garden-deep-atmosphere" aria-hidden="true" />}
       {level >= 7 && <div className="moon-garden-full-moon-aura" aria-hidden="true" />}
       <FirefliesLayer level={level} />
-      <div className="moon-garden-scene-chip">{statusLabel}</div>
+      {onExpand ? <button type="button" className="garden-scene-expand" onClick={onExpand} aria-label={expandLabel}><Maximize2 size={16} /><span>{expandLabel}</span></button> : <div className="moon-garden-scene-chip">{statusLabel}</div>}
       <div className="moon-garden-sound-control">
         {soundOpen && (
           <div className="moon-garden-sound-panel">

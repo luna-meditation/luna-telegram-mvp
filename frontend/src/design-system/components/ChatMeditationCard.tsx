@@ -1,3 +1,4 @@
+import {OptimizedImage} from './OptimizedImage';
 import { Crown, Play } from 'lucide-react';
 import type { AppLanguage, Meditation } from '../../api';
 import { formatMeditationDuration } from '../../utils/duration';
@@ -15,7 +16,7 @@ export function ChatMeditationCard({ meditation, language, hasPremium, onOpen }:
   const locked = meditation.premium && !hasPremium;
   return (
     <article className="chat-meditation-card" data-testid="chat-meditation-card">
-      <img src={meditation.cover_image} alt="" loading="lazy" />
+      <OptimizedImage src={meditation.cover_image} alt="" loading="lazy" />
       <div className="chat-meditation-card-copy">
         <strong className="type-card-title">{title}</strong>
         <small className="type-body-small">{subtitle} · {formatMeditationDuration(meditation.duration, language)} · {meditation.premium ? 'Premium' : (language === 'ru' ? 'Бесплатно' : 'Free')}</small>

@@ -1,4 +1,5 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap");
+@import "./design-system/fonts.css";
+@import "./design-system/image-backgrounds.css";
 @import "./design-system/index.css";
 
 html,

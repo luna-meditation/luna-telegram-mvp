@@ -1,4 +1,5 @@
 import { lunaBrandAssets } from '../brand';
+import {OptimizedImage} from './OptimizedImage';
 
 export function BrandLogo({
   size = 32,
@@ -12,10 +13,11 @@ export function BrandLogo({
   eager?: boolean;
 }) {
   return (
-    <img
+    <OptimizedImage
       src={lunaBrandAssets.mark}
       width={size}
       height={size}
+      sizes={`${size}px`}
       className={`brand-logo ${className}`}
       alt={alt}
       loading={eager ? 'eager' : 'lazy'}
