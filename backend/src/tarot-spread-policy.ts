@@ -3,6 +3,7 @@ import {z} from 'zod';
 import {tarotCatalog,legacyInterpretationSchema} from './tarot-policy.js';
 import {tarotInterpretationV2,tarotOutputSchemaV2,conciseTarotInstructions} from './tarot-interpretation-v2.js';
 import {buildModeInstructions} from './luna/modes.js';
+import {russianAddressInstructions} from './luna/russian-address.js';
 import {permittedPersonalContext,type PersonalProfile} from './personalization-policy.js';
 const card=z.object({cardId:z.string().refine(id=>tarotCatalog.some(c=>c.id===id)),orientation:z.enum(['upright','reversed'])}).strict();
 export const spreadInputSchema=z.object({clientReadingId:z.string().uuid(),kind:z.enum(['three','five']),cards:z.array(card).min(3).max(5),intention:z.enum(['general','love','career','growth']),question:z.string().trim().max(240),language:z.enum(['en','ru']),generate:z.boolean().default(false)}).strict().superRefine((input,ctx)=>{
@@ -15,7 +16,7 @@ export const spreadPositions={en:{three:['The situation','What needs attention',
 export function buildSpreadAiRequest(input:SpreadInput,profile:PersonalProfile|null,model:string){
  const cards=input.cards.map((selection,index)=>{const c=tarotCatalog.find(c=>c.id===selection.cardId)!;return {...selection,position:spreadPositions[input.language][input.kind][index],name:c.name[input.language],meaning:c.meaning[input.language][selection.orientation]};});
  return {model,store:false,reasoning:{effort:'minimal'},max_output_tokens:input.kind==='three'?2400:3600,
-  instructions:buildModeInstructions('tarot',input.language,null)+'\n'+conciseTarotInstructions,
+  instructions:buildModeInstructions('tarot',input.language,null)+'\n'+conciseTarotInstructions+'\n'+russianAddressInstructions(input.language,permittedPersonalContext(profile),input.question),
   input:[{role:'user',content:[{type:'input_text',text:JSON.stringify({kind:input.kind,cards,intention:input.intention,question:input.question,personalContext:permittedPersonalContext(profile)})}]}],
   text:{format:{type:'json_schema',name:'luna_tarot_spread_v2',strict:true,schema:tarotOutputSchemaV2}}};
 }

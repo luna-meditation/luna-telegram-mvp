@@ -1,0 +1,2 @@
+/** Shared position labels for standalone and in-chat readings. */
+export const tarotPositions={en:{single:['Main perspective'],three:['The situation','What needs attention','A possible direction'],five:['The heart of the question','Hidden influences','Obstacles','Opportunities','A conscious next step']},ru:{single:['Основной взгляд'],three:['Суть ситуации','Что требует внимания','Возможное направление'],five:['Суть вопроса','Скрытые факторы','Препятствия','Возможности','Осознанный следующий шаг']}};

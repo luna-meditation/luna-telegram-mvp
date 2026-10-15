@@ -1,0 +1,49 @@
+/* Luna 2.5: a compact celestial Home. Existing theme, safe-area and mood logic remain shared. */
+.bottom-navigation-luna2 .luna2-nav-ai[aria-current="page"]{background:transparent;border-color:transparent;box-shadow:none;color:var(--accent-gold-text)}
+.bottom-navigation-luna2 .luna2-nav-ai svg{padding:0;filter:drop-shadow(0 0 7px #a08ade66)}
+.bottom-navigation-luna2 .luna2-nav-ai:after{content:'';position:absolute;bottom:5px;width:17px;height:2px;border-radius:3px;background:#b7a1e766;box-shadow:0 0 8px #9172cf44}
+.luna2-home{gap:16px}
+.luna2-home .luna25-hero{min-height:318px;display:flex;flex-direction:column;isolation:isolate;background:#171d3b;border:1px solid #c2a2de24;border-radius:25px;box-shadow:0 10px 30px #05081818}
+.luna2-home .luna25-hero .home-v2-hero-image{display:block;object-fit:cover;object-position:35% 50%;opacity:1;filter:none}
+.luna2-home .luna25-hero:after{background:linear-gradient(90deg,#11142b85,#12142a24 75%),linear-gradient(0deg,#11152eac,transparent 65%);z-index:-1}
+.luna25-hero .home-v2-atmosphere-art{z-index:-2}
+.luna2-home .luna25-hero .home-v2-atmosphere-copy{padding:20px 19px 16px;text-shadow:0 1px 12px #10112655}
+.luna2-home .luna25-hero .home-v2-greeting{font-size:13px;line-height:1.4;color:#f4eaf7d9;margin-bottom:11px}
+.luna2-home .luna25-hero .home-v2-atmosphere-copy h1{max-width:270px;font-size:27px;line-height:1.16;font-weight:600;letter-spacing:-.025em;color:#f4eaf7;text-wrap:balance}
+.luna25-hero-subtitle{max-width:245px;font-size:14px;line-height:1.45;color:#f4eaf7de;margin:10px 0 0;text-wrap:balance}
+.luna2-home .luna25-hero .home-v2-mood-row{position:relative;inset:auto;margin:auto 0 0;padding:0 12px;gap:3px;background:transparent;z-index:1}
+.luna2-home .luna25-hero .home-v2-mood-pill{min-height:53px;padding:5px 1px;background:#17192f5c;border-radius:13px}
+.luna2-home .luna25-hero .home-v2-mood-pill small{font-size:12px;color:#f4eaf7}
+.luna2-home .luna25-hero .home-v2-mood-pill>span{color:#e5c77f}
+.luna25-hero-action{position:relative;padding:12px;margin-top:0;z-index:1}
+.luna25-hero-action .luna2-talk-primary{width:100%;min-height:46px;justify-content:flex-start;gap:10px;padding:10px 13px;background:#342746ed;color:#f4eaf7;border:1px solid #c4a1e047;border-radius:14px;box-shadow:0 3px 14px #0c102427;font-size:15px}
+.luna25-hero-action .luna2-talk-primary>svg:last-child{margin-left:auto;color:#e5c77f}
+.luna2-home .luna25-hero .home-v2-mood-saved{position:relative;inset:auto;margin:5px 12px 0;background:#151a335c;border-color:#d1bbdb33;min-height:49px}
+.luna2-home .luna25-hero .home-v2-mood-saved strong{font-size:14px;color:#f4eaf7}
+.luna2-home .luna25-hero .home-v2-mood-saved button{min-height:44px;font-size:13px;color:#e5c77f}
+.luna25-home-categories{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.luna25-category{position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;min-height:181px;text-align:left;border-radius:21px;border:1px solid var(--border-subtle);background:#171d3b;box-shadow:0 6px 20px #0508180b;touch-action:manipulation}
+.luna25-category-art{position:absolute;inset:0;z-index:-2;overflow:hidden}
+.luna25-category-art>img{position:static;width:100%;height:100%;object-fit:cover;opacity:.82;filter:none}
+.luna25-category.is-tarot .luna25-category-art>img,.luna25-category.is-astrology .luna25-category-art>img{object-fit:cover;object-position:50% 35%}
+.luna25-category:before{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(0deg,#10142ff2 1%,#1518329e 36%,transparent 77%)}
+.luna25-category-copy{display:grid;gap:4px;padding:14px 12px;min-width:0}
+.luna25-category-copy strong{font-size:17px;line-height:1.25;font-weight:600;letter-spacing:-.01em;color:#f4eaf7}
+.luna25-category-copy>span{font-size:12px;line-height:1.4;min-height:2.8em;color:#eee7f1c9;padding-right:8px}
+.luna25-category>svg{position:absolute;right:10px;bottom:14px;color:#e5c77f}
+.luna25-soon{position:absolute;top:10px;right:10px;padding:4px 7px;border-radius:8px;background:#13172bba;color:#e5c77f;font-size:11px;line-height:1.3;border:1px solid #e5c77f2b}
+.luna25-breath-art{position:absolute;inset:0;background:radial-gradient(circle at 50% 38%,#172955,#0e1431 67%)}
+.luna25-breath-art>i{position:absolute;left:50%;top:39%;transform:translate(-50%,-50%);width:87px;height:87px;border:3px solid #439cf4;border-radius:50%;box-shadow:0 0 6px #73e6ff,inset 0 0 11px #4077f6a8,0 0 25px #8560dfaa}
+.luna25-breath-art>i+i{width:72px;height:72px;border:1px solid #89dcff88;box-shadow:none}
+.luna2-home .luna25-daily-card{min-height:112px;display:flex;align-items:center;gap:10px;padding:16px 14px 16px 102px;border-radius:20px;text-align:left}
+.luna2-home .luna25-daily-card .luna2-celestial-art{left:5px;right:auto;width:94px;height:94px;opacity:.95;object-fit:contain}
+.luna25-daily-card>div{min-width:0;flex:1;position:relative}
+.luna2-home .luna25-daily-card h2{font-size:17px;line-height:1.3;max-width:240px;margin:5px 0}
+.luna25-daily-card p{font-size:12px!important;line-height:1.4!important;color:var(--text-secondary)}
+.luna25-daily-card>svg{flex-shrink:0;color:var(--accent-gold-text)}
+:root[data-theme="light"] .luna2-home .luna25-hero{border-color:#d5c2e6;box-shadow:0 7px 22px #73648812}
+:root[data-theme="light"] .luna2-home .luna25-hero:after{background:linear-gradient(90deg,#17162c69,#12142a18 75%),linear-gradient(0deg,#17172e94,transparent 70%)}
+:root[data-theme="light"] .luna25-hero-action .luna2-talk-primary{background:#473354ed;color:#fff5fd;border-color:#c7a5e55c}
+:root[data-theme="light"] .luna25-category{background:#e9e0f4;border-color:#cfc2e2;box-shadow:0 5px 16px #70658012}
+:root[data-theme="light"] .luna25-category-art>img{opacity:.95}
+@media(max-width:350px){.luna2-home .luna25-hero .home-v2-atmosphere-copy h1{font-size:25px;max-width:245px}.luna2-home .luna25-hero .home-v2-atmosphere-copy{padding:19px 15px 14px}.luna25-category{min-height:168px}.luna25-category-copy{padding:13px 10px}.luna25-category-copy strong{font-size:15px}.luna25-category-copy>span{font-size:12px}.luna25-home-categories{gap:10px}.luna2-home .luna25-daily-card{padding-left:86px}.luna2-home .luna25-daily-card .luna2-celestial-art{width:80px;height:80px}.luna2-home .luna25-daily-card h2{font-size:16px}}

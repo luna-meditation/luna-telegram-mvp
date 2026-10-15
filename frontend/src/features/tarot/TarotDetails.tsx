@@ -5,7 +5,7 @@ import type {AppLanguage} from '../../api';
 import type {TarotCardDefinition,TarotOrientation} from './deck';
 import {tarotCopy} from './copy';
 
-export function TarotDetails({card,orientation,language,onClose,registerBackHandler}:{card:TarotCardDefinition;orientation:TarotOrientation;language:AppLanguage;onClose:()=>void;registerBackHandler:(handler:(()=>void)|null)=>void;}){
+export function TarotDetails({card,orientation,language,position,onClose,registerBackHandler}:{card:TarotCardDefinition;orientation:TarotOrientation;language:AppLanguage;position?:string;onClose:()=>void;registerBackHandler:(handler:(()=>void)|null)=>void;}){
  const t=tarotCopy[language],dialog=useRef<HTMLDivElement>(null),close=useRef<HTMLButtonElement>(null);
  const [failed,setFailed]=useState(false),[attempt,setAttempt]=useState(0);
  useEffect(()=>{
@@ -28,5 +28,7 @@ export function TarotDetails({card,orientation,language,onClose,registerBackHand
   <img key={attempt} src={`${card.image}${attempt?`?retry=${attempt}`:''}`} width={card.width} height={card.height} alt={card.name[language]} onError={()=>setFailed(true)} draggable={false}/>
   {failed&&<div className="tarot-error" role="alert"><p>{t.imageError}</p><button type="button" className="tarot-text-button" onClick={()=>{setFailed(false);setAttempt(value=>value+1);}}>{t.retry}</button></div>}
   <p className="tarot-orientation-pill">{t[orientation]}</p>
+  {position&&<p className="tarot-details-position">{position}</p>}
+  <p className="tarot-details-meaning">{card.meaning[language][orientation]}</p>
  </div></div>,document.body);
 }

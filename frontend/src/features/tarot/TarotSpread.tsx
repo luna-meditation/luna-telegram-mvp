@@ -11,7 +11,7 @@ import {tarotCopy} from './copy';
 import {prepareCardChoices,randomIndex} from './draw';
 import {createSpreadSession,type SpreadAction,type SpreadKind} from './spreadSession';
 import type {TarotSession,TarotAction} from './session';
-const positions={en:{three:['The situation','What needs attention','A possible direction'],five:['The heart of the question','Hidden influences','Obstacles','Opportunities','A conscious next step']},ru:{three:['Суть ситуации','Что требует внимания','Возможное направление'],five:['Суть вопроса','Скрытые факторы','Препятствия','Возможности','Осознанный следующий шаг']}};
+import {tarotPositions as positions} from './positions';
 export function TarotSpread({kind,language,initData,session,dispatch,onContinue,registerBackHandler}:{kind:SpreadKind;language:AppLanguage;initData?:string;session:TarotSession;dispatch:Dispatch<TarotAction>;onContinue?:(id:string)=>void;registerBackHandler:(handler:(()=>void)|null)=>void}){
  const state=session.spreads?.[kind]??createSpreadSession(kind),size=kind==='three'?3:5,en=language==='en',t=tarotCopy[language];
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[zoom,setZoom]=useState<number|null>(null);const pending=useRef(false),choiceLock=useRef(new Set<number>()),alive=useRef(true);

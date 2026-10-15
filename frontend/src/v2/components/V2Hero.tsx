@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import {OptimizedImage} from '../../design-system/components/OptimizedImage';
 import {useResolvedTheme} from '../../hooks/useResolvedTheme';
+import hero25 from '../home-hero-25.json';
+import {HomeLunaGuide} from '../../luna2/HomeDiscovery';
 
 type MoodChip = 'Sleep' | 'Calm' | 'Focus' | 'Anxiety' | 'Breath' | 'Energy';
 type MoodVisual = 'great' | 'good' | 'meh' | 'anxious' | 'tired';
@@ -83,6 +85,8 @@ function MoodOption({
 }
 
 type V2HeroProps = {
+  premiumHome?: boolean;
+  onTalk?: () => void;
   greeting: string;
   firstName: string;
   headline: string;
@@ -101,6 +105,8 @@ type V2HeroProps = {
 };
 
 export function V2Hero({
+  premiumHome = false,
+  onTalk,
   greeting,
   firstName,
   headline,
@@ -128,12 +134,14 @@ export function V2Hero({
   const selectedMood = activeMood ? visualMoods.find((item) => item.active.includes(activeMood)) : null;
 
   return (
-    <section className="home-v2-atmosphere">
+    <section className={`home-v2-atmosphere ${premiumHome ? 'luna25-hero' : ''}`}>
       <div className="home-v2-atmosphere-art" aria-hidden="true">
         {(Object.entries(homeHeroAssets) as Array<[keyof typeof homeHeroAssets, string]>).filter(([theme])=>theme===resolvedTheme).map(([theme, path]) => failedImages[theme] ? null : (
           <OptimizedImage
             key={theme}
-            src={path}
+            src={premiumHome ? hero25.variants[1].src : path}
+            asset={premiumHome ? hero25 : undefined}
+            sizes={premiumHome ? '(max-width: 600px) 640px, 800px' : undefined}
             className={`home-v2-hero-image home-v2-hero-${theme}`}
             alt=""
             loading="eager"
@@ -147,8 +155,9 @@ export function V2Hero({
       </div>
 
       <div className="home-v2-atmosphere-copy">
-        <p className="home-v2-greeting">{greeting}, {firstName}</p>
-        <h1>{headline}</h1>
+        <p className="home-v2-greeting">{greeting}{firstName ? `, ${firstName}` : ''}</p>
+        <h1>{premiumHome ? language === 'ru' ? 'Что сегодня у тебя на душе?' : 'What’s on your mind today?' : headline}</h1>
+        {premiumHome && <p className="luna25-hero-subtitle">{language === 'ru' ? 'Луна рядом, чтобы помочь разобраться' : 'Luna is here to help you find clarity'}</p>}
       </div>
 
       {showCheckinToast ? (
@@ -184,6 +193,7 @@ export function V2Hero({
           ))}
         </div>
       )}
+      {premiumHome && onTalk && <HomeLunaGuide language={language} onTalk={onTalk}/>}
     </section>
   );
 }

@@ -1,0 +1,84 @@
+{
+  "status": "PASS",
+  "projectId": "vkcdtasbdoeilgfucoax",
+  "productionWrites": 0,
+  "backupRestorePasses": 2,
+  "backupCapturedAt": "2026-10-15T11:46:45.073425+00:00",
+  "backupSha256": "cf9e2d4f1c514ed1470a7590476e2d241beade0e93064d11cfd9c101d1146c59",
+  "checks": [
+    "exact staging dependencies reapply and preserve the legacy reading",
+    "new tools reject missing/forged Telegram identity and disabled flag",
+    "single reading is saved once with server-selected card and closed state",
+    "concurrent reveal generates once and passes relevant confirmed memory only",
+    "reopening persistent cards and interpretation never regenerates",
+    "cross-account reading, reveal, conversation and rename are denied",
+    "rename persists and invalid title/owner injection is rejected",
+    "three and five share existing engine and staging-only free QA remains rate limited",
+    "production cannot use free QA spread generation, even with QA flag set",
+    "daily quota blocks new generation without changing balances or entitlements",
+    "provider error is saved as fallback without a paid retry",
+    "deleted readings do not return from chat metadata or trigger regeneration",
+    "budget remains owner-specific, immutable per request and within $0.02",
+    "RLS prevents anon/authenticated direct table/RPC access",
+    "production release grant enables only the hard-pinned QA owner; five-card AI saves once without wallet writes",
+    "exact production-schema restore accepts the additive release migration",
+    "migration is idempotent; repeated application preserves original objects",
+    "all 35 original Luna tables, data, grants, RLS and RPC definitions remain byte-identical; unrelated fixture untouched",
+    "new budget tables enforce and force RLS",
+    "anon/authenticated cannot read either table or call budget RPCs",
+    "service_role can reserve only an owned processing reading once",
+    "actual usage settles once; mismatched repeated settlement is rejected",
+    "non-destructive operational rollback disables the grant immediately",
+    "transaction rollback removes only new objects and restores the exact original snapshot"
+  ],
+  "migrationHashes": {
+    "20261015115049_luna24_release_qa_ai_budget.sql": "cd0a60577433b4dfc1b19c9a71c1c91e3993d6ad99a78f3898394a0fa683f6e9"
+  },
+  "nativeEngine": "PostgreSQL 17",
+  "realAiRequests": 0,
+  "release": "luna25",
+  "baseCommit": "acac0ffc4680ea40092c6c77ffa2fd7723cef7f4",
+  "noDatabaseMigrations": true,
+  "mobileCases": 48,
+  "mobileStatus": "PASS",
+  "frontendTests": {
+    "pass": 152,
+    "fail": 0
+  },
+  "backendTests": {
+    "pass": 216,
+    "skip": 1,
+    "fail": 0
+  },
+  "isolatedCurrentDbChecks": 15,
+  "aiCostUsd": 0,
+  "preflight": {
+    "users": "937bf11a2c5e86c252698d6dde9769a1",
+    "schema": "bf855a922140971e2eedcd4e4993d911",
+    "gardens": "70232bfca7b5da03e1cf050a30a8870b",
+    "project": "vkcdtasbdoeilgfucoax",
+    "version": "PostgreSQL 17.6 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit",
+    "memories": "5d8c133540d1c624ede7a0549de7ca32",
+    "payments": "527bc7db99fb91a5d262b6be345c7535",
+    "policies": "cb85e3cfba5e6a181d68f30caef0ffe9",
+    "profiles": "f23f4d32e332c5f89294e844c5194c6b",
+    "functions": "bc6aa940c23484a8412fc487d1406b1c",
+    "capturedAt": "2026-10-15T14:45:00.850564+00:00",
+    "playbackRls": true,
+    "latestMigration": "20261015121433"
+  },
+  "rollback": {
+    "netlifyDeployId": "6ad0c5f209cda963175df6bb",
+    "railwayDeployId": "1c2e8e2e-5ea5-413b-842f-ed9062d2de11",
+    "databaseRestoreNeeded": false
+  },
+  "netlify": {
+    "creditsBefore": 66.3,
+    "plannedDeployments": 1,
+    "stagingDeployments": 0,
+    "skipPrs": true,
+    "allowedBranches": [
+      "main"
+    ]
+  }
+}
