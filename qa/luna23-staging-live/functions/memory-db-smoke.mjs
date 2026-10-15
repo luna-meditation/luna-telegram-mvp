@@ -112,7 +112,12 @@ export default {
  deploySucceeded:run,
  async fetch(request,context){
   if(context.site?.id!==siteId||Netlify.env.get('STAGING_MODE')!=='true')return new Response('Denied',{status:403});
-  if(request.method!=='GET')return new Response('Method not allowed',{status:405});
+  if(request.method==='POST'){
+   if(request.headers.get('origin')!==new URL(request.url).origin||await request.text()!=='run=approved')return new Response('Denied',{status:403});
+   await run(context);
+  }
+  if(request.method==='GET'&&new URL(request.url).searchParams.get('form')==='true')return new Response('<!doctype html><html lang="en"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Luna staging memory verification</title><h1>Private staging memory verification</h1><p>Real staging database. At most 2 approved AI calls, $0.02 total. No production changes. This is not a Telegram login test.</p><form method="post"><input type="hidden" name="run" value="approved"><button type="submit">Run approved staging verification</button></form></html>',{headers:{'Content-Type':'text/html; charset=utf-8','Cache-Control':'private, no-store'}});
+  if(!['GET','POST'].includes(request.method))return new Response('Method not allowed',{status:405});
   return Response.json(await cache().get('result',{type:'json',consistency:'strong'})??{status:'pending'},{headers:{'Cache-Control':'private, no-store','X-Robots-Tag':'noindex, nofollow'}});
  }
 };

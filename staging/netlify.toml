@@ -35,6 +35,12 @@
   force = true
 
 [[redirects]]
+  from = "/qa/memory-test"
+  to = "/.netlify/functions/memory-db-smoke"
+  status = 200
+  force = true
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200

@@ -1,6 +1,7 @@
 import serverless from 'serverless-http';
 
 const stagingSiteId = 'a634a7fc-1ecb-47fa-8b43-edd81a7e3694';
+declare const Netlify: {env: {get(name:string):string|undefined}} | undefined;
 type StagingContext = {site?: {id?: string}; ip?: string; requestId?: string};
 type LambdaResult = {statusCode: number; body: string; isBase64Encoded?: boolean; headers?: Record<string,string|number|boolean>; multiValueHeaders?: Record<string,string[]>};
 let adapter: ReturnType<typeof serverless> | undefined;
@@ -22,7 +23,8 @@ const runtimeKeys = [
   'TAROT_AI_DAILY_LIMIT','TAROT_AI_GLOBAL_DAILY_LIMIT','TAROT_AI_MAX_OUTPUT_TOKENS','COMMIT_SHA'
 ] as const;
 function loadRuntimeConfiguration() {
-  const runtime = (globalThis as typeof globalThis & {Netlify?: {env?: {get(name:string):string|undefined}}}).Netlify;
+  // Netlify injects a module-scoped runtime binding, not globalThis.Netlify.
+  const runtime = typeof Netlify === 'undefined' ? undefined : Netlify;
   if (!runtime?.env) return;
   for (const key of runtimeKeys) {
     const value = runtime.env.get(key);
