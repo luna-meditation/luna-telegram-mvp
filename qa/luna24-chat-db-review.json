@@ -13,12 +13,14 @@
     "daily quota blocks new generation without changing balances or entitlements",
     "provider error is saved as fallback without a paid retry",
     "deleted readings do not return from chat metadata or trigger regeneration",
-    "RLS prevents anon/authenticated direct table/RPC access"
+    "budget remains owner-specific, immutable per request and within $0.02",
+    "RLS prevents anon/authenticated direct table/RPC access",
+    "production release grant enables only the hard-pinned QA owner; five-card AI saves once without wallet writes"
   ],
   "engine": "PostgreSQL via PGlite",
   "syntheticIdentities": true,
   "providerMocked": true,
-  "providerCallsMocked": 4,
+  "providerCallsMocked": 5,
   "realAiRequests": 0,
   "productionWrites": 0,
   "newMigrations": 0

@@ -1,0 +1,39 @@
+{
+  "status": "PASS",
+  "projectId": "vkcdtasbdoeilgfucoax",
+  "productionWrites": 0,
+  "backupRestorePasses": 2,
+  "backupCapturedAt": "2026-10-15T11:46:45.073425+00:00",
+  "backupSha256": "cf9e2d4f1c514ed1470a7590476e2d241beade0e93064d11cfd9c101d1146c59",
+  "checks": [
+    "exact staging dependencies reapply and preserve the legacy reading",
+    "new tools reject missing/forged Telegram identity and disabled flag",
+    "single reading is saved once with server-selected card and closed state",
+    "concurrent reveal generates once and passes relevant confirmed memory only",
+    "reopening persistent cards and interpretation never regenerates",
+    "cross-account reading, reveal, conversation and rename are denied",
+    "rename persists and invalid title/owner injection is rejected",
+    "three and five share existing engine and staging-only free QA remains rate limited",
+    "production cannot use free QA spread generation, even with QA flag set",
+    "daily quota blocks new generation without changing balances or entitlements",
+    "provider error is saved as fallback without a paid retry",
+    "deleted readings do not return from chat metadata or trigger regeneration",
+    "budget remains owner-specific, immutable per request and within $0.02",
+    "RLS prevents anon/authenticated direct table/RPC access",
+    "production release grant enables only the hard-pinned QA owner; five-card AI saves once without wallet writes",
+    "exact production-schema restore accepts the additive release migration",
+    "migration is idempotent; repeated application preserves original objects",
+    "all 35 original Luna tables, data, grants, RLS and RPC definitions remain byte-identical; unrelated fixture untouched",
+    "new budget tables enforce and force RLS",
+    "anon/authenticated cannot read either table or call budget RPCs",
+    "service_role can reserve only an owned processing reading once",
+    "actual usage settles once; mismatched repeated settlement is rejected",
+    "non-destructive operational rollback disables the grant immediately",
+    "transaction rollback removes only new objects and restores the exact original snapshot"
+  ],
+  "migrationHashes": {
+    "20261015115049_luna24_release_qa_ai_budget.sql": "cd0a60577433b4dfc1b19c9a71c1c91e3993d6ad99a78f3898394a0fa683f6e9"
+  },
+  "nativeEngine": "PostgreSQL 17",
+  "realAiRequests": 0
+}

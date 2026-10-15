@@ -5,10 +5,15 @@ import {stagingAiMeterRecord} from './staging-ai-meter.js';
 
 const stagingRef='funvzpmpbgazsisehiru';
 export function qaTarotEnabled(telegramId:number){
- return env.STAGING_MODE&&env.STAGING_HOST==='netlify'&&env.FEATURE_AI_CENTRAL_EXPERIENCE&&env.FEATURE_TAROT_SPREAD_AI_QA
+ const staging=env.STAGING_MODE&&env.STAGING_HOST==='netlify'&&env.FEATURE_AI_CENTRAL_EXPERIENCE&&env.FEATURE_TAROT_SPREAD_AI_QA
   &&env.STAGING_SUPABASE_PROJECT_REF===stagingRef&&new URL(env.SUPABASE_URL).hostname===`${stagingRef}.supabase.co`
   &&telegramId===env.STAGING_TAROT_AI_QA_OWNER_ID&&Boolean(env.STAGING_TAROT_AI_QA_GRANT_ID)
   &&env.AI_CHAT_MODEL==='gpt-5-mini';
+ const release=!env.STAGING_MODE&&env.FEATURE_AI_CENTRAL_EXPERIENCE&&env.FEATURE_TAROT_RELEASE_AI_QA
+  &&new URL(env.SUPABASE_URL).hostname==='vkcdtasbdoeilgfucoax.supabase.co'
+  &&telegramId===158467796&&telegramId===env.RELEASE_TAROT_AI_QA_OWNER_ID&&Boolean(env.RELEASE_TAROT_AI_QA_GRANT_ID)
+  &&env.AI_CHAT_MODEL==='gpt-5-mini';
+ return staging||release;
 }
 export function qaTarotLimits(telegramId:number){
  // Separate owner exception, not a global configuration/quota reset.
@@ -24,7 +29,7 @@ export function qaTarotTransport(telegramId:number,clientReadingId:string,transp
   // conservative reservation $0.012 at the pinned standard GPT-5-mini rates.
   if(request.model!=='gpt-5-mini'||request.tools||request.store!==false||!Number.isInteger(request.max_output_tokens)
    ||request.max_output_tokens!<1||request.max_output_tokens!>3600||Buffer.byteLength(JSON.stringify(body),'utf8')>16000)throw new Error('qa_request_bounds');
-  const args={p_grant_id:env.STAGING_TAROT_AI_QA_GRANT_ID!,p_telegram_id:telegramId,p_client_reading_id:clientReadingId};
+  const args={p_grant_id:(env.STAGING_MODE?env.STAGING_TAROT_AI_QA_GRANT_ID:env.RELEASE_TAROT_AI_QA_GRANT_ID)!,p_telegram_id:telegramId,p_client_reading_id:clientReadingId};
   const reserved=await supabase.rpc('reserve_luna24_qa_ai_call',args);
   if(reserved.error||reserved.data?.acquired!==true)throw new Error('qa_budget_limit');
   // On transport failure/unknown usage leave the full reservation held. Never retry.

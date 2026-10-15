@@ -1,0 +1,7 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {validateTarotV2,tarotInterpretationV2} from './tarot-interpretation-v2.js';
+const card={cardId:'the-star',orientation:'reversed'};
+const valid={version:2,summary:'A concrete personal synthesis about a manageable work decision.',cards:[{...card,position:'Main perspective',positionMeaning:'The reversed Star invites a realistic review of expectations.',application:'Choose a small work task you can finish today.',detail:'Notice the difference between slow progress and no progress.'}],overall:'Make the next step measurable rather than waiting for certainty.',actions:['Write down one achievable milestone.'],question:'Which task has a clear finish?',continuation:null};
+test('versioned output validates canonical cards/orientations and does not accept partial output',()=>{assert.equal(validateTarotV2(valid,[card]).version,2);assert.throws(()=>validateTarotV2(valid,[{...card,orientation:'upright'}]));assert.throws(()=>validateTarotV2(valid,[{...card,cardId:'the-moon'}]));assert.equal(tarotInterpretationV2.safeParse({...valid,actions:[]}).success,false);assert.equal(tarotInterpretationV2.safeParse({...valid,overall:undefined}).success,false);assert.equal(tarotInterpretationV2.safeParse({...valid,secret:'extra'}).success,false);});
+test('repeated substantial paragraphs are rejected instead of saved as AI-ready',()=>{assert.throws(()=>validateTarotV2({...valid,overall:valid.summary},[card]),/repeated_interpretation/);});

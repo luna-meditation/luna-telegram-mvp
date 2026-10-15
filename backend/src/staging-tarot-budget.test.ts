@@ -23,3 +23,12 @@ test('bounded provider requests reserve once, settle actual usage; duplicates an
   await assert.rejects(fail(request,AbortSignal.timeout(1000)));assert.equal(rpcCalls.length,before+1);await assert.rejects(fail(request,AbortSignal.timeout(1000)));assert.equal(calls,2);
  }finally{supabase.rpc=original;}
 });
+test('production QA needs separate approval, exact production project and hard-pinned owner',()=>{
+ const original={...env};try{
+  Object.assign(env,{STAGING_MODE:false,SUPABASE_URL:'https://vkcdtasbdoeilgfucoax.supabase.co',FEATURE_TAROT_RELEASE_AI_QA:true,RELEASE_TAROT_AI_QA_OWNER_ID:158467796,RELEASE_TAROT_AI_QA_GRANT_ID:'00000000-0000-4000-8000-000000000025'});
+  assert.equal(qaTarotEnabled(158467796),true);assert.equal(qaTarotEnabled(24001),false);
+  env.RELEASE_TAROT_AI_QA_OWNER_ID=24001;assert.equal(qaTarotEnabled(24001),false);env.RELEASE_TAROT_AI_QA_OWNER_ID=158467796;
+  env.FEATURE_TAROT_RELEASE_AI_QA=false;assert.equal(qaTarotEnabled(158467796),false);
+  env.FEATURE_TAROT_RELEASE_AI_QA=true;env.SUPABASE_URL='https://funvzpmpbgazsisehiru.supabase.co';assert.equal(qaTarotEnabled(158467796),false);
+ }finally{Object.assign(env,original);}
+});

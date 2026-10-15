@@ -7,8 +7,8 @@ test('only the approved frontend flags are enabled in the production context',()
  const config=text('../netlify.toml');
  assert.match(config,/\[context.production\][\s\S]*build:production/);
  const production=config.split('[context.production.environment]')[1].split('[[redirects]]')[0];
- for(const key of ['NEW_NAVIGATION','TAROT_DAILY'])assert.match(production,new RegExp(`VITE_FEATURE_${key} = "true"`));
- for(const key of ['TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO'])assert.match(production,new RegExp(`VITE_FEATURE_${key} = "false"`));
+ for(const key of ['NEW_NAVIGATION','TAROT_DAILY','TAROT_SPREADS','AI_CENTRAL_EXPERIENCE'])assert.match(production,new RegExp(`VITE_FEATURE_${key} = "true"`));
+ for(const key of ['ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','PREMIUM_V2','TAROT_PAID_READINGS'])assert.match(production,new RegExp(`VITE_FEATURE_${key} = "false"`));
  assert.match(text('src/config/featureFlagDefinitions.ts'),/source\[featureFlagEnvironment\[key\]\] \?\? ''/);
 });
 test('stable Tarot image URLs cache without an immutable stale-art trap or frame blocking',()=>{
