@@ -17,6 +17,7 @@ import { recordLunaStage } from '../runtime-diagnostics';
 import { LunaQuickActions } from '../luna2/LunaQuickActions';
 import { luna2Copy } from '../luna2/copy';
 import {featureFlags} from '../config/featureFlags';
+import {MessageText} from './MessageText';
 
 type LunaChatProps = {
   firstName: string;
@@ -384,7 +385,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
             <div key={message.id} className={`luna-live-message-row luna-live-message-${message.role}`}>
               {message.role === 'assistant' ? <span className="luna-message-orb" aria-hidden="true" /> : null}
               <div className="luna-live-message-content">
-                <div className="luna-message-bubble"><p>{message.content}</p></div>
+                <div className="luna-message-bubble"><MessageText text={message.content}/></div>
                 {recommendation ? <ChatMeditationCard meditation={recommendation} language={language} hasPremium={hasPremium} onOpen={() => onOpenMeditation(recommendation)} /> : null}
               </div>
             </div>

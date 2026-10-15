@@ -1,3 +1,4 @@
+import {OptimizedImage} from '../../design-system/components/OptimizedImage';
 import { Play } from 'lucide-react';
 import type { Meditation } from '../../api';
 
@@ -37,7 +38,7 @@ export function V2Recommendation({
         <span>{checkinMeta || checkinLine}</span>
       </div>
       <button type="button" onClick={onOpen} className="home-v2-recommendation">
-        <img src={meditation.cover_image} alt="" loading="lazy" />
+        <OptimizedImage src={meditation.cover_image} alt="" loading="lazy" />
         <span className="home-v2-recommendation-copy">
           <small>{categoryLabel} · {durationLabel}</small>
           <strong>{view.title}</strong>

@@ -11,9 +11,9 @@ export function SectionBack({ language, onBack }: { language: AppLanguage; onBac
   return <button type="button" className="luna2-back" onClick={onBack}><ArrowLeft size={18} />{luna2Copy[language].back}</button>;
 }
 
-export function CelestialArt({ kind }: { kind: 'tarot' | 'astrology' }) {
+export function CelestialArt({ kind,sizes='(max-width: 600px) calc((100vw - 70px) / 2), 240px' }: { kind: 'tarot' | 'astrology';sizes?:string }) {
   const source = kind === 'tarot' ? '/images/explore/tarot-celestial-v1.png' : '/images/explore/astrology-zodiac-v1.png';
-  return <OptimizedImage className={`luna2-celestial-art luna2-${kind}-art`} src={source} sizes="(max-width: 600px) 45vw, 240px" width={1280} height={1280} alt="" aria-hidden="true" />;
+  return <OptimizedImage className={`luna2-celestial-art luna2-${kind}-art`} src={source} sizes={sizes} width={1280} height={1280} alt="" aria-hidden="true" />;
 }
 
 export function ExplorePage({ language, tarotEnabled = false, onOpen }: { language: AppLanguage; tarotEnabled?: boolean; onOpen: (category: ExploreCategory) => void }) {

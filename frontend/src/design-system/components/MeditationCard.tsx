@@ -1,3 +1,4 @@
+import {OptimizedImage} from './OptimizedImage';
 import { Crown, Heart, Lock } from 'lucide-react';
 import type { Meditation } from '../../api';
 
@@ -39,7 +40,7 @@ export function MeditationCard({
   if (variant === 'tile') {
     return (
       <button type="button" onClick={onOpen} className="meditation-card meditation-card-tile">
-        <img src={meditation.cover_image} alt="" loading="lazy" />
+        <OptimizedImage src={meditation.cover_image} alt="" loading="lazy" />
         <span className="meditation-card-tile-copy">
           <strong className="type-card-title">{title}</strong>
           <small>{metadata}</small>
@@ -52,7 +53,7 @@ export function MeditationCard({
   return (
     <article className="meditation-card meditation-card-row">
       <button type="button" onClick={onOpen} className="meditation-card-cover">
-        <img src={meditation.cover_image} alt="" className={locked ? 'is-locked' : ''} loading="lazy" />
+        <OptimizedImage src={meditation.cover_image} alt="" className={locked ? 'is-locked' : ''} loading="lazy" />
         {locked ? <Lock size={20} aria-label={premiumLabel} /> : null}
       </button>
       <button type="button" onClick={onOpen} className="meditation-card-copy">

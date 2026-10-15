@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+**/node_modules
 .pnpm-store/
 
 # Environment files
@@ -19,6 +20,8 @@ dist-phase2/
 dist-tarot-preview/
 dist-refinement/
 dist-refinement-preview/
+dist-premium-preview/
+qa/
 dist-staging/
 supabase/.temp/
 build/

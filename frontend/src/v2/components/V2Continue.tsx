@@ -1,3 +1,4 @@
+import {OptimizedImage} from '../../design-system/components/OptimizedImage';
 import type { Meditation } from '../../api';
 
 type MeditationView = {
@@ -30,7 +31,7 @@ export function V2Continue({
           const progress = Math.max(0, Math.min(100, Number(meditation.history?.completion_percent ?? 0)));
           return (
             <button key={meditation.id} type="button" onClick={() => onOpen(meditation)} className="home-v2-continue-card">
-              <img src={meditation.cover_image} alt="" loading="lazy" />
+              <OptimizedImage src={meditation.cover_image} alt="" loading="lazy" />
               <span>
                 <strong>{view.title}</strong>
                 <small>{durationLabel(meditation.duration)}</small>

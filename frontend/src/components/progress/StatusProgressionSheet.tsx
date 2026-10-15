@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect,useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, LockKeyhole, Moon, Sparkles, X } from 'lucide-react';
+import { Check, LockKeyhole, Sparkles, X, Sprout, Compass, Flame, Shield, Sun, BookOpen, Mountain, Orbit, Star, Crown } from 'lucide-react';
 import type { AppLanguage, ProfileStats } from '../../api';
 import {
   journeyStatusDefinitions,
@@ -51,9 +51,10 @@ export function resolveJourneyStatus(profile: ProfileStats | null): JourneyStatu
 }
 
 export function JourneyStatusMark({ statusId = 'initiate', compact = false }: { statusId?: JourneyStatusId; compact?: boolean }) {
+  const Icon={initiate:Sprout,seeker:Compass,adept:Flame,guardian:Shield,luminary:Sun,sage:BookOpen,ascendant:Mountain,celestial:Orbit,ethereal:Star,lunaris:Crown}[statusId];
   return (
     <span className={`progress-v5-status-seal ${compact ? 'is-compact' : ''}`} data-status={statusId} aria-hidden="true">
-      <Moon size={compact ? 18 : 28} />
+      <Icon size={compact ? 18 : 28} />
       <Sparkles className="progress-v5-status-sparkle" size={compact ? 9 : 13} />
     </span>
   );
@@ -84,16 +85,22 @@ export function StatusProgressionSheet({
 }) {
   const status = resolveJourneyStatus(profile);
   const currentRank = Math.max(0, status.rank);
+  const dialog=useRef<HTMLElement>(null);
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
+    const previousFocus=document.activeElement as HTMLElement|null;
+    const app=document.querySelector('.app-root'),wasInert=app?.hasAttribute('inert');
+    app?.setAttribute('inert','');dialog.current?.querySelector<HTMLButtonElement>('button')?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
+      if(event.key==='Tab'){const items=[...(dialog.current?.querySelectorAll<HTMLElement>('button:not(:disabled),a,input,select,textarea')??[])];const first=items[0],last=items[items.length-1];if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}}
     };
     document.body.style.overflow = 'hidden';
     window.addEventListener('keydown', onKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
+      if(!wasInert)app?.removeAttribute('inert');if(previousFocus?.isConnected)previousFocus.focus({preventScroll:true});
       window.removeEventListener('keydown', onKeyDown);
     };
   }, [onClose]);
@@ -103,6 +110,7 @@ export function StatusProgressionSheet({
   return createPortal(
     <div className="status-progression-backdrop" onClick={onClose}>
       <section
+        ref={dialog}
         className="status-progression-sheet"
         role="dialog"
         aria-modal="true"

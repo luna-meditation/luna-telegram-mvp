@@ -10,7 +10,9 @@ button:focus-visible,summary:focus-visible { outline: 2px solid var(--accent-lun
 .luna2-page-heading h1,.tarot-hub>header h1,.tarot-page .tarot-heading h1 { font: 650 clamp(26px,7vw,29px)/1.16 var(--font-sans); letter-spacing: -.035em; }
 .luna2-page-heading>p,.luna2-eyebrow { font-size: 12px; letter-spacing: .1em; }
 .luna2-page-heading>span { font-size: 15px; line-height: 1.5; }
+.luna-page p.text-xs { font-size: 14px; line-height: 1.55; }
 .luna2-page-heading { gap: 7px; margin-bottom: 2px; }
+.luna-image[data-loaded="false"] { background-color: var(--surface-subtle); }
 .luna-icon-button,.tarot-text-button,.luna2-back { min-height: 44px; min-width: 44px; }
 .bottom-navigation-luna2 { height: 64px; }
 .bottom-navigation-luna2 .bottom-navigation-item { min-height: 54px; border-radius: 16px; gap: 3px; }
@@ -18,6 +20,8 @@ button:focus-visible,summary:focus-visible { outline: 2px solid var(--accent-lun
 .bottom-navigation-luna2 .luna2-nav-ai svg { padding: 1px; }
 .bottom-navigation-luna2 .luna2-nav-ai:not([aria-current]) { background: transparent; box-shadow: none; }
 .premium-ambient { position: fixed; inset: 0; pointer-events: none; overflow: hidden; background: radial-gradient(ellipse at 20% 12%,rgba(94,73,164,.09),transparent 58%); }
+.premium-ambient::before { content: ''; position: absolute; inset: -5%; background: radial-gradient(ellipse at 65% 35%,rgba(88,78,150,.07),transparent 60%); animation: premium-atmosphere 45s ease-in-out infinite alternate; }
+@keyframes premium-atmosphere { from { transform: translate3d(-2%,0,0); opacity: .4; } to { transform: translate3d(2%,3%,0); opacity: .8; } }
 .premium-ambient>span { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #dbc494; opacity: .28; animation: premium-star 12s ease-in-out infinite alternate; }
 .premium-ambient>span:nth-child(1) { left: 9%; top: 13%; }.premium-ambient>span:nth-child(2) { left: 71%; top: 7%; animation-delay: -4s; }.premium-ambient>span:nth-child(3) { left: 90%; top: 36%; animation-delay: -8s; }.premium-ambient>span:nth-child(4) { left: 26%; top: 67%; animation-delay: -2s; }.premium-ambient>span:nth-child(5) { left: 59%; top: 84%; animation-delay: -10s; }.premium-ambient>span:nth-child(6) { left: 13%; top: 91%; animation-delay: -7s; }.premium-ambient>span:nth-child(7) { left: 84%; top: 63%; animation-delay: -3s; }.premium-ambient>span:nth-child(8) { left: 43%; top: 39%; animation-delay: -5s; }
 @keyframes premium-star { from { opacity: .13; transform: translate3d(0,0,0); } to { opacity: .5; transform: translate3d(0,-5px,0); } }
@@ -36,6 +40,9 @@ button:focus-visible,summary:focus-visible { outline: 2px solid var(--accent-lun
 .luna2-daily-card h2 { font: 600 19px/1.3 var(--font-sans); max-width: 205px; }
 .luna2-daily-card .luna2-celestial-art { width: 118px; height: 118px; right: -12px; }
 .luna21-home-categories button { min-height: 88px; padding: 12px 5px; gap: 7px; }
+.luna21-home-categories { grid-template-columns: repeat(4,minmax(0,1fr)); gap: 8px; }
+.luna21-home-categories button { grid-template-columns: minmax(0,1fr); justify-items: center; align-content: center; text-align: center; }
+.luna21-home-categories button svg { grid-row: auto; }.luna21-home-categories button small { grid-column: 1; font-size: 12px; }
 .luna21-home-categories button>span { font-size: 13px; }
 .luna2-home-progress { gap: 8px; }
 .luna2-home-progress button { min-height: 64px; border-radius: 18px; padding: 12px; }
@@ -55,7 +62,10 @@ button:focus-visible,summary:focus-visible { outline: 2px solid var(--accent-lun
 .tarot-hub-spreads button strong { font: 600 17px/1.3 var(--font-sans); }
 .tarot-hub-note { font-size: 13px; line-height: 1.55; }
 .tarot-page .tarot-reading { gap: 12px; }
-.tarot-daily .tarot-card-stage { width: min(55vw,210px); margin-inline: auto; }
+.tarot-daily .tarot-card-stage { width: min(42vw,164px); margin-inline: auto; }
+.tarot-daily>.tarot-orientation-pill { width: fit-content; justify-self: center; padding: 4px 10px; }
+.tarot-daily.luna2-page>.tarot-ai-reflection { margin-top: 2px; padding: 14px; gap: 12px; }
+.tarot-daily.luna2-page>.tarot-ai-reflection>div { margin: 0; }
 .tarot-ai-reflection .tarot-ai-takeaway { padding: 16px; border-radius: 19px; border: 1px solid var(--border-accent); background: var(--surface-selected); }
 .tarot-ai-reflection h3 { font: 600 16px/1.4 var(--font-sans); margin: 0 0 6px; }
 .tarot-ai-reflection p { margin: 0; font-size: 15px; line-height: 1.65; }
@@ -71,6 +81,7 @@ button:focus-visible,summary:focus-visible { outline: 2px solid var(--accent-lun
 .luna2-chat .luna2-ai-actions button { min-height: 48px; padding: 10px 12px; }
 .luna-live-message-content { overflow-wrap: anywhere; font-size: 15px; line-height: 1.65; }
 .luna-live-message-content p { margin-block: 0 12px; }
+.luna-message-bubble p:last-child { margin-bottom: 0; }.luna-message-bubble h4 { font-size: 15px; font-weight: 650; margin: 0 0 8px; }.luna-message-bubble ul { padding-left: 20px; margin: 0 0 12px; }.luna-message-bubble li+li { margin-top: 5px; }
 .luna-mode-select { margin-block: 3px; }
 .luna-mode-select>span { font-size: 12px; }
 .luna-mode-select select { min-height: 44px; font-size: 14px; }
@@ -87,6 +98,9 @@ button:focus-visible,summary:focus-visible { outline: 2px solid var(--accent-lun
 .premium-profile-links { display: grid; gap: 8px; }
 .premium-profile-link { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 72px; padding: 13px; border-radius: 19px; border: 1px solid var(--border-subtle); background: var(--surface-primary); text-align: left; }
 .premium-profile-link img { width: 52px; height: 52px; object-fit: cover; border-radius: 13px; }
+.premium-profile-link.luna2-garden-entry { position: relative; isolation: isolate; min-height: 78px; text-align: left; justify-items: normal; display: flex; }
+.premium-profile-link.luna2-garden-entry::before,.premium-profile-link.luna2-garden-entry::after { display: none; }
+.premium-profile-link.luna2-garden-entry img { position: static; inset: auto; z-index: auto; width: 52px; height: 52px; flex-shrink: 0; }
 .premium-profile-link span { flex: 1; min-width: 0; }.premium-profile-link strong,.premium-profile-link small { display: block; }.premium-profile-link strong { font-size: 16px; }.premium-profile-link small { font-size: 13px; margin-top: 5px; color: var(--text-secondary); }
 .premium-profile-link>svg { color: var(--accent-gold-text); flex-shrink: 0; }
 .compact-journey .progress-v5-status-heading { gap: 12px; }

@@ -1,3 +1,4 @@
+import {OptimizedImage,imageSource} from './design-system/components/OptimizedImage';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -110,7 +111,6 @@ import { JourneyHub } from './components/journey/JourneyHub';
 import { CompactJourney } from './components/journey/CompactJourney';
 import { PersonalizationSettings } from './luna2/PersonalizationSettings';
 import { supportsNativeBack } from './navigation/telegramBack';
-import { LunaChat } from './components/LunaChat';
 import { AchievementsStory, JourneyStatusMark, ProgressExperience, ProgressExperienceSkeleton, StatusProgressionSheet, journeyStatusNames, resolveJourneyStatus } from './components/progress/ProgressExperience';
 import { AppHeader } from './design-system/components/AppHeader';
 import { BottomNavigation } from './design-system/components/BottomNavigation';
@@ -133,7 +133,7 @@ import { formatMeditationDuration } from './utils/duration';
 import { breathCycleSeconds, breathPhaseAt, breathPhaseLabel, breathPractices, type BreathPracticeId } from './features/breathing/practices';
 import { HomeV2 } from './v2/pages/HomeV2';
 import { ExplorePage, FeaturePreview, SectionBack, type ExploreCategory } from './luna2/ExplorePage';
-import { ActivityPage, ProfileOverview, WalletPage } from './luna2/ProfileOverview';
+import { ProfileOverview, WalletPage } from './luna2/ProfileOverview';
 import { BreathAudioModes, BreathingVisual } from './luna2/BreathingVisual';
 import { luna2Copy } from './luna2/copy';
 import './luna2/luna2.css';
@@ -141,6 +141,8 @@ import { frontendBuildMetadata, recordPaymentStage, useRuntimeDiagnostics, type 
 
 type Page = AppPage;
 const TarotPage = lazy(() => import('./features/tarot/TarotPage'));
+const LunaChat=lazy(()=>import('./components/LunaChat').then(module=>({default:module.LunaChat})));
+const ActivityPage=lazy(()=>import('./luna2/JournalPage').then(module=>({default:module.JournalPage})));
 type Mood = 'Calm' | 'Stressed' | 'Tired' | 'Anxious' | 'Focused';
 type MoodChip = 'Sleep' | 'Calm' | 'Focus' | 'Anxiety' | 'Breath' | 'Energy';
 type LibraryMode = 'meditations' | 'breathing' | 'mantras';
@@ -1441,11 +1443,16 @@ function isExplicitAdminDenial(error: unknown) {
   return error instanceof ApiRequestError && (error.status === 401 || error.status === 403);
 }
 
+const prefetchedCovers=new Set<string>();
 function preloadCoverImages(meditations: Meditation[]) {
-  meditations.slice(0, 8).forEach((meditation) => {
+  meditations.slice(0, 2).forEach((meditation) => {
     if (!meditation.cover_image) return;
+    const source=imageSource(meditation.cover_image);
+    if(prefetchedCovers.has(source))return;
+    prefetchedCovers.add(source);
     const image = new Image();
-    image.src = meditation.cover_image;
+    image.decoding='async';image.fetchPriority='low';
+    image.src = source;
   });
 }
 
@@ -3125,7 +3132,7 @@ function App() {
           />
         )}
 
-        {page === 'luna' && (
+        {page === 'luna' && (<Suspense fallback={<PageSkeleton rows={2}/>}>
           <LunaPage
             firstName={personalDisplayName ?? user.first_name ?? 'friend'}
             language={language}
@@ -3137,13 +3144,13 @@ function App() {
             readingContextId={aiReadingId}
             onClearReadingContext={()=>setAiReadingId(undefined)}
           />
-        )}
+        </Suspense>)}
 
         {featureFlags.new_navigation && page === 'explore' && <ExplorePage language={language} tarotEnabled={featureFlags.tarot_daily} onOpen={openExploreCategory} />}
         {featureFlags.new_navigation && page === 'tarot' && (featureFlags.tarot_daily ? <Suspense fallback={<PageSkeleton rows={2} />}><TarotPage language={language} onBack={goBack} session={tarotSession} dispatch={tarotDispatch} registerBackHandler={registerTarotBackHandler} initData={initData} onContinue={id=>{setAiReadingId(id);navigatePrimary('luna');}} /></Suspense> : <FeaturePreview kind="tarot" language={language} featureEnabled={false} onBack={goBack} onMeditate={() => openExploreCategory('meditations')} />)}
         {featureFlags.new_navigation && page === 'astrology' && <FeaturePreview kind="astrology" language={language} featureEnabled={featureFlags.astrology} onBack={goBack} onMeditate={() => openExploreCategory('meditations')} />}
         {featureFlags.new_navigation && page === 'wallet' && <WalletPage language={language} profile={profile} onBack={goBack} onGarden={() => setPage('moonGarden')} />}
-        {featureFlags.new_navigation && page === 'activity' && <ActivityPage language={language} history={history} meditations={decoratedMeditations} wellness={wellness} onBack={goBack} onOpen={openMeditation} />}
+        {featureFlags.new_navigation && page === 'activity' && <Suspense fallback={<PageSkeleton rows={3}/>}><ActivityPage language={language} history={history} meditations={decoratedMeditations} wellness={wellness} onBack={goBack} onOpen={openMeditation} initData={initData} onReading={reading=>{tarotDispatch({type:'resume',reading});setPage('tarot');}} /></Suspense>}
         {featureFlags.new_navigation && page === 'achievements' && <AchievementsStory items={buildAchievementViews(profile, language)} language={language} initiallyOpen onClose={goBack} />}
 
         {page === 'library' && (
@@ -3185,7 +3192,7 @@ function App() {
           {featureFlags.new_navigation && <SectionBack language={language} onBack={goBack} />}
           <JourneyHub
             language={language}
-            journey={featureFlags.new_navigation && !accountLoading && !accountUnavailable ? <CompactJourney profile={profile} language={language} achievements={buildAchievementViews(profile,language)} onGarden={()=>setPage('moonGarden')} onAchievements={()=>setPage('achievements')}/> : (
+            journey={featureFlags.new_navigation && !accountLoading && !accountUnavailable ? <CompactJourney profile={profile} language={language} achievements={buildAchievementViews(profile,language)} onGarden={()=>setPage('moonGarden')} onAchievements={()=>setPage('achievements')} registerBackHandler={registerTarotBackHandler}/> : (
               <ProgressPage
                 profile={profile}
                 isAdmin={adminStatus === 'allowed'}
@@ -3780,7 +3787,7 @@ function MantraCard({ mantra, locked, onOpen, language }: {
     <button onClick={() => onOpen(mantra)} className="luna-editorial-row group w-full text-left transition">
       <div className="grid grid-cols-[88px_minmax(0,1fr)] items-center gap-3">
         <div className="relative shrink-0">
-          <img src={mantra.cover} alt="" className={`h-[88px] w-[88px] rounded-[18px] object-cover shadow-glow ${locked ? 'blur-[2px]' : ''}`} loading="lazy" />
+          <OptimizedImage src={mantra.cover} alt="" className={`h-[88px] w-[88px] rounded-[18px] object-cover shadow-glow ${locked ? 'blur-[2px]' : ''}`} loading="lazy" />
           {locked && <Lock className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gold" />}
         </div>
         <div className="min-w-0 self-center">
@@ -3840,7 +3847,7 @@ function MantraPlayerPage({ mantra, onClose, language }: { mantra: MantraDefinit
 
   return (
     <div className="luna-page relative space-y-4">
-      <img src={mantra.cover} alt="" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[520px] w-full scale-110 rounded-[34px] object-cover opacity-25 blur-3xl" />
+      <OptimizedImage src={mantra.cover} alt="" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[520px] w-full scale-110 rounded-[34px] object-cover opacity-25 blur-3xl" />
       <section className="luna-surface-strong rounded-[28px] p-4">
         <div className="flex items-center justify-between">
           <div>
@@ -3851,7 +3858,7 @@ function MantraPlayerPage({ mantra, onClose, language }: { mantra: MantraDefinit
             <X size={18} />
           </button>
         </div>
-        <img src={mantra.cover} alt="" className="mt-4 aspect-square w-full rounded-[26px] object-cover shadow-glow" />
+        <OptimizedImage src={mantra.cover} alt="" className="mt-4 aspect-square w-full rounded-[26px] object-cover shadow-glow" />
         <p className="mt-4 text-center text-sm text-lavender">{mantra.subtitle[language]}</p>
         <p className="mx-auto mt-2 max-w-xs text-center text-sm leading-6 text-cream/75">{mantra.description[language]}</p>
         <button onClick={toggle} className="mx-auto mt-5 grid h-16 w-16 place-items-center rounded-full bg-gold text-night shadow-glow">
@@ -3895,7 +3902,7 @@ function ScenePlayerPage({
 }) {
   return (
     <div className="luna-page relative space-y-4">
-      <img src={scene.cover} alt="" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[520px] w-full scale-110 rounded-[34px] object-cover opacity-25 blur-3xl" />
+      <OptimizedImage src={scene.cover} alt="" className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[520px] w-full scale-110 rounded-[34px] object-cover opacity-25 blur-3xl" />
       <div className="luna-surface-strong rounded-[28px] p-4">
         <div className="flex items-center justify-between">
           <div>
@@ -3907,7 +3914,7 @@ function ScenePlayerPage({
           </button>
         </div>
 
-        <img src={scene.cover} alt="" className="mt-4 aspect-square w-full rounded-[26px] object-cover shadow-glow" />
+        <OptimizedImage src={scene.cover} alt="" className="mt-4 aspect-square w-full rounded-[26px] object-cover shadow-glow" />
         <p className="mt-3 text-center text-[13px] leading-5 text-lavender">{scene.subtitle[language]}</p>
         <p className="mt-1.5 text-center text-[10px] uppercase tracking-[0.14em] text-gold">{copy[language].sceneLoop}</p>
 
@@ -3932,7 +3939,7 @@ function ScenePlayerPage({
             return (
               <button key={item.id} onClick={() => onScene(item)} className={`w-28 shrink-0 text-left ${locked ? 'opacity-70' : ''}`}>
                 <div className="relative">
-                  <img src={item.cover} alt="" className="h-28 w-28 rounded-[20px] object-cover shadow-glow" />
+                  <OptimizedImage src={item.cover} alt="" className="h-28 w-28 rounded-[20px] object-cover shadow-glow" />
                   {locked && <Lock className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-gold" />}
                 </div>
                 <p className="mt-2 line-clamp-2 min-h-8 text-[12px] font-semibold leading-4">{item.title[language]}</p>
@@ -3961,7 +3968,7 @@ function SceneMiniPlayer({ scene, playing, volume, onToggle, onOpen, onClose, on
     <div className="theme-floating fixed inset-x-3 bottom-[calc(82px+env(safe-area-inset-bottom))] z-20 mx-auto max-w-md overflow-hidden rounded-[20px] border border-white/10 shadow-glow backdrop-blur-2xl">
       <div className="flex min-h-[60px] items-center gap-2 px-3 py-2">
         <button onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-          <img src={scene.cover} alt="" className="h-10 w-10 shrink-0 rounded-[14px] object-cover" />
+          <OptimizedImage src={scene.cover} alt="" className="h-10 w-10 shrink-0 rounded-[14px] object-cover" />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold">{scene.title[language]}</p>
             <p className="truncate text-[11px] text-lavender">{playing ? copy[language].soundscapeActive : scene.subtitle[language]}</p>
@@ -4559,7 +4566,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, favoritePending, onF
 
   return (
     <div className="luna-page relative space-y-5 pt-1">
-      <img src={meditation.cover_image} alt="" className="pointer-events-none absolute inset-x-[-20px] top-[-20px] -z-10 h-[520px] w-[calc(100%+40px)] scale-105 rounded-[38px] object-cover opacity-20 blur-3xl" />
+      <OptimizedImage src={meditation.cover_image} alt="" className="pointer-events-none absolute inset-x-[-20px] top-[-20px] -z-10 h-[520px] w-[calc(100%+40px)] scale-105 rounded-[38px] object-cover opacity-20 blur-3xl" />
       <div className="flex items-center justify-between">
         <button onClick={onHome} className="rounded-full border border-white/10 bg-night/45 px-4 py-2 text-sm text-cream backdrop-blur">
           ←
@@ -4569,8 +4576,8 @@ function PlayerPage({ meditation, nextMeditation, favorite, favoritePending, onF
       </div>
       <div>
         <div className="relative mx-auto aspect-square w-full max-w-[336px] overflow-hidden rounded-[34px] border border-white/10 bg-night/80 shadow-glow">
-          <img src={meditation.cover_image} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-20 blur-xl" />
-          <img src={meditation.cover_image} alt="" className="relative h-full w-full object-contain p-3" />
+          <OptimizedImage src={meditation.cover_image} alt="" className="absolute inset-0 h-full w-full scale-110 object-cover opacity-20 blur-xl" />
+          <OptimizedImage src={meditation.cover_image} alt="" className="relative h-full w-full object-contain p-3" />
           {loading && <div className="absolute left-4 top-4 rounded-full bg-night/70 px-4 py-2 text-xs text-cream backdrop-blur">{copy[language].loadingAudio}</div>}
           {meditation.premium && <div className="absolute right-4 top-4 rounded-full bg-gold px-3 py-1 text-xs font-semibold text-night">{copy[language].premium}</div>}
           {completed && (
@@ -4904,6 +4911,7 @@ function MoonGardenPage({
   const [appearedElementId, setAppearedElementId] = useState<string | null>(null);
   const [gardenJourneyOpen, setGardenJourneyOpen] = useState(false);
   const [gardenExpanded, setGardenExpanded] = useState(false);
+  const [previewUpgrade,setPreviewUpgrade]=useState<GardenElement|null>(null);
   const purchasePending = useRef(false);
   const [devOpen, setDevOpen] = useState(false);
   const [grantAmount, setGrantAmount] = useState(40);
@@ -4921,13 +4929,13 @@ function MoonGardenPage({
   const canPlantNextUpgrade = Boolean(nextSuggestedElement && nextUpgradeNeeded === 0 && !workingId);
 
   useEffect(()=>{
-    if(!gardenExpanded&&!gardenJourneyOpen)return;
+    if(!gardenExpanded&&!gardenJourneyOpen&&!previewUpgrade)return;
     const previous=document.activeElement as HTMLElement|null;
     const root=document.querySelector<HTMLElement>('.app-root');
-    const dialog=document.querySelector<HTMLElement>('.garden-expanded,.journey-garden-sheet-panel');
+    const dialog=document.querySelector<HTMLElement>('.garden-expanded,.journey-garden-sheet-panel,.garden-upgrade-preview-panel>section');
     root?.setAttribute('inert','');
     dialog?.querySelector<HTMLButtonElement>('button')?.focus();
-    const close=()=>{setGardenExpanded(false);setGardenJourneyOpen(false);};
+    const close=()=>{setGardenExpanded(false);setGardenJourneyOpen(false);setPreviewUpgrade(null);};
     registerBackHandler?.(close);
     const keys=(event:KeyboardEvent)=>{
       if(event.key==='Escape'){event.preventDefault();close();}
@@ -4940,7 +4948,7 @@ function MoonGardenPage({
     };
     document.addEventListener('keydown',keys);
     return ()=>{document.removeEventListener('keydown',keys);registerBackHandler?.(null);root?.removeAttribute('inert');previous?.focus();};
-  },[gardenExpanded,gardenJourneyOpen,registerBackHandler]);
+  },[gardenExpanded,gardenJourneyOpen,previewUpgrade,registerBackHandler]);
 
   useEffect(() => {
     setLiveProfile(profile);
@@ -5039,6 +5047,9 @@ function MoonGardenPage({
         </div>
       )}
 
+      <p className="journey-garden-meta" aria-label={copy[language].moonGarden}>
+        <span>{language==='en'?`Level ${stage.level}`:`Уровень ${stage.level}`}</span><i aria-hidden="true">·</i><span>{plantedCount}/7 {language==='en'?'upgrades':'улучшений'}</span><i aria-hidden="true">·</i><span>{seeds} Moon Seeds</span>{isGardenComplete&&<strong>{copy[language].gardenComplete}</strong>}
+      </p>
       <MoonGardenScene
         profile={activeProfile}
         language={language}
@@ -5051,14 +5062,6 @@ function MoonGardenPage({
         onAmbienceVolume={onAmbienceVolume}
       />
 
-      <p className="journey-garden-meta" aria-label={copy[language].moonGarden}>
-        <span>{language === 'en' ? `Level ${stage.level}` : `Уровень ${stage.level}`}</span>
-        <i aria-hidden="true">·</i>
-        <span>{language === 'en' ? `${plantedCount}/7 upgrades` : `${plantedCount}/7 улучшений`}</span>
-        <i aria-hidden="true">·</i>
-        <span>{language === 'en' ? `${seeds} Moon Seeds` : `${seeds} лунных семян`}</span>
-        {isGardenComplete && <strong>{copy[language].gardenComplete}</strong>}
-      </p>
       {message && <p className="rounded-2xl bg-night/70 px-3 py-2 text-sm text-gold">{message}</p>}
 
       {embedded && !isGardenComplete && nextSuggestedElement && (
@@ -5088,19 +5091,20 @@ function MoonGardenPage({
       {!embedded && <>
         <button className="journey-garden-journey-link" onClick={()=>setGardenExpanded(true)}>{language==='en'?'Explore your garden':'Рассмотреть сад'}</button>
         <section className="garden-upgrade-shop" aria-label={language==='en'?'Garden upgrades':'Улучшения сада'}>
-          <h3>{language==='en'?'Grow your garden':'Развивай свой сад'}</h3>
+          <h3>{isGardenComplete?(language==='en'?'Your garden collection':'Твоя коллекция сада'):(language==='en'?'Grow your garden':'Развивай свой сад')}</h3>
           {!activeProfile?.gardenAtomicReady&&<p>{language==='en'?'Purchases unlock after the secure shop update. Your garden and balance are preserved.':'Покупки появятся после обновления защищённого магазина. Сад и баланс сохранены.'}</p>}
           <div className="garden-upgrade-rail">{gardenElements.map((element,index)=>{
             const owned=planted.has(element.id);return <article key={element.id} data-upgrade={element.id}>
-              <img src={gardenStages[index+1].path} alt="" loading="lazy"/>
+              <button className="garden-upgrade-preview" onClick={()=>setPreviewUpgrade(element)} aria-label={`${language==='en'?'Preview':'Предпросмотр'}: ${element.name[language]}`}><OptimizedImage src={gardenStages[index+1].path} alt="" loading="lazy"/></button>
               <strong>{element.name[language]}</strong><p>{gardenStages[index+1].subtitle[language]}</p>
               <span>{element.cost} Moon Seeds</span>
-              <button disabled={owned||Boolean(workingId)||!activeProfile?.gardenAtomicReady||seeds<element.cost} onClick={()=>void plant(element)}>{owned?(language==='en'?'Owned':'Открыто'):workingId===element.id?copy[language].planting:(language==='en'?'Unlock':'Купить')}</button>
+              {owned?<span className="garden-owned">✓ {language==='en'?'Owned':'Открыто'}</span>:<button onClick={()=>setPreviewUpgrade(element)}>{language==='en'?'View upgrade':'Подробнее'}</button>}
             </article>;
           })}</div>
         </section>
       </>}
-      {gardenExpanded && createPortal(<div className="garden-expanded" role="dialog" aria-modal="true" aria-label={copy[language].moonGarden}><button className="garden-expanded-close" onClick={()=>setGardenExpanded(false)} aria-label={copy[language].close}><X/></button><img src={stage.path} alt={stage.title[language]}/></div>,document.body)}
+      {previewUpgrade&&createPortal(<div className="garden-upgrade-preview-panel" onClick={event=>{if(event.target===event.currentTarget)setPreviewUpgrade(null);}}><section role="dialog" aria-modal="true" aria-labelledby="garden-upgrade-title"><header><h3 id="garden-upgrade-title">{previewUpgrade.name[language]}</h3><button className="luna-icon-button" aria-label={copy[language].close} onClick={()=>setPreviewUpgrade(null)}><X size={20}/></button></header><OptimizedImage src={gardenStages[gardenElements.findIndex(e=>e.id===previewUpgrade.id)+1].path} alt={previewUpgrade.name[language]}/><p>{gardenStages[gardenElements.findIndex(e=>e.id===previewUpgrade.id)+1].subtitle[language]}</p>{planted.has(previewUpgrade.id)?<span className="garden-owned">✓ {language==='en'?'Already growing in your garden':'Уже растёт в твоём саду'}</span>:<><strong>{previewUpgrade.cost} Moon Seeds</strong>{activeProfile?.gardenAtomicReady?<button className="luna-button-primary" disabled={Boolean(workingId)||seeds<previewUpgrade.cost} onClick={()=>void plant(previewUpgrade)}>{workingId===previewUpgrade.id?copy[language].planting:seeds<previewUpgrade.cost?(language==='en'?`Need ${previewUpgrade.cost-seeds} more Seeds`:`Нужно ещё ${previewUpgrade.cost-seeds} семян`):(language==='en'?'Unlock':'Купить')}</button>:<p>{language==='en'?'Purchases are unavailable. Your balance is preserved.':'Покупки недоступны. Твой баланс сохранён.'}</p>}</>}{message&&<p role="status">{message}</p>}</section></div>,document.body)}
+      {gardenExpanded && createPortal(<div className="garden-expanded" role="dialog" aria-modal="true" aria-label={copy[language].moonGarden}><button className="garden-expanded-close" onClick={()=>setGardenExpanded(false)} aria-label={copy[language].close}><X/></button><OptimizedImage src={stage.path} alt={stage.title[language]}/></div>,document.body)}
       <button type="button" className="journey-garden-journey-link" onClick={() => setGardenJourneyOpen(true)}>
         {language === 'en' ? 'View garden journey' : 'Посмотреть путь сада'} <span aria-hidden="true">→</span>
       </button>
@@ -5116,7 +5120,7 @@ function MoonGardenPage({
             <div className="journey-garden-stage-grid">
               {gardenStages.map((gardenStage) => (
                 <article key={gardenStage.level} className={`journey-garden-stage-card ${gardenStage.level === stage.level ? 'is-current' : ''} ${gardenStage.level > stage.level ? 'is-locked' : 'is-unlocked'}`}>
-                  <img src={gardenStage.path} alt={`${text(language, 'gardenStageLevel', { level: gardenStage.level })}: ${gardenStage.title[language]}`} loading="lazy" />
+                  <OptimizedImage src={gardenStage.path} alt={`${text(language, 'gardenStageLevel', { level: gardenStage.level })}: ${gardenStage.title[language]}`} loading="lazy" />
                   <div><span>{text(language, 'gardenStageLevel', { level: gardenStage.level })}</span><strong>{gardenStage.title[language]}</strong></div>
                 </article>
               ))}
@@ -5258,7 +5262,7 @@ function resizeAvatarImage(file: File) {
   });
 }
 
-type ProfileSettingsView = 'main' | 'appearance' | 'goals' | 'notifications' | 'language' | 'subscription' | 'privacy' | 'privacy-policy' | 'support' | 'terms' | 'disclaimer' | 'personalization';
+type ProfileSettingsView = 'main' | 'settings' | 'appearance' | 'goals' | 'notifications' | 'language' | 'subscription' | 'privacy' | 'privacy-policy' | 'support' | 'terms' | 'disclaimer' | 'personalization';
 type RestoreState = 'idle' | 'loading' | 'success' | 'empty' | 'error';
 
 const APP_VERSION = import.meta.env.VITE_APP_VERSION ?? '0.1.0';
@@ -5410,7 +5414,7 @@ function ProfilePage({
       if (logoutOpen) setLogoutOpen(false);
       else if (avatarActionsOpen) setAvatarActionsOpen(false);
       else if (statusProgressionOpen) setStatusProgressionOpen(false);
-      else setView('main');
+      else setView(view==='settings'?'main':'settings');
     };
 
     backButton.onClick(closeNestedSurface);
@@ -5585,7 +5589,20 @@ function ProfilePage({
     }
   };
 
-  if (view === 'personalization') return <ProfileChildScreen title={language==='en'?'Personal Luna profile':'Личный профиль Luna'} onBack={()=>setView('main')} language={language}><PersonalizationSettings language={language} firstName={firstName} initData={initData} onLanguageChange={onLanguageChange} onClose={()=>setView('main')}/></ProfileChildScreen>;
+  if(view==='settings')return <ProfileChildScreen title={language==='en'?'Settings':'Настройки'} onBack={()=>setView('main')} language={language}>
+    <section className="luna-surface rounded-[22px] p-2">
+      <ProfileSettingsRow icon={Target} title={language==='en'?'Goals':'Цели'} value={goalsLabel} onClick={()=>setView('goals')}/>
+      <ProfileSettingsRow icon={Globe2} title={copy[language].language} value={languageLabel} onClick={()=>setView('language')}/>
+      <ProfileSettingsRow icon={SunMoon} title={language==='en'?'Appearance':'Оформление'} value={themePreference==='system'?(language==='en'?'System':'Системная'):themePreference==='light'?(language==='en'?'Light':'Светлая'):(language==='en'?'Dark':'Тёмная')} onClick={()=>setView('appearance')}/>
+      <ProfileSettingsRow icon={Bell} title={language==='en'?'Notifications':'Уведомления'} value={notificationLabel} onClick={()=>setView('notifications')}/>
+      {featureFlags.personalization&&<ProfileSettingsRow icon={User} title={language==='en'?'AI personalization':'AI-персонализация'} value={language==='en'?'Optional':'Необязательно'} onClick={()=>setView('personalization')}/>}
+      <ProfileSettingsRow icon={Bot} title={language==='en'?'Luna AI':'Луна ИИ'} value={companionStatus} onClick={onLuna}/>
+      <ProfileSettingsRow icon={Lock} title={language==='en'?'Privacy & Data':'Приватность и данные'} value="" onClick={()=>setView('privacy')}/>
+      <ProfileSettingsRow icon={Heart} title={language==='en'?'Support':'Поддержка'} value="" onClick={()=>{setSupportCategory('problem');setSettingsMessage('');setView('support');}}/>
+      <ProfileSettingsRow icon={CreditCard} title={language==='en'?'Manage subscription':'Управление подпиской'} value={localizedPlanStatus} onClick={()=>setView('subscription')}/>
+    </section>
+  </ProfileChildScreen>;
+  if (view === 'personalization') return <ProfileChildScreen title={language==='en'?'Personal Luna profile':'Личный профиль Luna'} onBack={()=>setView(initialView==='personalization'?'main':'settings')} language={language}><PersonalizationSettings language={language} firstName={firstName} initData={initData} onLanguageChange={onLanguageChange} onClose={()=>setView(initialView==='personalization'?'main':'settings')}/></ProfileChildScreen>;
 
   if (view === 'appearance') {
     const systemEnabled = themePreference === 'system';
@@ -5966,7 +5983,7 @@ function ProfilePage({
           className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border border-gold/30 bg-white/[0.045] shadow-glow focus:outline-none focus:ring-2 focus:ring-gold/35"
           aria-label={language === 'en' ? 'Change profile photo' : 'Изменить фото профиля'}
         >
-          {avatarUrl ? <img src={avatarUrl} alt="" className="h-full w-full object-cover" /> : <BrandLogo size={80} className="h-full w-full border-0" />}
+          {avatarUrl ? <OptimizedImage src={avatarUrl} alt="" className="h-full w-full object-cover" /> : <BrandLogo size={80} className="h-full w-full border-0" />}
           <span className="absolute bottom-0 right-0 grid h-8 w-8 place-items-center rounded-full border border-white/15 bg-night/90 text-gold shadow-glow backdrop-blur">
             <Camera size={17} />
           </span>
@@ -5994,15 +6011,8 @@ function ProfilePage({
       {showJourneyEntry && <ProfileOverview language={language} profile={profile} onWallet={onWallet} onJourney={onJourney} onGarden={onGarden} onActivity={onActivity} onAchievements={onAchievements} />}
 
       <section className="luna-surface rounded-[26px] p-2">
-        <ProfileSettingsRow icon={Target} title={language === 'en' ? 'Goals' : 'Цели'} value={goalsLabel} onClick={() => setView('goals')} />
-        <ProfileSettingsRow icon={Bell} title={language === 'en' ? 'Notifications' : 'Уведомления'} value={notificationLabel} onClick={() => setView('notifications')} />
-        <ProfileSettingsRow icon={Bot} title={language === 'en' ? 'AI Companion' : 'AI-компаньон'} value={companionStatus} onClick={onLuna} />
-        <ProfileSettingsRow icon={CreditCard} title={language === 'en' ? 'Subscription' : 'Подписка'} value={localizedPlanStatus} onClick={() => setView('subscription')} />
-        {featureFlags.personalization&&<ProfileSettingsRow icon={User} title={language==='en'?'Personal Luna profile':'Личный профиль Luna'} value={language==='en'?'Optional · you are in control':'Необязательно · под твоим контролем'} onClick={()=>setView('personalization')}/>}
-        <ProfileSettingsRow icon={SunMoon} title={language === 'en' ? 'Appearance' : 'Оформление'} value={themePreference === 'system' ? (language === 'en' ? 'System' : 'Системная') : themePreference === 'light' ? (language === 'en' ? 'Light' : 'Светлая') : (language === 'en' ? 'Dark' : 'Тёмная')} onClick={() => setView('appearance')} />
-        <ProfileSettingsRow icon={Globe2} title={copy[language].language} value={languageLabel} onClick={() => setView('language')} />
-        <ProfileSettingsRow icon={Lock} title={language === 'en' ? 'Privacy & Data' : 'Приватность и данные'} value="" onClick={() => setView('privacy')} />
-        <ProfileSettingsRow icon={Heart} title={language === 'en' ? 'Support' : 'Поддержка'} value={language === 'en' ? 'Send a request' : 'Отправить запрос'} onClick={() => { setSupportCategory('problem'); setSettingsMessage(''); setView('support'); }} />
+        <ProfileSettingsRow icon={CreditCard} title={language === 'en' ? 'Subscription & purchases' : 'Подписка и покупки'} value={localizedPlanStatus} onClick={() => setView('subscription')} />
+        <ProfileSettingsRow icon={Settings} title={language==='en'?'Settings':'Настройки'} value={languageLabel} onClick={()=>setView('settings')}/>
       </section>
 
       <section className="luna-surface profile-secondary-action rounded-[22px] p-2">
@@ -6634,7 +6644,7 @@ function AdminPage({
               return (
                 <article key={meditation.id} className="rounded-3xl border border-cream/15 bg-white/10 p-3 backdrop-blur-xl">
                   <div className="flex gap-3">
-                    <img src={meditation.cover_image} alt="" className="h-20 w-20 rounded-2xl object-cover" />
+                    <OptimizedImage src={meditation.cover_image} alt="" className="h-20 w-20 rounded-2xl object-cover" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <h4 className="truncate font-semibold">{meditation.title}</h4>
@@ -7044,7 +7054,7 @@ function AdminPreview({ form }: { form: MeditationPayload }) {
     <div className="rounded-[24px] border border-white/10 bg-night/50 p-3">
       <div className="flex gap-3">
         <div className="relative">
-          {form.cover_image ? <img src={form.cover_image} alt="" className="h-28 w-28 rounded-[20px] object-cover" /> : <div className="grid h-28 w-28 place-items-center rounded-[20px] bg-cream/10 text-cream/40">Cover</div>}
+          {form.cover_image ? <OptimizedImage src={form.cover_image} alt="" className="h-28 w-28 rounded-[20px] object-cover" /> : <div className="grid h-28 w-28 place-items-center rounded-[20px] bg-cream/10 text-cream/40">Cover</div>}
           <span className="absolute bottom-2 left-2 rounded-full bg-gold px-2 py-1 text-[10px] font-semibold text-night">{form.premium ? 'Premium' : 'Free'}</span>
         </div>
         <div className="min-w-0 flex-1">
