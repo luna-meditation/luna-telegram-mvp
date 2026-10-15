@@ -6,7 +6,7 @@ import test from 'node:test';
 const source = readFileSync(resolve(process.cwd(), 'src/components/LunaChat.tsx'), 'utf8');
 
 test('retry reuses the stable client request id without another user bubble', () => {
-  assert.ok(source.includes('retry?.clientRequestId ?? (discussionId?`discuss-${discussionId}-v1`:requestId())'));
+  assert.ok(source.includes('retry?.clientRequestId ?? requestId()'));
   assert.match(source, /if \(!retry\) setMessages/);
   assert.match(source, /requestId: clientRequestId/);
 });

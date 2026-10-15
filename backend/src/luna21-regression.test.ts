@@ -25,8 +25,8 @@ test('AI gets actual positions and orientation meanings, bounded output and no b
  for(const kind of ['three','five'] as const)for(const language of ['en','ru'] as const){
   const value=spreadInputSchema.parse({...input,kind,language,cards:cards.slice(0,kind==='three'?3:5)});
   const request=buildSpreadAiRequest(value,{...emptyPersonalProfile,preferences:'PRIVATE',birth_date:'1980-01-01',birth_place:'PRIVATE PLACE'},'gpt-5-mini');
-  assert.equal(request.store,false);assert.equal(request.max_output_tokens,kind==='three'?2400:3600);assert.equal(request.text.format.strict,true);
-  assert.match(request.instructions,kind==='three'?/260–380/:/330–480/);assert.match(request.instructions,/not a second summary/);assert.doesNotMatch(JSON.stringify(request),/PRIVATE|1980-01-01/);
+  assert.equal(request.store,false);assert.equal(request.max_output_tokens,kind==='three'?2200:3000);assert.equal(request.text.format.strict,true);
+  assert.match(request.instructions,/100–160 words/);assert.match(request.instructions,/NOT repeating the summary/);assert.doesNotMatch(JSON.stringify(request),/PRIVATE|1980-01-01/);
   const data=JSON.parse(request.input[0].content[0].text);assert.equal(data.cards.length,value.cards.length);assert.equal(data.cards[1].orientation,'reversed');assert.ok(data.cards.every((c:{position:string})=>c.position));
  }
 });

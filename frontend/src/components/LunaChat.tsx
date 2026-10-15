@@ -6,7 +6,7 @@ import {
   getLunaConversation,
   getLunaConversations,
   sendLunaMessage,
-  renameLunaConversation,openLunaTarot,
+  renameLunaConversation,openLunaTarot,attachSavedLunaTarot,
   type AppLanguage,
   type LunaConversationSummary,
   type LunaMessage,
@@ -142,12 +142,13 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
   const [tarotComposer,setTarotComposer]=useState(false),[tarotKind,setTarotKind]=useState<'single'|'three'|'five'>('single'),[tarotIntention,setTarotIntention]=useState<'general'|'love'|'career'|'growth'>('general'),[tarotQuestion,setTarotQuestion]=useState('');
   const [renaming,setRenaming]=useState<string|null>(null),[renameTitle,setRenameTitle]=useState('');
   const [attachedReadingId,setAttachedReadingId]=useState<string|undefined>();
-  const tarotPending=useRef(false),tarotClientId=useRef(''),autoDiscuss=useRef(new Set<string>());
+  const tarotPending=useRef(false),turnPending=useRef(false),tarotClientId=useRef(''),autoDiscuss=useRef(new Set<string>());
   useEffect(()=>{if(!central)return;const handler=renaming?()=>setRenaming(null):tarotComposer?()=>setTarotComposer(false):toolsOpen?()=>setToolsOpen(false):screen==='overview'?()=>setScreen('chat'):null;registerBackHandler?.(handler);return()=>registerBackHandler?.(null);},[central,renaming,tarotComposer,toolsOpen,screen,registerBackHandler]);
   const listRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const nearBottomRef = useRef(true);
   const renderedCardsRef = useRef(new Set<string>());
+  useEffect(()=>{if(tarotComposer)requestAnimationFrame(()=>listRef.current?.scrollTo({top:0,behavior:'instant'}));},[tarotComposer]);
   const prompts = language === 'ru'
     ? ['Не могу уснуть', 'Мысли не останавливаются', 'Я перегружен(а)', 'Мне нужно поговорить', 'Подбери медитацию']
     : ["I can't sleep", "My thoughts won't stop", "I'm overwhelmed", 'I need someone to talk to', 'Recommend a meditation'];
@@ -214,7 +215,8 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
   const scrollToLatest = useCallback((smooth = true) => {
     const list = listRef.current;
     if (!list) return;
-    list.scrollTo({ top: list.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+    const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    list.scrollTo({ top: list.scrollHeight, behavior: smooth&&!reduced ? 'smooth' : 'instant' });
     nearBottomRef.current = true;
     setAwayFromBottom(false);
   }, []);
@@ -223,6 +225,13 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
     if (screen !== 'chat' || !nearBottomRef.current) return;
     requestAnimationFrame(() => scrollToLatest(messages.length > 1));
   }, [messages.length, screen, scrollToLatest, thinking]);
+
+  useEffect(()=>{
+    const viewport=window.visualViewport;
+    const resized=()=>{if(nearBottomRef.current)requestAnimationFrame(()=>scrollToLatest(false));};
+    viewport?.addEventListener('resize',resized);
+    return()=>viewport?.removeEventListener('resize',resized);
+  },[scrollToLatest]);
 
   useEffect(() => {
     if (screen !== 'chat') return;
@@ -248,14 +257,15 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
     window.localStorage.removeItem(activeConversationKey);
   };
 
-  const submit = async (text: string, retry?: FailedTurn,discussionId?:string,targetConversationId?:string) => {
+  const submit = async (text: string, retry?: FailedTurn,contextReadingId?:string) => {
     const clean = text.trim();
-    if (!clean || thinking || quotaExhausted || clean.length > 2000) return;
-    const clientRequestId = retry?.clientRequestId ?? (discussionId?`discuss-${discussionId}-v1`:requestId());
+    if (!clean || thinking || turnPending.current || quotaExhausted || clean.length > 2000) return;
+    turnPending.current=true;
+    const clientRequestId = retry?.clientRequestId ?? requestId();
     const optimistic: LunaMessage = retry
       ? { id: retry.optimisticMessageId, request_id: clientRequestId, role: 'user', content: clean, created_at: new Date().toISOString() }
       : { id: requestId(), request_id: clientRequestId, role: 'user', content: clean, created_at: new Date().toISOString() };
-    if (screen !== 'chat'||discussionId&&!targetConversationId) {
+    if (screen !== 'chat') {
       setActiveId('');
       setMessages([]);
       setScreen('chat');
@@ -270,9 +280,9 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
     recordLunaStage('luna_message_sent', { requestId: clientRequestId }, initData);
     recordLunaStage('model_request_started', { requestId: clientRequestId }, initData);
     try {
-      const selectedMode=discussionId?'tarot':retry?retry.mode:mode||undefined;
-      const readingId=discussionId??(retry?retry.readingId:selectedMode==='tarot'?readingContextId??attachedReadingId:undefined);
-      const result = await sendLunaMessage({ conversationId: discussionId?targetConversationId:activeId || undefined, message: clean, language, requestId: clientRequestId,...(selectedMode?{mode:selectedMode}:{}),...(readingId?{readingId}:{}) }, initData);
+      const selectedMode=contextReadingId?'tarot':retry?retry.mode:mode||undefined;
+      const readingId=contextReadingId??(retry?retry.readingId:selectedMode==='tarot'?readingContextId??attachedReadingId:undefined);
+      const result = await sendLunaMessage({ conversationId: activeId || undefined, message: clean, language, requestId: clientRequestId,...(selectedMode?{mode:selectedMode}:{}),...(readingId?{readingId}:{}) }, initData);
       const recommendationId = recommendationIdForMessage(result.message);
       const pendingState = result.message.metadata?.pending_state;
       recordLunaStage('model_result_received', { requestId: clientRequestId, hasAssistantMessage: Boolean(result.message.content) }, initData);
@@ -289,19 +299,26 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
       if (result.message.metadata?.duplicateClarificationBlocked) recordLunaStage('duplicate_reply_blocked', { requestId: clientRequestId }, initData);
       setActiveId(result.conversationId);
       window.localStorage.setItem(activeConversationKey, result.conversationId);
-      if(discussionId){const saved=await getLunaConversation(result.conversationId,initData);setMessages(saved.messages);setAttachedReadingId(discussionId);setMode('tarot');onClearReadingContext?.();}
-      else setMessages((current) => current.some(m=>m.id===result.message.id)?current:[...current, result.message]);
+      setMessages((current) => current.some(m=>m.id===result.message.id)?current:[...current, result.message]);
       await refreshConversations();
     } catch (sendError) {
       const details = errorDetails(sendError, language);
       setQuotaExhausted(details.state === 'quota_exhausted');
-      setFailedTurn({ ...details, clientRequestId, text: clean, optimisticMessageId: optimistic.id,mode:discussionId?'tarot':retry?retry.mode:mode||undefined,readingId:discussionId??(retry?retry.readingId:mode==='tarot'?readingContextId??attachedReadingId:undefined) });
+      setFailedTurn({ ...details, clientRequestId, text: clean, optimisticMessageId: optimistic.id,mode:contextReadingId?'tarot':retry?retry.mode:mode||undefined,readingId:contextReadingId??(retry?retry.readingId:mode==='tarot'?readingContextId??attachedReadingId:undefined) });
     } finally {
+      turnPending.current=false;
       setThinking(false);
     }
   };
 
-  useEffect(()=>{if(!central||loading||thinking||!readingContextId||autoDiscuss.current.has(readingContextId))return;autoDiscuss.current.add(readingContextId);setMode('tarot');setAttachedReadingId(readingContextId);void submit(en?'Let’s discuss this reading. What stands out in relation to my question?':'Давай обсудим этот расклад. Что в нём главное для моего вопроса?',undefined,readingContextId);},[central,loading,readingContextId]);
+  async function attachReading(id:string){
+    if(thinking)return;autoDiscuss.current.add(id);setThinking(true);setError('');
+    try{const result=await attachSavedLunaTarot(id,initData);const saved=await getLunaConversation(result.conversationId,initData);setActiveId(result.conversationId);window.localStorage.setItem(activeConversationKey,result.conversationId);setMessages(saved.messages);setAttachedReadingId(id);setMode('tarot');setScreen('chat');onClearReadingContext?.();await refreshConversations();}
+    catch{autoDiscuss.current.delete(id);setError(en?'Could not attach the saved reading. No new AI request was sent.':'Не удалось прикрепить сохранённый расклад. Новый AI-запрос не отправлялся.');}
+    finally{setThinking(false);}
+  }
+  useEffect(()=>{if(!central||loading||thinking||!readingContextId||autoDiscuss.current.has(readingContextId))return;void attachReading(readingContextId);},[central,loading,readingContextId]);
+  const updateTarotMessage=useCallback((next:LunaMessage)=>setMessages(current=>current.map(m=>m.id===next.id?next:m)),[]);
 
   async function startChatTarot(){if(tarotPending.current||thinking)return;tarotPending.current=true;setThinking(true);setError('');tarotClientId.current||=crypto.randomUUID();const clientReadingId=tarotClientId.current;try{const result=await openLunaTarot({clientReadingId,...(activeId?{conversationId:activeId}:{}),kind:tarotKind,intention:tarotIntention,question:tarotQuestion,language},initData);setActiveId(result.conversationId);window.localStorage.setItem(activeConversationKey,result.conversationId);setMessages(current=>current.some(m=>m.id===result.message.id)?current:[...current,result.message]);setAttachedReadingId(result.message.metadata?.tarot?.readingId);setMode('tarot');setTarotComposer(false);setTarotQuestion('');tarotClientId.current='';await refreshConversations();}catch{setError(en?'Could not open the reading. Your history is unchanged; retry the same request.':'Не удалось открыть расклад. История не изменена — можно повторить запрос.');}finally{tarotPending.current=false;setThinking(false);}}
   async function rename(){if(!renaming||thinking)return;setThinking(true);setError('');try{await renameLunaConversation(renaming,renameTitle,initData);setRenaming(null);await refreshConversations();}catch{setError(en?'Could not rename this conversation.':'Не удалось переименовать разговор.');}finally{setThinking(false);}}
@@ -370,8 +387,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
         <div><BrandLogo size={28} eager /><span><h2>{activeTitle}</h2><p>{thinking ? (language === 'ru' ? 'Luna думает...' : 'Luna is reflecting...') : (language === 'ru' ? 'Рядом и слушает' : 'Here and listening')}</p></span></div>
         {central?<><button type="button" onClick={()=>beginConversation()} disabled={thinking} aria-label={en?'New conversation':'Новый разговор'}><Plus size={19}/></button><button type="button" onClick={()=>setToolsOpen(v=>!v)} aria-expanded={toolsOpen} aria-label={en?'More conversation tools':'Другие действия'}><MoreHorizontal size={20}/></button></>:<button type="button" onClick={() => void removeConversation()} disabled={!activeId} aria-label={language === 'ru' ? 'Удалить разговор' : 'Delete conversation'}><Trash2 size={17} /></button>}
       </header>
-      {central&&<nav className="luna24-chat-toolbar" aria-label={en?'Conversation tools':'Управление разговором'}><button type="button" onClick={()=>setToolsOpen(v=>!v)}>{mode==='tarot'&&(readingContextId||attachedReadingId)?(en?'Tarot · reading attached':'Таро · расклад прикреплён'):({tarot:en?'Tarot reflection':'Размышление с Таро',wellbeing:en?'Emotional support':'Эмоциональная поддержка',meditation:en?'Meditation guide':'Гид по медитации',companion:en?'Self-discovery':'Самопознание','':en?'General conversation':'Общий разговор'})[mode]}</button><button type="button" disabled={thinking} onClick={()=>{setTarotComposer(v=>!v);setToolsOpen(false);}}>{en?'Tarot':'Таро'} ✧</button></nav>}
-      {central&&tarotComposer&&<form className="luna24-tarot-composer" onSubmit={e=>{e.preventDefault();void startChatTarot();}}><header><strong>{en?'A question for the cards':'Вопрос к картам'}</strong><button type="button" aria-label={en?'Close':'Закрыть'} onClick={()=>setTarotComposer(false)}><X size={18}/></button></header><label>{en?'Intention':'Тема'}<select disabled={thinking} value={tarotIntention} onChange={e=>{setTarotIntention(e.target.value as typeof tarotIntention);tarotClientId.current='';}}>{(['general','love','career','growth'] as const).map(k=><option key={k} value={k}>{tarotCopy[language].intentions[k].title}</option>)}</select></label><label>{en?'Reading':'Расклад'}<select disabled={thinking} value={tarotKind} onChange={e=>{setTarotKind(e.target.value as typeof tarotKind);tarotClientId.current='';}}><option value="single">{en?'One card':'Одна карта'}</option><option value="three" disabled={!featureFlags.tarot_spreads}>{en?'Three cards':'Три карты'}</option><option value="five" disabled={!featureFlags.tarot_spreads}>{en?'Five cards':'Пять карт'}</option></select></label><label>{en?'Your question · optional':'Твой вопрос · необязательно'}<textarea disabled={thinking} maxLength={240} rows={2} value={tarotQuestion} onChange={e=>{setTarotQuestion(e.target.value);tarotClientId.current='';}}/></label>{thinking&&<div className="luna24-shuffling" aria-label={en?'Shuffling the deck':'Перемешиваем колоду'}>{[0,1,2].map(i=><span key={i}><TarotCardBack/></span>)}</div>}<button className="luna-button-primary" type="submit" disabled={thinking}>{thinking?(en?'Preparing…':'Готовим…'):(en?'Open reading':'Открыть расклад')}</button></form>}
+      {central&&mode==='tarot'&&(readingContextId||attachedReadingId)&&<div className="luna251-chat-context">✧ {en?'Tarot · reading attached':'Таро · расклад прикреплён'}</div>}
 
       {featureFlags.ai_modes&&(!central||toolsOpen)&&<label className="luna-mode-select">{central?(en?'Mode':'Режим'):language==='en'?'Conversation mode':'Режим разговора'}<select disabled={thinking||Boolean(failedTurn)} value={mode} onChange={event=>{setMode(event.target.value as typeof mode);if(event.target.value!=='tarot')onClearReadingContext?.();}}>
         <option value="">{central?(en?'General conversation':'Общий разговор'):language==='en'?'Current Luna':'Прежняя Luna'}</option><option value="companion">{language==='en'?'Self-discovery':'Самопознание'}</option><option value="tarot">{language==='en'?'Tarot reflection':'Размышление с Таро'}</option><option value="wellbeing">{language==='en'?'Emotional support':'Эмоциональная поддержка'}</option><option value="meditation">{language==='en'?'Meditation guide':'Гид по медитации'}</option><option value="astrology" disabled>{language==='en'?'Astrology · awaiting chart engine':'Астрология · нужен расчётный модуль'}</option>
@@ -381,7 +397,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
       {redesigned && (!central||toolsOpen) && visibleMessages.length > 0 && <button type="button" className="luna2-ideas-toggle" aria-expanded={ideasOpen} onClick={() => setIdeasOpen(value => !value)}>{luna2Copy[language].ideas}</button>}
       {redesigned && ideasOpen && visibleMessages.length > 0 && <LunaQuickActions language={language} onTarot={central?()=>setTarotComposer(true):onTarot} disabled={thinking || quotaExhausted} onPrompt={(prompt) => { setDraft(prompt); setIdeasOpen(false); textareaRef.current?.focus(); }} />}
 
-      {central&&toolsOpen&&<div className="luna24-extra-tools"><button type="button" disabled={!activeId||thinking} onClick={()=>{setToolsOpen(false);void removeConversation();}}><Trash2 size={16}/>{en?'Delete conversation':'Удалить разговор'}</button></div>}
+      {central&&toolsOpen&&<div className="luna24-extra-tools"><button type="button" disabled={thinking} onClick={()=>{setTarotComposer(true);setToolsOpen(false);}}><span aria-hidden="true">✧</span>{en?'New Tarot reading':'Новый расклад Таро'}</button><button type="button" disabled={!activeId||thinking} onClick={()=>{setToolsOpen(false);void removeConversation();}}><Trash2 size={16}/>{en?'Delete conversation':'Удалить разговор'}</button></div>}
       <div
         ref={listRef}
         className="luna-live-message-list"
@@ -392,6 +408,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
           setAwayFromBottom(!nearBottom);
         }}
       >
+        {central&&tarotComposer&&<form className="luna24-tarot-composer" onSubmit={e=>{e.preventDefault();void startChatTarot();}}><header><strong>{en?'A question for the cards':'Вопрос к картам'}</strong><button type="button" aria-label={en?'Close':'Закрыть'} onClick={()=>setTarotComposer(false)}><X size={18}/></button></header><label>{en?'Intention':'Тема'}<select disabled={thinking} value={tarotIntention} onChange={e=>{setTarotIntention(e.target.value as typeof tarotIntention);tarotClientId.current='';}}>{(['general','love','career','growth'] as const).map(k=><option key={k} value={k}>{tarotCopy[language].intentions[k].title}</option>)}</select></label><label>{en?'Reading':'Расклад'}<select disabled={thinking} value={tarotKind} onChange={e=>{setTarotKind(e.target.value as typeof tarotKind);tarotClientId.current='';}}><option value="single">{en?'One card':'Одна карта'}</option><option value="three" disabled={!featureFlags.tarot_spreads}>{en?'Three cards':'Три карты'}</option><option value="five" disabled={!featureFlags.tarot_spreads}>{en?'Five cards':'Пять карт'}</option></select></label><label>{en?'Your question · optional':'Твой вопрос · необязательно'}<textarea disabled={thinking} maxLength={240} rows={2} value={tarotQuestion} onChange={e=>{setTarotQuestion(e.target.value);tarotClientId.current='';}}/></label>{thinking&&<div className="luna24-shuffling" aria-label={en?'Shuffling the deck':'Перемешиваем колоду'}>{[0,1,2].map(i=><span key={i}><TarotCardBack/></span>)}</div>}<button className="luna-button-primary" type="submit" disabled={thinking}>{thinking?(en?'Preparing…':'Готовим…'):(en?'Open reading':'Открыть расклад')}</button></form>}
         {loading ? (
           <div className="space-y-3 px-2" aria-label={language === 'ru' ? 'Загрузка разговора' : 'Loading conversation'}>
             <BrandLogo size={48} className="mx-auto" eager />
@@ -399,7 +416,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
             <div className="luna-ai-loading-line ml-auto max-w-[76%]" />
             <div className="luna-ai-loading-line max-w-[86%]" />
           </div>
-        ) : !visibleMessages.length ? (
+        ) : !visibleMessages.length&&!tarotComposer ? (
           <div className="luna-live-empty">
             {featureFlags.personal_memory&&<UniverseInvitation language={language}/>}
             <BrandLogo size={88} alt={language === 'ru' ? 'Логотип Luna Meditation' : 'Luna Meditation logo'} eager />
@@ -419,8 +436,9 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
               <div className="luna-live-message-content">
                 {!(central&&message.metadata?.tarot)&&<div className="luna-message-bubble"><MessageText text={message.content}/></div>}
                 {central&&message.role==='assistant'&&message.metadata?.contextualActions?.length? <div className="luna24-context-actions">{message.metadata.contextualActions.map(action=><button type="button" key={action} disabled={thinking} onClick={()=>{if(action==='tarot'){setTarotQuestion(messages.filter(m=>m.role==='user').slice(-1)[0]?.content.slice(0,240)??'');setTarotComposer(true);}else if(action==='journal')window.dispatchEvent(new Event('luna-open-activity'));else if(action==='birth_profile')window.dispatchEvent(new Event(featureFlags.personal_memory?'luna-open-universe':'luna-open-astrology'));else{setMode('meditation');setDraft(luna2Copy[language].recommendPrompt);textareaRef.current?.focus();}}}>{({tarot:en?'Explore with Tarot':'Посмотреть через Таро',journal:en?'Open journal':'Открыть дневник',birth_profile:en?'My birth profile':'Мои данные рождения',meditation:en?'Find a meditation':'Подобрать медитацию'})[action]}</button>)}</div>:null}
-                {central&&message.metadata?.tarot&&<ChatTarotReading message={message} language={language} initData={initData} registerBackHandler={registerBackHandler} onContinue={id=>{setAttachedReadingId(id);setMode('tarot');void submit(en?'Let’s discuss this reading. What stands out in relation to my question?':'Давай обсудим этот расклад. Что в нём главное для моего вопроса?',undefined,id,activeId);}} onUpdate={next=>setMessages(current=>current.map(m=>m.id===next.id?next:m))}/>}
-                {featureFlags.personal_memory&&!thinking&&(message.id===visibleMessages.filter(m=>m.role===message.role).slice(-1)[0]?.id)&&<MemorySaveAction key={message.id} language={language} initData={initData} message={message}/>}
+                {central&&message.metadata?.tarot&&<ChatTarotReading message={message} language={language} initData={initData} registerBackHandler={registerBackHandler} onUpdate={updateTarotMessage}/>}
+                {central&&message.id===visibleMessages[visibleMessages.length-1]?.id&&message.metadata?.tarot?.reading&&message.metadata.tarot.revealed>=(message.metadata.tarot.reading.cards?.length||1)&&<div className="luna24-context-actions luna251-followups" aria-label={en?'Continue this reflection':'Продолжить размышление'}>{(en?[message.metadata.tarot.kind==='single'?'Explore this card':'How do these cards connect?','What does this mean for my situation?','Help me think through my next step']:[message.metadata.tarot.kind==='single'?'Рассмотрим эту карту подробнее':'Как связаны карты расклада?','Что это может значить в моей ситуации?','Помоги обдумать следующий шаг']).map(prompt=><button type="button" key={prompt} disabled={thinking||quotaExhausted||Boolean(failedTurn)} onClick={()=>void submit(prompt,undefined,message.metadata?.tarot?.readingId)}>{prompt}</button>)}</div>}
+                {featureFlags.personal_memory&&!message.metadata?.tarot&&!thinking&&(message.id===visibleMessages.filter(m=>m.role===message.role).slice(-1)[0]?.id)&&<MemorySaveAction key={message.id} language={language} initData={initData} message={message}/>}
                 {recommendation ? <ChatMeditationCard meditation={recommendation} language={language} hasPremium={hasPremium} onOpen={() => onOpenMeditation(recommendation)} /> : null}
               </div>
             </div>
@@ -433,7 +451,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
         </div> : null}
         {error ? <div className="luna-live-error" role="status">
           <p>{error}</p>
-          <button type="button" disabled={loading} onClick={() => void refreshConversations()}>
+          <button type="button" disabled={loading||thinking} onClick={() => readingContextId?void attachReading(readingContextId):void refreshConversations()}>
             <RotateCcw size={14} />{language === 'ru' ? 'Обновить историю' : 'Reload history'}
           </button>
         </div> : null}

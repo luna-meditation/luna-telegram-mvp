@@ -7,13 +7,17 @@ import {tarotCopy} from './copy';
 
 export function TarotDetails({card,orientation,language,position,onClose,registerBackHandler}:{card:TarotCardDefinition;orientation:TarotOrientation;language:AppLanguage;position?:string;onClose:()=>void;registerBackHandler:(handler:(()=>void)|null)=>void;}){
  const t=tarotCopy[language],dialog=useRef<HTMLDivElement>(null),close=useRef<HTMLButtonElement>(null);
+ const handlers=useRef({onClose,registerBackHandler});handlers.current={onClose,registerBackHandler};
  const [failed,setFailed]=useState(false),[attempt,setAttempt]=useState(0);
  useEffect(()=>{
   const previousFocus=document.activeElement as HTMLElement|null,previousOverflow=document.body.style.overflow;
   const app=document.querySelector('.app-root'),wasInert=app?.hasAttribute('inert');
-  document.body.style.overflow='hidden';app?.setAttribute('inert','');close.current?.focus();registerBackHandler(onClose);
+  const scrollParents:Array<{element:HTMLElement;top:number;left:number}>=[];
+  for(let element=previousFocus?.parentElement;element;element=element.parentElement){if(element.scrollHeight>element.clientHeight)scrollParents.push({element,top:element.scrollTop,left:element.scrollLeft});}
+  const register=handlers.current.registerBackHandler,closeViewer=()=>handlers.current.onClose();
+  document.body.style.overflow='hidden';app?.setAttribute('inert','');close.current?.focus({preventScroll:true});register(closeViewer);
   function handleKey(event:KeyboardEvent){
-   if(event.key==='Escape'){event.preventDefault();onClose();}
+   if(event.key==='Escape'){event.preventDefault();closeViewer();}
    if(event.key==='Tab'){
     const buttons=dialog.current?.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'),first=buttons?.[0],last=buttons?.[buttons.length-1];
     if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}
@@ -21,8 +25,8 @@ export function TarotDetails({card,orientation,language,position,onClose,registe
    }
   }
   document.addEventListener('keydown',handleKey);
-  return ()=>{document.removeEventListener('keydown',handleKey);registerBackHandler(null);document.body.style.overflow=previousOverflow;if(!wasInert)app?.removeAttribute('inert');if(previousFocus?.isConnected)previousFocus.focus({preventScroll:true});};
- },[onClose,registerBackHandler]);
+  return ()=>{document.removeEventListener('keydown',handleKey);register(null);document.body.style.overflow=previousOverflow;if(!wasInert)app?.removeAttribute('inert');if(previousFocus?.isConnected)previousFocus.focus({preventScroll:true});for(const {element,top,left}of scrollParents)if(element.isConnected)element.scrollTo({top,left,behavior:'instant'});};
+ },[]);
  return createPortal(<div className="tarot-details-overlay" onClick={event=>{if(event.target===event.currentTarget)onClose();}}><div className="tarot-details" ref={dialog} role="dialog" aria-modal="true" aria-labelledby="tarot-details-title">
   <header><h2 id="tarot-details-title">{card.name[language]}</h2><button type="button" ref={close} className="luna-icon-button" aria-label={t.close} onClick={onClose}><X size={23}/></button></header>
   <img key={attempt} src={`${card.image}${attempt?`?retry=${attempt}`:''}`} width={card.width} height={card.height} alt={card.name[language]} onError={()=>setFailed(true)} draggable={false}/>

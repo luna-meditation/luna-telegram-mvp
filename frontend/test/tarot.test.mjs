@@ -141,7 +141,7 @@ test('intention interpretations use the existing upright/reversed local meaning 
 test('card zoom is accessible and Telegram back closes it before leaving the reading',()=>{
  const dialog=src('features/tarot/TarotDetails.tsx'),route=src('navigation/useAppRouteState.ts');
  assert.match(dialog,/role="dialog" aria-modal="true"/);assert.match(dialog,/event.key==='Escape'/);assert.match(dialog,/event.key==='Tab'/);
- assert.match(dialog,/registerBackHandler\(onClose\)/);assert.match(dialog,/registerBackHandler\(null\)/);
+ assert.match(dialog,/register\(closeViewer\)/);assert.match(dialog,/register\(null\)/);assert.match(dialog,/handlers.current.onClose/);
  assert.match(dialog,/removeAttribute\('inert'\)/);assert.match(route,/if \(!beforeBackRef.current\?\.\(\)\) goBack\(\)/);
  assert.match(src('features/tarot/tarot.css'),/tarot-details-overlay[^\n]+background: var\(--bg-primary\)/);
 });

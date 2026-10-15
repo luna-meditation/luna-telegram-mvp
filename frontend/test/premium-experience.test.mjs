@@ -16,7 +16,7 @@ test('the visible Home theme alone loads, with eager responsive artwork and no n
  assert.match(read('src/main.tsx'),/AmbientSky/);
 });
 test('AI interpretation reuses saved result with progressive disclosure and no generation calls',()=>{
- const source=read('src/features/tarot/TarotAiInterpretation.tsx');assert.match(source,/ai.summary/);assert.match(source,/details className="tarot-ai-details"/);assert.match(source,/ai.context/);assert.match(source,/ai.question/);assert.doesNotMatch(source,/fetch\(|saveTarot|openDailyTarot|createInvoice/);
+ const source=read('src/features/tarot/TarotAiInterpretation.tsx');assert.match(source,/ai.summary/);assert.match(source,/details className="tarot-ai-details luna251-reading-details"/);assert.match(source,/ai.context/);assert.match(source,/ai.question/);assert.doesNotMatch(source,/fetch\(|saveTarot|openDailyTarot|createInvoice/);
 });
 test('journal reuses owner APIs, never harvests private conversations or generates readings',()=>{
  const source=read('src/luna2/JournalPage.tsx');for(const value of ['listTarotReadings','weeklyCheckins','last_played','onReading','reflection'])assert.ok(source.includes(value));assert.doesNotMatch(source,/getLunaConversation|sendLunaMessage|generate:|saveTarotReading|localStorage/);

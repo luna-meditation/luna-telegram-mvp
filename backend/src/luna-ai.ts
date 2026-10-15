@@ -918,7 +918,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
   if (!env.AI_CHAT_ENABLED) throw new LunaAiError('chat_disabled', 'Luna AI chat is not enabled.', 503);
   if (!env.OPENAI_API_KEY) throw new LunaAiError('missing_api_key', 'Luna AI is not configured.', 503);
   const input = lunaChatInputSchema.parse(rawInput);
-  let responseLanguage = resolveResponseLanguage(input.message, input.language);
+  let responseLanguage = resolveResponseLanguage(input.message, input.language, [], env.FEATURE_AI_CENTRAL_EXPERIENCE);
   const telegramId = user.telegram_id;
   if(input.mode&&!env.FEATURE_AI_MODES)throw new FoundationError(503,'mode_disabled','This Luna mode is not enabled.');
   if(input.mode==='astrology')throw new FoundationError(503,'astrology_unavailable','Calculated astrology is not available yet.');
@@ -1017,7 +1017,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
 
     const { recent, context, catalog, memoryEnabled, pendingState, conversationState } = await loadContext(telegramId, resolvedConversationId, input.message);
     const allowMeditationActions = !input.mode || input.mode === 'meditation';
-    responseLanguage = resolveResponseLanguage(input.message, input.language, recent);
+    responseLanguage = resolveResponseLanguage(input.message, input.language, recent, env.FEATURE_AI_CENTRAL_EXPERIENCE);
     console.info('[Luna AI pending state loaded]', {
       user: userHash(telegramId),
       requestId: input.requestId,

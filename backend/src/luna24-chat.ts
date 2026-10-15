@@ -1,4 +1,5 @@
 import {Router} from 'express';
+import {createHash} from 'node:crypto';
 import {z} from 'zod';
 import {env} from './config.js';
 import {supabase,upsertUser} from './db.js';
@@ -19,6 +20,24 @@ export async function hydrateLunaTarotMessages(user:number,messages:Array<Record
  return messages.map(m=>{const meta=m.metadata as Record<string,unknown>|undefined;const state=chatTarotState.safeParse(meta?.tarot);if(!state.success)return m;return {...m,metadata:{...meta,tarot:{...state.data,reading:readings.get(state.data.readingId)??null}}};});
 }
 async function response(user:number,message:Record<string,unknown>){return {conversationId:message.conversation_id,message:(await hydrateLunaTarotMessages(user,[message]))[0]};}
+// Attachment is a saved-data operation, never a provider request or a reward event.
+// Stable IDs + existing unique constraints make retries and simultaneous opens safe.
+export async function attachSavedTarot(user:number,body:unknown){
+ const {readingId}=z.object({readingId:z.string().uuid()}).strict().parse(body);
+ if(!env.FEATURE_AI_CENTRAL_EXPERIENCE||!env.FEATURE_TAROT_HISTORY)throw fail('feature_disabled',404);
+ const reading=await getTarotReading(user,readingId) as StoredReading&{reading_kind?:string};
+ const prior=await supabase.from('ai_messages').select(messageFields).eq('telegram_id',user).contains('metadata',{tarot:{readingId}}).limit(1).maybeSingle();
+ if(prior.error)throw fail('chat_unavailable');
+ if(prior.data){await ownedConversation(user,prior.data.conversation_id);return response(user,prior.data);}
+ const raw=createHash('sha256').update(`luna251:attach:${user}:${readingId}`).digest('hex');
+ const conversationId=`${raw.slice(0,8)}-${raw.slice(8,12)}-4${raw.slice(13,16)}-8${raw.slice(17,20)}-${raw.slice(20,32)}`;
+ const created=await supabase.from('ai_conversations').upsert({id:conversationId,telegram_id:user,title:reading.language==='ru'?'Размышление с Таро':'Tarot reflection',language:reading.language},{onConflict:'id',ignoreDuplicates:true});
+ if(created.error)throw fail('chat_unavailable');await ownedConversation(user,conversationId);
+ const kind=reading.reading_kind==='three'?'three':reading.reading_kind==='five'?'five':'single';
+ const state:ChatTarotState={readingId,clientReadingId:reading.client_reading_id,kind,revealed:readingSize(kind),requestHash:createHash('sha256').update(`attached:${readingId}`).digest('hex')};
+ const result=await supabase.from('ai_messages').upsert({id:conversationId,conversation_id:conversationId,telegram_id:user,role:'assistant',message_type:'tarot_reading',request_id:`attach:${readingId}`,content:reading.interpretation?.summary??(reading.language==='ru'?'Расклад сохранён. Можно продолжить размышление здесь.':'Your reading is saved. You can continue reflecting here.'),metadata:{tarot:state}},{onConflict:'id',ignoreDuplicates:true});
+ if(result.error)throw fail('reading_save_failed');return response(user,await ownedMessage(user,conversationId));
+}
 export async function openChatTarot(user:number,body:unknown){
  const input=chatTarotInput.parse(body),hash=chatTarotHash(input);
  if(!env.FEATURE_AI_CENTRAL_EXPERIENCE||!env.FEATURE_TAROT_HISTORY)throw fail('feature_disabled',404);
@@ -56,4 +75,5 @@ export const luna24Router=Router();
 luna24Router.use(requireTelegramWebApp,(_req,res,next)=>env.FEATURE_AI_CENTRAL_EXPERIENCE?next():res.status(404).json({code:'feature_disabled'}));
 luna24Router.patch('/conversations/:id',async(req,res,next)=>{try{const user=(req as unknown as AuthenticatedRequest).telegramUser.telegram_id,id=z.string().uuid().parse(req.params.id),{title}=z.object({title:z.string().trim().min(1).max(60)}).strict().parse(req.body);await ownedConversation(user,id);const result=await supabase.from('ai_conversations').update({title,updated_at:new Date().toISOString()}).eq('id',id).eq('telegram_id',user).select('id,title').maybeSingle();if(result.error||!result.data)throw fail('rename_failed');res.json(result.data);}catch(e){next(e);}});
 luna24Router.post('/tarot',async(req,res,next)=>{try{const user=(req as AuthenticatedRequest).telegramUser;await upsertUser(user);res.json(await openChatTarot(user.telegram_id,req.body));}catch(e){next(e);}});
+luna24Router.post('/tarot/attach',async(req,res,next)=>{try{res.json(await attachSavedTarot((req as unknown as AuthenticatedRequest).telegramUser.telegram_id,req.body));}catch(e){next(e);}});
 luna24Router.post('/tarot/:id/reveal',async(req,res,next)=>{try{res.json(await revealChatTarot((req as unknown as AuthenticatedRequest).telegramUser.telegram_id,req.params.id,req.body));}catch(e){next(e);}});

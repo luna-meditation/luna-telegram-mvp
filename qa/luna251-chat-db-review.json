@@ -1,0 +1,29 @@
+{
+  "status": "PASS",
+  "checks": [
+    "exact staging dependencies reapply and preserve the legacy reading",
+    "new tools reject missing/forged Telegram identity and disabled flag",
+    "single reading is saved once with server-selected card and closed state",
+    "concurrent reveal generates once and passes relevant confirmed memory only",
+    "reopening persistent cards and interpretation never regenerates",
+    "attaching an existing chat reading reuses its conversation without provider, quota or wallet writes",
+    "standalone attachment is concurrent-safe, owner-only, immutable and fully persistent without generation",
+    "cross-account reading, reveal, conversation and rename are denied",
+    "rename persists and invalid title/owner injection is rejected",
+    "three and five share existing engine and staging-only free QA remains rate limited",
+    "production cannot use free QA spread generation, even with QA flag set",
+    "daily quota blocks new generation without changing balances or entitlements",
+    "provider error is saved as fallback without a paid retry",
+    "deleted readings do not return from chat metadata or trigger regeneration",
+    "budget remains owner-specific, immutable per request and within $0.02",
+    "RLS prevents anon/authenticated direct table/RPC access",
+    "production release grant enables only the hard-pinned QA owner; five-card AI saves once without wallet writes"
+  ],
+  "engine": "PostgreSQL via PGlite",
+  "syntheticIdentities": true,
+  "providerMocked": true,
+  "providerCallsMocked": 5,
+  "realAiRequests": 0,
+  "productionWrites": 0,
+  "newMigrations": 0
+}

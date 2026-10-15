@@ -3,21 +3,26 @@ import type {AppLanguage,TarotReading} from '../../api';
 import {tarotDeck} from './deck';
 export function TarotAiInterpretation({reading,language,onContinue}:{reading:TarotReading;language:AppLanguage;onContinue?:(id:string)=>void}){
  const ai=reading.interpretation;if(!ai||reading.status!=='ready')return null;
- const en=language==='en';
- if(ai.version===2)return <section className="tarot-ai-reflection" data-testid="tarot-ai-reflection">
-  <p className="tarot-ai-label"><Sparkles size={16}/>Luna AI</p>
-  <div className="tarot-ai-takeaway"><h3>{en?'Your takeaway':'Главный вывод Luna'}</h3><p>{ai.summary}</p></div>
-  <div className="tarot-ai-card-insights"><h3>{en?'Your cards':'Карты расклада'}</h3>{ai.cards?.map(c=><article key={c.cardId}><h4>{tarotDeck.find(card=>card.id===c.cardId)?.name[language]??c.cardId}</h4><small>{c.position} · {c.orientation==='reversed'?(en?'Reversed':'Перевёрнутая'):(en?'Upright':'Прямая')}</small><p>{c.positionMeaning}</p><p>{c.application}</p><details><summary>{en?'More about this card':'Подробнее о карте'}</summary><p>{c.detail}</p></details></article>)}</div>
-  <div><h3>{en?'The bigger picture':'Общая картина'}</h3><p>{ai.overall}</p></div>
-  <div><h3>{en?'What you can try':'Что можно попробовать'}</h3><ul>{ai.actions?.map(action=><li key={action}>{action}</li>)}</ul></div>
-  <p>{ai.question}</p>
-  {onContinue&&<button type="button" className="tarot-draw-button" onClick={()=>onContinue(reading.id)}>{en?'Discuss with Luna':'Обсудить с Luna'}<ArrowRight size={18}/></button>}
- </section>;
- return <section className="tarot-ai-reflection" data-testid="tarot-ai-reflection">
+ const en=language==='en',v2=ai.version===2,action=v2?ai.actions?.[0]:ai.reflection;
+ // Presentation only: historical interpretations remain intact, with no regeneration.
+ return <section className="tarot-ai-reflection luna251-interpretation" data-testid="tarot-ai-reflection">
  <p className="tarot-ai-label"><Sparkles size={16}/>Luna AI</p>
- <div className="tarot-ai-takeaway"><h3>{en?'Your takeaway':'Главный вывод Luna'}</h3><p>{ai.summary}</p></div>
- <div><h3>{en?'The card':'Значение карты'}</h3><p>{ai.cardMeaning}</p></div>
- <div><h3>{en?'A practical thought':'Практическая мысль'}</h3><p>{ai.reflection}</p></div>
+ <div className="tarot-ai-takeaway"><h3>{en?'Your takeaway':'Главный вывод'}</h3><p>{ai.summary}</p></div>
+ {action&&<div className="luna251-practical"><h3>{en?'One small step':'Один небольшой шаг'}</h3><p>{action}</p></div>}
+ <p className="luna251-reflection-question">{ai.question}</p>
+ <details className="tarot-ai-details luna251-reading-details"><summary>{en?'Explore the reading':'Подробнее о раскладе'}</summary>
+  {v2?<>
+   <div className="tarot-ai-card-insights"><h3>{en?'Individual cards':'Карты по отдельности'}</h3>{ai.cards?.map(c=><article key={c.cardId}><h4>{tarotDeck.find(card=>card.id===c.cardId)?.name[language]??c.cardId}</h4><small>{c.position} · {c.orientation==='reversed'?(en?'Reversed':'Перевёрнутая'):(en?'Upright':'Прямая')}</small><p>{c.positionMeaning}</p><p>{c.application}</p><p>{c.detail}</p></article>)}</div>
+   {ai.overall&&<div><h3>{en?'How the cards connect':'Как связаны карты'}</h3><p>{ai.overall}</p></div>}
+   {Boolean(ai.actions&&ai.actions.length>1)&&<div><h3>{en?'Further reflection':'Для дальнейшего размышления'}</h3><ul>{ai.actions?.slice(1).map(a=><li key={a}>{a}</li>)}</ul></div>}
+  </>:<>
+   {ai.cardMeaning&&<div><h3>{en?'Card symbolism':'Символика карты'}</h3><p>{ai.cardMeaning}</p></div>}
+   {ai.context&&<div><h3>{en?'In your context':'В контексте вопроса'}</h3><p>{ai.context}</p></div>}
+   {ai.cardInsights?.map(c=><article key={c.cardId}><h4>{tarotDeck.find(card=>card.id===c.cardId)?.name[language]??c.cardId}</h4><p>{c.text}</p></article>)}
+   {ai.links&&<div><h3>{en?'How the cards connect':'Как связаны карты'}</h3><p>{ai.links}</p></div>}
+  </>}
+  {ai.continuation&&<p>{ai.continuation}</p>}
+ </details>
  {onContinue&&<button type="button" className="tarot-draw-button" onClick={()=>onContinue(reading.id)}>{en?'Discuss with Luna':'Обсудить с Luna'}<ArrowRight size={18}/></button>}
- <details className="tarot-ai-details"><summary>{en?'Explore the full interpretation':'Подробная интерпретация'}</summary><div><h3>{en?'In your context':'В твоём контексте'}</h3><p>{ai.context}</p></div><div><h3>{en?'A question for you':'Вопрос для размышления'}</h3><p>{ai.question}</p></div>{ai.continuation&&<p>{ai.continuation}</p>}</details></section>;
+ </section>;
 }

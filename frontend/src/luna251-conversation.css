@@ -1,0 +1,37 @@
+/* Shared rhythm, using Luna's existing theme tokens; no separate visual system. */
+:root{--conversation-body:1rem;--conversation-support:.875rem;--conversation-heading:1.125rem;--conversation-space:12px;--conversation-radius:16px}
+.luna24-chat .luna-live-chat-header{min-height:56px;padding:5px 8px;gap:4px}
+.luna24-chat .luna-live-chat-header h2{font-size:1rem;line-height:1.3;max-width:150px}
+.luna24-chat .luna-live-chat-header p{font-size:.75rem;line-height:1.35;margin-top:2px}
+.luna251-chat-context{flex:0 0 auto;padding:3px 16px 7px;color:var(--accent-gold-text);font-size:.8125rem;line-height:1.4;border-bottom:1px solid var(--border-subtle)}
+.luna24-chat .luna24-extra-tools{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.luna24-chat .luna-live-message-list{scrollbar-gutter:stable;overflow-anchor:none;padding-bottom:20px}
+.luna24-chat .luna-message-bubble{font-size:var(--conversation-body);line-height:1.65}
+.luna24-chat .luna-live-empty{min-height:0;padding:20px 4px;gap:var(--conversation-space)}
+.luna24-chat .luna-live-empty>.brand-logo{width:64px;height:64px;margin-bottom:6px}
+.luna24-chat .luna24-tarot-composer{max-height:none;overflow:visible;flex-shrink:initial;margin:0 0 16px;padding:16px;gap:12px;border-radius:20px}
+.luna24-chat .luna24-chat-reading{gap:12px}
+.luna24-chat .luna24-chat-reading>header>strong{font-size:1.25rem;line-height:1.3}
+.luna24-chat .luna24-chat-reading p{font-size:var(--conversation-body);line-height:1.65}
+.luna251-reading-complete{color:var(--accent-gold-text);font-size:var(--conversation-support)!important;margin:0}
+.luna251-inspect-card{min-height:44px;padding:6px 3px;font-size:.8125rem;line-height:1.3;color:var(--accent-gold-text);border:1px solid var(--border-subtle);border-radius:12px;background:var(--surface-selected)}
+.luna24-chat-cards>article>.luna251-orientation{font-size:.8125rem;line-height:1.4;overflow-wrap:anywhere;color:var(--text-secondary)}
+.luna251-interpretation{gap:var(--conversation-space)!important;overflow:visible;max-height:none}
+.luna251-interpretation .tarot-ai-takeaway{padding:14px;border-radius:var(--conversation-radius)}
+.luna251-interpretation h3{font-size:var(--conversation-heading)!important;line-height:1.4}
+.luna251-interpretation p{font-size:var(--conversation-body)!important;line-height:1.65}
+.luna251-practical{padding:0 2px}
+.luna251-reflection-question{font-weight:500;color:var(--text-primary)}
+.luna251-interpretation .luna251-reading-details{overflow:visible;max-height:none;margin:0}
+.luna251-reading-details>summary{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:var(--conversation-support);min-height:48px;color:var(--accent-gold-text)}
+.luna251-reading-details>summary::after{content:'+';font-size:1.25rem}
+.luna251-reading-details[open]>summary::after{content:'−'}
+.luna251-reading-details>div{margin:14px 0}
+.luna251-reading-details .tarot-ai-card-insights{gap:16px}
+.luna251-reading-details small{font-size:var(--conversation-support);color:var(--text-secondary)}
+.luna251-followups{margin:14px 0 4px;gap:8px}
+.luna251-followups button{font-size:var(--conversation-support);min-height:44px;text-align:left;color:var(--text-primary);border-color:var(--border-subtle);background:var(--surface-selected)}
+.luna24-chat button:focus-visible,.luna251-interpretation summary:focus-visible{outline:2px solid var(--accent-gold-text);outline-offset:3px}
+.luna25-daily-card .luna2-eyebrow{font-size:.75rem;letter-spacing:.08em}
+.luna25-daily-card h2{font-size:1.125rem;line-height:1.35}
+@media(prefers-reduced-motion:reduce){.luna24-chat,.luna24-chat *{scroll-behavior:auto!important;animation:none!important;transition-duration:.01ms!important}}

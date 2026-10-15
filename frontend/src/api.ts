@@ -750,6 +750,7 @@ export async function deleteLunaConversation(conversationId: string, initData?: 
 export async function renameLunaConversation(id:string,title:string,initData?:string){return request<{id:string;title:string}>(`/api/luna/tools/conversations/${id}`,{method:'PATCH',body:JSON.stringify({title})},initData);}
 export async function openLunaTarot(input:{clientReadingId:string;conversationId?:string;kind:'single'|'three'|'five';intention:'general'|'love'|'career'|'growth';question:string;language:AppLanguage},initData?:string){return request<{conversationId:string;message:LunaMessage}>('/api/luna/tools/tarot',{method:'POST',body:JSON.stringify(input)},initData);}
 export async function revealLunaTarot(id:string,index:number,initData?:string){return request<{conversationId:string;message:LunaMessage}>(`/api/luna/tools/tarot/${id}/reveal`,{method:'POST',body:JSON.stringify({index})},initData);}
+export async function attachSavedLunaTarot(readingId:string,initData?:string){return request<{conversationId:string;message:LunaMessage}>('/api/luna/tools/tarot/attach',{method:'POST',body:JSON.stringify({readingId})},initData);}
 
 export async function clearLunaConversations(initData?: string) {
   return request<{ ok: true }>('/api/luna/conversations', { method: 'DELETE' }, initData);
