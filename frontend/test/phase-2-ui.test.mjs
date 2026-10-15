@@ -107,7 +107,9 @@ test('AI quick actions draft only; Tarot opens its existing flow and chart stays
   const actions=src('luna2/LunaQuickActions.tsx');
   assert.equal((actions.match(/id: '/g)??[]).length,5);
   assert.equal((actions.match(/prompt: null/g)??[]).length,2);
-  assert.match(actions,/disabled=\{disabled \|\| \(!prompt&&!openTarot\)\}/);
+  assert.match(actions,/disabled=\{disabled \|\| \(!prompt&&!openAction\)\}/);
+  assert.match(actions,/My birth profile/);
+  assert.match(actions,/luna-open-universe/);
   assert.match(actions,/id==='tarot'\?onTarot:undefined/);
   assert.doesNotMatch(actions,/sendLunaMessage|fetch\(|random/);
   assert.match(src('components/LunaChat.tsx'),/setDraft\(prompt\); textareaRef\.current\?\.focus\(\)/);

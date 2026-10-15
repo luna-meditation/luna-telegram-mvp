@@ -10,18 +10,19 @@ import { fileURLToPath } from 'node:url';
 assert.equal(process.versions.node.split('.')[0], '22', 'Use Node.js 22');
 const frontend = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const tarotPreview = process.argv.includes('--tarot');
-const memoryPreview=process.argv.includes('--memory');
+const centralPreview=process.argv.includes('--luna24');
+const memoryPreview=process.argv.includes('--memory')||centralPreview;
 const luna21Preview=process.argv.includes('--luna21')||memoryPreview;
 const productionFlags=process.argv.includes('--production-flags');
 const refinementPreview=process.argv.includes('--refinement')||luna21Preview;
 const legacyPreview = process.argv.includes('--legacy');
 assert.ok(!(tarotPreview&&legacyPreview),'Choose either Tarot or legacy preview');
-const outputDirectory = memoryPreview?'dist-memory-preview':productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
+const outputDirectory = centralPreview?'dist-luna24-preview':memoryPreview?'dist-memory-preview':productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
 const output = resolve(frontend, outputDirectory);
-const flagNames = ['PERSONAL_MEMORY','NEW_NAVIGATION','TAROT_DAILY','TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI','DAILY_CARD_V2','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2'];
+const flagNames = ['AI_CENTRAL_EXPERIENCE','PERSONAL_MEMORY','NEW_NAVIGATION','TAROT_DAILY','TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI','DAILY_CARD_V2','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2'];
 if(!process.argv.includes('--serve-only')){
 const build = spawn(process.execPath,[resolve(frontend,'node_modules/vite/bin/vite.js'),'build','--outDir',outputDirectory],{
-  cwd:frontend, stdio:'inherit', env:{...process.env,...Object.fromEntries(flagNames.map(key=>[`VITE_FEATURE_${key}`,'false'])),...(refinementPreview?Object.fromEntries(['PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI'].map(key=>[`VITE_FEATURE_${key}`,'true'])):{}),...(luna21Preview?{VITE_FEATURE_DAILY_CARD_V2:'true',VITE_FEATURE_TAROT_SPREADS:productionFlags?'false':'true'}:{}),VITE_FEATURE_NEW_NAVIGATION:legacyPreview?'false':'true',VITE_FEATURE_TAROT_DAILY:tarotPreview||refinementPreview?'true':'false',VITE_FEATURE_PERSONAL_MEMORY:memoryPreview?'true':'false',VITE_API_URL:'',VITE_BOT_USERNAME:''}
+  cwd:frontend, stdio:'inherit', env:{...process.env,...Object.fromEntries(flagNames.map(key=>[`VITE_FEATURE_${key}`,'false'])),...(refinementPreview?Object.fromEntries(['PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI'].map(key=>[`VITE_FEATURE_${key}`,'true'])):{}),...(luna21Preview?{VITE_FEATURE_DAILY_CARD_V2:'true',VITE_FEATURE_TAROT_SPREADS:productionFlags?'false':'true'}:{}),VITE_FEATURE_AI_CENTRAL_EXPERIENCE:centralPreview?'true':'false',VITE_FEATURE_NEW_NAVIGATION:legacyPreview?'false':'true',VITE_FEATURE_TAROT_DAILY:tarotPreview||refinementPreview?'true':'false',VITE_FEATURE_PERSONAL_MEMORY:memoryPreview?'true':'false',VITE_API_URL:'',VITE_BOT_USERNAME:''}
 });
 const code = await new Promise(done=>build.once('exit',done));
 assert.equal(code,0,'Preview build failed');
@@ -34,6 +35,8 @@ const user={first_name:'Alex',language_code:'en',lifetime_access:true,active_unt
 const profile={user,currentWeek:{weekStart:date(monday),activeDays:3,practiceDays:3,completedDays:3,completedSessions:10,listeningMinutes:42,days:[]},completed:10,completedMeditations:10,dayStreak:5,currentStreak:5,longestStreak:10,minutesListened:100,purchasedPlan:'Lifetime',calmScore:20,rewards:{7:true,14:false,30:false,100:false},moonSeeds:123,moonSeedsAvailable:123,moonSeedsEarnedTotal:345,gardenLevel:3,plantedGardenElements:['first_bloom','lantern_glow','stone_path'],achievements:{unlocked:3,total:10,items:[]}};
 let checkin=null;const messages=[];const conversation={id:'offline-qa',title:'Offline UI preview',created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
 const emptyPersonal={interests:[],preferences:'',birth_date:null,birth_time:null,birth_place:null,ai_context_consent:false};let personal={...emptyPersonal};const readings=new Map();let generated=0;
+const centralConversations=new Map();
+const previewDeck=centralPreview?JSON.parse(await readFile(resolve(frontend,'src/features/tarot/manifest.json'),'utf8')).cards:[];
 const previewMemories=new Map();let previewMemoryEnabled=true;
 if(refinementPreview)profile.gardenAtomicReady=true;
 if(refinementPreview)profile.journeyStatus={id:'adept',rank:2,earned:true,eligibleRank:2,next:{id:'guardian',rank:3,progressPercent:75,remaining:[{key:'completedMeditations',current:10,target:20,remaining:10}]}};
@@ -95,6 +98,32 @@ const server=createServer(async(req,res)=>{
         user.language_code=body.language;return json({user});
       }
       if(url.pathname==='/api/checkins'&&req.method==='POST'){checkin={id:'offline-checkin',...body,local_date:body.local_date||date()};return json({checkin});}
+      if(centralPreview){
+        const summary=c=>({...c,latestMessage:c.messages.at(-1)?.content??''});
+        if(url.pathname==='/api/luna/conversations'&&req.method==='GET')return json({conversations:[...centralConversations.values()].map(summary)});
+        const convoId=url.pathname.match(/^\/api\/luna\/conversations\/([^/]+)$/)?.[1];
+        if(convoId&&centralConversations.has(convoId)){const c=centralConversations.get(convoId);if(req.method==='DELETE'){centralConversations.delete(convoId);return json({ok:true});}if(req.method==='GET')return json({conversation:summary(c),messages:c.messages});}
+        const rename=url.pathname.match(/^\/api\/luna\/tools\/conversations\/([^/]+)$/)?.[1];
+        if(rename&&req.method==='PATCH'){const c=centralConversations.get(rename);if(!c)return json({code:'conversation_not_found'},404);c.title=body.title;return json({id:rename,title:c.title});}
+        if(url.pathname==='/api/luna/tools/tarot'&&req.method==='POST'){
+          const id=body.conversationId??body.clientReadingId;
+          let c=centralConversations.get(id);if(!c){c={id,title:body.language==='ru'?'Таро · локальный preview':'Tarot · offline preview',language:body.language,status:'active',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),last_message_at:new Date().toISOString(),messages:[]};centralConversations.set(id,c);}
+          let m=c.messages.find(m=>m.id===body.clientReadingId);
+          if(!m){const count=body.kind==='five'?5:body.kind==='three'?3:1,cards=previewDeck.slice(0,count).map((v,i)=>({cardId:v.id,orientation:i%2?'reversed':'upright'}));
+            const reading={id:randomUUID(),client_reading_id:body.clientReadingId,reading_kind:body.kind,cards,card_id:cards[0].cardId,orientation:cards[0].orientation,intention:body.intention,question:body.question,language:body.language,status:'local',interpretation:null,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
+            readings.set(body.clientReadingId,reading);m={id:body.clientReadingId,conversation_id:id,role:'assistant',content:body.language==='ru'?'Локальный UI preview. Открой карты по порядку. AI не вызывается.':'Offline UI preview. Reveal cards in order. No AI call is made.',created_at:new Date().toISOString(),metadata:{tarot:{readingId:reading.id,clientReadingId:body.clientReadingId,kind:body.kind,revealed:0,requestHash:'0'.repeat(64),reading}}};c.messages.push(m);}
+          return json({conversationId:id,message:m});
+        }
+        const revealId=url.pathname.match(/^\/api\/luna\/tools\/tarot\/([^/]+)\/reveal$/)?.[1];
+        if(revealId&&req.method==='POST'){for(const c of centralConversations.values()){const m=c.messages.find(m=>m.id===revealId);if(!m)continue;const t=m.metadata.tarot;if(body.index>t.revealed)return json({code:'reveal_order'},409);t.revealed=Math.max(t.revealed,body.index+1);if(t.revealed===t.reading.cards.length&&!t.reading.interpretation){const en=t.reading.language==='en';t.reading.status='ready';t.reading.interpretation={version:2,summary:en?'OFFLINE QA — no AI request. This sample checks the new reading structure and mobile typography. Consider a concrete step you can observe today, while keeping your own priorities visible. The cards are a symbolic starting point for reflection, not evidence about another person or a prediction. The saved question stays attached to this reading.':'ЛОКАЛЬНЫЙ QA — запрос в AI не отправлялся. Этот пример проверяет новую структуру расклада и читаемость текста на телефоне. Выбери конкретный шаг, результат которого можно увидеть сегодня, сохраняя собственные приоритеты. Карты служат символической отправной точкой для размышления, а не доказательством чувств другого человека или предсказанием. Сохранённый вопрос остаётся связан с раскладом.',cards:t.reading.cards.map((v,i)=>({...v,position:en?'Perspective '+(i+1):'Позиция '+(i+1),positionMeaning:en?'A sample position-specific meaning.':'Пример значения карты в этой позиции.',application:en?'An example linked to your question.':'Пример связи с заданным вопросом.',detail:en?'Optional detail for checking the expanded view.':'Дополнение для проверки раскрывающегося раздела.'})),overall:en?'This is a fixture conclusion for layout testing only.':'Это тестовый общий вывод только для проверки интерфейса.',actions:[en?'Check whether you can read and navigate comfortably.':'Проверь, удобно ли читать текст и перелистывать карты.'],question:en?'Is the reading easy to explore?':'Удобно ли изучать расклад?',continuation:null};}return json({conversationId:c.id,message:m});}return json({code:'message_not_found'},404);}
+        if(url.pathname==='/api/luna/chat'&&req.method==='POST'){
+          const prior=[...centralConversations.values()].find(c=>c.messages.some(m=>m.request_id===body.requestId&&m.role==='assistant'));const id=prior?.id??body.conversationId??randomUUID();let c=centralConversations.get(id);
+          if(!c){c={id,title:body.message.slice(0,60),language:body.language,status:'active',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),last_message_at:new Date().toISOString(),messages:[]};centralConversations.set(id,c);}
+          let m=c.messages.find(m=>m.request_id===body.requestId&&m.role==='assistant');
+          if(!m){m={id:randomUUID(),request_id:body.requestId,role:'assistant',content:body.language==='ru'?'Локальный UI preview: серверный AI здесь не вызывается.':'Offline UI preview: no server AI is called here.',created_at:new Date().toISOString(),metadata:{}};c.messages.push({id:randomUUID(),role:'user',content:body.message,created_at:new Date().toISOString()},m);}
+          return json({conversationId:id,message:m,duplicate:false,remaining:7,requestState:'completed'});
+        }
+      }
       if(url.pathname==='/api/luna/chat'&&req.method==='POST'){
         const message={id:randomUUID(),role:'assistant',content:body.language==='ru'?'Это локальный UI preview. Реальный запрос к AI не отправлялся.':'This is an offline UI preview. No actual AI request was sent.',created_at:new Date().toISOString(),metadata:{}};
         messages.push({id:randomUUID(),role:'user',content:body.message,created_at:new Date().toISOString()},message);return json({conversationId:conversation.id,message,duplicate:false,remaining:7,requestState:'completed'});
@@ -113,10 +142,10 @@ const server=createServer(async(req,res)=>{
     let path=resolve(output,`.${decodeURIComponent(url.pathname)}`);
     if(path!==output&&!path.startsWith(output+sep)){res.writeHead(403);return res.end();}
     if(!extname(path))path=resolve(output,'index.html');
-    let content=await readFile(path);if(extname(path)==='.html')content=Buffer.from(content.toString().replace(/<script\b[^>]*src=["']https:\/\/telegram\.org\/[^"']*["'][^>]*><\/script>/g,'').replace('<head>',`<head>${bridge}`).replace(/<title>[^<]+<\/title>/,memoryPreview?'<title>Luna 2.3 Personal Memory — sample data</title>':'<title>Luna 2.2 UI preview — sample data</title>'));
+    let content=await readFile(path);if(extname(path)==='.html')content=Buffer.from(content.toString().replace(/<script\b[^>]*src=["']https:\/\/telegram\.org\/[^"']*["'][^>]*><\/script>/g,'').replace('<head>',`<head>${bridge}`).replace(/<title>[^<]+<\/title>/,centralPreview?'<title>Luna 2.4 — offline UI preview</title>':memoryPreview?'<title>Luna 2.3 Personal Memory — sample data</title>':'<title>Luna 2.2 UI preview — sample data</title>'));
     res.writeHead(200,{'content-type':mime[extname(path)]||'application/octet-stream','cache-control':extname(path)==='.html'?'no-store':'public, max-age=86400','x-luna-preview':'synthetic-local-only','content-security-policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; media-src 'self'"});res.end(content);
   } catch {res.writeHead(404);res.end('Not available in the offline preview');}
 });
-const port=Number(process.env.PHASE2_PREVIEW_PORT??(memoryPreview?55990:tarotPreview?55448:55444));assert.ok(Number.isInteger(port)&&port>1024&&port<65536);
+const port=Number(process.env.PHASE2_PREVIEW_PORT??(centralPreview?56024:memoryPreview?55990:tarotPreview?55448:55444));assert.ok(Number.isInteger(port)&&port>1024&&port<65536);
 const host=process.env.LUNA_PREVIEW_HOST==='0.0.0.0'?'0.0.0.0':'127.0.0.1';
 server.listen(port,host,()=>console.log(`OFFLINE QA preview on ${host}:${port} — synthetic data only; no production API, AI, payments or database writes.`));

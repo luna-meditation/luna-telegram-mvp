@@ -1,8 +1,18 @@
 import {ArrowRight,Sparkles} from 'lucide-react';
 import type {AppLanguage,TarotReading} from '../../api';
+import {tarotDeck} from './deck';
 export function TarotAiInterpretation({reading,language,onContinue}:{reading:TarotReading;language:AppLanguage;onContinue?:(id:string)=>void}){
  const ai=reading.interpretation;if(!ai||reading.status!=='ready')return null;
  const en=language==='en';
+ if(ai.version===2)return <section className="tarot-ai-reflection" data-testid="tarot-ai-reflection">
+  <p className="tarot-ai-label"><Sparkles size={16}/>Luna AI</p>
+  <div className="tarot-ai-takeaway"><h3>{en?'Your takeaway':'Главный вывод Luna'}</h3><p>{ai.summary}</p></div>
+  <div className="tarot-ai-card-insights"><h3>{en?'Your cards':'Карты расклада'}</h3>{ai.cards?.map(c=><article key={c.cardId}><h4>{tarotDeck.find(card=>card.id===c.cardId)?.name[language]??c.cardId}</h4><small>{c.position} · {c.orientation==='reversed'?(en?'Reversed':'Перевёрнутая'):(en?'Upright':'Прямая')}</small><p>{c.positionMeaning}</p><p>{c.application}</p><details><summary>{en?'More about this card':'Подробнее о карте'}</summary><p>{c.detail}</p></details></article>)}</div>
+  <div><h3>{en?'The bigger picture':'Общая картина'}</h3><p>{ai.overall}</p></div>
+  <div><h3>{en?'What you can try':'Что можно попробовать'}</h3><ul>{ai.actions?.map(action=><li key={action}>{action}</li>)}</ul></div>
+  <p>{ai.question}</p>
+  {onContinue&&<button type="button" className="tarot-draw-button" onClick={()=>onContinue(reading.id)}>{en?'Discuss with Luna':'Обсудить с Luna'}<ArrowRight size={18}/></button>}
+ </section>;
  return <section className="tarot-ai-reflection" data-testid="tarot-ai-reflection">
  <p className="tarot-ai-label"><Sparkles size={16}/>Luna AI</p>
  <div className="tarot-ai-takeaway"><h3>{en?'Your takeaway':'Главный вывод Luna'}</h3><p>{ai.summary}</p></div>

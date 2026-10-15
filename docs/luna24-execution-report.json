@@ -1,0 +1,255 @@
+{
+  "title": "Luna 2.3 release and Luna 2.4 development — 2026-10-15",
+  "status": "LUNA23_RELEASED_LUNA24_LOCAL_AND_DATABASE_CHECKS_PASS",
+  "production": {
+    "version": "Luna 2.3 Personal Memory",
+    "branch": "main",
+    "commit": "23ed1c5c85758186e64ef65d8c9c1188e88138a0",
+    "pullRequest": "https://github.com/luna-meditation/luna-telegram-mvp/pull/14",
+    "url": "https://luna-telegram-miniapp.netlify.app/",
+    "netlifyDeploy": "6ad07fe6e08ce1317f93556b",
+    "netlifyStatus": "ready",
+    "railwayDeploy": "a8a0ea7e-4bf1-4b7e-905f-d34c251b8352",
+    "railwayStatus": "SUCCESS",
+    "schemaProject": "vkcdtasbdoeilgfucoax",
+    "memoryMigration": {
+      "file": "20261015032917_luna23_personal_memory.sql",
+      "appliedVersion": "20261015072030",
+      "oldRowsPreserved": 14,
+      "unconfirmedLegacyEntriesRemainPrivate": true,
+      "otherObjectsFingerprintUnchanged": true
+    },
+    "staticVerification": {
+      "assetsWithExactChecksums": 84,
+      "tarotCards": 78,
+      "cardBack": true,
+      "realTelegramSdk": true
+    },
+    "backup": {
+      "directoryOutsideGit": "release-backups/luna-connector-rwA9c2/pre-luna23-final-20261015",
+      "encrypted": true,
+      "tables": 35,
+      "rows": 1313,
+      "rpc": 14,
+      "avatars": 2,
+      "independentRestorePasses": 2
+    },
+    "preserved": {
+      "annualStars": 750,
+      "lifetimeStars": 2499,
+      "paymentAtomic": true,
+      "moonSeeds": true,
+      "subscriptions": true,
+      "otherApplications": true
+    }
+  },
+  "development": {
+    "branch": "feature/luna-2-4-ai-universe",
+    "basedOn": "23ed1c5c85758186e64ef65d8c9c1188e88138a0",
+    "productionDeploymentAllowed": false,
+    "features": [
+      "Visible new conversation and paginated history; rename/delete/resume",
+      "Contextual allowlisted actions: Tarot, birth profile, journal and real meditation recommendations",
+      "Shared Tarot services for tab/chat, server draw from all 78 cards, sequential persisted reveal",
+      "Card detail zoom and Telegram native Back integration",
+      "Deterministic Discuss request ID and automatic first contextual answer",
+      "Concrete symbolism/orientation/tension/practical prompt; confirmed consented memory only",
+      "Compact five-section My Universe; separate privacy/memory management",
+      "Dark default only when no explicit Light/Dark/System preference exists",
+      "Astrology adapter validation and owner-scoped cache contract; no fake calculations"
+    ],
+    "flags": {
+      "ai_central_experience": "false by default; staging-only preview opt-in",
+      "tarot_spread_ai_qa": "false by default; impossible outside STAGING_MODE",
+      "newPaidFeatures": "disabled"
+    },
+    "newPermanentProjects": 0,
+    "newSecrets": 0
+  },
+  "staging": {
+    "project": "funvzpmpbgazsisehiru",
+    "url": "https://luna-staging-itfl.netlify.app/",
+    "bot": "https://t.me/luna_staging_qa_eger_bot",
+    "previewStatus": "Deployment details are written to qa/luna24-staging-verification.json after publishing the development commit",
+    "migrations": [
+      {
+        "file": "20261015075000_luna24_staging_spread_dependencies.sql",
+        "status": "APPLIED STAGING ONLY — three canonical dependency tables, all switches off",
+        "version": "20261015081212"
+      },
+      {
+        "file": "20261014142638_luna21_tarot_spreads.sql",
+        "status": "APPLIED STAGING ONLY — existing production migration reused",
+        "version": "20261015081220"
+      }
+    ],
+    "legacyReadingsPreserved": 3,
+    "unrelatedObjectsFingerprintUnchanged": true,
+    "affectedTableBackupEncryptedAndRestored": true,
+    "realPhoneLuna24Verified": false
+  },
+  "tests": {
+    "node": "22.23.3",
+    "backendPass": 207,
+    "frontendPass": 147,
+    "optionalLegacySqlSkip": 1,
+    "isolatedChatDatabaseChecks": 13,
+    "mobileCases": 16,
+    "themes": [
+      "dark",
+      "light"
+    ],
+    "languages": [
+      "en",
+      "ru"
+    ],
+    "widths": [
+      360,
+      375,
+      390,
+      393
+    ],
+    "providersMockedInLocalTests": true,
+    "newRealAiCalls": 0,
+    "themeDefaultAndSystem": "PASS",
+    "typecheck": "PASS frontend/backend",
+    "lint": "PASS frontend/backend",
+    "build": "PASS Node 22 local frontend/backend"
+  },
+  "ai": {
+    "maximumNewBudgetUsd": 0.02,
+    "newRequestsSent": 0,
+    "actualNewCostUsd": 0,
+    "releaseSmoke": "Existing QA daily Tarot quota was already used (2/2); new QA reading stayed local and no provider call occurred. Quota was not bypassed.",
+    "evidence": "Production metering has two earlier successful GPT-5-mini responses today; these are not counted as new test calls.",
+    "remaining": "A fresh real inference using the new prompts/context must be verified after quota reset or through a separately approved QA run."
+  },
+  "astrology": {
+    "status": "ENGINE_NOT_SELECTED_OR_CONNECTED",
+    "canonicalBirthProfile": "existing luna_personal_profiles; no duplicate birth data store",
+    "unknownBirthTime": "No invented exact UTC instant, ascendant or houses",
+    "options": [
+      {
+        "name": "Hosted Astrologer API",
+        "commercial": "Vendor documents external commercial/closed-source use",
+        "plansUsd": [
+          {
+            "monthly": 9,
+            "requests": 5000
+          },
+          {
+            "monthly": 18,
+            "requests": 50000
+          },
+          {
+            "monthly": 40,
+            "requests": 1000000
+          }
+        ],
+        "capabilities": [
+          "natal JSON/SVG",
+          "houses/aspects",
+          "transits/returns",
+          "synastry/composite"
+        ],
+        "accuracy": "Vendor claims arcsecond precision; not independently benchmarked in Luna",
+        "pending": [
+          "RapidAPI checkout/overage terms",
+          "caching permission and retention/DPA",
+          "historical timezone and DST fixtures",
+          "engine/API version pin"
+        ],
+        "source": "https://kerykeion.net/astrologer-api"
+      },
+      {
+        "name": "Kerykeion self-hosted",
+        "license": "AGPL-3.0; review network/distribution obligations before closed-source integration",
+        "runtime": "Python 3.12+; current v6 defaults to libephemeris/JPL, Swiss is optional",
+        "capabilities": [
+          "typed natal data",
+          "SVG",
+          "houses/aspects",
+          "transits",
+          "synastry",
+          "IANA timezone handling with explicit DST ambiguity"
+        ],
+        "cost": "No per-call vendor fee; hosting/maintenance/licensing review still required",
+        "source": "https://github.com/g-battaglia/kerykeion/blob/main/README.md"
+      },
+      {
+        "name": "Swiss Ephemeris",
+        "license": "AGPL or signed Professional contract",
+        "professionalLicenseChf": 700,
+        "cost": "Published unlimited-license price; no purchase or agreement executed",
+        "capabilities": [
+          "astronomical coordinates",
+          "house calculations"
+        ],
+        "additionalWork": [
+          "SVG rendering and aspects",
+          "geocoding and historical TZDB",
+          "data-file/version management"
+        ],
+        "source": "https://www.astro.com/swisseph/swephprice_e.htm"
+      }
+    ],
+    "recommendation": "Start by approving a hosted-provider licensing/pricing/privacy review; no subscription activated. Local contracts already prevent guessed birth-time outputs."
+  },
+  "limitations": [
+    "Luna 2.4 is not merged into main and not deployed to production.",
+    "New real AI smoke and physical iPhone interaction remain to be verified.",
+    "Extended 3/5-card AI is disabled outside explicitly opted-in staging QA; no free/paid production entitlement was introduced.",
+    "No astronomical engine, geocoder subscription or natal calculation is connected.",
+    "Local preview contains clearly labeled synthetic UI data; it is not evidence of production authentication."
+  ],
+  "iphoneChecklist": [
+    "Open the QA bot → Open Luna QA, not a browser login page",
+    "Create one-card reading inside Luna AI, reveal and enlarge; Telegram Back closes the image first",
+    "Switch tabs/reopen: same cards and interpretation, no second charge/generation",
+    "Rename/resume/delete a chat; New conversation remains visible",
+    "Check RU/EN, Dark/Light/System and keyboard/composer safe area",
+    "My Universe: confirm/edit/delete a neutral preference; verify it is absent after deletion or consent withdrawal",
+    "Treat 3/5-card local meanings as preview; no Moon Seeds or real payment test"
+  ],
+  "filesChanged": [
+    "backend/.env.example",
+    "backend/src/config.ts",
+    "backend/src/luna/modes.ts",
+    "backend/src/luna/prompts/tarot-interpretation.ts",
+    "backend/src/luna24-policy.ts",
+    "backend/src/luna24-chat.ts",
+    "backend/src/luna24.test.ts",
+    "backend/src/astrology-foundation.ts",
+    "backend/src/luna-ai.ts",
+    "backend/src/luna-ai-ui.test.ts",
+    "backend/src/server.ts",
+    "backend/src/tarot-spreads.ts",
+    "backend/src/netlify-staging-handler.ts",
+    "backend/test/luna24-chat-db-review.mjs",
+    "frontend/.env.example",
+    "frontend/index.html",
+    "frontend/src/hooks/useTheme.ts",
+    "frontend/src/config/featureFlagDefinitions.ts",
+    "frontend/src/api.ts",
+    "frontend/src/App.tsx",
+    "frontend/src/navigation/useAppRouteState.ts",
+    "frontend/src/components/LunaChat.tsx",
+    "frontend/src/components/luna24-chat.css",
+    "frontend/src/features/tarot/ChatTarotReading.tsx",
+    "frontend/src/luna2/LunaQuickActions.tsx",
+    "frontend/src/luna2/MyUniverse.tsx",
+    "frontend/src/luna2/MyUniverseOverview.tsx",
+    "frontend/src/luna2/universe-overview.css",
+    "frontend/scripts/build-production.mjs",
+    "frontend/scripts/build-staging.mjs",
+    "frontend/scripts/phase2-preview.mjs",
+    "frontend/scripts/luna24-browser-review.mjs",
+    "frontend/test/phase-1-foundation.test.mjs",
+    "frontend/test/luna-chat-state.test.mjs",
+    "frontend/test/phase-2-ui.test.mjs",
+    "frontend/test/luna24-foundation.test.mjs",
+    "supabase/migrations/20261015075000_luna24_staging_spread_dependencies.sql",
+    "docs/luna24-execution-report.json",
+    "qa/luna24-chat-db-review.json"
+  ]
+}

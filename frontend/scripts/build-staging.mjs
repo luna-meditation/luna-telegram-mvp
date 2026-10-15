@@ -8,8 +8,9 @@ assert.equal(process.versions.node.split('.')[0],'22','Staging requires Node.js 
 const frontend=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const commit=process.env.VITE_COMMIT_SHA;
 assert.match(commit??'',/^[a-f0-9]{40}$/,'Provide the verified development commit SHA');
-const enabled=['NEW_NAVIGATION','TAROT_DAILY','PERSONALIZATION','PERSONAL_MEMORY','AI_MODES','TAROT_HISTORY','TAROT_AI'];
-const disabled=['TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','DAILY_CARD_V2','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2','PAYMENT_ATOMIC'];
+const profile=process.env.LUNA_STAGING_PROFILE??'luna23';assert.ok(['luna23','luna24'].includes(profile));
+const enabled=['NEW_NAVIGATION','TAROT_DAILY','PERSONALIZATION','PERSONAL_MEMORY','AI_MODES','TAROT_HISTORY','TAROT_AI',...(profile==='luna24'?['AI_CENTRAL_EXPERIENCE','TAROT_SPREADS']:[])];
+const disabled=[...(profile==='luna24'?[]:['AI_CENTRAL_EXPERIENCE','TAROT_SPREADS']),'ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','DAILY_CARD_V2','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2','PAYMENT_ATOMIC'];
 // Public fields only: never spread server secrets into the bundler environment.
 const env={PATH:process.env.PATH,HOME:process.env.HOME,TMPDIR:process.env.TMPDIR,
  NODE_ENV:'production',VITE_API_URL:'',VITE_BOT_USERNAME:process.env.VITE_BOT_USERNAME??'',

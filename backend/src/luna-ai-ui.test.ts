@@ -17,7 +17,7 @@ test('Luna opens directly as chat and renders a message input immediately', () =
 
 test('retry keeps one user turn and reuses its client request id', () => {
   const source = readFileSync(componentPath, 'utf8');
-  assert.match(source, /const clientRequestId = retry\?\.clientRequestId \?\? requestId\(\)/);
+  assert.ok(source.includes('const clientRequestId = retry?.clientRequestId ?? (discussionId?`discuss-${discussionId}-v1`:requestId())'));
   assert.match(source, /if \(!retry\) setMessages/);
   assert.match(source, /requestId: clientRequestId/);
   assert.doesNotMatch(source, /current\.filter\(\(message\) => message\.id !== optimistic\.id\)/);

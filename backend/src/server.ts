@@ -10,6 +10,7 @@ import {FoundationError,getPersonalProfile,savePersonalProfile,deletePersonalPro
 import {personalMemoryRouter} from './personal-memory-routes.js';
 import {tarotRouter} from './tarot-router.js';
 import {runAuthorizedReleaseQa} from './release-qa.js';
+import {luna24Router} from './luna24-chat.js';
 import {runLuna21Qa} from './luna21-qa.js';
 import {luna21CommerceRouter} from './luna21-commerce-router.js';
 import { bot, configureTelegramBot, createStarsInvoiceLink, sendStarsInvoice } from './bot.js';
@@ -312,6 +313,7 @@ app.post(
 );
 
 app.use(express.json({ limit: '1mb' }));
+app.use('/api/luna/tools',rateLimit({windowMs:60_000,max:10}),luna24Router);
 
 app.get('/health', async (req, res) => {
   if (env.STAGING_MODE) {
@@ -705,7 +707,7 @@ app.get('/api/profile/me', requireTelegramWebApp, async (req, res, next) => {
 app.get('/api/luna/conversations', requireTelegramWebApp, async (req, res, next) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    res.json({ conversations: await listLunaConversations(authReq.telegramUser.telegram_id) });
+    res.json({ conversations: await listLunaConversations(authReq.telegramUser.telegram_id,req.query.offset??0) });
   } catch (error) {
     next(error);
   }

@@ -1,0 +1,12 @@
+.universe-overview{display:grid;gap:12px;padding-bottom:var(--mobile-bottom-clearance,24px)}
+.universe-overview>header{padding:22px 18px;border:1px solid var(--border-accent);border-radius:26px;background:var(--surface-primary)}
+.universe-overview>header>span{display:flex;align-items:center;gap:8px;font-size:11px;letter-spacing:.15em;color:var(--accent-gold)}
+.universe-overview h1{margin:12px 0 8px;font-size:32px;line-height:1.16;overflow-wrap:anywhere}.universe-overview p{margin:9px 0;font-size:15px;line-height:1.6;overflow-wrap:anywhere;color:var(--text-secondary)}
+.universe-overview>section{border:1px solid var(--border-subtle);border-radius:21px;padding:16px;background:var(--surface-primary)}
+.universe-overview h2{display:flex;align-items:center;gap:9px;font-size:17px;font-weight:550}.universe-overview h2 svg{color:var(--accent-gold)}
+.universe-overview small{display:block;color:var(--text-secondary);font-size:12px;line-height:1.5}
+.universe-overview button{min-height:44px;color:var(--accent-gold);font-size:14px}.universe-overview summary{min-height:44px;padding-top:12px;font-size:14px;color:var(--text-primary)}
+.universe-interest-chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:10px}.universe-interest-chips span{border:1px solid var(--border-subtle);background:var(--surface-selected);border-radius:100px;padding:7px 10px;font-size:14px;color:var(--text-primary)}
+.universe-memory-entry{display:flex;align-items:center;gap:12px;text-align:left;background:var(--surface-selected);padding:17px;border-radius:21px;border:1px solid var(--border-accent)}
+.universe-memory-entry>span:first-of-type{flex:1;min-width:0}.universe-memory-entry strong{display:block;font-size:16px;color:var(--text-primary);margin-bottom:4px}
+.my-universe.is-memory-management>details:not(:last-of-type){display:none}

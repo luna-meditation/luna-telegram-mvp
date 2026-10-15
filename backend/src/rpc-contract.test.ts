@@ -22,7 +22,7 @@ const dbSource = readFileSync(resolve(process.cwd(), 'src/db.ts'), 'utf8');
 
 test('every backend RPC call has a canonical SQL function definition', () => {
   const rpcNames = [...backendSource.matchAll(/\.rpc\(\s*['"]([^'"]+)['"]/g)].map((match) => match[1]);
-  assert.deepEqual([...new Set(rpcNames)].sort(), ['increment_meditation_play_count','luna21_analytics','luna21_buy_seed_reading','luna21_claim_stars_checkout','luna21_fulfill_existing_stars','luna21_fulfill_stars_reading','luna21_prepare_stars_reading','luna_mutate_garden','reserve_luna_chat_request','reserve_luna_daily_card','reserve_luna_tarot_reading','reserve_luna_tarot_spread','settle_luna_tarot_spread']);
+  assert.deepEqual([...new Set(rpcNames)].sort(), ['increment_meditation_play_count','luna21_analytics','luna21_buy_seed_reading','luna21_claim_stars_checkout','luna21_fulfill_existing_stars','luna21_fulfill_stars_reading','luna21_prepare_stars_reading','luna_mutate_garden','reserve_luna24_qa_ai_call','reserve_luna_chat_request','reserve_luna_daily_card','reserve_luna_tarot_reading','reserve_luna_tarot_spread','settle_luna24_qa_ai_call','settle_luna_tarot_spread']);
 
   for (const rpcName of new Set(rpcNames)) {
     assert.match(schema + additiveMigrations, new RegExp(`create (?:or replace )?function public\\.${rpcName}\\s*\\(`));

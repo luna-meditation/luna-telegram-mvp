@@ -4,7 +4,7 @@ export type ThemePreference = 'system' | 'light' | 'dark';
 export type ResolvedTheme = 'light' | 'dark';
 
 export const THEME_STORAGE_KEY = 'luna.theme.preference.v1';
-export const DEFAULT_THEME_PREFERENCE: ThemePreference = 'system';
+export const DEFAULT_THEME_PREFERENCE: ThemePreference = 'dark';
 const DARK_MEDIA_QUERY = '(prefers-color-scheme: dark)';
 
 export function readThemePreference(): ThemePreference {

@@ -110,7 +110,7 @@
 .tarot-card-flip { width: min(100%, 272px); aspect-ratio: 2 / 3; display: block; position: relative; border: 0; padding: 0; background: transparent; perspective: 1100px; text-align: initial; }
 .tarot-card-flip:disabled { opacity: 1; cursor: progress; }
 .tarot-page button:focus-visible, .tarot-question textarea:focus-visible { outline: 2px solid var(--color-gold-soft); outline-offset: 4px; }
-.tarot-card-rotator { position: absolute; inset: 0; display: block; transform-style: preserve-3d; transition: transform 650ms cubic-bezier(.2,.75,.25,1); }
+.tarot-card-rotator { position: absolute; inset: 0; display: block; transform-style: preserve-3d; transition: transform 420ms cubic-bezier(.2,.75,.25,1); }
 .tarot-card-flip.is-revealed .tarot-card-rotator { transform: rotateY(180deg); }
 .tarot-card-face { position: absolute; inset: 0; display: block; backface-visibility: hidden; -webkit-backface-visibility: hidden; box-shadow: 0 12px 35px rgba(6, 9, 30, .32); }
 .tarot-card-front { transform: rotateY(180deg); }
