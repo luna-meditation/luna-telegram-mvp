@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Pause, Play, Settings, Volume2 } from 'lucide-react';
 import './moonGardenScene.css';
+import {OptimizedImage} from '../../design-system/components/OptimizedImage';
 
 export type MoonGardenSceneStage = {
   level: number;
@@ -112,7 +113,7 @@ export function MoonGardenScene({
       {imageError && !useVideo ? (
         <div className="moon-garden-scene-fallback" role="img" aria-label={statusLabel} />
       ) : !imageError ? (
-        <img src={stage.path} alt={statusLabel} draggable={false} onError={() => setImageError(true)} className="moon-garden-scene-image" />
+        <OptimizedImage src={stage.path} alt={statusLabel} draggable={false} loading="eager" onError={() => setImageError(true)} className="moon-garden-scene-image" />
       ) : null}
       <div className="moon-garden-scene-vignette" aria-hidden="true" />
       <StarsLayer level={level} />

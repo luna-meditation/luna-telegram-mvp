@@ -10,7 +10,7 @@ export function HomeLunaGuide({language,onTalk,onPersonalize}:{language:AppLangu
  return <section className="luna2-home-guide" aria-label={en?'Your personal Luna guide':'Твоя персональная Luna'}>
   <div><Sparkles size={22}/><span>Luna AI</span></div>
   <h2>{en?'A space to find your clarity.':'Пространство для твоей ясности.'}</h2>
-  <button type="button" className="luna2-talk-primary" onClick={onTalk}>{en?'Talk to Luna':'Поговорить с Luna'}<ArrowUpRight size={19}/></button>
+  <button type="button" className="luna2-talk-primary" onClick={onTalk}><span className="luna2-talk-label">{en?'Talk to Luna':'Поговорить с Luna'}</span><ArrowUpRight size={19}/></button>
   {onPersonalize&&<button type="button" className="luna2-personalize-entry" onClick={onPersonalize}>{en?'Personalize your guide':'Настроить своего проводника'}</button>}
  </section>;
 }
