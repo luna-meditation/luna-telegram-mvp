@@ -56,9 +56,10 @@ export function assertStagingIsolation(config: StagingConfig) {
     throw new Error('The external staging Mini App URL must use HTTPS.');
   }
   if (config.STAGING_HOST === 'netlify' && config.MINI_APP_URL !== 'https://luna-staging-itfl.netlify.app') {
-    throw new Error('The Netlify staging host must match the reviewed private project.');
+    throw new Error('The Netlify staging host must match the reviewed QA project.');
   }
-  // Netlify staging uses the saved Private project visibility at the CDN perimeter.
+  // Netlify serves the static shell without team login so Telegram can open it.
+  // Server data remains behind signed Telegram auth plus the explicit QA allowlist.
   // Standalone staging still requires its own access password.
   if (config.STAGING_HOST !== 'netlify' && (!config.STAGING_ACCESS_PASSWORD || config.STAGING_ACCESS_PASSWORD.length < 20)) {
     throw new Error('Private staging requires a server-only access password of at least 20 characters.');

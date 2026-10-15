@@ -47,8 +47,14 @@ test('modern staging function preserves auth and routes without bot startup or c
     process.env.STAGING_MODE='true';
     const health = await netlifyStagingHandler(request('/health'),context);
     assert.equal(health.status,200);
+    assert.deepEqual(Object.keys(await health.json()).sort(),['commit','ok','service']);
     assert.equal(health.headers.get('cache-control'),'private, no-store');
     assert.equal((await netlifyStagingHandler(request('/.netlify/functions/luna-staging/health'),context)).status,200);
+    for (const path of ['/health?providers=true','/health?report=true','/health?providers=true&report=true','/qa/memory-test','/.netlify/functions/luna-staging/qa/memory-test']) {
+      const closed = await netlifyStagingHandler(request(path),context);
+      assert.equal(closed.status,404);
+      assert.deepEqual(await closed.json(),{code:'not_found'});
+    }
     assert.equal((await netlifyStagingHandler(request('/api/plans'),context)).status,401);
     assert.equal((await netlifyStagingHandler(request('/api/plans',{'x-telegram-init-data':'invalid'}),context)).status,401);
     assert.equal((await netlifyStagingHandler(request('/api/plans',{'x-telegram-init-data':auth(880040003)}),context)).status,403);

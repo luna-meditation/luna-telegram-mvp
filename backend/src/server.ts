@@ -77,7 +77,6 @@ import {
 import { startReminderScheduler } from './reminders.js';
 import { supportRequestInputSchema, supportStatusInputSchema } from './support-policy.js';
 import {privateStagingGate, stagingQaOnly, stagingTelegramIds} from './staging-policy.js';
-import {configureQaBotMenu} from './staging-bot.js';
 
 export const app = express();
 let telegramStartupReady=false;
@@ -89,7 +88,8 @@ if (env.STAGING_MODE) {
   if (!isNetlifyStaging && !existsSync(resolve(stagingFrontend, 'index.html'))) {
     throw new Error('Build the real staging frontend before starting private staging.');
   }
-  // No public preview, production bot mutation, billing or privileged admin writes.
+  // The staging shell may load in Telegram without Netlify team login.
+  // Every data API still requires the QA bot signature and explicit QA allowlist.
   if (!isNetlifyStaging) app.use(privateStagingGate(env.STAGING_ACCESS_PASSWORD!));
   else app.use((_req,res,next) => {
     res.setHeader('Cache-Control','private, no-store');
@@ -314,28 +314,13 @@ app.post(
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/health', async (req, res) => {
-  if (env.STAGING_MODE && req.query.providers === 'true') {
-    // Private staging preflight. Optional QA-bot setup is narrowly opt-in.
-    // No model generation, Telegram messages, user records or secret values.
-    const provider = await getLunaProviderHealth({stagingTarot:true});
-    const database = await supabase.from('meditations').select('id',{count:'exact',head:true});
-    let botReady = false;
-    try {
-      const response = await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/getMe`,{signal:AbortSignal.timeout(5000)});
-      const value = await response.json() as {ok?:boolean;result?:{username?:string}};
-      botReady = response.ok && value.ok === true && value.result?.username === 'luna_staging_qa_eger_bot';
-    } catch {/* Never log a Telegram URL containing its bot token. */}
-    const qaMenuReady = botReady && await configureQaBotMenu(env);
-    const meter=await supabase.from('ai_usage').select('model,input_tokens,output_tokens,estimated_cost,request_status').like('request_id','tarot:%');
-    const report={ok:true,service:'luna-backend',runtimeNode:process.versions.node,version:getBackendVersion(),
-      provider,botReady,qaMenuReady,databaseReady:!database.error,publicMeditations:database.count,
-      aiSmokeMeter:{available:!meter.error,requests:meter.data?.length??null,usage:meter.data??[]}};
-    if(req.query.report==='true'){
-      const safe=JSON.stringify(report,null,2).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-      res.type('html').send(`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Private Luna staging diagnostics</title><body style="font:16px system-ui;padding:24px;background:#101329;color:#eee"><h1>Luna staging diagnostics</h1><p>No keys, questions, interpretations or user identifiers are included.</p><pre style="white-space:pre-wrap;overflow-wrap:anywhere">${safe}</pre><a style="color:#e8cb86" href="/">Open Luna</a></body></html>`);
+  if (env.STAGING_MODE) {
+    // Public liveness only: no database/provider calls, QA results or bot setup.
+    if (req.query.providers !== undefined || req.query.report !== undefined) {
+      res.status(404).json({code:'not_found'});
       return;
     }
-    res.json(report);
+    res.json({ok:true,service:'luna-staging',commit:getBackendVersion().commitSha});
     return;
   }
   res.json({ ok: true, service: 'luna-backend',...(env.STAGING_MODE?{runtimeNode:process.versions.node}:{}),runtime:publicRuntimeReadiness({node:process.versions.node,commit:getBackendVersion().commitSha,supabaseUrl:env.SUPABASE_URL,model:env.AI_CHAT_MODEL,aiEnabled:env.AI_CHAT_ENABLED,keyConfigured:Boolean(env.OPENAI_API_KEY),flags:backendFeatureFlags}),luna21:{dailyCard:env.FEATURE_DAILY_CARD_V2,spreads:env.FEATURE_TAROT_SPREADS,walletV2:env.FEATURE_MOON_SEEDS_WALLET_V2,rewardsV2:env.FEATURE_ECONOMY_REWARDS_V2,paidReadings:env.FEATURE_TAROT_PAID_READINGS,premiumV2:env.FEATURE_PREMIUM_V2,paymentAtomic:env.FEATURE_PAYMENT_ATOMIC,telegramReady:telegramStartupReady} });

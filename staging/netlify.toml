@@ -1,4 +1,4 @@
-# Used explicitly for the separate private luna-staging-itfl site only.
+# Used explicitly for the separate Telegram-QA luna-staging-itfl site only.
 # Production netlify.toml remains unchanged. No secrets or automatic migrations.
 [build]
   publish = "frontend/dist-staging"
@@ -35,9 +35,9 @@
   force = true
 
 [[redirects]]
-  from = "/qa/memory-test"
-  to = "/.netlify/functions/memory-db-smoke"
-  status = 200
+  from = "/qa/*"
+  to = "/index.html"
+  status = 404
   force = true
 
 [[redirects]]

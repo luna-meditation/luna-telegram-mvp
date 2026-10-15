@@ -18,6 +18,6 @@ const catalogPlugin={name:'canonical-tarot-catalog',setup(builder){builder.onLoa
  assert.notEqual(contents,original,'Canonical catalog embedding must match exactly once');
  return {contents,loader:'js',resolveDir:dirname(args.path)};
 });}};
-for(const [source,name] of [[resolve(root,'../../backend/staging/functions/luna-staging.mjs'),'luna-staging'],[resolve(root,'functions/memory-db-smoke.mjs'),'memory-db-smoke']]){
- await build({entryPoints:[source],outfile:resolve(root,'dist-functions',name+'.mjs'),bundle:true,platform:'node',target:'node22',format:'esm',nodePaths:[blobModules],plugins:[catalogPlugin],banner:{js:'import {createRequire as __qaCreateRequire} from "node:module";const require=__qaCreateRequire(import.meta.url);'},external:['pg-native']});
-}
+// A separate output directory prevents an old QA worker being uploaded by mistake.
+// The interactive Telegram preview must never ship the one-off database/AI test.
+await build({entryPoints:[resolve(root,'../../backend/staging/functions/luna-staging.mjs')],outfile:resolve(root,'dist-telegram-functions/luna-staging.mjs'),bundle:true,platform:'node',target:'node22',format:'esm',nodePaths:[blobModules],plugins:[catalogPlugin],banner:{js:'import {createRequire as __qaCreateRequire} from "node:module";const require=__qaCreateRequire(import.meta.url);'},external:['pg-native']});
