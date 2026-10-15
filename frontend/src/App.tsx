@@ -4836,7 +4836,8 @@ function MoonGardenScene({
   ambienceVolume,
   ambienceError = false,
   onToggleAmbience,
-  onAmbienceVolume
+  onAmbienceVolume,
+  onExpand
 }: {
   profile: ProfileStats | null;
   language: AppLanguage;
@@ -4847,6 +4848,7 @@ function MoonGardenScene({
   ambienceError?: boolean;
   onToggleAmbience: () => Promise<void>;
   onAmbienceVolume: (volume: number) => void;
+  onExpand?: () => void;
 }) {
   const plantedCount = plantedGardenElements(profile).length;
   const stage = getCurrentGardenStage(plantedCount);
@@ -4871,6 +4873,8 @@ function MoonGardenScene({
       soundUnavailableLabel={copy[language].gardenAmbienceUnavailable}
       onToggleSound={() => void onToggleAmbience()}
       onSoundVolumeChange={onAmbienceVolume}
+      onExpand={onExpand}
+      expandLabel={language === 'en' ? 'Explore your garden' : 'Рассмотреть сад'}
     />
   );
 }
@@ -5038,18 +5042,18 @@ function MoonGardenPage({
           <h3>{language === 'en' ? 'Grow your quiet place.' : 'Вырасти своё тихое место.'}</h3>
         </header>
       ) : (
-        <div className="flex items-center justify-between gap-3">
+        <div className="garden-page-heading flex items-center justify-between gap-3">
           <div>
             <h2 className="type-page-title">{copy[language].moonGarden}</h2>
-            <p className="mt-1 text-sm text-lavender">{copy[language].moonGardenBody}</p>
+            <p className="garden-stage-subtitle">{language === 'en' ? `Level ${stage.level}` : `Уровень ${stage.level}`} · {stage.title[language]}</p>
           </div>
           {onBack && <button onClick={onBack} className="luna-icon-button" aria-label={copy[language].close}><X size={18} /></button>}
         </div>
       )}
 
-      <p className="journey-garden-meta" aria-label={copy[language].moonGarden}>
+      {embedded && <p className="journey-garden-meta" aria-label={copy[language].moonGarden}>
         <span>{language==='en'?`Level ${stage.level}`:`Уровень ${stage.level}`}</span><i aria-hidden="true">·</i><span>{plantedCount}/7 {language==='en'?'upgrades':'улучшений'}</span><i aria-hidden="true">·</i><span>{seeds} Moon Seeds</span>{isGardenComplete&&<strong>{copy[language].gardenComplete}</strong>}
-      </p>
+      </p>}
       <MoonGardenScene
         profile={activeProfile}
         language={language}
@@ -5060,6 +5064,7 @@ function MoonGardenPage({
         ambienceError={ambienceError}
         onToggleAmbience={onToggleAmbience}
         onAmbienceVolume={onAmbienceVolume}
+        onExpand={!embedded ? () => setGardenExpanded(true) : undefined}
       />
 
       {message && <p className="rounded-2xl bg-night/70 px-3 py-2 text-sm text-gold">{message}</p>}
@@ -5089,15 +5094,14 @@ function MoonGardenPage({
       )}
 
       {!embedded && <>
-        <button className="journey-garden-journey-link" onClick={()=>setGardenExpanded(true)}>{language==='en'?'Explore your garden':'Рассмотреть сад'}</button>
         <section className="garden-upgrade-shop" aria-label={language==='en'?'Garden upgrades':'Улучшения сада'}>
-          <h3>{isGardenComplete?(language==='en'?'Your garden collection':'Твоя коллекция сада'):(language==='en'?'Grow your garden':'Развивай свой сад')}</h3>
+          <header className="garden-shop-heading"><h3>{language==='en'?'Garden upgrades':'Улучшения сада'}</h3><span>{plantedCount}/7{isGardenComplete ? ` · ${copy[language].gardenComplete}` : ''}</span></header>
           {!activeProfile?.gardenAtomicReady&&<p>{language==='en'?'Purchases unlock after the secure shop update. Your garden and balance are preserved.':'Покупки появятся после обновления защищённого магазина. Сад и баланс сохранены.'}</p>}
           <div className="garden-upgrade-rail">{gardenElements.map((element,index)=>{
             const owned=planted.has(element.id);return <article key={element.id} data-upgrade={element.id}>
               <button className="garden-upgrade-preview" onClick={()=>setPreviewUpgrade(element)} aria-label={`${language==='en'?'Preview':'Предпросмотр'}: ${element.name[language]}`}><OptimizedImage src={gardenStages[index+1].path} sizes="160px" alt="" loading="lazy"/></button>
-              <strong>{element.name[language]}</strong><p>{gardenStages[index+1].subtitle[language]}</p>
-              <span>{element.cost} Moon Seeds</span>
+              <strong>{element.name[language]}</strong>
+              {!owned && <span>{element.cost} Moon Seeds</span>}
               {owned?<span className="garden-owned">✓ {language==='en'?'Owned':'Открыто'}</span>:<button onClick={()=>setPreviewUpgrade(element)}>{language==='en'?'View upgrade':'Подробнее'}</button>}
             </article>;
           })}</div>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pause, Play, Settings, Volume2 } from 'lucide-react';
+import { Maximize2, Pause, Play, Settings, Volume2 } from 'lucide-react';
 import './moonGardenScene.css';
 import {OptimizedImage} from '../../design-system/components/OptimizedImage';
 
@@ -23,6 +23,8 @@ type MoonGardenSceneProps = {
   soundUnavailableLabel: string;
   onToggleSound: () => void;
   onSoundVolumeChange: (volume: number) => void;
+  onExpand?: () => void;
+  expandLabel?: string;
 };
 
 const stars: Array<[number, number, number, number]> = [
@@ -68,7 +70,9 @@ export function MoonGardenScene({
   soundVolumeLabel,
   soundUnavailableLabel,
   onToggleSound,
-  onSoundVolumeChange
+  onSoundVolumeChange,
+  onExpand,
+  expandLabel
 }: MoonGardenSceneProps) {
   const [imageError, setImageError] = useState(false);
   const [soundOpen, setSoundOpen] = useState(false);
@@ -108,7 +112,7 @@ export function MoonGardenScene({
       {level >= 6 && <div className="moon-garden-deep-atmosphere" aria-hidden="true" />}
       {level >= 7 && <div className="moon-garden-full-moon-aura" aria-hidden="true" />}
       <FirefliesLayer level={level} />
-      <div className="moon-garden-scene-chip">{statusLabel}</div>
+      {onExpand ? <button type="button" className="garden-scene-expand" onClick={onExpand} aria-label={expandLabel}><Maximize2 size={16} /><span>{expandLabel}</span></button> : <div className="moon-garden-scene-chip">{statusLabel}</div>}
       <div className="moon-garden-sound-control">
         {soundOpen && (
           <div className="moon-garden-sound-panel">

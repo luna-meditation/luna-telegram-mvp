@@ -1,5 +1,9 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync,existsSync} from 'node:fs';import {createHash} from 'node:crypto';import {createRequire} from 'node:module';import {pathToFileURL} from 'node:url';
 const read=p=>readFileSync(p,'utf8'),require=createRequire(import.meta.url);
+test('garden reference composition stays compact without changing authoritative purchases',()=>{
+ const app=read('src/App.tsx'),css=read('src/premium-experience.css'),scene=read('src/components/moon-garden/MoonGardenScene.tsx');
+ assert.match(app,/garden-page-heading/);assert.match(app,/garden-shop-heading/);assert.match(css,/flex-basis: calc\(\(100% - 20px\) \/ 3\)/);assert.match(scene,/className="garden-scene-expand"/);assert.match(app,/purchasePending.current \|\| workingId/);assert.match(app,/await onPlant\(element\)/);assert.match(app,/!owned && <span>\{element.cost\} Moon Seeds/);
+});
 test('Russian spread labels distinguish three cards from five cards',()=>{assert.match(read('src/features/tarot/TarotHub.tsx'),/Расклад на 5 карт/);assert.ok(read('src/features/tarot/TarotSpread.tsx').includes("size===5?'карт':'карты'"));});
 test('all responsive assets are present, content-addressed and preserve source dimensions',()=>{
  const sources=new Map();for(const file of ['src/design-system/image-manifest.json','src/features/tarot/image-manifest.json'])for(const[source,asset]of Object.entries(JSON.parse(read(file)))){if(source.startsWith('https://'))assert.match(source,/^https:\/\/vkcdtasbdoeilgfucoax\.supabase\.co\/storage\/v1\/object\/public\/[^?]+$/);else assert.ok(existsSync('public'+source));assert.ok(asset.width>0&&asset.height>0);sources.set(source,asset);for(const v of asset.variants){const bytes=readFileSync('public'+v.src);assert.equal(bytes.length,v.bytes);assert.ok(v.src.includes(createHash('sha256').update(bytes).digest('hex').slice(0,12)));assert.ok(v.width<=asset.width);}}
