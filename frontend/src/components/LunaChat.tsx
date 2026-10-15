@@ -18,6 +18,7 @@ import { LunaQuickActions } from '../luna2/LunaQuickActions';
 import { luna2Copy } from '../luna2/copy';
 import {featureFlags} from '../config/featureFlags';
 import {MessageText} from './MessageText';
+import {MemorySaveAction,UniverseInvitation} from '../luna2/PersonalMemoryEditor';
 
 type LunaChatProps = {
   firstName: string;
@@ -321,6 +322,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
           <div><h2>Luna</h2><p>{language === 'ru' ? 'Твой тихий компаньон' : 'Your quiet companion'}</p></div>
           <button type="button" onClick={() => beginConversation()} aria-label={language === 'ru' ? 'Новый разговор' : 'New conversation'}><Plus size={20} /></button>
         </div>
+        {featureFlags.personal_memory&&<UniverseInvitation language={language}/>}
         <section className="luna-ai-recent">
           <h3>{language === 'ru' ? 'Недавние разговоры' : 'Recent Conversations'}</h3>
           {loading ? <div className="luna-ai-loading-line" /> : conversations.length ? conversations.slice(0, 6).map((conversation) => (
@@ -370,6 +372,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
           </div>
         ) : !visibleMessages.length ? (
           <div className="luna-live-empty">
+            {featureFlags.personal_memory&&<UniverseInvitation language={language}/>}
             <BrandLogo size={88} alt={language === 'ru' ? 'Логотип Luna Meditation' : 'Luna Meditation logo'} eager />
             {redesigned && <span className="luna2-ai-kicker">{luna2Copy[language].aiKicker}</span>}
             <h3>{language === 'ru' ? `Я рядом, ${firstName || 'друг'}.` : `I'm here, ${firstName || 'friend'}.`}</h3>
@@ -386,6 +389,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
               {message.role === 'assistant' ? <span className="luna-message-orb" aria-hidden="true" /> : null}
               <div className="luna-live-message-content">
                 <div className="luna-message-bubble"><MessageText text={message.content}/></div>
+                {featureFlags.personal_memory&&!thinking&&(message.id===visibleMessages.filter(m=>m.role===message.role).slice(-1)[0]?.id)&&<MemorySaveAction key={message.id} language={language} initData={initData} message={message}/>}
                 {recommendation ? <ChatMeditationCard meditation={recommendation} language={language} hasPremium={hasPremium} onOpen={() => onOpenMeditation(recommendation)} /> : null}
               </div>
             </div>

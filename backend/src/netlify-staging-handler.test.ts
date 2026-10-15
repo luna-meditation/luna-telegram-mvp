@@ -13,6 +13,19 @@ Object.assign(process.env,{
 for (const key of ['DATABASE_URL','WEBHOOK_URL','OPENAI_API_KEY','STAGING_ACCESS_PASSWORD']) delete process.env[key];
 const {netlifyStagingHandler} = await import('./netlify-staging-handler.js');
 const context = {site:{id:'a634a7fc-1ecb-47fa-8b43-edd81a7e3694'},ip:'127.0.0.1'};
+test('runtime configuration is read only on the pinned staging site',async()=>{
+  const scope=globalThis as typeof globalThis & {Netlify?:{env:{get(name:string):string|undefined}}};
+  const previous=scope.Netlify;
+  const reads:string[]=[];
+  scope.Netlify={env:{get(name){reads.push(name);return undefined;}}};
+  try {
+    assert.equal((await netlifyStagingHandler(new Request('https://example.test/health'),{site:{id:'production-site'}})).status,403);
+    assert.equal(reads.length,0);
+    assert.equal((await netlifyStagingHandler(new Request('https://luna-staging-itfl.netlify.app/health'),context)).status,200);
+    assert.ok(reads.includes('OPENAI_API_KEY'));
+    assert.ok(!reads.includes('DATABASE_URL'));
+  } finally {scope.Netlify=previous;}
+});
 function auth(id:number) {
   const params = new URLSearchParams({user:JSON.stringify({id,first_name:'Synthetic QA'}),auth_date:String(Math.floor(Date.now()/1000))});
   const data = [...params].sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>`${k}=${v}`).join('\n');
@@ -34,8 +47,14 @@ test('modern staging function preserves auth and routes without bot startup or c
     process.env.STAGING_MODE='true';
     const health = await netlifyStagingHandler(request('/health'),context);
     assert.equal(health.status,200);
+    assert.deepEqual(Object.keys(await health.json()).sort(),['commit','ok','service']);
     assert.equal(health.headers.get('cache-control'),'private, no-store');
     assert.equal((await netlifyStagingHandler(request('/.netlify/functions/luna-staging/health'),context)).status,200);
+    for (const path of ['/health?providers=true','/health?report=true','/health?providers=true&report=true','/qa/memory-test','/.netlify/functions/luna-staging/qa/memory-test']) {
+      const closed = await netlifyStagingHandler(request(path),context);
+      assert.equal(closed.status,404);
+      assert.deepEqual(await closed.json(),{code:'not_found'});
+    }
     assert.equal((await netlifyStagingHandler(request('/api/plans'),context)).status,401);
     assert.equal((await netlifyStagingHandler(request('/api/plans',{'x-telegram-init-data':'invalid'}),context)).status,401);
     assert.equal((await netlifyStagingHandler(request('/api/plans',{'x-telegram-init-data':auth(880040003)}),context)).status,403);

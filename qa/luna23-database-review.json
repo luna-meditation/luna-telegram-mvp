@@ -1,0 +1,28 @@
+{
+  "status": "PASS",
+  "engine": "PostgreSQL via PGlite 0.5.10; isolated synthetic schema",
+  "checks": [
+    "migration applies and reapplies without confirming legacy data",
+    "unrelated application rows are unchanged",
+    "legacy service-role SQL remains compatible and inserts stay unconfirmed",
+    "anon cannot bypass RLS or directly read/write memory",
+    "authenticated cannot bypass RLS or directly read/write memory",
+    "anon remains isolated under an accidental grant and row_security bypass attempt",
+    "authenticated remains isolated under an accidental grant and row_security bypass attempt",
+    "RU normalized indexes preserve different Cyrillic topics and values",
+    "Telegram authorization rejects missing or forged identity",
+    "explicit draft persists but is excluded from AI",
+    "confirming and reopening retrieves real relevant memory",
+    "cross-user list/edit/source spoofing is denied",
+    "duplicates and stale updates cannot overwrite confirmed memory",
+    "AI text cannot be promoted to a personal fact",
+    "sensitive information needs separate storage consent",
+    "sensitive tags are durable, credentials and foreign source messages are rejected",
+    "rollback disables global memory before the new feature; stored records remain intact",
+    "withdrawing either consent removes future memory context",
+    "individual and full deletion are owner-scoped"
+  ],
+  "migrationSha256": "2294c32d5316b28c63fa84374f47fb1cd799c183cca61b73e855d625c8a35afe",
+  "productionWrites": 0,
+  "realAiRequests": 0
+}

@@ -11,10 +11,10 @@ const api=new URL(process.env.VITE_API_URL?.trim()||'https://invalid.invalid');
 assert.ok(api.protocol==='https:'&&!['invalid.invalid','localhost','127.0.0.1','::1'].includes(api.hostname),'Provide the verified production VITE_API_URL');
 assert.ok(!api.username&&!api.password&&!api.search&&!api.hash,'The public API URL must not carry credentials or tokens');
 const profile=process.env.LUNA_RELEASE_PROFILE??'tarot-phase2';
-assert.ok(['tarot-phase2','luna2','luna21'].includes(profile),'Unknown approved release profile');
+assert.ok(['tarot-phase2','luna2','luna21','luna23'].includes(profile),'Unknown approved release profile');
 const foundation=['PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI'];
-const required=['NEW_NAVIGATION','TAROT_DAILY',...(['luna2','luna21'].includes(profile)?foundation:[]),...(profile==='luna21'?['DAILY_CARD_V2']:[])];
-const disabled=['TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2',...(['luna2','luna21'].includes(profile)?[]:foundation)];
+const required=['NEW_NAVIGATION','TAROT_DAILY',...(['luna2','luna21','luna23'].includes(profile)?foundation:[]),...(['luna21','luna23'].includes(profile)?['DAILY_CARD_V2']:[]),...(profile==='luna23'?['PERSONAL_MEMORY']:[])];
+const disabled=[...(profile==='luna23'?[]:['PERSONAL_MEMORY']),'TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2',...(['luna2','luna21','luna23'].includes(profile)?[]:foundation)];
 for(const key of required)assert.equal(process.env[`VITE_FEATURE_${key}`],'true',`${key} must be explicitly enabled for this release`);
 for(const key of disabled)assert.ok(!process.env[`VITE_FEATURE_${key}`]||process.env[`VITE_FEATURE_${key}`]==='false',`${key} is not part of the approved release`);
 if(profile==='luna2'){
@@ -34,6 +34,14 @@ if(profile==='luna21'){
  for(const name of ['20261014141843_luna21_daily_card.sql','20261014141847_luna21_economy_foundation.sql','20261014141850_luna21_atomic_stars_fulfillment.sql','20261014142638_luna21_tarot_spreads.sql'])assert.equal(createHash('sha256').update(readFileSync(resolve(frontend,'../supabase/migrations',name))).digest('hex'),review.migrationHashes?.[name],`Migration changed since review: ${name}`);
 }
 const commit=process.env.VITE_COMMIT_SHA||process.env.COMMIT_REF||process.env.GIT_COMMIT_SHA;
+if(profile==='luna23'){
+ const reviewPath=process.env.LUNA_RELEASE_DB_REVIEW;assert.ok(reviewPath,'Luna 2.3 requires verified backup/restore and database review');
+ const review=JSON.parse(readFileSync(reviewPath,'utf8'));
+ assert.equal(review.status,'PASS');assert.equal(review.projectId,'vkcdtasbdoeilgfucoax');assert.equal(review.productionWrites,0);
+ assert.equal(review.backupRestorePasses,2);assert.ok(review.checks.length>=23);
+ const name='20261015032917_luna23_personal_memory.sql';
+ assert.equal(createHash('sha256').update(readFileSync(resolve(frontend,'../supabase/migrations',name))).digest('hex'),review.migrationHashes?.[name],`Migration changed since review: ${name}`);
+}
 assert.match(commit??'',/^[a-f0-9]{40}$/,'A verified source commit is required');
 const env={...process.env,VITE_COMMIT_SHA:commit,VITE_DEPLOY_ENV:'production',VITE_RELEASE_PROFILE:profile};
 for(const script of ['node_modules/typescript/bin/tsc','node_modules/vite/bin/vite.js']){

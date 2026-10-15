@@ -1,0 +1,86 @@
+{
+  "release": "Luna 2.3 Phase 1 — Personal Memory & My Universe",
+  "branch": "feature/luna-2-3-personal-memory",
+  "baseCommit": "c04e502aeca40ef3ce0e43bfebe23f4fd425762c",
+  "productionChanged": false,
+  "implemented": [
+    "Reuse user_memories, canonical luna_personal_profiles, existing Tarot history and shared Luna AI transport; no duplicate user or billing system.",
+    "Structured facts, preferences, goals, interests, life context and user-saved reflections with provenance, timestamps, revision and explicit confirmation. Optional birth information stays in the canonical profile and is never included in AI context.",
+    "My Universe in Profile: portrait, optional birth information, interests, goals, discoveries and Luna memory, with optional contextual entrances from chat, Tarot and astrology preview.",
+    "Manual review, drafts, confirmation, edit, single/all deletion, private-entry exclusion and independent memory/context consents. AI text can only be saved as a symbolic reflection, not a personal fact.",
+    "At most six relevant confirmed non-private facts within 1600 serialized characters, plus at most two explicitly saved symbolic reflections only for reflection queries. No full-history retrieval; recent conversation window is bounded.",
+    "Canonical topic/value deduplication, database uniqueness, optimistic edit revisions, Telegram owner predicates, authenticated routes, 30-request/minute write surface and default-deny RLS.",
+    "Automatic legacy AI memory writes are disabled when the new feature is enabled; legacy entries are not silently confirmed. The new backend legacy reader also explicitly excludes all new memory categories if the feature is switched off.",
+    "EN/RU, Dark/Light, no duplicate native Back button, nested Back handling and keyboard-size viewport checks. Payments, prices, entitlements and Moon Seeds accounting are unchanged."
+  ],
+  "migration": {
+    "file": "supabase/migrations/20261015032917_luna23_personal_memory.sql",
+    "status": "Prepared and applied/reapplied only to isolated synthetic PostgreSQL through PGlite; not executed on any cloud Supabase project.",
+    "dependencies": ["Existing Luna users, user_memories and canonical personal profile schema, including display_name", "PostgreSQL Unicode normalization support", "Service backend continues using mandatory telegram_id owner predicates"],
+    "scope": "Only Luna public.user_memories metadata, RLS/grants and indexes; no payments, users or other application objects are changed.",
+    "stagingDrift": "Existing funvzpmpbgazsisehiru personal profile lacks display_name. It was not blindly migrated or used as proof of full Luna 2.3 integration."
+  },
+  "verification": {
+    "node": "22.23.3",
+    "frontendTests": 141,
+    "backendTests": 196,
+    "optionalBackendSqlTestSkipped": 1,
+    "isolatedPostgresChecks": 19,
+    "mobileCases": 16,
+    "mobileWidths": [360, 375, 390, 393],
+    "themes": ["dark", "light"],
+    "languages": ["en", "ru"],
+    "typecheck": "PASS frontend/backend",
+    "lint": "PASS frontend/backend",
+    "builds": "Node.js 22 frontend, backend and local feature-enabled UI preview",
+    "evidence": ["qa/luna23-database-review.json", "qa/luna23-mobile-results.json", "qa/luna23-ai-smoke-result.json"]
+  },
+  "aiSmoke": {
+    "status": "PASS",
+    "model": "gpt-5-mini",
+    "realRequests": 2,
+    "inputTokens": 398,
+    "outputTokens": 234,
+    "cachedTokens": 0,
+    "usagePricedUsd": 0.0005675,
+    "budgetUsd": 0.02,
+    "pricing": "https://developers.openai.com/api/docs/pricing",
+    "billingInvoiceVerified": false,
+    "serverOnlyKey": true,
+    "testDataOnly": true,
+    "supabaseWrites": 0,
+    "productionWrites": 0,
+    "persistedReopenVerified": true,
+    "scope": "Real provider smoke with the same relevant-memory policy and server transport, using neutral synthetic context; not a claim of cloud DB/Telegram end-to-end verification.",
+    "qaDeployment": "6ad050c6d56abee550fa7e9d",
+    "qaSite": "a634a7fc-1ecb-47fa-8b43-edd81a7e3694",
+    "qaPackaging": "Three private draft packages, zero cloud builds; first two failed before any OpenAI request. A single immutable shared reservation limits the total to two calls. Published staging and production sites were not replaced."
+  },
+  "preview": {
+    "command": "Node.js 22: frontend/scripts/phase2-preview.mjs --memory",
+    "localUrl": "http://127.0.0.1:55990/",
+    "data": "Synthetic offline UI fixtures only; no production authentication, AI, database or payments. For iPhone Safari, use the Mac LAN address on the same Wi-Fi.",
+    "productionDefaults": "FEATURE_PERSONAL_MEMORY=false and VITE_FEATURE_PERSONAL_MEMORY=false. Existing approved production build profiles reject enabling PERSONAL_MEMORY."
+  },
+  "limitations": [
+    "Physical iPhone Telegram WebView, actual software keyboard and real two-account Telegram sessions still require owner verification before release.",
+    "Isolated PostgreSQL tests use the relevant synthetic schema, not a full production database or copied personal data; cloud PostgREST/schema and account-deletion smoke remain release gates.",
+    "Relevance and sensitive-data classification are conservative heuristics, not semantic truth detection or complete DLP. Contradictions are prevented for normalized topics, not all paraphrases.",
+    "Memory management is capped at 200 active entries. Earlier legacy entries remain unconfirmed/private until deliberate review.",
+    "The old backend ignores new confirmation/privacy columns. A safe rollback MUST first set AI_MEMORY_ENABLED=false globally, before disabling PERSONAL_MEMORY or reverting backend code. Never resume the legacy memory reader on newly saved private/symbolic records.",
+    "Deleting memory does not erase conversation text, old Tarot interpretations or provider security logs. Existing separate history deletion controls remain available. Current conversation text can still provide context until its history is deleted.",
+    "Birth information is optional and canonical; no real astrology engine is connected.",
+    "UI preview persistence is process-local synthetic state. Real persistence/owner isolation is independently tested through the backend with PostgreSQL.",
+    "OpenAI store:false is not a promise of zero retention; provider abuse-monitoring logs follow its data policy."
+  ],
+  "safeReleasePlan": [
+    "Obtain explicit production approval; do not merge or deploy this phase beforehand.",
+    "Verify current production SHA, schema and all legitimate user_memories callers; save schema/grants and encrypted backup, then verify isolated restore.",
+    "Reconcile the existing staging canonical profile dependency without copying real user data; apply the reviewed memory migration there and run real Telegram/DB end-to-end tests.",
+    "Apply only the reviewed additive migration to production after separate approval; verify RLS, service_role and denied anon/authenticated access.",
+    "Deploy backend with FEATURE_PERSONAL_MEMORY=false, verify legacy behavior and existing payment/playback/chat smoke.",
+    "After QA, explicitly enable backend PERSONAL_MEMORY with PERSONALIZATION and publish the reviewed frontend with VITE_FEATURE_PERSONAL_MEMORY. No new monetization flags are enabled.",
+    "If regression occurs, FIRST set AI_MEMORY_ENABLED=false globally and verify memory retrieval/writes are disabled. ONLY THEN disable the new backend/frontend feature or revert backend code and publish a reviewed fix-forward artifact. The old reader ignores new privacy columns. Keep additive columns and user rows. Do not blindly drop columns/indexes or restore broader permissions; snapshot-based privilege rollback requires explicit review.",
+    "Verify on a physical iPhone: optional setup, privacy/confirmation states, next-chat recall, deletion/consent withdrawal, RU/EN, both themes, keyboard, Telegram Back and account switching."
+  ]
+}

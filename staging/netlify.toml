@@ -1,4 +1,4 @@
-# Used explicitly for the separate private luna-staging-itfl site only.
+# Used explicitly for the separate Telegram-QA luna-staging-itfl site only.
 # Production netlify.toml remains unchanged. No secrets or automatic migrations.
 [build]
   publish = "frontend/dist-staging"
@@ -32,6 +32,12 @@
   from = "/telegram/*"
   to = "/.netlify/functions/luna-staging/telegram/:splat"
   status = 200
+  force = true
+
+[[redirects]]
+  from = "/qa/*"
+  to = "/index.html"
+  status = 404
   force = true
 
 [[redirects]]

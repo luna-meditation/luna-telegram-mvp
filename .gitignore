@@ -28,6 +28,7 @@ build/
 .vite/
 .vercel/
 .netlify/
+frontend/dist-memory-preview/
 
 # Logs
 *.log

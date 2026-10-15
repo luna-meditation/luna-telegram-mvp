@@ -7,6 +7,7 @@ export const featureFlagKeys = [
   'moon_seeds_purchases',
   'breathwork_audio',
   'personalization',
+  'personal_memory',
   'ai_modes',
   'tarot_history',
   'tarot_ai'
@@ -24,6 +25,7 @@ export const featureFlagEnvironment: Record<FeatureFlagKey, string> = {
   moon_seeds_purchases: 'VITE_FEATURE_MOON_SEEDS_PURCHASES',
   breathwork_audio: 'VITE_FEATURE_BREATHWORK_AUDIO',
   personalization: 'VITE_FEATURE_PERSONALIZATION',
+  personal_memory: 'VITE_FEATURE_PERSONAL_MEMORY',
   ai_modes: 'VITE_FEATURE_AI_MODES',
   tarot_history: 'VITE_FEATURE_TAROT_HISTORY',
   tarot_ai: 'VITE_FEATURE_TAROT_AI'

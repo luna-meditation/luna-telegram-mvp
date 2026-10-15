@@ -1,0 +1,10 @@
+[build]
+  publish = "public"
+[functions]
+  directory = "functions"
+  node_bundler = "esbuild"
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Cache-Control = "private, no-store"

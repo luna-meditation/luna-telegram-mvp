@@ -1,0 +1,11 @@
+import {Router} from 'express';
+import {z} from 'zod';
+import type {AuthenticatedRequest} from './auth.js';
+import {getUniverse,writePersonalMemory,removePersonalMemory} from './personal-memory.js';
+const uuid=z.string().uuid();
+export const personalMemoryRouter=Router();
+personalMemoryRouter.get('/',async(req,res,next)=>{try{res.set('Cache-Control','no-store');res.json(await getUniverse((req as unknown as AuthenticatedRequest).telegramUser.telegram_id));}catch(error){next(error);}});
+personalMemoryRouter.post('/memories',async(req,res,next)=>{try{res.status(201).json(await writePersonalMemory((req as unknown as AuthenticatedRequest).telegramUser.telegram_id,req.body));}catch(error){next(error);}});
+personalMemoryRouter.patch('/memories/:id',async(req,res,next)=>{try{res.json(await writePersonalMemory((req as unknown as AuthenticatedRequest).telegramUser.telegram_id,req.body,uuid.parse(req.params.id)));}catch(error){next(error);}});
+personalMemoryRouter.delete('/memories/:id',async(req,res,next)=>{try{await removePersonalMemory((req as unknown as AuthenticatedRequest).telegramUser.telegram_id,uuid.parse(req.params.id));res.json({ok:true});}catch(error){next(error);}});
+personalMemoryRouter.delete('/memories',async(req,res,next)=>{try{await removePersonalMemory((req as unknown as AuthenticatedRequest).telegramUser.telegram_id);res.json({ok:true});}catch(error){next(error);}});

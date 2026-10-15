@@ -1,4 +1,5 @@
 import {supabase} from './db.js';
+import {env} from './config.js';
 import {personalProfileSchema,emptyPersonalProfile,type PersonalProfile} from './personalization-policy.js';
 export class FoundationError extends Error {constructor(public status:number,public code:string,message:string){super(message);}}
 export async function getPersonalProfile(telegramId:number):Promise<PersonalProfile>{
@@ -14,6 +15,13 @@ export async function savePersonalProfile(telegramId:number,body:unknown){
  return profile;
 }
 export async function deletePersonalProfile(telegramId:number){
+ if(env.FEATURE_PERSONAL_MEMORY){
+  // Erase every supplied value and revoke consent, but retain an empty privacy
+  // tombstone so old messages/cached context cannot resurrect deleted facts.
+  const {error}=await supabase.from('luna_personal_profiles').upsert({telegram_id:telegramId,...emptyPersonalProfile,updated_at:new Date().toISOString()},{onConflict:'telegram_id'});
+  if(error)throw new FoundationError(503,'personal_profile_unavailable','Could not delete your personal profile.');
+  return;
+ }
  const {error}=await supabase.from('luna_personal_profiles').delete().eq('telegram_id',telegramId);
  if(error)throw new FoundationError(503,'personal_profile_unavailable','Could not delete your personal profile.');
 }
