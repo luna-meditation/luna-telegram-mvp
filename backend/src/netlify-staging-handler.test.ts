@@ -13,6 +13,19 @@ Object.assign(process.env,{
 for (const key of ['DATABASE_URL','WEBHOOK_URL','OPENAI_API_KEY','STAGING_ACCESS_PASSWORD']) delete process.env[key];
 const {netlifyStagingHandler} = await import('./netlify-staging-handler.js');
 const context = {site:{id:'a634a7fc-1ecb-47fa-8b43-edd81a7e3694'},ip:'127.0.0.1'};
+test('runtime configuration is read only on the pinned staging site',async()=>{
+  const scope=globalThis as typeof globalThis & {Netlify?:{env:{get(name:string):string|undefined}}};
+  const previous=scope.Netlify;
+  const reads:string[]=[];
+  scope.Netlify={env:{get(name){reads.push(name);return undefined;}}};
+  try {
+    assert.equal((await netlifyStagingHandler(new Request('https://example.test/health'),{site:{id:'production-site'}})).status,403);
+    assert.equal(reads.length,0);
+    assert.equal((await netlifyStagingHandler(new Request('https://luna-staging-itfl.netlify.app/health'),context)).status,200);
+    assert.ok(reads.includes('OPENAI_API_KEY'));
+    assert.ok(!reads.includes('DATABASE_URL'));
+  } finally {scope.Netlify=previous;}
+});
 function auth(id:number) {
   const params = new URLSearchParams({user:JSON.stringify({id,first_name:'Synthetic QA'}),auth_date:String(Math.floor(Date.now()/1000))});
   const data = [...params].sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>`${k}=${v}`).join('\n');

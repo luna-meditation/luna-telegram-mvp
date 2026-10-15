@@ -5,6 +5,31 @@ type StagingContext = {site?: {id?: string}; ip?: string; requestId?: string};
 type LambdaResult = {statusCode: number; body: string; isBase64Encoded?: boolean; headers?: Record<string,string|number|boolean>; multiValueHeaders?: Record<string,string[]>};
 let adapter: ReturnType<typeof serverless> | undefined;
 
+// Modern Netlify Functions expose server configuration through Netlify.env.
+// Bridge an explicit allowlist before importing config.ts; never export values.
+const runtimeKeys = [
+  'BOT_TOKEN','BOT_USERNAME','MINI_APP_URL','FRONTEND_ORIGIN',
+  'SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','OPENAI_API_KEY',
+  'STAGING_MODE','STAGING_HOST','STAGING_SETUP_QA_BOT','STAGING_SUPABASE_PROJECT_REF','STAGING_TELEGRAM_IDS',
+  'RUN_MIGRATIONS','ALLOW_UNVERIFIED_TELEGRAM_WEBAPP','REMINDER_SCHEDULER_ENABLED',
+  'FEATURE_GARDEN_ATOMIC','FEATURE_PERSONALIZATION','FEATURE_PERSONAL_MEMORY','FEATURE_AI_MODES',
+  'FEATURE_TAROT_HISTORY','FEATURE_TAROT_AI','FEATURE_DAILY_CARD_V2','FEATURE_ECONOMY_REWARDS_V2',
+  'FEATURE_TAROT_PAID_READINGS','FEATURE_PREMIUM_V2','FEATURE_PAYMENT_ATOMIC',
+  'FEATURE_NEW_NAVIGATION','FEATURE_TAROT_DAILY','FEATURE_TAROT_SPREADS','FEATURE_ASTROLOGY',
+  'FEATURE_MOON_SEEDS_WALLET_V2','FEATURE_MOON_SEEDS_PURCHASES','FEATURE_BREATHWORK_AUDIO',
+  'AI_CHAT_MODEL','AI_CHAT_ENABLED','AI_MEMORY_ENABLED','AI_MAX_MESSAGES_PER_DAY',
+  'AI_PREMIUM_MAX_MESSAGES_PER_DAY','AI_MAX_OUTPUT_TOKENS','AI_REASONING_EFFORT','AI_REQUEST_TIMEOUT_MS',
+  'TAROT_AI_DAILY_LIMIT','TAROT_AI_GLOBAL_DAILY_LIMIT','TAROT_AI_MAX_OUTPUT_TOKENS','COMMIT_SHA'
+] as const;
+function loadRuntimeConfiguration() {
+  const runtime = (globalThis as typeof globalThis & {Netlify?: {env?: {get(name:string):string|undefined}}}).Netlify;
+  if (!runtime?.env) return;
+  for (const key of runtimeKeys) {
+    const value = runtime.env.get(key);
+    if (value !== undefined) process.env[key] = value;
+  }
+}
+
 async function boundedBody(request: Request) {
   if (!request.body) return Buffer.alloc(0);
   const reader = request.body.getReader();
@@ -26,6 +51,10 @@ async function boundedBody(request: Request) {
 
 /** Only this separate private Netlify site may load the existing Express backend. */
 export async function netlifyStagingHandler(request: Request, context: StagingContext) {
+  if (context.site?.id !== stagingSiteId) {
+    return Response.json({code:'staging_host_denied'},{status:403,headers:{'Cache-Control':'private, no-store'}});
+  }
+  loadRuntimeConfiguration();
   if (context.site?.id !== stagingSiteId || process.env.STAGING_MODE !== 'true' || process.env.STAGING_HOST !== 'netlify') {
     if(typeof request.url==='string' && new URL(request.url).searchParams.get('report')==='true') {
       const checks={siteMatched:context.site?.id===stagingSiteId,stagingMode:process.env.STAGING_MODE==='true',netlifyHost:process.env.STAGING_HOST==='netlify'};
