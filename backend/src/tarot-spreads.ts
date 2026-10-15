@@ -1,7 +1,8 @@
 import {z} from 'zod';
 import {env} from './config.js';
 import {supabase} from './db.js';
-import {FoundationError,getPersonalProfile} from './personalization.js';
+import {FoundationError} from './personalization.js';
+import {getAiPersonalProfile as getPersonalProfile} from './personal-memory.js';
 import {spreadInputSchema,spreadRequestHash,buildSpreadAiRequest,spreadInterpretationSchema,type SpreadInput} from './tarot-spread-policy.js';
 import {requestLunaResponse,responseOutputText} from './luna/ai-provider.js';
 import {stagingAiMeterRecord,type StagingAiMeterRecord} from './staging-ai-meter.js';
@@ -45,7 +46,7 @@ async function saveExtendedReading(telegramId:number,input:SpreadInput|(TarotInp
  }
  if(reserved.acquired){
   let interpretation:unknown=null,status='fallback';
-  try{const profile=env.FEATURE_PERSONALIZATION?await getPersonalProfile(telegramId):null;const meter=async(value:StagingAiMeterRecord)=>{const {error:e}=await supabase.from('ai_usage').upsert({...value,telegram_id:telegramId,request_id:`tarot:${input.clientReadingId}`},{onConflict:'telegram_id,request_id'});if(e)throw new Error('usage_save_failed');};interpretation=input.kind==='single'?await generateTarot(input,profile,requestLunaResponse,meter):await generateTarotSpread(input,profile,requestLunaResponse,meter);status='ready';}catch{/* No implicit retries or additional debit. */}
+  try{const profile=env.FEATURE_PERSONALIZATION?await getPersonalProfile(telegramId,input.intention+' '+input.question):null;const meter=async(value:StagingAiMeterRecord)=>{const {error:e}=await supabase.from('ai_usage').upsert({...value,telegram_id:telegramId,request_id:`tarot:${input.clientReadingId}`},{onConflict:'telegram_id,request_id'});if(e)throw new Error('usage_save_failed');};interpretation=input.kind==='single'?await generateTarot(input,profile,requestLunaResponse,meter):await generateTarotSpread(input,profile,requestLunaResponse,meter);status='ready';}catch{/* No implicit retries or additional debit. */}
   const update=await supabase.rpc('settle_luna_tarot_spread',{p_telegram_id:telegramId,p_client_reading_id:input.clientReadingId,p_status:status,p_interpretation:interpretation});
   if(update.error||!update.data)throw new FoundationError(503,'reading_save_failed','Your reading is saved. Please reopen it.');reading=update.data as StoredReading;
  }

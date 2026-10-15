@@ -134,6 +134,7 @@ import { breathCycleSeconds, breathPhaseAt, breathPhaseLabel, breathPractices, t
 import { HomeV2 } from './v2/pages/HomeV2';
 import { ExplorePage, FeaturePreview, SectionBack, type ExploreCategory } from './luna2/ExplorePage';
 import { ProfileOverview, WalletPage } from './luna2/ProfileOverview';
+import { MyUniverse } from './luna2/MyUniverse';
 import { BreathAudioModes, BreathingVisual } from './luna2/BreathingVisual';
 import { luna2Copy } from './luna2/copy';
 import './luna2/luna2.css';
@@ -1989,7 +1990,8 @@ function App() {
   const [access, setAccess] = useState<AccessState>(() => initialAccountCache?.access ?? { hasPremium: false, plan: 'Free' });
   const [profile, setProfile] = useState<ProfileStats | null>(() => initialAccountCache?.profile ?? null);
   const [profileNestedActive, setProfileNestedActive] = useState(false);
-  const [profileEntry, setProfileEntry] = useState<'main'|'personalization'>('main');
+  const [profileEntry, setProfileEntry] = useState<'main'|'personalization'|'universe'>('main');
+  useEffect(()=>{const open=()=>{if(!featureFlags.personal_memory)return;setProfileEntry('universe');navigatePrimary('profile');};window.addEventListener('luna-open-universe',open);return()=>window.removeEventListener('luna-open-universe',open);},[navigatePrimary]);
   const [personalDisplayName, setPersonalDisplayName] = useState<string|null>(null);
   useEffect(()=>{if(page!=='profile')setProfileEntry('main');},[page]);
   useEffect(()=>{
@@ -5266,7 +5268,7 @@ function resizeAvatarImage(file: File) {
   });
 }
 
-type ProfileSettingsView = 'main' | 'settings' | 'appearance' | 'goals' | 'notifications' | 'language' | 'subscription' | 'privacy' | 'privacy-policy' | 'support' | 'terms' | 'disclaimer' | 'personalization';
+type ProfileSettingsView = 'main' | 'settings' | 'appearance' | 'goals' | 'notifications' | 'language' | 'subscription' | 'privacy' | 'privacy-policy' | 'support' | 'terms' | 'disclaimer' | 'personalization' | 'universe';
 type RestoreState = 'idle' | 'loading' | 'success' | 'empty' | 'error';
 
 const APP_VERSION = import.meta.env.VITE_APP_VERSION ?? '0.1.0';
@@ -5347,7 +5349,7 @@ function ProfilePage({
   resolvedTheme,
   onThemePreferenceChange
 }: {
-  initialView?: 'main'|'personalization';
+  initialView?: 'main'|'personalization'|'universe';
   profile: ProfileStats | null;
   access: AccessState;
   loading: boolean;
@@ -5382,6 +5384,7 @@ function ProfilePage({
   onThemePreferenceChange: (preference: ThemePreference) => void;
 }) {
   const [view, setView] = useState<ProfileSettingsView>(initialView);
+  const universeBackRef = useRef<(()=>boolean)|null>(null);
   const [statusProgressionOpen, setStatusProgressionOpen] = useState(false);
   const [avatarActionsOpen, setAvatarActionsOpen] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
@@ -5419,7 +5422,8 @@ function ProfilePage({
       else if (avatarActionsOpen) setAvatarActionsOpen(false);
       else if (statusProgressionOpen) setStatusProgressionOpen(false);
       else if(['privacy-policy','terms','disclaimer'].includes(view))setView('privacy');
-      else setView(view==='settings'||view==='subscription'||(view==='personalization'&&initialView==='personalization')?'main':'settings');
+      else if(view==='universe'&&universeBackRef.current?.())return;
+      else setView(view==='settings'||view==='subscription'||view==='universe'||(view==='personalization'&&initialView==='personalization')?'main':'settings');
     };
 
     backButton.onClick(closeNestedSurface);
@@ -5607,6 +5611,7 @@ function ProfilePage({
       <ProfileSettingsRow icon={CreditCard} title={language==='en'?'Manage subscription':'Управление подпиской'} value={localizedPlanStatus} onClick={()=>setView('subscription')}/>
     </section>
   </ProfileChildScreen>;
+  if (view === 'universe'&&featureFlags.personal_memory) return <ProfileChildScreen title={language==='en'?'My Universe':'Мой космос'} onBack={()=>{if(!universeBackRef.current?.())setView('main');}} language={language}><MyUniverse language={language} initData={initData} firstName={firstName} goalOptions={profileGoalOptions} onBackChange={handler=>{universeBackRef.current=handler;}}/></ProfileChildScreen>;
   if (view === 'personalization') return <ProfileChildScreen title={language==='en'?'Personal Luna profile':'Личный профиль Luna'} onBack={()=>setView(initialView==='personalization'?'main':'settings')} language={language}><PersonalizationSettings language={language} firstName={firstName} initData={initData} onLanguageChange={onLanguageChange} onClose={()=>setView(initialView==='personalization'?'main':'settings')}/></ProfileChildScreen>;
 
   if (view === 'appearance') {
@@ -5924,6 +5929,7 @@ function ProfilePage({
           {language === 'en' ? 'Luna connects your Telegram session to your profile, progress, purchases, favorites, check-ins, and preferences. Personalization stays under your control.' : 'Luna связывает Telegram-сессию с профилем, прогрессом, покупками, избранным, чек-инами и настройками. Ты управляешь персонализацией.'}
         </p>
         <h3 className="text-sm font-semibold text-cream">{language === 'en' ? 'Luna Memory' : 'Память Luna'}</h3>
+        {featureFlags.personal_memory&&<p className="text-sm leading-6 text-lavender">{language==='en'?'Saved entries may include unconfirmed earlier memory. Review confirmation, privacy and AI context consent in My Universe.':'Здесь могут быть неподтверждённые прежние записи. Подтверждения, приватность и согласие на AI-контекст доступны в «Моём космосе».'}<button type="button" className="min-h-11 text-gold" onClick={()=>setView('universe')}>{language==='en'?'Open My Universe':'Открыть «Мой космос»'} →</button></p>}
         <p className="text-xs leading-5 text-lavender">{language === 'en' ? 'Memory helps Luna continue conversations with useful details you shared.' : 'Память помогает Luna продолжать разговоры с учётом полезных деталей.'}</p>
         <section className="luna-surface rounded-[24px] p-2">
           <ProfileToggleRow title={language === 'en' ? 'Allow helpful memory' : 'Разрешить полезную память'} checked={memoryEnabled} disabled={memoryLoading} onChange={(enabled) => void toggleMemory(enabled)} />
@@ -6014,6 +6020,7 @@ function ProfilePage({
       {avatarBusy && <div className="h-1 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gold transition-all" style={{ width: `${Math.max(8, avatarProgress)}%` }} /></div>}
 
       {showJourneyEntry && <ProfileOverview language={language} profile={profile} onWallet={onWallet} onJourney={onJourney} onGarden={onGarden} onActivity={onActivity} onAchievements={onAchievements} />}
+      {featureFlags.personal_memory&&<button className="universe-profile-entry" onClick={()=>setView('universe')}><span aria-hidden="true">✧</span><span><strong>{language==='en'?'My Universe':'Мой космос'}</strong><small>{language==='en'?'Your portrait, discoveries and confirmed memory':'Твой портрет, открытия и подтверждённая память'}</small></span><ChevronRight size={20}/></button>}
 
       <section className="luna-surface rounded-[26px] p-2">
         <ProfileSettingsRow icon={CreditCard} title={language === 'en' ? 'Subscription & purchases' : 'Подписка и покупки'} value={localizedPlanStatus} onClick={() => setView('subscription')} />

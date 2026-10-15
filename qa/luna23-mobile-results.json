@@ -1,0 +1,328 @@
+{
+  "status": "PASS",
+  "cases": 16,
+  "results": [
+    {
+      "width": 360,
+      "height": 800,
+      "language": "en",
+      "theme": "dark",
+      "status": "PASS",
+      "checks": [
+        "six sections",
+        "Telegram back",
+        "draft",
+        "confirm",
+        "reopen",
+        "fresh edit consent",
+        "delete",
+        "mobile keyboard geometry",
+        "AI contextual shortcut",
+        "no overflow",
+        "no runtime errors"
+      ]
+    },
+    {
+      "width": 360,
+      "height": 800,
+      "language": "en",
+      "theme": "light",
+      "status": "PASS",
+      "checks": [
+        "six sections",
+        "Telegram back",
+        "draft",
+        "confirm",
+        "reopen",
+        "fresh edit consent",
+        "delete",
+        "mobile keyboard geometry",
+        "AI contextual shortcut",
+        "no overflow",
+        "no runtime errors"
+      ]
+    },
+    {
+      "width": 360,
+      "height": 800,
+      "language": "ru",
+      "theme": "dark",
+      "status": "PASS",
+      "checks": [
+        "six sections",
+        "Telegram back",
+        "draft",
+        "confirm",
+        "reopen",
+        "fresh edit consent",
+        "delete",
+        "mobile keyboard geometry",
+        "AI contextual shortcut",
+        "no overflow",
+        "no runtime errors"
+      ]
+    },
+    {
+      "width": 360,
+      "height": 800,
+      "language": "ru",
+      "theme": "light",
+      "status": "PASS",
+      "checks": [
+        "six sections",
+        "Telegram back",
+        "draft",
+        "confirm",
+        "reopen",
+        "fresh edit consent",
+        "delete",
+        "mobile keyboard geometry",
+        "AI contextual shortcut",
+        "no overflow",
+        "no runtime errors"
+      ]
+    },
+    {
+      "width": 375,
+      "height": 812,
+      "language": "en",
+      "theme": "dark",
+      "status": "PASS",
+      "checks": [
+        "six sections",
+        "Telegram back",
+        "draft",
+        "confirm",
+        "reopen",
+        "fresh edit consent",
+        "delete",
+        "mobile keyboard geometry",
+        "AI contextual shortcut",
+        "no overflow",
+        "no runtime errors"
+      ]
+    },
+    {
+      "width": 375,
+      "height": 812,
+      "language": "en",
+      "theme": "light",
+      "status": "PASS",
+      "checks": [
+        "six sections",
+        "Telegram back",
+        "draft",
+        "confirm",
+        "reopen",
+        "fresh edit consent",
+        "delete",
+        "mobile keyboard geometry",
+        "AI contextual shortcut",
+        "no overflow",
+        "no runtime errors"
+      ]
+    },
+    {
+      "width": 375,
+      "height": 812,
+      "language": "ru",
+      "theme": "dark",
+      "status": "PASS",
+      "checks": [
+        "six sections",
+        "Telegram back",
+        "draft",
+        "confirm",
+        "reopen",
+        "fresh edit consent",
+        "delete",
+        "mobile keyboard geometry",
+        "AI contextual shortcut",
+        "no overflow",
+        "no runtime errors"
+      ]
+    },
+    {
+      "width": 375,
+      "height": 812,
+      "language": "ru",
+      "theme": "light",
+      "status": "PASS",
+      "checks": [
+        "six sections",
+        "Telegram back",
+        "draft",
+        "confirm",
+        "reopen",
+        "fresh edit consent",
+        "delete",
+        "mobile keyboard geometry",
+        "AI contextual shortcut",
+        "no overflow",
+        "no runtime errors"
+      ]
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "language": "en",
+      "theme": "dark",
+      "status": "PASS",
+      "checks": [
+        "six sections",
+        "Telegram back",
+        "draft",
+        "confirm",
+        "reopen",
+        "fresh edit consent",
+        "delete",
+        "mobile keyboard geometry",
+        "AI contextual shortcut",
+        "no overflow",
+        "no runtime errors"
+      ]
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "language": "en",
+      "theme": "light",
+      "status": "PASS",
+      "checks": [
+        "six sections",
+        "Telegram back",
+        "draft",
+        "confirm",
+        "reopen",
+        "fresh edit consent",
+        "delete",
+        "mobile keyboard geometry",
+        "AI contextual shortcut",
+        "no overflow",
+        "no runtime errors"
+      ]
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "language": "ru",
+      "theme": "dark",
+      "status": "PASS",
+      "checks": [
+        "six sections",
+        "Telegram back",
+        "draft",
+        "confirm",
+        "reopen",
+        "fresh edit consent",
+        "delete",
+        "mobile keyboard geometry",
+        "AI contextual shortcut",
+        "no overflow",
+        "no runtime errors"
+      ]
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "language": "ru",
+      "theme": "light",
+      "status": "PASS",
+      "checks": [
+        "six sections",
+        "Telegram back",
+        "draft",
+        "confirm",
+        "reopen",
+        "fresh edit consent",
+        "delete",
+        "mobile keyboard geometry",
+        "AI contextual shortcut",
+        "no overflow",
+        "no runtime errors"
+      ]
+    },
+    {
+      "width": 393,
+      "height": 852,
+      "language": "en",
+      "theme": "dark",
+      "status": "PASS",
+      "checks": [
+        "six sections",
+        "Telegram back",
+        "draft",
+        "confirm",
+        "reopen",
+        "fresh edit consent",
+        "delete",
+        "mobile keyboard geometry",
+        "AI contextual shortcut",
+        "no overflow",
+        "no runtime errors"
+      ]
+    },
+    {
+      "width": 393,
+      "height": 852,
+      "language": "en",
+      "theme": "light",
+      "status": "PASS",
+      "checks": [
+        "six sections",
+        "Telegram back",
+        "draft",
+        "confirm",
+        "reopen",
+        "fresh edit consent",
+        "delete",
+        "mobile keyboard geometry",
+        "AI contextual shortcut",
+        "no overflow",
+        "no runtime errors"
+      ]
+    },
+    {
+      "width": 393,
+      "height": 852,
+      "language": "ru",
+      "theme": "dark",
+      "status": "PASS",
+      "checks": [
+        "six sections",
+        "Telegram back",
+        "draft",
+        "confirm",
+        "reopen",
+        "fresh edit consent",
+        "delete",
+        "mobile keyboard geometry",
+        "AI contextual shortcut",
+        "no overflow",
+        "no runtime errors"
+      ]
+    },
+    {
+      "width": 393,
+      "height": 852,
+      "language": "ru",
+      "theme": "light",
+      "status": "PASS",
+      "checks": [
+        "six sections",
+        "Telegram back",
+        "draft",
+        "confirm",
+        "reopen",
+        "fresh edit consent",
+        "delete",
+        "mobile keyboard geometry",
+        "AI contextual shortcut",
+        "no overflow",
+        "no runtime errors"
+      ]
+    }
+  ],
+  "physicalTelegramVerified": false,
+  "fixtureOnly": true
+}

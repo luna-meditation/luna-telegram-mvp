@@ -10,17 +10,18 @@ import { fileURLToPath } from 'node:url';
 assert.equal(process.versions.node.split('.')[0], '22', 'Use Node.js 22');
 const frontend = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const tarotPreview = process.argv.includes('--tarot');
-const luna21Preview=process.argv.includes('--luna21');
+const memoryPreview=process.argv.includes('--memory');
+const luna21Preview=process.argv.includes('--luna21')||memoryPreview;
 const productionFlags=process.argv.includes('--production-flags');
 const refinementPreview=process.argv.includes('--refinement')||luna21Preview;
 const legacyPreview = process.argv.includes('--legacy');
 assert.ok(!(tarotPreview&&legacyPreview),'Choose either Tarot or legacy preview');
-const outputDirectory = productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
+const outputDirectory = memoryPreview?'dist-memory-preview':productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
 const output = resolve(frontend, outputDirectory);
-const flagNames = ['NEW_NAVIGATION','TAROT_DAILY','TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI','DAILY_CARD_V2','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2'];
+const flagNames = ['PERSONAL_MEMORY','NEW_NAVIGATION','TAROT_DAILY','TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI','DAILY_CARD_V2','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2'];
 if(!process.argv.includes('--serve-only')){
 const build = spawn(process.execPath,[resolve(frontend,'node_modules/vite/bin/vite.js'),'build','--outDir',outputDirectory],{
-  cwd:frontend, stdio:'inherit', env:{...process.env,...Object.fromEntries(flagNames.map(key=>[`VITE_FEATURE_${key}`,'false'])),...(refinementPreview?Object.fromEntries(['PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI'].map(key=>[`VITE_FEATURE_${key}`,'true'])):{}),...(luna21Preview?{VITE_FEATURE_DAILY_CARD_V2:'true',VITE_FEATURE_TAROT_SPREADS:productionFlags?'false':'true'}:{}),VITE_FEATURE_NEW_NAVIGATION:legacyPreview?'false':'true',VITE_FEATURE_TAROT_DAILY:tarotPreview||refinementPreview?'true':'false',VITE_API_URL:'',VITE_BOT_USERNAME:''}
+  cwd:frontend, stdio:'inherit', env:{...process.env,...Object.fromEntries(flagNames.map(key=>[`VITE_FEATURE_${key}`,'false'])),...(refinementPreview?Object.fromEntries(['PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI'].map(key=>[`VITE_FEATURE_${key}`,'true'])):{}),...(luna21Preview?{VITE_FEATURE_DAILY_CARD_V2:'true',VITE_FEATURE_TAROT_SPREADS:productionFlags?'false':'true'}:{}),VITE_FEATURE_NEW_NAVIGATION:legacyPreview?'false':'true',VITE_FEATURE_TAROT_DAILY:tarotPreview||refinementPreview?'true':'false',VITE_FEATURE_PERSONAL_MEMORY:memoryPreview?'true':'false',VITE_API_URL:'',VITE_BOT_USERNAME:''}
 });
 const code = await new Promise(done=>build.once('exit',done));
 assert.equal(code,0,'Preview build failed');
@@ -33,6 +34,7 @@ const user={first_name:'Alex',language_code:'en',lifetime_access:true,active_unt
 const profile={user,currentWeek:{weekStart:date(monday),activeDays:3,practiceDays:3,completedDays:3,completedSessions:10,listeningMinutes:42,days:[]},completed:10,completedMeditations:10,dayStreak:5,currentStreak:5,longestStreak:10,minutesListened:100,purchasedPlan:'Lifetime',calmScore:20,rewards:{7:true,14:false,30:false,100:false},moonSeeds:123,moonSeedsAvailable:123,moonSeedsEarnedTotal:345,gardenLevel:3,plantedGardenElements:['first_bloom','lantern_glow','stone_path'],achievements:{unlocked:3,total:10,items:[]}};
 let checkin=null;const messages=[];const conversation={id:'offline-qa',title:'Offline UI preview',created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
 const emptyPersonal={interests:[],preferences:'',birth_date:null,birth_time:null,birth_place:null,ai_context_consent:false};let personal={...emptyPersonal};const readings=new Map();let generated=0;
+const previewMemories=new Map();let previewMemoryEnabled=true;
 if(refinementPreview)profile.gardenAtomicReady=true;
 if(refinementPreview)profile.journeyStatus={id:'adept',rank:2,earned:true,eligibleRank:2,next:{id:'guardian',rank:3,progressPercent:75,remaining:[{key:'completedMeditations',current:10,target:20,remaining:10}]}};
 // LAN previews are HTTP. Supply an RFC4122 ID only in this isolated QA bridge;
@@ -46,6 +48,16 @@ const server=createServer(async(req,res)=>{
   try {
     if(url.pathname.startsWith('/api/')){
       let body={};if(req.method!=='GET'){let input='';for await(const part of req){input+=part;if(input.length>20000)return json({error:'Preview input too large'},413);}if(input)body=JSON.parse(input);}
+      if(memoryPreview&&url.pathname==='/api/universe')return json({memories:[...previewMemories.values()],profile:personal,identity:{firstName:user.first_name,language:user.language_code,goals:user.profile_goals},memoryEnabled:previewMemoryEnabled,contextConsent:personal.ai_context_consent});
+      if(memoryPreview&&url.pathname.startsWith('/api/universe/memories')){
+        const id=url.pathname.split('/')[4],old=id?previewMemories.get(id):null;
+        if(req.method==='DELETE'){if(id)previewMemories.delete(id);else previewMemories.clear();return json({ok:true});}
+        if(typeof body.key!=='string'||typeof body.value!=='string'||!body.key.trim()||body.value.length<2)return json({code:'invalid_memory'},400);
+        if(id&&(!old||old.revision!==body.revision))return json({code:'memory_changed'},409);
+        if([...previewMemories.values()].some(m=>m.id!==id&&m.category===body.category&&m.memory_key===body.key.trim().toLowerCase().replace(/\s+/g,'_')))return json({code:'memory_conflict'},409);
+        const now=new Date().toISOString(),record={id:id??randomUUID(),category:body.category,memory_key:body.key.trim().toLowerCase().replace(/\s+/g,'_'),memory_value:body.value,confirmation_status:body.confirmed?'confirmed':'pending',memory_kind:body.kind,is_sensitive:body.sensitiveConsent===true,source_type:body.sourceMessageId?'user_message':'user_entered',source_message_id:body.sourceMessageId??null,revision:(old?.revision??0)+1,created_at:old?.created_at??now,updated_at:now,confirmed_at:body.confirmed?now:null};previewMemories.set(record.id,record);return json(record,id?200:201);
+      }
+      if(memoryPreview&&url.pathname==='/api/luna/memory'&&req.method==='PATCH'){previewMemoryEnabled=body.enabled===true;return json({ok:true,enabled:previewMemoryEnabled});}
       if(url.pathname==='/api/users/sync')return json({user});
       if(refinementPreview&&url.pathname==='/api/personalization'){
         if(req.method==='PUT')personal={...body};if(req.method==='DELETE'){personal={...emptyPersonal};return json({ok:true});}return json(personal);
@@ -101,10 +113,10 @@ const server=createServer(async(req,res)=>{
     let path=resolve(output,`.${decodeURIComponent(url.pathname)}`);
     if(path!==output&&!path.startsWith(output+sep)){res.writeHead(403);return res.end();}
     if(!extname(path))path=resolve(output,'index.html');
-    let content=await readFile(path);if(extname(path)==='.html')content=Buffer.from(content.toString().replace(/<script\b[^>]*src=["']https:\/\/telegram\.org\/[^"']*["'][^>]*><\/script>/g,'').replace('<head>',`<head>${bridge}`).replace(/<title>[^<]+<\/title>/,'<title>Luna 2.2 UI preview — sample data</title>'));
+    let content=await readFile(path);if(extname(path)==='.html')content=Buffer.from(content.toString().replace(/<script\b[^>]*src=["']https:\/\/telegram\.org\/[^"']*["'][^>]*><\/script>/g,'').replace('<head>',`<head>${bridge}`).replace(/<title>[^<]+<\/title>/,memoryPreview?'<title>Luna 2.3 Personal Memory — sample data</title>':'<title>Luna 2.2 UI preview — sample data</title>'));
     res.writeHead(200,{'content-type':mime[extname(path)]||'application/octet-stream','cache-control':extname(path)==='.html'?'no-store':'public, max-age=86400','x-luna-preview':'synthetic-local-only','content-security-policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; media-src 'self'"});res.end(content);
   } catch {res.writeHead(404);res.end('Not available in the offline preview');}
 });
-const port=Number(process.env.PHASE2_PREVIEW_PORT??(tarotPreview?55448:55444));assert.ok(Number.isInteger(port)&&port>1024&&port<65536);
+const port=Number(process.env.PHASE2_PREVIEW_PORT??(memoryPreview?55990:tarotPreview?55448:55444));assert.ok(Number.isInteger(port)&&port>1024&&port<65536);
 const host=process.env.LUNA_PREVIEW_HOST==='0.0.0.0'?'0.0.0.0':'127.0.0.1';
 server.listen(port,host,()=>console.log(`OFFLINE QA preview on ${host}:${port} — synthetic data only; no production API, AI, payments or database writes.`));

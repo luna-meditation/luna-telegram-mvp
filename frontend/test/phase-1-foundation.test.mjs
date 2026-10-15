@@ -36,6 +36,7 @@ test('all Luna 2.0 feature flags are disabled unless explicitly enabled', () => 
     moon_seeds_purchases: false,
     breathwork_audio: false,
     personalization: false,
+    personal_memory: false,
     ai_modes: false,
     tarot_history: false,
     tarot_ai: false

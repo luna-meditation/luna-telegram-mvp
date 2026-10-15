@@ -14,7 +14,7 @@ const profile=process.env.LUNA_RELEASE_PROFILE??'tarot-phase2';
 assert.ok(['tarot-phase2','luna2','luna21'].includes(profile),'Unknown approved release profile');
 const foundation=['PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI'];
 const required=['NEW_NAVIGATION','TAROT_DAILY',...(['luna2','luna21'].includes(profile)?foundation:[]),...(profile==='luna21'?['DAILY_CARD_V2']:[])];
-const disabled=['TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2',...(['luna2','luna21'].includes(profile)?[]:foundation)];
+const disabled=['PERSONAL_MEMORY','TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2',...(['luna2','luna21'].includes(profile)?[]:foundation)];
 for(const key of required)assert.equal(process.env[`VITE_FEATURE_${key}`],'true',`${key} must be explicitly enabled for this release`);
 for(const key of disabled)assert.ok(!process.env[`VITE_FEATURE_${key}`]||process.env[`VITE_FEATURE_${key}`]==='false',`${key} is not part of the approved release`);
 if(profile==='luna2'){

@@ -1,7 +1,8 @@
 import {z} from 'zod';
 import {supabase} from './db.js';
 import {env} from './config.js';
-import {FoundationError,getPersonalProfile} from './personalization.js';
+import {FoundationError} from './personalization.js';
+import {getAiPersonalProfile as getPersonalProfile} from './personal-memory.js';
 import {tarotInputSchema,tarotRequestHash,buildTarotAiRequest,interpretationSchema,type TarotInput,type TarotInterpretation} from './tarot-policy.js';
 import {requestLunaResponse,responseOutputText} from './luna/ai-provider.js';
 import {safetyCategory} from './luna-ai-policy.js';
@@ -51,7 +52,7 @@ async function completeReservedReading(telegramId:number,input:TarotInput,reserv
  }
  if(reserved.acquired){
   let interpretation:TarotInterpretation|null=null;let status:StoredReading['status']='fallback';let reason:string|null='provider_error';
-  try{const profile=!maintenance?.excludePersonalContext&&env.FEATURE_PERSONALIZATION?await getPersonalProfile(telegramId):null;interpretation=await generateTarot(input,profile,maintenance?.transport??requestLunaResponse,maintenance?.onMeter??(async meter=>{
+  try{const profile=!maintenance?.excludePersonalContext&&env.FEATURE_PERSONALIZATION?await getPersonalProfile(telegramId,input.intention+' '+input.question):null;interpretation=await generateTarot(input,profile,maintenance?.transport??requestLunaResponse,maintenance?.onMeter??(async meter=>{
    // Meter every actual response, including invalid/incomplete AI output. No text or preferences.
    const {error:meterError}=await supabase.from('ai_usage').upsert({...meter,telegram_id:telegramId,request_id:`tarot:${input.clientReadingId}`},{onConflict:'telegram_id,request_id'});
    if(meterError)throw new Error('usage_save_failed');

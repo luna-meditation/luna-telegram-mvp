@@ -14,6 +14,7 @@ import {TarotHistory,TarotReadingTools} from './TarotReadingTools';
 import {TarotHub} from './TarotHub';
 import {DailyTarot} from './DailyTarot';
 import {luna21Flags} from '../../config/luna21Flags';
+import {UniverseInvitation} from '../../luna2/PersonalMemoryEditor';
 import {TarotSpread} from './TarotSpread';
 import './tarot.css';
 
@@ -64,6 +65,7 @@ export default function TarotPage({language,onBack,session,dispatch,registerBack
   <header className="luna2-page-heading tarot-heading"><p>{t.eyebrow}<span>{t.step} {step+1} {t.of} 4</span></p><h1 ref={heading} tabIndex={-1}>{revealed&&card?card.name[language]:titles[session.stage]}</h1>{!revealed&&<span>{descriptions[session.stage]}</span>}</header>
   {!revealed&&<ol className="tarot-progress" aria-label={`${t.step} ${step+1} ${t.of} 4`}>{t.steps.map((label,index)=><li key={index} className={index<=step?'is-current':''} aria-current={index===step?'step':undefined}><span aria-hidden="true"/><span>{label}</span></li>)}</ol>}
   {session.stage==='intention'&&<section className="tarot-intention" aria-label={t.intentionTitle}>
+   {featureFlags.personal_memory&&<UniverseInvitation language={language}/>}
    <div className="tarot-intention-intro"><div><TarotCardBack {...coverProps}/></div><p>{t.body}<span>{t.deck}</span></p></div>
    <div className="tarot-intention-grid" role="group" aria-label={t.intentionTitle}>{tarotIntentions.map(value=>{const Icon=intentionIcons[value];return <button type="button" key={value} data-intention={value} aria-pressed={session.intention===value} onClick={()=>dispatch({type:'intention',value})}><Icon size={22}/><strong>{t.intentions[value].title}</strong><span>{t.intentions[value].description}</span></button>;})}</div>
    <div className="tarot-question"><label htmlFor="tarot-question">{t.question}<span>{t.optional}</span></label><textarea id="tarot-question" rows={2} maxLength={240} value={session.question} onChange={event=>dispatch({type:'question',value:event.target.value})} placeholder={t.questionPlaceholder} aria-describedby="tarot-question-privacy"/><p id="tarot-question-privacy">{featureFlags.tarot_history?(language==='en'?'After reveal, this reading and question are saved privately. You can delete them in history. AI receives them only when you choose Reflect with Luna AI.':'После открытия расклад и вопрос сохраняются приватно. Их можно удалить в истории. AI получит их только по кнопке «Осмыслить с Luna AI».'):t.questionPrivacy}</p></div>

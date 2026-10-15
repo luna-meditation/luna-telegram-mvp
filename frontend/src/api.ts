@@ -27,6 +27,13 @@ export class ApiRequestError extends Error {
 const inFlightRequests = new Map<string, Promise<unknown>>();
 
 export type PersonalProfile={display_name?:string|null;interests:Array<'tarot'|'astrology'|'wellbeing'|'meditation'>;preferences:string;birth_date:string|null;birth_time:string|null;birth_place:string|null;ai_context_consent:boolean};
+export type PersonalMemoryCategory='personal_facts'|'preferences'|'goals'|'interests'|'birth_information'|'life_context'|'reflections';
+export type PersonalMemory={id:string;category:string;memory_key:string;memory_value:string;confirmation_status:'pending'|'confirmed';memory_kind:'fact'|'symbolic';is_sensitive:boolean;source_type:string;source_message_id:string|null;revision:number;created_at:string;updated_at:string;confirmed_at:string|null};
+export type UniverseData={memories:PersonalMemory[];profile:PersonalProfile;identity:{firstName:string;language:string;goals:string[]}|null;memoryEnabled:boolean;contextConsent:boolean};
+export type PersonalMemoryInput={category:PersonalMemoryCategory;key:string;value:string;confirmed:boolean;kind:'fact'|'symbolic';sourceMessageId?:string;revision?:number;sensitiveConsent:boolean};
+export const getUniverse=(initData?:string)=>request<UniverseData>('/api/universe',undefined,initData);
+export const writePersonalMemory=(input:PersonalMemoryInput,initData?:string,id?:string)=>request<PersonalMemory>(`/api/universe/memories${id?'/'+id:''}`,{method:id?'PATCH':'POST',body:JSON.stringify(input)},initData);
+export const removePersonalMemory=(initData?:string,id?:string)=>request<{ok:boolean}>(`/api/universe/memories${id?'/'+id:''}`,{method:'DELETE'},initData);
 export const getPersonalProfile=(initData?:string)=>request<PersonalProfile>('/api/personalization',undefined,initData);
 export const savePersonalProfile=(profile:PersonalProfile,initData?:string)=>request<PersonalProfile>('/api/personalization',{method:'PUT',body:JSON.stringify(profile)},initData);
 export const deletePersonalProfile=(initData?:string)=>request<{ok:boolean}>('/api/personalization',{method:'DELETE'},initData);

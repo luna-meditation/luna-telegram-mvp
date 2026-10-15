@@ -6,7 +6,9 @@ import { logBackendError } from './error-logging.js';
 import { buildLunaSystemPrompt, detectedIntents, recommendationGoals } from './luna/prompts/index.js';
 import {requestLunaResponse} from './luna/ai-provider.js';
 import {lunaModeSchema,buildModeInstructions,boundedModeContext} from './luna/modes.js';
-import {getPersonalProfile,FoundationError} from './personalization.js';
+import {FoundationError} from './personalization.js';
+import {getAiPersonalProfile} from './personal-memory.js';
+import {confirmedMemoryPrompt} from './luna/prompts/memory-policy.js';
 import {permittedPersonalContext} from './personalization-policy.js';
 import {
   memoryCandidateSchema,
@@ -587,8 +589,8 @@ export function buildLunaOpenAiRequest(input: {
     model: env.AI_CHAT_MODEL,
     store: false,
     reasoning: { effort: env.AI_REASONING_EFFORT },
-    instructions: mode?systemPrompt(input.language,JSON.stringify(input.catalog.slice(0,8)),JSON.stringify(modeContext))+'\n\n'+buildModeInstructions(mode,input.language,modeContext):systemPrompt(input.language, JSON.stringify(input.catalog), JSON.stringify(input.context)),
-    input: (mode?input.recent.slice(-8):input.recent).map((message,index,array) => ({ role: message.role, content: mode?message.content.slice(0,index===array.length-1?2000:1000):message.content })),
+    instructions: (mode?systemPrompt(input.language,JSON.stringify(input.catalog.slice(0,8)),JSON.stringify(modeContext))+'\n\n'+buildModeInstructions(mode,input.language,modeContext):systemPrompt(input.language, JSON.stringify(input.catalog), JSON.stringify(input.context)))+(env.FEATURE_PERSONAL_MEMORY?'\n'+confirmedMemoryPrompt:''),
+    input: (mode||env.FEATURE_PERSONAL_MEMORY?input.recent.slice(-8):input.recent).map((message,index,array) => ({ role: message.role, content: mode||env.FEATURE_PERSONAL_MEMORY?message.content.slice(0,index===array.length-1?2000:1000):message.content })),
     max_output_tokens: input.maxOutputTokens ?? env.AI_MAX_OUTPUT_TOKENS,
     text: lunaStructuredTextFormat()
   };
@@ -767,8 +769,8 @@ function relevantMemories(message: string, memories: Array<{ category: string; m
 
 async function loadContext(telegramId: number, conversationId: string, currentMessage: string) {
   const [{ data: recent }, { data: memories }, { data: user }, { data: checkin }, { data: catalog }, { data: conversation }] = await Promise.all([
-    supabase.from('ai_messages').select('role, content, metadata, created_at').eq('conversation_id', conversationId).order('created_at', { ascending: false }).limit(env.AI_RECENT_MESSAGE_LIMIT),
-    supabase.from('user_memories').select('category, memory_key, memory_value').eq('telegram_id', telegramId).eq('is_active', true).order('updated_at', { ascending: false }).limit(30),
+    supabase.from('ai_messages').select('role, content, metadata, created_at').eq('conversation_id', conversationId).eq('telegram_id', telegramId).order('created_at', { ascending: false }).limit(env.AI_RECENT_MESSAGE_LIMIT),
+    supabase.from('user_memories').select('category, memory_key, memory_value').eq('telegram_id', telegramId).in('category', memoryCategories).eq('is_active', true).order('updated_at', { ascending: false }).limit(30),
     supabase.from('users').select('first_name, language_code, profile_goals, ai_memory_enabled').eq('telegram_id', telegramId).maybeSingle(),
     supabase.from('daily_checkins').select('mood, sleep_range, available_minutes, local_date').eq('telegram_id', telegramId).order('local_date', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('meditations').select('id, title, subtitle, description, category, duration, cover_image, audio_file, premium, published, mood, play_count, created_at, translations').eq('published', true).order('created_at', { ascending: false }).limit(40),
@@ -781,7 +783,7 @@ async function loadContext(telegramId: number, conversationId: string, currentMe
   const context = {
     profile: user ? { firstName: user.first_name, goals: user.profile_goals } : null,
     latestCheckin: checkin ?? null,
-    memories: user?.ai_memory_enabled && env.AI_MEMORY_ENABLED ? relevantMemories(currentMessage, memories ?? []) : [],
+    memories: !env.FEATURE_PERSONAL_MEMORY && user?.ai_memory_enabled && env.AI_MEMORY_ENABLED ? relevantMemories(currentMessage, memories ?? []) : [],
     pendingState,
     conversationState
   };
@@ -815,6 +817,7 @@ async function saveUsage(input: {
 }
 
 async function saveMemories(telegramId: number, conversationId: string, sourceMessageId: string, candidates: z.infer<typeof memoryCandidateSchema>[], sourceMessage: string) {
+  if (env.FEATURE_PERSONAL_MEMORY) return;
   const valid = validMemoryCandidates(candidates, sourceMessage);
   if (!valid.length) return;
   const rows = valid.map((candidate) => ({
@@ -903,7 +906,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
   const telegramId = user.telegram_id;
   if(input.mode&&!env.FEATURE_AI_MODES)throw new FoundationError(503,'mode_disabled','This Luna mode is not enabled.');
   if(input.mode==='astrology')throw new FoundationError(503,'astrology_unavailable','Calculated astrology is not available yet.');
-  const personal=input.mode&&env.FEATURE_PERSONALIZATION?permittedPersonalContext(await getPersonalProfile(telegramId)):null;
+  const personal=(input.mode||env.FEATURE_PERSONAL_MEMORY)&&env.FEATURE_PERSONALIZATION?permittedPersonalContext(await getAiPersonalProfile(telegramId,input.message)):null;
   let readingContext:unknown=null;
   if(input.readingId){
     if(!env.FEATURE_TAROT_HISTORY||input.mode!=='tarot')throw new FoundationError(503,'reading_context_unavailable','Reading context is unavailable.');
@@ -1123,8 +1126,9 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     });
     const modelContext = {
       ...context,
+      ...(env.FEATURE_PERSONAL_MEMORY?{profile:null,latestCheckin:null,personalContext:personal}:{}),
       ...(input.mode?{modeContext:{mode:input.mode,personalContext:personal,readingContext}}:{}),
-      userGoals: Array.isArray(context.profile?.goals) ? context.profile.goals : [],
+      userGoals: !env.FEATURE_PERSONAL_MEMORY&&Array.isArray(context.profile?.goals) ? context.profile.goals : [],
       runtimeDecision: intentResolution,
       runtimeRecommendation: runtimeRecommendation ? {
         intent: runtimeRecommendation.intent,

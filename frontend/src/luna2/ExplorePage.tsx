@@ -3,6 +3,8 @@ import type { AppLanguage } from '../api';
 import { luna2Copy } from './copy';
 import { tarotCopy } from '../features/tarot/copy';
 import {OptimizedImage} from '../design-system/components/OptimizedImage';
+import {featureFlags} from '../config/featureFlags';
+import {UniverseInvitation} from './PersonalMemoryEditor';
 
 export type ExploreCategory = 'tarot' | 'astrology' | 'meditations' | 'breathwork';
 export const exploreCategories: readonly ExploreCategory[] = ['tarot', 'astrology', 'meditations', 'breathwork'];
@@ -52,6 +54,7 @@ export function FeaturePreview({ kind, language, featureEnabled, onBack, onMedit
       <h1>{tarot ? t.tarotPreviewTitle : t.astrologyPreviewTitle}</h1>
       <p>{tarot ? t.tarotPreviewBody : t.astrologyPreviewBody}</p>
     </section>
+    {featureFlags.personal_memory&&<UniverseInvitation language={language}/>}
     <div className="luna2-preview-details">{(tarot ? t.tarotDetails : t.astrologyDetails).map(label => <span key={label}><Sparkles size={16} />{label}</span>)}</div>
     <p className="luna2-preview-notice" role="status">{t.previewNotice}</p>
     <section className="luna2-available-now"><p>{t.availableNow}</p><button type="button" onClick={onMeditate}>{t.openMeditations}<ArrowUpRight size={18} /></button></section>

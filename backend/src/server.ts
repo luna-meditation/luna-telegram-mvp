@@ -7,6 +7,7 @@ import { ZodError } from 'zod';
 import { requireTelegramWebApp, type AuthenticatedRequest } from './auth.js';
 import { env } from './config.js';
 import {FoundationError,getPersonalProfile,savePersonalProfile,deletePersonalProfile} from './personalization.js';
+import {personalMemoryRouter} from './personal-memory-routes.js';
 import {tarotRouter} from './tarot-router.js';
 import {runAuthorizedReleaseQa} from './release-qa.js';
 import {runLuna21Qa} from './luna21-qa.js';
@@ -833,6 +834,8 @@ app.route('/api/personalization')
  .get(async(req,res,next)=>{try{res.json(await getPersonalProfile((req as AuthenticatedRequest).telegramUser.telegram_id));}catch(error){next(error);}})
  .put(async(req,res,next)=>{try{res.json(await savePersonalProfile((req as AuthenticatedRequest).telegramUser.telegram_id,req.body));}catch(error){next(error);}})
  .delete(async(req,res,next)=>{try{await deletePersonalProfile((req as AuthenticatedRequest).telegramUser.telegram_id);res.json({ok:true});}catch(error){next(error);}});
+
+app.use('/api/universe',requireTelegramWebApp,rateLimit({windowMs:60_000,max:30}),(_req,res,next)=>env.FEATURE_PERSONAL_MEMORY?next():res.status(404).json({code:'feature_disabled'}),personalMemoryRouter);
 
 app.post('/api/moon-garden/dev', requireTelegramWebApp, async (req, res, next) => {
   try {
