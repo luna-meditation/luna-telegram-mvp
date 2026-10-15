@@ -1,0 +1,97 @@
+{
+  "title": "Luna 2.3 production release preflight — 2026-10-15",
+  "status": "PRE_RELEASE_VALIDATED_PRODUCTION_NOT_CHANGED",
+  "production": {
+    "branch": "main",
+    "commit": "c04e502aeca40ef3ce0e43bfebe23f4fd425762c",
+    "netlifyDeploy": "6ad0356825db9043fddfa9bf",
+    "railwayDeploy": "d33d0603-3b2d-4384-9ff3-ae3858f69956",
+    "supabaseProject": "vkcdtasbdoeilgfucoax",
+    "postgres": "17.6.1.127",
+    "node": "22.14.0"
+  },
+  "development": {
+    "branch": "feature/luna-2-3-personal-memory",
+    "base": "c04e502aeca40ef3ce0e43bfebe23f4fd425762c",
+    "baseIncluded": true
+  },
+  "backup": {
+    "status": "PASS",
+    "capturedAt": "2026-10-15T06:43:47.182577Z",
+    "scope": "35 Luna-owned application tables, 14 RPCs, all related schema/constraints/indexes/RLS/grants, two referenced user avatars",
+    "rows": 1313,
+    "restorePasses": 2,
+    "avatarsRestore": "PASS",
+    "excluded": "Unrelated applications, hosted Auth infrastructure, global media library and external secrets",
+    "privateArchiveOutsideGit": true,
+    "productionWrites": 0
+  },
+  "migration": {
+    "file": "20261015032917_luna23_personal_memory.sql",
+    "sha256": "2294c32d5316b28c63fa84374f47fb1cd799c183cca61b73e855d625c8a35afe",
+    "productionStatus": "Pending application after final freshness check",
+    "stagingStatus": "Applied and verified",
+    "displayNameDependency": "Already present in production; do not reapply compatibility DDL",
+    "oldSecurityMigration": "Already applied in production as 20261014124825; do not reapply",
+    "review": "qa/luna23-release-db-review.json",
+    "checks": 33,
+    "productionMatchedLocale": "ICU en-US, en_US.UTF-8, UTC",
+    "legacyMemoryCount": 14,
+    "legacyAutoConfirmation": false
+  },
+  "privacyFixes": [
+    "Drop old transcript AND cached conversation/pending state after a memory privacy cutoff, including ambiguous equal timestamps.",
+    "Keep current authenticated user message, without deleting stored chat history.",
+    "Erasing personal profile clears supplied values and consent while retaining only an empty privacy cutoff tombstone.",
+    "Memory mutations create a privacy cutoff even before optional profile setup.",
+    "Exclude sensitive canonical preferences on every AI retrieval path, including memory-off.",
+    "Pass confirmed-memory update timestamps and explicit conflict priority; never auto-save AI guesses."
+  ],
+  "tests": {
+    "node": "22.23.3",
+    "frontendPass": 142,
+    "backendPass": 200,
+    "optionalSqlSkip": 1,
+    "syntheticDatabaseChecks": 22,
+    "productionSchemaNativeChecks": 11,
+    "typecheck": "PASS frontend/backend",
+    "lint": "PASS frontend/backend",
+    "productionArtifact": "Pending exact release commit build"
+  },
+  "existingConditions": {
+    "annualStars": 750,
+    "lifetimeStars": 2499,
+    "paymentAtomic": true,
+    "dailyCardV2": true,
+    "newPaidReadings": false,
+    "newSeedEconomy": false,
+    "spreads": false,
+    "astrology": false
+  },
+  "priorStagingProof": {
+    "realPersistenceChecks": 32,
+    "realTelegramAuthAndMemoryRead": "HTTP 200 observed after owner iPhone launch",
+    "iphoneOpened": true,
+    "url": "https://luna-staging-itfl.netlify.app/",
+    "bot": "luna_staging_qa_eger_bot"
+  },
+  "aiNewBudget": {
+    "maximumUsd": 0.02,
+    "callsInitiated": 0,
+    "spentUsd": 0
+  },
+  "recovery": [
+    "On a memory regression, disable AI_MEMORY_ENABLED first, then PERSONAL_MEMORY; retain additive schema and user data.",
+    "Do not restore old backend memory readers over new private/confirmed entries.",
+    "Do not replay this snapshot over live user activity or remove additive populated columns.",
+    "Frontend recovery is a reviewed fix-forward release, never restoreSiteDeploy."
+  ],
+  "next": [
+    "Exact-commit local build and mobile regression checks.",
+    "Final fresh encrypted backup and isolated restore before any production DDL.",
+    "Apply only personal-memory migration; compare shared-project metadata fingerprints.",
+    "Merge reviewed PR with Netlify auto-build skipped; deploy compatible backend, preserving Stars and monetization flags.",
+    "Publish one prebuilt frontend artifact and verify live commit, API, assets and permitted neutral AI smoke.",
+    "Create separate Luna 2.4 development branch only after Luna 2.3 release."
+  ]
+}

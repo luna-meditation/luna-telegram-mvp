@@ -1,0 +1,53 @@
+{
+  "status": "PASS",
+  "projectId": "vkcdtasbdoeilgfucoax",
+  "productionWrites": 0,
+  "backupRestorePasses": 2,
+  "checks": [
+    "migration applies and reapplies without confirming legacy data",
+    "unrelated application rows are unchanged",
+    "legacy service-role SQL remains compatible and inserts stay unconfirmed",
+    "anon cannot bypass RLS or directly read/write memory",
+    "authenticated cannot bypass RLS or directly read/write memory",
+    "anon remains isolated under an accidental grant and row_security bypass attempt",
+    "authenticated remains isolated under an accidental grant and row_security bypass attempt",
+    "RU normalized indexes preserve different Cyrillic topics and values",
+    "Telegram authorization rejects missing or forged identity",
+    "explicit draft persists but is excluded from AI",
+    "confirming and reopening retrieves real relevant memory",
+    "cross-user list/edit/source spoofing is denied",
+    "duplicates and stale updates cannot overwrite confirmed memory",
+    "AI text cannot be promoted to a personal fact",
+    "sensitive information needs separate storage consent",
+    "sensitive tags are durable, credentials and foreign source messages are rejected",
+    "rollback disables global memory before the new feature; stored records remain intact",
+    "withdrawing either consent removes future memory context",
+    "individual and full deletion are owner-scoped",
+    "memory privacy cutoff exists even before optional profile setup",
+    "profile erasure retains only empty privacy tombstone, not supplied values or consent",
+    "sensitive canonical preferences stay excluded even while the memory switch is off",
+    "Production-matched ICU en-US locale and UTC timezone",
+    "Only reviewed personal-memory migration applied to restored production schema",
+    "Migration safely reapplies",
+    "All original values in 35 Luna tables preserved exactly",
+    "All existing legacy memory stays unconfirmed/private",
+    "anon read/write and RLS-bypass attempts denied",
+    "authenticated read/write and RLS-bypass attempts denied",
+    "Current production service_role legacy insert remains compatible",
+    "RU normalized unique indexes distinguish real Cyrillic values under ICU",
+    "service_role confirmed-memory update/delete works",
+    "Isolated QA fixtures roll back without data changes"
+  ],
+  "migrationHashes": {
+    "20261015032917_luna23_personal_memory.sql": "2294c32d5316b28c63fa84374f47fb1cd799c183cca61b73e855d625c8a35afe"
+  },
+  "nativeDatabase": "luna23_release_review_1792047922152",
+  "matchedLocale": {
+    "datlocprovider": "i",
+    "datlocale": "en-US",
+    "datctype": "en_US.UTF-8"
+  },
+  "restoredTables": 35,
+  "preservedRows": 1313,
+  "newPaidOperations": 0
+}

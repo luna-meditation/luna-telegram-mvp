@@ -8,7 +8,7 @@ import {requestLunaResponse} from './luna/ai-provider.js';
 import {lunaModeSchema,buildModeInstructions,boundedModeContext} from './luna/modes.js';
 import {FoundationError} from './personalization.js';
 import {getAiPersonalProfile,getMemoryContextBoundary,advanceMemoryContextBoundary} from './personal-memory.js';
-import {messagesAfterMemoryBoundary} from './personal-memory-policy.js';
+import {messagesAfterMemoryBoundary,conversationStateAfterMemoryBoundary} from './personal-memory-policy.js';
 import {confirmedMemoryPrompt} from './luna/prompts/memory-policy.js';
 import {permittedPersonalContext} from './personalization-policy.js';
 import {
@@ -780,8 +780,15 @@ async function loadContext(telegramId: number, conversationId: string, currentMe
   ]);
 
   const recentMessages = [...messagesAfterMemoryBoundary(recent ?? [],memoryBoundary)].reverse();
-  const pendingState = inferPendingStateFromRecent(conversation?.pending_state, recentMessages);
-  const conversationState = recoverConversationState(conversation?.conversation_state, recentMessages);
+  // Same-millisecond timestamps are conservatively excluded; the authenticated
+  // current request is always explicit context, never recovered historical memory.
+  if(memoryBoundary&&(recentMessages.at(-1)?.role!=='user'||recentMessages.at(-1)?.content!==currentMessage)){
+    recentMessages.push({role:'user',content:currentMessage,metadata:null,created_at:new Date().toISOString()});
+  }
+  const storedState = conversationStateAfterMemoryBoundary(conversation?.conversation_state,memoryBoundary);
+  const storedPending = !memoryBoundary || storedState ? conversation?.pending_state : null;
+  const pendingState = inferPendingStateFromRecent(storedPending, recentMessages);
+  const conversationState = recoverConversationState(storedState, recentMessages);
   const context = {
     profile: user ? { firstName: user.first_name, goals: user.profile_goals } : null,
     latestCheckin: checkin ?? null,

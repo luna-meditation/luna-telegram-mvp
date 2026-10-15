@@ -6,11 +6,18 @@
   NODE_VERSION = "22"
   PNPM_VERSION = "9.15.0"
 
-# Only the approved frontend Tarot release. Development defaults stay disabled.
+# Approved Luna 2.3 release. Development and unfinished-product defaults stay disabled.
 [context.production]
   command = "pnpm --filter @luna/frontend build:production"
 
 [context.production.environment]
+  LUNA_RELEASE_PROFILE = "luna23"
+  LUNA_RELEASE_DB_REVIEW = "../qa/luna23-release-db-review.json"
+  VITE_FEATURE_PERSONALIZATION = "true"
+  VITE_FEATURE_PERSONAL_MEMORY = "true"
+  VITE_FEATURE_AI_MODES = "true"
+  VITE_FEATURE_TAROT_HISTORY = "true"
+  VITE_FEATURE_TAROT_AI = "true"
   VITE_FEATURE_NEW_NAVIGATION = "true"
   VITE_FEATURE_TAROT_DAILY = "true"
   VITE_FEATURE_TAROT_SPREADS = "false"

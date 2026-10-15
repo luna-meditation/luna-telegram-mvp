@@ -4,7 +4,20 @@ import {getPersonalProfile,FoundationError} from './personalization.js';
 import {memoryWriteSchema,canonicalMemoryKey,normalizedMemoryValue,potentiallySensitive,containsCredential,selectRelevantMemories,selectRelevantReflections,type PersonalMemory} from './personal-memory-policy.js';
 const fields='id,category,memory_key,memory_value,confirmation_status,memory_kind,is_sensitive,source_type,source_message_id,revision,created_at,updated_at,confirmed_at';
 // Reuse canonical profile metadata as a privacy boundary, without deleting chat history.
-export async function advanceMemoryContextBoundary(owner:number){if(!env.FEATURE_PERSONAL_MEMORY)return;const {error}=await supabase.from('luna_personal_profiles').update({updated_at:new Date().toISOString()}).eq('telegram_id',owner);if(error)throw new FoundationError(503,'memory_unavailable','Could not update memory privacy boundary.');}
+export async function advanceMemoryContextBoundary(owner:number){
+ if(!env.FEATURE_PERSONAL_MEMORY)return;
+ const updated_at=new Date().toISOString();
+ const changed=await supabase.from('luna_personal_profiles').update({updated_at}).eq('telegram_id',owner).select('telegram_id');
+ if(changed.error)throw new FoundationError(503,'memory_unavailable','Could not update memory privacy boundary.');
+ if(changed.data?.length)return;
+ // A user can manage memory before optional profile setup. Persist only the cutoff.
+ const inserted=await supabase.from('luna_personal_profiles').insert({telegram_id:owner,updated_at});
+ if(inserted.error?.code==='23505'){
+  const raced=await supabase.from('luna_personal_profiles').update({updated_at}).eq('telegram_id',owner).select('telegram_id');
+  if(!raced.error&&raced.data?.length)return;
+ } else if(!inserted.error)return;
+ throw new FoundationError(503,'memory_unavailable','Could not update memory privacy boundary.');
+}
 export async function getMemoryContextBoundary(owner:number){if(!env.FEATURE_PERSONAL_MEMORY)return undefined;const {data,error}=await supabase.from('luna_personal_profiles').select('updated_at').eq('telegram_id',owner).maybeSingle();if(error)throw new FoundationError(503,'memory_unavailable','Could not verify memory privacy boundary.');return data?.updated_at as string|undefined;}
 export async function listPersonalMemories(owner:number){const {data,error}=await supabase.from('user_memories').select(fields).eq('telegram_id',owner).eq('is_active',true).order('updated_at',{ascending:false}).limit(200);if(error)throw new FoundationError(503,'memory_unavailable','Memory is unavailable.');return (data??[]) as PersonalMemory[];}
 export async function getUniverse(owner:number){const [memories,profile,{data:user}]=await Promise.all([listPersonalMemories(owner),getPersonalProfile(owner),supabase.from('users').select('first_name,language_code,profile_goals,ai_memory_enabled').eq('telegram_id',owner).maybeSingle()]);return {memories,profile,identity:user?{firstName:user.first_name,language:user.language_code,goals:user.profile_goals??[]}:null,memoryEnabled:Boolean(user?.ai_memory_enabled),contextConsent:profile.ai_context_consent};}
@@ -22,7 +35,9 @@ export async function writePersonalMemory(owner:number,body:unknown,id?:string){
 }
 export async function removePersonalMemory(owner:number,id?:string){await advanceMemoryContextBoundary(owner);let query=supabase.from('user_memories').delete().eq('telegram_id',owner);if(id)query=query.eq('id',id);const {error}=await query;if(error)throw new FoundationError(503,'memory_unavailable','Could not delete memory.');}
 export async function getAiPersonalProfile(owner:number,query=''){
- const profile=await getPersonalProfile(owner);if(!env.FEATURE_PERSONAL_MEMORY||!env.AI_MEMORY_ENABLED||!profile.ai_context_consent)return profile;
+ const savedProfile=await getPersonalProfile(owner);
+ const profile=env.FEATURE_PERSONAL_MEMORY?{...savedProfile,preferences:potentiallySensitive(savedProfile.preferences)?'':savedProfile.preferences}:savedProfile;
+ if(!env.FEATURE_PERSONAL_MEMORY||!env.AI_MEMORY_ENABLED||!profile.ai_context_consent)return profile;
  const {data:user,error}=await supabase.from('users').select('ai_memory_enabled').eq('telegram_id',owner).maybeSingle();if(error||!user?.ai_memory_enabled)return profile;
  try{const rows=await listPersonalMemories(owner);return {...profile,preferences:potentiallySensitive(profile.preferences)?'':profile.preferences,confirmed_memories:selectRelevantMemories(rows,query),saved_reflections:selectRelevantReflections(rows,query)};}catch{return {...profile,preferences:''};}
 }
