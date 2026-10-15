@@ -62,6 +62,7 @@ try{
       assert.equal(await page.evaluate(()=>window.Telegram.WebApp.BackButton.isVisible),true);
       await page.evaluate(()=>window.__qaBack());await page.locator('[data-page="profile"]').waitFor();
     }
+    await page.getByRole('button',{name:language==='en'?/^Settings/:/^Настройки/}).click();
     await page.getByRole('button',{name:language==='en'?/Appearance/:/Оформление/}).click();
     assert.equal(await page.evaluate(()=>window.Telegram.WebApp.BackButton.isVisible),true);
     await page.locator('.appearance-theme-card').nth(0).click();
@@ -69,6 +70,8 @@ try{
     await page.locator('.appearance-theme-card').nth(1).click();
     assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
     if(theme==='light')await page.locator('.appearance-theme-card').nth(0).click();
+    await page.evaluate(()=>window.__qaBack());
+    await page.getByRole('heading',{name:language==='en'?'Settings':'Настройки',exact:true}).waitFor();
     await page.evaluate(()=>window.__qaBack());
     await page.locator('.bottom-navigation').waitFor({state:'visible'});
     await page.locator('.bottom-navigation button').first().click();

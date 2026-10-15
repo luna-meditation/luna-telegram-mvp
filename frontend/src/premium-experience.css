@@ -70,6 +70,8 @@ button:focus-visible,summary:focus-visible { outline: 2px solid var(--accent-lun
 .tarot-ai-reflection h3 { font: 600 16px/1.4 var(--font-sans); margin: 0 0 6px; }
 .tarot-ai-reflection p { margin: 0; font-size: 15px; line-height: 1.65; }
 .tarot-ai-reflection .tarot-ai-label { font-size: 12px; letter-spacing: .06em; }
+.tarot-ai-reflection .tarot-ai-label { color: var(--accent-gold-text); }
+:root[data-theme="dark"] .luna2-breath .breath-circle-visual { background-image: var(--luna-night-image); }
 .tarot-ai-details { border-top: 1px solid var(--border-subtle); }
 .tarot-ai-details>summary { cursor: pointer; display: flex; align-items: center; min-height: 48px; font-size: 14px; color: var(--accent-gold-text); }
 .tarot-ai-details>div { margin-bottom: 15px; }

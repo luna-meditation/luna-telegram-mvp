@@ -97,7 +97,8 @@ test('Garden keeps one compact upgrade action and moves all eight stages behind 
   assert.match(gardenPage, /journey-garden-journey-link/);
   assert.match(gardenPage, /journey-garden-sheet/);
   assert.match(gardenPage, /!embedded[\s\S]*garden-upgrade-rail[\s\S]*gardenElements\.map\(/);
-  assert.match(gardenPage, /plantedCount}\/7 upgrades/);
+  assert.match(gardenPage, /plantedCount}\/7/);
+  assert.match(gardenPage, /language==='en'\?'upgrades':'улучшений'/);
   assert.doesNotMatch(gardenPage, /journey-garden-milestones/);
 });
 

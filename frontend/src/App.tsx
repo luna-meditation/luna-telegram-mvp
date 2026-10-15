@@ -5095,7 +5095,7 @@ function MoonGardenPage({
           {!activeProfile?.gardenAtomicReady&&<p>{language==='en'?'Purchases unlock after the secure shop update. Your garden and balance are preserved.':'Покупки появятся после обновления защищённого магазина. Сад и баланс сохранены.'}</p>}
           <div className="garden-upgrade-rail">{gardenElements.map((element,index)=>{
             const owned=planted.has(element.id);return <article key={element.id} data-upgrade={element.id}>
-              <button className="garden-upgrade-preview" onClick={()=>setPreviewUpgrade(element)} aria-label={`${language==='en'?'Preview':'Предпросмотр'}: ${element.name[language]}`}><OptimizedImage src={gardenStages[index+1].path} alt="" loading="lazy"/></button>
+              <button className="garden-upgrade-preview" onClick={()=>setPreviewUpgrade(element)} aria-label={`${language==='en'?'Preview':'Предпросмотр'}: ${element.name[language]}`}><OptimizedImage src={gardenStages[index+1].path} sizes="160px" alt="" loading="lazy"/></button>
               <strong>{element.name[language]}</strong><p>{gardenStages[index+1].subtitle[language]}</p>
               <span>{element.cost} Moon Seeds</span>
               {owned?<span className="garden-owned">✓ {language==='en'?'Owned':'Открыто'}</span>:<button onClick={()=>setPreviewUpgrade(element)}>{language==='en'?'View upgrade':'Подробнее'}</button>}
@@ -5120,7 +5120,7 @@ function MoonGardenPage({
             <div className="journey-garden-stage-grid">
               {gardenStages.map((gardenStage) => (
                 <article key={gardenStage.level} className={`journey-garden-stage-card ${gardenStage.level === stage.level ? 'is-current' : ''} ${gardenStage.level > stage.level ? 'is-locked' : 'is-unlocked'}`}>
-                  <OptimizedImage src={gardenStage.path} alt={`${text(language, 'gardenStageLevel', { level: gardenStage.level })}: ${gardenStage.title[language]}`} loading="lazy" />
+                  <OptimizedImage src={gardenStage.path} sizes="160px" alt={`${text(language, 'gardenStageLevel', { level: gardenStage.level })}: ${gardenStage.title[language]}`} loading="lazy" />
                   <div><span>{text(language, 'gardenStageLevel', { level: gardenStage.level })}</span><strong>{gardenStage.title[language]}</strong></div>
                 </article>
               ))}
@@ -5414,7 +5414,8 @@ function ProfilePage({
       if (logoutOpen) setLogoutOpen(false);
       else if (avatarActionsOpen) setAvatarActionsOpen(false);
       else if (statusProgressionOpen) setStatusProgressionOpen(false);
-      else setView(view==='settings'?'main':'settings');
+      else if(['privacy-policy','terms','disclaimer'].includes(view))setView('privacy');
+      else setView(view==='settings'||view==='subscription'||(view==='personalization'&&initialView==='personalization')?'main':'settings');
     };
 
     backButton.onClick(closeNestedSurface);
@@ -5423,7 +5424,7 @@ function ProfilePage({
       backButton.offClick(closeNestedSurface);
       backButton.hide();
     };
-  }, [avatarActionsOpen, logoutOpen, statusProgressionOpen, view]);
+  }, [avatarActionsOpen, logoutOpen, statusProgressionOpen, view, initialView]);
 
   useEffect(() => {
     setGoals(profile?.user?.profile_goals ?? []);
@@ -5610,7 +5611,7 @@ function ProfilePage({
       ? (language === 'en' ? 'Light' : 'Светлая')
       : (language === 'en' ? 'Dark' : 'Тёмная');
     return (
-      <ProfileChildScreen title={language === 'en' ? 'Appearance' : 'Оформление'} onBack={() => setView('main')} language={language}>
+      <ProfileChildScreen title={language === 'en' ? 'Appearance' : 'Оформление'} onBack={() => setView('settings')} language={language}>
         <p className="text-sm leading-6 text-lavender">
           {language === 'en'
             ? 'Choose the atmosphere that feels most comfortable. Luna keeps its artwork natural in every mode.'
@@ -5656,7 +5657,7 @@ function ProfilePage({
 
   if (view === 'goals') {
     return (
-      <ProfileChildScreen title={language === 'en' ? 'Goals' : 'Цели'} onBack={() => setView('main')} language={language}>
+      <ProfileChildScreen title={language === 'en' ? 'Goals' : 'Цели'} onBack={() => setView('settings')} language={language}>
         <p className="text-sm leading-6 text-lavender">{language === 'en' ? 'Choose what you want Luna to support.' : 'Выбери, в чём Luna может тебя поддержать.'}</p>
         <div className="space-y-2">
           {profileGoalOptions.map((goal) => {
@@ -5696,7 +5697,7 @@ function ProfilePage({
       getTelegram()?.openTelegramLink(`https://t.me/${username}`);
     };
     return (
-      <ProfileChildScreen title={language === 'en' ? 'Notifications' : 'Уведомления'} onBack={() => setView('main')} language={language}>
+      <ProfileChildScreen title={language === 'en' ? 'Notifications' : 'Уведомления'} onBack={() => setView('settings')} language={language}>
         <p className="text-sm leading-6 text-lavender">
           {language === 'en'
             ? 'With your consent, the Luna Telegram bot sends the reminders you choose at your local time.'
@@ -5795,7 +5796,7 @@ function ProfilePage({
       }
     };
     return (
-      <ProfileChildScreen title={language === 'en' ? 'Support' : 'Поддержка'} onBack={() => setView('main')} language={language}>
+      <ProfileChildScreen title={language === 'en' ? 'Support' : 'Поддержка'} onBack={() => setView('settings')} language={language}>
         <p className="text-sm leading-6 text-lavender">{language === 'en' ? 'Send a secure request to the Luna support inbox.' : 'Отправь безопасный запрос во входящие поддержки Luna.'}</p>
         <label className="grid gap-2 text-xs font-semibold text-lavender">
           {language === 'en' ? 'Category' : 'Категория'}
@@ -5820,7 +5821,7 @@ function ProfilePage({
 
   if (view === 'language') {
     return (
-      <ProfileChildScreen title={copy[language].language} onBack={() => setView('main')} language={language}>
+      <ProfileChildScreen title={copy[language].language} onBack={() => setView('settings')} language={language}>
         <section className="luna-surface rounded-[24px] p-2">
           {(['en', 'ru'] as const).map((item) => (
             <button key={item} onClick={() => onLanguageChange(item)} className="flex min-h-[50px] w-full items-center justify-between rounded-[16px] px-4 text-left text-sm text-cream">
@@ -5914,7 +5915,7 @@ function ProfilePage({
       }
     };
     return (
-      <ProfileChildScreen title={language === 'en' ? 'Privacy & Data' : 'Приватность и данные'} onBack={() => setView('main')} language={language}>
+      <ProfileChildScreen title={language === 'en' ? 'Privacy & Data' : 'Приватность и данные'} onBack={() => setView('settings')} language={language}>
         <p className="text-sm leading-6 text-lavender">
           {language === 'en' ? 'Luna connects your Telegram session to your profile, progress, purchases, favorites, check-ins, and preferences. Personalization stays under your control.' : 'Luna связывает Telegram-сессию с профилем, прогрессом, покупками, избранным, чек-инами и настройками. Ты управляешь персонализацией.'}
         </p>

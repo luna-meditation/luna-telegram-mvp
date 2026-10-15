@@ -126,6 +126,11 @@
           "width": 800,
           "src": "/assets/optimized/level-0-empty-garden-800-94bca080bd75.webp",
           "bytes": 94214
+        },
+        {
+          "width": 941,
+          "src": "/assets/optimized/level-0-empty-garden-941-749ba2b6a809.webp",
+          "bytes": 120238
         }
       ]
     },
@@ -144,6 +149,11 @@
           "width": 800,
           "src": "/assets/optimized/level-1-first-bloom-800-53c81fe9c321.webp",
           "bytes": 110242
+        },
+        {
+          "width": 941,
+          "src": "/assets/optimized/level-1-first-bloom-941-18fe40e3062a.webp",
+          "bytes": 140132
         }
       ]
     },
@@ -162,6 +172,11 @@
           "width": 800,
           "src": "/assets/optimized/level-2-lantern-glow-800-35f70d9c0173.webp",
           "bytes": 102758
+        },
+        {
+          "width": 941,
+          "src": "/assets/optimized/level-2-lantern-glow-941-be890f8f7d22.webp",
+          "bytes": 130434
         }
       ]
     },
@@ -180,6 +195,11 @@
           "width": 800,
           "src": "/assets/optimized/level-3-stone-path-800-b98c5fd83a7c.webp",
           "bytes": 121302
+        },
+        {
+          "width": 941,
+          "src": "/assets/optimized/level-3-stone-path-941-877218586f6e.webp",
+          "bytes": 155012
         }
       ]
     },
@@ -198,6 +218,11 @@
           "width": 800,
           "src": "/assets/optimized/level-4-twin-bloom-800-e62489937090.webp",
           "bytes": 105888
+        },
+        {
+          "width": 941,
+          "src": "/assets/optimized/level-4-twin-bloom-941-5f1048a40684.webp",
+          "bytes": 135922
         }
       ]
     },
@@ -216,6 +241,11 @@
           "width": 800,
           "src": "/assets/optimized/level-5-moon-bridge-800-d5c6c2d0def9.webp",
           "bytes": 109872
+        },
+        {
+          "width": 941,
+          "src": "/assets/optimized/level-5-moon-bridge-941-ac2d573e6cb1.webp",
+          "bytes": 140840
         }
       ]
     },
@@ -234,6 +264,11 @@
           "width": 800,
           "src": "/assets/optimized/level-6-reflection-garden-800-6fd1cb3d75f1.webp",
           "bytes": 153600
+        },
+        {
+          "width": 936,
+          "src": "/assets/optimized/level-6-reflection-garden-936-3fbbf7ce00d2.webp",
+          "bytes": 190182
         }
       ]
     },
@@ -252,6 +287,11 @@
           "width": 800,
           "src": "/assets/optimized/level-7-full-moon-garden-800-f90360f7cd55.webp",
           "bytes": 244806
+        },
+        {
+          "width": 941,
+          "src": "/assets/optimized/level-7-full-moon-garden-941-5061627f3864.webp",
+          "bytes": 303478
         }
       ]
     },
@@ -1835,6 +1875,196 @@
           "width": 1200,
           "src": "/assets/optimized/luna-avatar-1200-9e5edc9b625b.webp",
           "bytes": 169280
+        }
+      ]
+    },
+    {
+      "source": "https://vkcdtasbdoeilgfucoax.supabase.co/storage/v1/object/public/meditations/cover/076151f0-a97d-4e82-aaab-297ec4d00ef9.png",
+      "originalStorage": "unchanged public Supabase object",
+      "sourceSha256": "6380bcd7cc902257c8a4feb653c225ef43d4d3831d5941769016b3343b0446ea",
+      "bytes": 2124354,
+      "width": 1254,
+      "height": 1254,
+      "variants": [
+        {
+          "width": 160,
+          "src": "/assets/optimized/meditation-3db283b1-160-a4c71e59e6b5.webp",
+          "bytes": 4084
+        },
+        {
+          "width": 480,
+          "src": "/assets/optimized/meditation-3db283b1-480-9faa9c6debf0.webp",
+          "bytes": 22666
+        },
+        {
+          "width": 960,
+          "src": "/assets/optimized/meditation-3db283b1-960-85b119a41272.webp",
+          "bytes": 68868
+        }
+      ]
+    },
+    {
+      "source": "https://vkcdtasbdoeilgfucoax.supabase.co/storage/v1/object/public/meditations/cover/814e7a10-f274-41bf-9f0a-119c97c5f0bf.png",
+      "originalStorage": "unchanged public Supabase object",
+      "sourceSha256": "9f09bc55b5d2153304c22ed238f14a7716b160bddec898c36f22523c4a708e15",
+      "bytes": 3004851,
+      "width": 1086,
+      "height": 1448,
+      "variants": [
+        {
+          "width": 160,
+          "src": "/assets/optimized/meditation-ee4f309b-160-2ff3f96ebc35.webp",
+          "bytes": 4220
+        },
+        {
+          "width": 480,
+          "src": "/assets/optimized/meditation-ee4f309b-480-568b8fccc186.webp",
+          "bytes": 27992
+        },
+        {
+          "width": 960,
+          "src": "/assets/optimized/meditation-ee4f309b-960-72f5209a394e.webp",
+          "bytes": 95294
+        }
+      ]
+    },
+    {
+      "source": "https://vkcdtasbdoeilgfucoax.supabase.co/storage/v1/object/public/meditations/cover/998229de-6005-483a-9801-25582be124ee.png",
+      "originalStorage": "unchanged public Supabase object",
+      "sourceSha256": "6cb974691a448b2dbcd612d875b1e2570a74becb010a0532b0aa1808cec09f7e",
+      "bytes": 3072135,
+      "width": 1055,
+      "height": 1491,
+      "variants": [
+        {
+          "width": 160,
+          "src": "/assets/optimized/meditation-6d7ddb54-160-61e52d9ecd6f.webp",
+          "bytes": 5182
+        },
+        {
+          "width": 480,
+          "src": "/assets/optimized/meditation-6d7ddb54-480-c0175619d494.webp",
+          "bytes": 29408
+        },
+        {
+          "width": 960,
+          "src": "/assets/optimized/meditation-6d7ddb54-960-c0a44c0f6e2e.webp",
+          "bytes": 88510
+        }
+      ]
+    },
+    {
+      "source": "https://vkcdtasbdoeilgfucoax.supabase.co/storage/v1/object/public/meditations/cover/af2fc3a6-00f3-4911-b4a6-e0d1b359387e.jpeg",
+      "originalStorage": "unchanged public Supabase object",
+      "sourceSha256": "5eba8ca06d9187817bc21756c3b6d8df48bafc059accfc1b61cf2b583588d178",
+      "bytes": 223415,
+      "width": 941,
+      "height": 1181,
+      "variants": [
+        {
+          "width": 160,
+          "src": "/assets/optimized/meditation-7d221318-160-cfdffdcb820c.webp",
+          "bytes": 4778
+        },
+        {
+          "width": 480,
+          "src": "/assets/optimized/meditation-7d221318-480-07ffc175e431.webp",
+          "bytes": 23502
+        }
+      ]
+    },
+    {
+      "source": "https://vkcdtasbdoeilgfucoax.supabase.co/storage/v1/object/public/meditations/cover/d138efaa-5d1a-4034-a1bd-c7da9cefe84e.png",
+      "originalStorage": "unchanged public Supabase object",
+      "sourceSha256": "c29c9062296c9be37d2922578fa0e9f14b4a1bee8feecf4335f035ee8bb18cd1",
+      "bytes": 3265443,
+      "width": 1254,
+      "height": 1254,
+      "variants": [
+        {
+          "width": 160,
+          "src": "/assets/optimized/meditation-2d43e25e-160-fcbd3c334900.webp",
+          "bytes": 6246
+        },
+        {
+          "width": 480,
+          "src": "/assets/optimized/meditation-2d43e25e-480-89234962de99.webp",
+          "bytes": 36820
+        },
+        {
+          "width": 960,
+          "src": "/assets/optimized/meditation-2d43e25e-960-a64e776b6ac3.webp",
+          "bytes": 108168
+        }
+      ]
+    },
+    {
+      "source": "https://vkcdtasbdoeilgfucoax.supabase.co/storage/v1/object/public/meditations/cover/e6d19dae-d64a-46be-8779-339bf5907ac9.jpeg",
+      "originalStorage": "unchanged public Supabase object",
+      "sourceSha256": "20ed881011a84838b17fcb4f1e0d6a44bdaa2d0d23b66cb00b0ac2960856cef8",
+      "bytes": 308237,
+      "width": 941,
+      "height": 1229,
+      "variants": [
+        {
+          "width": 160,
+          "src": "/assets/optimized/meditation-98aceb42-160-330161d063b1.webp",
+          "bytes": 6438
+        },
+        {
+          "width": 480,
+          "src": "/assets/optimized/meditation-98aceb42-480-561b8731b0f0.webp",
+          "bytes": 39192
+        }
+      ]
+    },
+    {
+      "source": "https://vkcdtasbdoeilgfucoax.supabase.co/storage/v1/object/public/meditations/cover/f3b5438c-25b7-4a19-a7bf-eb130b62f247.png",
+      "originalStorage": "unchanged public Supabase object",
+      "sourceSha256": "99d3a6860709d427f9980e604426a60c60a31bec0fd3101164b4ba2245ce894e",
+      "bytes": 2155357,
+      "width": 1254,
+      "height": 1254,
+      "variants": [
+        {
+          "width": 160,
+          "src": "/assets/optimized/meditation-72779772-160-4332070335bb.webp",
+          "bytes": 3854
+        },
+        {
+          "width": 480,
+          "src": "/assets/optimized/meditation-72779772-480-20b9be04621a.webp",
+          "bytes": 23064
+        },
+        {
+          "width": 960,
+          "src": "/assets/optimized/meditation-72779772-960-be7cdf02f671.webp",
+          "bytes": 80962
+        }
+      ]
+    },
+    {
+      "source": "https://vkcdtasbdoeilgfucoax.supabase.co/storage/v1/object/public/meditations/cover/f43db69b-6a5b-464e-85d7-d3ce66cac77e.png",
+      "originalStorage": "unchanged public Supabase object",
+      "sourceSha256": "b2a239ba05388c3cf3d72217e44d56a8f846e52e670b9e5b0b1714fb1cc25e4f",
+      "bytes": 3410013,
+      "width": 1086,
+      "height": 1448,
+      "variants": [
+        {
+          "width": 160,
+          "src": "/assets/optimized/meditation-084dd3fa-160-d039c04eff50.webp",
+          "bytes": 8270
+        },
+        {
+          "width": 480,
+          "src": "/assets/optimized/meditation-084dd3fa-480-97abfef755b7.webp",
+          "bytes": 57820
+        },
+        {
+          "width": 960,
+          "src": "/assets/optimized/meditation-084dd3fa-960-43d87364304e.webp",
+          "bytes": 178362
         }
       ]
     }

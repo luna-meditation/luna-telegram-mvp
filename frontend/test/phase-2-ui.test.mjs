@@ -73,8 +73,8 @@ test('Phase 2.1 uses original bundled illustrations without broken remote assets
 
 test('Phase 2.1 profile highlights real balance and selects garden artwork from existing progress', () => {
   const profile = src('luna2/ProfileOverview.tsx');
-  assert.match(profile, /luna2-wallet-copy/);
-  assert.match(profile, /luna2-wallet-label/);
+  assert.match(profile, /premium-profile-stats/);
+  assert.match(profile, /onWallet/);
   assert.match(profile, /Math\.floor\(profile\?\.gardenLevel \?\? 0\)/);
   assert.equal((profile.match(/'level-\d-/g) ?? []).length, 8);
   assert.match(styles, /\.luna2-wallet-copy > b.*overflow-wrap: anywhere/);
@@ -97,7 +97,8 @@ test('Home preserves mood hero and recommendations while new dashboard is opt-in
 test('Profile uses existing balances/history and has no local reward or charge mutations', () => {
   const profile=src('luna2/ProfileOverview.tsx');
   assert.match(profile,/profile\.moonSeedsAvailable \?\? profile\.moonSeeds/);
-  for(const field of ['currentStreak','gardenLevel','achievements','weeklyCheckins','meditation_id']) assert.ok(profile.includes(field));
+  for(const field of ['currentStreak','gardenLevel','achievements']) assert.ok(profile.includes(field));
+  const journal=src('luna2/JournalPage.tsx');for(const field of ['weeklyCheckins','meditation_id'])assert.ok(journal.includes(field));
   assert.doesNotMatch(profile,/localStorage|fetch\(|createInvoice|saveHistory|setProfile|moonSeeds\s*[+-]=/);
   assert.match(app,/showJourneyEntry && <ProfileOverview/);
 });
@@ -154,7 +155,8 @@ test('offline preview cannot use production backend, credentials, payments or re
   const preview=readFileSync(resolve(process.cwd(),'scripts/phase2-preview.mjs'),'utf8');
   assert.match(preview,/VITE_API_URL:''/);
   assert.match(preview,/VITE_BOT_USERNAME:''/);
-  assert.match(preview,/server\.listen\(port,'127\.0\.0\.1'/);
+  assert.match(preview,/const host=process.env.LUNA_PREVIEW_HOST==='0.0.0.0'\?'0.0.0.0':'127.0.0.1'/);
+  assert.match(preview,/server\.listen\(port,host/);
   assert.match(preview,/connect-src 'self'; media-src 'self'/);
   assert.match(preview,/if\(req\.method!=='GET'\)return json\([\s\S]*501\)/);
   assert.doesNotMatch(preview,/SUPABASE_SERVICE_ROLE_KEY|BOT_TOKEN|OPENAI_API_KEY|fetch\(/);

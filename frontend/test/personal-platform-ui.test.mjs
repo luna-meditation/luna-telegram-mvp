@@ -6,7 +6,7 @@ test('new Journey contains compact progress and links, not an embedded garden',(
  assert.match(app,/featureFlags.new_navigation && !accountLoading && !accountUnavailable \? <CompactJourney/);
 });
 test('garden shop uses existing stage assets and authoritative responses only',()=>{
- assert.match(app,/garden-upgrade-rail/);assert.match(app,/gardenStages\[index\+1\]\.path/);assert.match(app,/owned\|\|Boolean\(workingId\)/);
+ assert.match(app,/garden-upgrade-rail/);assert.match(app,/gardenStages\[index\+1\]\.path/);assert.match(app,/planted\.has\(previewUpgrade.id\)/);assert.match(app,/disabled=\{Boolean\(workingId\)\|\|seeds<previewUpgrade.cost\}/);
  const plant=app.split('const plant = async')[1].split('const runDevAction')[0];
  assert.doesNotMatch(plant,/moonSeeds: seeds -|moonSeedsAvailable: seeds -/);assert.match(plant,/purchasePending.current = true/);assert.match(plant,/setLiveProfile\(nextProfile\)/);
 });

@@ -36,4 +36,3 @@ export function WalletPage({ language, profile, onBack, onGarden }: {
     <p className="luna2-preview-notice">{t.walletNote}</p><button type="button" className="luna2-text-action" onClick={onGarden}><Flower2 size={20} />{t.garden}<ArrowUpRight size={18} /></button>
   </div>;
 }
-

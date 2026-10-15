@@ -27,6 +27,7 @@ try{for(const [width,height] of quick?[[390,844]]:[[360,800],[375,812],[390,844]
   return route.continue();
  });
  const geometry=async()=>{
+  if(await page.locator('.app-shell-chat').count())await page.locator('.luna-live-composer').waitFor();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'No horizontal overflow');
   assert.equal(await page.locator('.bottom-navigation [aria-current="page"]').count(),1,'Exactly one selected tab');
   const surface=await page.locator('.luna-live-composer').count()?page.locator('.luna-live-composer'):page.locator('.app-shell');
