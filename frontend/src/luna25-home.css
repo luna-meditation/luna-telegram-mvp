@@ -42,6 +42,8 @@
 .luna25-daily-card p{font-size:12px!important;line-height:1.4!important;color:var(--text-secondary)}
 .luna25-daily-card>svg{flex-shrink:0;color:var(--accent-gold-text)}
 :root[data-theme="light"] .luna2-home .luna25-hero{border-color:#d5c2e6;box-shadow:0 7px 22px #73648812}
+:root[data-theme="light"] .luna2-home .luna25-hero .home-v2-atmosphere-copy h1{color:#f4eaf7}
+:root[data-theme="light"] .luna2-home .luna25-hero .home-v2-greeting{color:#f4eaf7d9}
 :root[data-theme="light"] .luna2-home .luna25-hero:after{background:linear-gradient(90deg,#17162c69,#12142a18 75%),linear-gradient(0deg,#17172e94,transparent 70%)}
 :root[data-theme="light"] .luna25-hero-action .luna2-talk-primary{background:#473354ed;color:#fff5fd;border-color:#c7a5e55c}
 :root[data-theme="light"] .luna25-category{background:#e9e0f4;border-color:#cfc2e2;box-shadow:0 5px 16px #70658012}

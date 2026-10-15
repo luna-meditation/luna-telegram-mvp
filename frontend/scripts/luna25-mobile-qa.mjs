@@ -17,6 +17,7 @@ try{
   const nav=page.locator('.bottom-navigation');assert.equal(await nav.locator('button').count(),3);assert.equal(await nav.locator('button').nth(1).innerText(),language==='en'?'Luna AI':'Луна ИИ');
   assert.equal(await page.locator('.luna25-home-categories>button').count(),4);
   assert.ok(await page.locator('.luna25-hero img').first().evaluate(i=>i.complete&&i.naturalWidth>0));
+  assert.equal(await page.locator('.luna25-hero h1').evaluate(e=>getComputedStyle(e).color),'rgb(244, 234, 247)','Hero heading must remain light over the supplied night landscape in BOTH themes');
   const check=async()=>assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'No horizontal page overflow');await check();
   if(width===390&&kind==='single')await page.screenshot({path:`${out}/${language}-${theme}-home.png`,fullPage:true});
   // Native route back and practical category links remain connected.
