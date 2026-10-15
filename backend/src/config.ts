@@ -33,6 +33,8 @@ const envSchema = z.object({
   FEATURE_PERSONAL_MEMORY: envBoolean.default(false),
   FEATURE_AI_CENTRAL_EXPERIENCE: envBoolean.default(false),
   FEATURE_TAROT_SPREAD_AI_QA: envBoolean.default(false),
+  STAGING_TAROT_AI_QA_OWNER_ID: z.coerce.number().int().positive().optional(),
+  STAGING_TAROT_AI_QA_GRANT_ID: z.string().uuid().optional(),
   FEATURE_AI_MODES: envBoolean.default(false),
   FEATURE_TAROT_HISTORY: envBoolean.default(false),
   FEATURE_TAROT_AI: envBoolean.default(false),

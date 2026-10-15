@@ -1,0 +1,41 @@
+{
+  "scope": "Luna 2.4 development and existing isolated staging only",
+  "productionChanges": false,
+  "budgetUSD": 0.02,
+  "expiryDays": 7,
+  "eligibleUser": "explicit server-side QA owner, verified Telegram identity",
+  "projectPin": "funvzpmpbgazsisehiru",
+  "sitePin": "a634a7fc-1ecb-47fa-8b43-edd81a7e3694",
+  "defaultEnabled": false,
+  "model": "gpt-5-mini",
+  "serviceTier": "default",
+  "maxInputJsonBytes": 16000,
+  "maxOutputTokens": 3600,
+  "atomicReservationUSD": 0.012,
+  "settlement": "actual metered cost rounded upwards to microUSD; unknown usage/timeout retains entire hold",
+  "idempotency": "existing reading reservation plus unique grant/reading budget claim",
+  "quota": "only the configured staging owner receives up to eight Tarot reservations per UTC day; normal limits remain unchanged",
+  "storedHistory": "GET never calls provider or reserves a budget; completed readings never regenerate",
+  "moonSeedsPaymentsSubscriptions": "unchanged; no debit or payment RPC is called",
+  "migration": "20261015104817_luna24_staging_qa_ai_budget.sql",
+  "rollback": "disable the specific budget grant in staging; no deployment needed; retain audit and reading history",
+  "verification": {
+    "node": "22.23.3",
+    "backendTestsPass": 209,
+    "optionalLegacySqlSkip": 1,
+    "frontendTestsPass": 148,
+    "isolatedPostgresChecks": 14,
+    "staging": "service-role success, anon/authenticated denial, owner boundary, cap, duplicate settlement and rollback checked"
+  },
+  "netlifyPolicy": {
+    "oneStagingPublishSeparatelyApproved": true,
+    "publicationCredits": 15,
+    "noIntermediateCloudBuilds": true,
+    "noProductionPublication": true,
+    "automaticBuildSettingsChanged": false,
+    "mainBranch": "main",
+    "allowedBranchDeploys": ["main"],
+    "stagingGitBuildIntegration": false,
+    "developmentCommits": "[skip netlify] [skip ci] until an explicitly approved release"
+  }
+}

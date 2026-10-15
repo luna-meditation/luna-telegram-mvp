@@ -9,6 +9,7 @@ import {safetyCategory} from './luna-ai-policy.js';
 import {stagingAiMeterRecord,type StagingAiMeterRecord} from './staging-ai-meter.js';
 import {randomInt} from 'node:crypto';
 import {tarotCatalog} from './tarot-policy.js';
+import {qaTarotEnabled,qaTarotLimits,qaTarotTransport} from './staging-tarot-budget.js';
 export const readingFields='id,client_reading_id,card_id,orientation,intention,question,language,interpretation,status,fallback_reason,created_at,updated_at'+(env.FEATURE_DAILY_CARD_V2||env.FEATURE_TAROT_SPREADS?',reading_kind,cards':'');
 export type StoredReading={id:string;client_reading_id:string;card_id:string;orientation:'upright'|'reversed';intention:'general'|'love'|'career'|'growth';question:string;language:'en'|'ru';interpretation:TarotInterpretation|null;status:'local'|'processing'|'ready'|'fallback'|'safety';fallback_reason:string|null;created_at:string;updated_at:string};
 export async function generateTarot(input:TarotInput,profile:Parameters<typeof buildTarotAiRequest>[1],transport=requestLunaResponse,onMeter?:(meter:StagingAiMeterRecord)=>Promise<void>,style:'single'|'daily'='single'){
@@ -32,8 +33,10 @@ export async function generateTarot(input:TarotInput,profile:Parameters<typeof b
 export async function saveTarotReading(telegramId:number,body:unknown,maintenance?:{excludePersonalContext:true;transport:typeof requestLunaResponse;onMeter:(meter:StagingAiMeterRecord)=>Promise<void>}){
  const input=tarotInputSchema.parse(body);
  const safety=safetyCategory(input.question);
- const canGenerate=input.generate&&env.FEATURE_TAROT_AI&&Boolean(env.OPENAI_API_KEY)&&!safety;
- const {data,error}=await supabase.rpc('reserve_luna_tarot_reading',{p_telegram_id:telegramId,p_client_reading_id:input.clientReadingId,p_request_hash:tarotRequestHash(input),p_card_id:input.cardId,p_orientation:input.orientation,p_intention:input.intention,p_question:input.question,p_language:input.language,p_generate:canGenerate,p_daily_limit:env.TAROT_AI_DAILY_LIMIT,p_global_limit:env.TAROT_AI_GLOBAL_DAILY_LIMIT});
+ const qaOnly=env.STAGING_MODE&&env.FEATURE_TAROT_SPREAD_AI_QA;
+ const canGenerate=input.generate&&env.FEATURE_TAROT_AI&&Boolean(env.OPENAI_API_KEY)&&!safety&&(!qaOnly||qaTarotEnabled(telegramId));
+ const limits=qaTarotLimits(telegramId);
+ const {data,error}=await supabase.rpc('reserve_luna_tarot_reading',{p_telegram_id:telegramId,p_client_reading_id:input.clientReadingId,p_request_hash:tarotRequestHash(input),p_card_id:input.cardId,p_orientation:input.orientation,p_intention:input.intention,p_question:input.question,p_language:input.language,p_generate:canGenerate,p_daily_limit:limits.daily,p_global_limit:limits.global});
  if(error||!data)throw new FoundationError(503,'history_unavailable','Reading history is unavailable.');
  return completeReservedReading(telegramId,input,data as TarotReservation,maintenance);
 }
@@ -52,7 +55,7 @@ async function completeReservedReading(telegramId:number,input:TarotInput,reserv
  }
  if(reserved.acquired){
   let interpretation:TarotInterpretation|null=null;let status:StoredReading['status']='fallback';let reason:string|null='provider_error';
-  try{const profile=!maintenance?.excludePersonalContext&&env.FEATURE_PERSONALIZATION?await getPersonalProfile(telegramId,input.intention+' '+input.question):null;interpretation=await generateTarot(input,profile,maintenance?.transport??requestLunaResponse,maintenance?.onMeter??(async meter=>{
+  try{const profile=!maintenance?.excludePersonalContext&&env.FEATURE_PERSONALIZATION?await getPersonalProfile(telegramId,input.intention+' '+input.question):null;const baseTransport=maintenance?.transport??requestLunaResponse;const transport=env.STAGING_MODE&&env.FEATURE_TAROT_SPREAD_AI_QA?qaTarotTransport(telegramId,input.clientReadingId,baseTransport):baseTransport;interpretation=await generateTarot(input,profile,transport,maintenance?.onMeter??(async meter=>{
    // Meter every actual response, including invalid/incomplete AI output. No text or preferences.
    const {error:meterError}=await supabase.from('ai_usage').upsert({...meter,telegram_id:telegramId,request_id:`tarot:${input.clientReadingId}`},{onConflict:'telegram_id,request_id'});
    if(meterError)throw new Error('usage_save_failed');
