@@ -100,6 +100,13 @@ const server=createServer(async(req,res)=>{
       if(url.pathname==='/api/checkins'&&req.method==='POST'){checkin={id:'offline-checkin',...body,local_date:body.local_date||date()};return json({checkin});}
       if(centralPreview){
         const summary=c=>({...c,latestMessage:c.messages.at(-1)?.content??''});
+        if(url.pathname==='/api/luna/tools/tarot/attach'&&req.method==='POST'){
+          const reading=[...readings.values()].find(r=>r.id===body.readingId);if(!reading)return json({code:'reading_not_found'},404);
+          for(const c of centralConversations.values()){const m=c.messages.find(m=>m.metadata?.tarot?.readingId===reading.id);if(m)return json({conversationId:c.id,message:m});}
+          const id=reading.id,kind=['three','five'].includes(reading.reading_kind)?reading.reading_kind:'single',count=kind==='five'?5:kind==='three'?3:1;
+          const m={id,conversation_id:id,role:'assistant',content:reading.interpretation?.summary??'OFFLINE QA — saved reading.',created_at:new Date().toISOString(),metadata:{tarot:{readingId:reading.id,clientReadingId:reading.client_reading_id,kind,revealed:count,requestHash:'0'.repeat(64),reading}}};
+          centralConversations.set(id,{id,title:reading.language==='ru'?'Сохранённый расклад · QA':'Saved reading · QA',language:reading.language,status:'active',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),last_message_at:new Date().toISOString(),messages:[m]});return json({conversationId:id,message:m});
+        }
         if(url.pathname==='/api/luna/conversations'&&req.method==='GET')return json({conversations:[...centralConversations.values()].map(summary)});
         const convoId=url.pathname.match(/^\/api\/luna\/conversations\/([^/]+)$/)?.[1];
         if(convoId&&centralConversations.has(convoId)){const c=centralConversations.get(convoId);if(req.method==='DELETE'){centralConversations.delete(convoId);return json({ok:true});}if(req.method==='GET')return json({conversation:summary(c),messages:c.messages});}

@@ -15,7 +15,7 @@ export function spreadRequestHash(input:SpreadInput){const immutable={clientRead
 export const spreadPositions={en:{three:['The situation','What needs attention','A possible direction'],five:['The heart of the question','Hidden influences','Obstacles','Opportunities','A conscious next step']},ru:{three:['Суть ситуации','Что требует внимания','Возможное направление'],five:['Суть вопроса','Скрытые факторы','Препятствия','Возможности','Осознанный следующий шаг']}};
 export function buildSpreadAiRequest(input:SpreadInput,profile:PersonalProfile|null,model:string){
  const cards=input.cards.map((selection,index)=>{const c=tarotCatalog.find(c=>c.id===selection.cardId)!;return {...selection,position:spreadPositions[input.language][input.kind][index],name:c.name[input.language],meaning:c.meaning[input.language][selection.orientation]};});
- return {model,store:false,reasoning:{effort:'minimal'},max_output_tokens:input.kind==='three'?2400:3600,
+ return {model,store:false,reasoning:{effort:'minimal'},max_output_tokens:input.kind==='three'?2200:3000,
   instructions:buildModeInstructions('tarot',input.language,null)+'\n'+conciseTarotInstructions+'\n'+russianAddressInstructions(input.language,permittedPersonalContext(profile),input.question),
   input:[{role:'user',content:[{type:'input_text',text:JSON.stringify({kind:input.kind,cards,intention:input.intention,question:input.question,personalContext:permittedPersonalContext(profile)})}]}],
   text:{format:{type:'json_schema',name:'luna_tarot_spread_v2',strict:true,schema:tarotOutputSchemaV2}}};
