@@ -21,3 +21,8 @@ test('one tap is queued through image loading and zoom includes full semantic co
  assert.match(card,/setTimeout\(\(\)=>setSettled\(true\)/);assert.match(card,/loading="eager"/);
  const zoom=read('features/tarot/TarotDetails.tsx');assert.match(zoom,/tarot-details-position/);assert.match(zoom,/card.meaning\[language\]\[orientation\]/);
 });
+test('Light theme overrides old light-landscape typography for the new night hero',()=>{
+ const css=read('luna25-home.css');
+ assert.match(css,/:root\[data-theme="light"\] \.luna2-home \.luna25-hero \.home-v2-atmosphere-copy h1\{color:#f4eaf7\}/);
+ assert.match(css,/:root\[data-theme="light"\] \.luna2-home \.luna25-hero \.home-v2-greeting\{color:#f4eaf7d9\}/);
+});

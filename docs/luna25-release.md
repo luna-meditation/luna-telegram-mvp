@@ -8,7 +8,7 @@ No database migrations, billing changes, balance changes, new models, new AI ent
 
 ## Verification
 
-Node.js 22: 152 frontend tests, 216 backend tests pass; one optional external PostgreSQL integration test is skipped. TypeScript, lint and both builds pass. The isolated database harness passes 15 checks including RLS/ownership, single generation, cached history, quota and wallet preservation.
+Node.js 22: 153 frontend tests, 216 backend tests pass; one optional external PostgreSQL integration test is skipped. TypeScript, lint and both builds pass. The isolated database harness passes 15 checks including RLS/ownership, single generation, cached history, quota and wallet preservation.
 
 48 local mobile UI scenarios cover 320/375/390/430 pixels, RU/EN, Dark/Light, one/three/five cards, native Back, keyboard-sized viewport, image loading latency, details and persistent reopening. These are fixture-based browser checks, not physical Telegram evidence or a new paid AI run. AI cost in this release: $0.
 
@@ -25,6 +25,12 @@ Rollback frontend to Netlify deploy 6ad0c5f209cda963175df6bb and backend to Rail
 Merge through a feature PR using [skip netlify] to avoid a duplicate cloud build. Build exact merged main locally; upload once to site 55baedc0-02e4-45ad-a0d5-0bd76ef4ce97 with no functions. Railway updates only because server prompt/response handling changed. Verify Ready/SUCCESS, matching commit, static assets and unauthorized API rejection.
 
 Before release: Netlify 66.3 credits, main-only branch builds, Deploy Previews disabled. One publish is expected to use 15 credits plus traffic. No staging release.
+
+## Post-publication correction
+
+The initial deploy 6ad0ec1a87c0da0af1551fbe reached Ready, but final screenshot review found the old Light-landscape CSS overriding the new hero heading/greeting foreground. The frontend was restored to the existing Luna 2.4 deploy 6ad0c5f209cda963175df6bb without a new build. The compatible server-only Russian address correction remains healthy at ebd196ae09e11ebe43de35aa47cefd8e0a7bc28c. Production data and permissions were verified unchanged.
+
+The correction adds explicit Light-theme foreground selectors and a real computed-color assertion in all mobile cases. A further frontend publication requires separate owner approval; do not represent this release as complete while the old frontend remains active. One deployment consumed 15 credits; observed remaining balance is 51.3.
 
 ## Physical iPhone checklist
 
