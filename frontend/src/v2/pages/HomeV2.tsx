@@ -8,7 +8,7 @@ import { V2Hero, V2HeroFallback } from '../components/V2Hero';
 import { V2Recommendation } from '../components/V2Recommendation';
 import { V2Sound } from '../components/V2Sound';
 import { V2Stats, type V2Stat } from '../components/V2Stats';
-import { HomeDiscovery, HomeProgress, HomeLunaGuide } from '../../luna2/HomeDiscovery';
+import { HomeDiscovery, HomeProgress } from '../../luna2/HomeDiscovery';
 import '../design-system/homeV2.css';
 
 type MoodChip = 'Sleep' | 'Calm' | 'Focus' | 'Anxiety' | 'Breath' | 'Energy';
@@ -155,6 +155,8 @@ export function HomeV2(props: HomeV2Props) {
       {props.daily || props.newNavigation ? (
         <V2Hero
           greeting={props.greeting}
+          premiumHome={props.newNavigation}
+          onTalk={props.onAskLuna}
           firstName={props.firstName}
           headline={props.labels.feeling}
           moods={props.moods}
@@ -176,7 +178,6 @@ export function HomeV2(props: HomeV2Props) {
         <V2HeroFallback title={props.labels.firstPracticeTitle} body={props.labels.firstPracticeBody} />
       )}
 
-      {props.newNavigation && <HomeLunaGuide language={props.language} onTalk={props.onAskLuna} onPersonalize={props.onPersonalize}/>}
       {props.newNavigation && <HomeDiscovery language={props.language} tarotEnabled={Boolean(props.tarotEnabled)} onTarot={props.onTarot} onDaily={props.onDaily} onAstrology={props.onAstrology} onMeditate={props.onLibrary} onBreathe={props.onBreath} />}
 
       {props.daily ? (

@@ -13,7 +13,8 @@ const styles = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
 const primitives = readFileSync(resolve(process.cwd(), 'src/design-system/primitives.css'), 'utf8');
 
 test('Home keeps the conversational question before and after check-in', () => {
-  assert.match(hero, /<h1>\{headline\}<\/h1>/);
+  assert.match(hero, /<h1>\{premiumHome[\s\S]*: headline\}<\/h1>/);
+  assert.match(hero,/Что сегодня у тебя на душе\?/);
   assert.doesNotMatch(hero, /Today’s check-in|Сегодняшний чек-ин/);
   assert.match(hero, /language === 'ru' \? 'Сегодня' : 'Today'/);
   assert.match(homeStyles, /\.home-v2-mood-saved[\s\S]*width: max-content/);

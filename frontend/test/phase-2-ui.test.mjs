@@ -17,10 +17,10 @@ const {luna2Copy} = await module('luna2/copy.ts');
 const app = src('App.tsx');
 const styles = src('luna2/luna2.css');
 
-test('Phase 2 keeps legacy five tabs and enables exactly four in approved order', () => {
+test('Luna 2.5 keeps legacy five tabs and enables exactly three in approved order', () => {
   assert.deepEqual(nav.primaryNavigation(false).map(x => x.page), ['home','library','luna','progress','profile']);
-  assert.deepEqual(nav.primaryNavigation(true).map(x => x.page), ['home','explore','luna','profile']);
-  for(const [locale,labels] of [['en',['Home','Explore','Luna AI','Profile']],['ru',['Главная','Открытия','Луна ИИ','Профиль']]]) {
+  assert.deepEqual(nav.primaryNavigation(true).map(x => x.page), ['home','luna','profile']);
+  for(const [locale,labels] of [['en',['Home','Luna AI','Profile']],['ru',['Главная','Луна ИИ','Профиль']]]) {
     assert.deepEqual(nav.primaryNavigation(true).map(x => luna2Copy[locale][x.labelKey]),labels);
   }
   assert.match(styles,/\.bottom-navigation-luna2 \.luna2-nav-ai/);
@@ -32,15 +32,15 @@ test('new route hierarchy and deep links fail closed without new_navigation', ()
     assert.equal(nav.pageFromStartParam(page,true),page);
   }
   assert.equal(nav.pageFromStartParam('explore',false),'library');
-  assert.equal(nav.pageFromStartParam('explore',true),'explore');
+  assert.equal(nav.pageFromStartParam('explore',true),'home');
   assert.equal(nav.pageFromStartParam('library',true),'library');
   assert.equal(nav.pageFromStartParam('saved',true),'library');
-  assert.equal(nav.fallbackPage('library',true),'explore');
+  assert.equal(nav.fallbackPage('library',true),'home');
   for(const page of ['progress','moonGarden','wallet','activity','achievements','pricing']) assert.equal(nav.primaryParent(page,true),'profile');
-  let state = nav.reduceRouteState({current:'explore',trail:[]},{type:'navigate',page:'tarot'},true);
+  let state = nav.reduceRouteState({current:'home',trail:[]},{type:'navigate',page:'tarot'},true);
   state = nav.reduceRouteState(state,{type:'navigate',page:'library'},true);
   state = nav.reduceRouteState(state,{type:'navigate',page:'player'},true);
-  for(const page of ['library','tarot','explore']) { state=nav.reduceRouteState(state,{type:'back'},true); assert.equal(state.current,page); }
+  for(const page of ['library','tarot','home']) { state=nav.reduceRouteState(state,{type:'back'},true); assert.equal(state.current,page); }
 });
 
 test('Explore contains only four categories and previews cannot perform paid or backend actions', () => {

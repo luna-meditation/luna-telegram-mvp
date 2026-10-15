@@ -11,6 +11,8 @@ import {randomInt} from 'node:crypto';
 import {tarotCatalog} from './tarot-policy.js';
 import {qaTarotEnabled,qaTarotLimits,qaTarotTransport} from './staging-tarot-budget.js';
 import {validateTarotV2} from './tarot-interpretation-v2.js';
+import {neutralRussianInterpretation} from './luna/russian-address.js';
+import {permittedPersonalContext} from './personalization-policy.js';
 export const readingFields='id,client_reading_id,card_id,orientation,intention,question,language,interpretation,status,fallback_reason,created_at,updated_at'+(env.FEATURE_DAILY_CARD_V2||env.FEATURE_TAROT_SPREADS?',reading_kind,cards':'');
 export type StoredReading={id:string;client_reading_id:string;card_id:string;orientation:'upright'|'reversed';intention:'general'|'love'|'career'|'growth';question:string;language:'en'|'ru';interpretation:TarotInterpretation|null;status:'local'|'processing'|'ready'|'fallback'|'safety';fallback_reason:string|null;created_at:string;updated_at:string};
 export async function generateTarot(input:TarotInput,profile:Parameters<typeof buildTarotAiRequest>[1],transport=requestLunaResponse,onMeter?:(meter:StagingAiMeterRecord)=>Promise<void>,style:'single'|'daily'='single'){
@@ -29,7 +31,7 @@ export async function generateTarot(input:TarotInput,profile:Parameters<typeof b
   console.info('[Luna staging Tarot usage]',{model:label(value.model),serviceTier:label(value.service_tier),inputTokens:count(value.usage?.input_tokens),cachedInputTokens:count(value.usage?.input_tokens_details?.cached_tokens),outputTokens:count(value.usage?.output_tokens)});
  }
  const text=responseOutputText(payload);if(!text)throw new Error('invalid_response');
- const parsed=interpretationSchema.parse(JSON.parse(text));
+ const parsed=interpretationSchema.parse(neutralRussianInterpretation(JSON.parse(text),input.language,permittedPersonalContext(profile),input.question));
  return 'version' in parsed?validateTarotV2(parsed,[{cardId:input.cardId,orientation:input.orientation}]):parsed;
 }
 export async function saveTarotReading(telegramId:number,body:unknown,maintenance?:{excludePersonalContext:true;transport:typeof requestLunaResponse;onMeter:(meter:StagingAiMeterRecord)=>Promise<void>}){

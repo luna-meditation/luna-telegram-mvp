@@ -49,9 +49,9 @@ test('all Luna 2.0 feature flags are disabled unless explicitly enabled', () => 
   }
 });
 
-test('legacy navigation stays active while the four-tab Luna 2.0 model is ready behind its flag', () => {
+test('legacy navigation stays active while the three-tab Luna 2.5 model is ready behind its flag', () => {
   assert.deepEqual(navigation.primaryNavigation(false).map((item) => item.page), ['home', 'library', 'luna', 'progress', 'profile']);
-  assert.deepEqual(navigation.primaryNavigation(true).map((item) => item.page), ['home', 'explore', 'luna', 'profile']);
+  assert.deepEqual(navigation.primaryNavigation(true).map((item) => item.page), ['home', 'luna', 'profile']);
   assert.match(app, /newNavigation:\s*featureFlags\.new_navigation/);
   assert.match(bottomNavigation, /newNavigation = false/);
   const copy = readFileSync(resolve(source, 'luna2/copy.ts'), 'utf8');

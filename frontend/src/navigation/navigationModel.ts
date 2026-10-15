@@ -34,7 +34,6 @@ export const legacyPrimaryNavigation: readonly PrimaryNavigationItem[] = [
 
 export const luna2PrimaryNavigation: readonly PrimaryNavigationItem[] = [
   { page: 'home', labelKey: 'home' },
-  { page: 'explore', labelKey: 'explore' },
   { page: 'luna', labelKey: 'lunaAi' },
   { page: 'profile', labelKey: 'profile' }
 ];
@@ -48,10 +47,10 @@ export function isPrimaryPage(page: AppPage, newNavigation: boolean) {
 }
 
 export function fallbackPage(page: AppPage, newNavigation: boolean): AppPage {
-  if (newNavigation && (page === 'library' || page === 'tarot' || page === 'astrology')) return 'explore';
+  if (newNavigation && (page === 'explore' || page === 'library' || page === 'tarot' || page === 'astrology')) return 'home';
   if (page === 'wallet' || page === 'activity' || page === 'achievements') return 'profile';
   if (page === 'favorites' || page === 'player' || page === 'scenePlayer' || page === 'mantraPlayer' || page === 'breathCircle') {
-    return newNavigation ? 'explore' : 'library';
+    return newNavigation ? 'home' : 'library';
   }
   if (page === 'progress' || page === 'moonGarden') return newNavigation ? 'profile' : 'progress';
   if (page === 'pricing') return 'profile';
@@ -62,7 +61,7 @@ export function pageFromStartParam(startParam: string, newNavigation = false): A
   const normalized = startParam.trim().toLowerCase();
   if (normalized === 'luna' || normalized === 'luna-ai' || normalized === 'ai') return 'luna';
   if (normalized === 'library' || normalized === 'saved' || normalized === 'meditations') return 'library';
-  if (normalized === 'explore') return newNavigation ? 'explore' : 'library';
+  if (normalized === 'explore') return newNavigation ? 'home' : 'library';
   if (newNavigation && (normalized === 'tarot' || normalized === 'astrology')) return normalized;
   if (newNavigation && (normalized === 'wallet' || normalized === 'activity' || normalized === 'achievements')) return normalized;
   if (normalized === 'breathwork' || normalized === 'breathing') return 'breathCircle';
@@ -75,6 +74,7 @@ export function pageFromStartParam(startParam: string, newNavigation = false): A
 
 export function initialPageFromLaunch(pathname: string, hash: string, startParam: string, newNavigation = false): AppPage {
   if (pathname === '/admin' || hash === '#admin') return 'admin';
+  if (newNavigation && (pathname.replace(/\/$/, '') === '/explore' || hash === '#explore') && !startParam) return 'home';
   return pageFromStartParam(startParam, newNavigation);
 }
 
@@ -106,6 +106,7 @@ export type RouteAction =
   | { type: 'back' };
 
 export function initialRouteState(initialPage: AppPage, newNavigation: boolean): RouteState {
+  if (newNavigation && initialPage === 'explore') return { current: 'home', trail: [] };
   if (isPrimaryPage(initialPage, newNavigation)) return { current: initialPage, trail: [] };
   return { current: initialPage, trail: [fallbackPage(initialPage, newNavigation)] };
 }
@@ -117,6 +118,7 @@ export function reduceRouteState(state: RouteState, action: RouteAction, newNavi
     return { current: previous, trail: state.trail.slice(0, -1) };
   }
 
+  if (newNavigation && action.page === 'explore') action = { ...action, page: 'home' };
   if (action.page === state.current) return state;
   if (action.type === 'primary' || isPrimaryPage(action.page, newNavigation)) {
     return { current: action.page, trail: [] };

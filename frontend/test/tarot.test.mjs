@@ -77,9 +77,9 @@ test('card flip preserves the whole frame, orientation and reduced motion',()=>{
  assert.match(css,/prefers-reduced-motion: reduce[\s\S]*transition: none/);
  assert.match(css,/is-settled \.tarot-card-front \{ transform: none/);
  assert.match(css,/@keyframes tarot-shuffle[^\n]+\* 24px/);
- assert.match(card,/aria-hidden=\{!revealed\}/);assert.match(card,/disabled=\{!ready\|\|failed\|\|!enabled\}/);assert.match(card,/enabled=true/);
+ assert.match(card,/aria-hidden=\{!revealed\}/);assert.match(card,/disabled=\{failed\|\|!enabled\}/);assert.match(card,/pending&&ready&&enabled&&!failed/);assert.match(card,/enabled=true/);
  assert.match(card,/alt=\{revealed\?card.name\[language\]:''\}/);
- assert.match(card,/event.currentTarget.decode\(\)/);
+ assert.match(card,/image.decode\(\)/);
 });
 test('Tarot is opt-in and does not mutate seeds, history, payments, subscriptions or AI',()=>{
  const app=src('App.tsx'),page=src('features/tarot/TarotPage.tsx');

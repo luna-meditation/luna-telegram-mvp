@@ -29,6 +29,14 @@ test('real provider adapter accepts structured complete response, not fixture te
  let calls=0;const result=await generateTarot(input,null,async(_body,signal)=>{calls++;assert.equal(signal.aborted,false);return new Response(JSON.stringify({status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify(interpretation)}]}]}));});
  assert.deepEqual(result,interpretation);assert.equal(calls,1);
 });
+test('Russian Tarot applies neutral address before persistence, without an extra provider call',async()=>{
+ let calls=0;
+ const result=await generateTarot({...input,language:'ru',question:'Как найти свой ритм?'},null,async body=>{
+  calls++;assert.match((body as {instructions:string}).instructions,/No explicit grammatical preference/);
+  return new Response(JSON.stringify({status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify({...interpretation,summary:'Если ты готова, можно продолжить.',question:'Готова попробовать сегодня?'})}]}]}));
+ });
+ assert.equal(result.summary,'Если ты хочешь, можно продолжить.');assert.equal(result.question,'Хочешь попробовать сегодня?');assert.equal(calls,1);
+});
 test('provider 5xx, refusal, incomplete output, invalid JSON and timeout have no automatic paid retries',async()=>{
  for(const mock of [()=>new Response('{}',{status:503}),()=>new Response(JSON.stringify({status:'incomplete',output:[]})),()=>new Response(JSON.stringify({status:'completed',output:[{content:[{type:'refusal',refusal:'no'}]}]})),()=>new Response(JSON.stringify({status:'completed',output:[{content:[{type:'output_text',text:'bad-json'}]}]})),()=>{throw new DOMException('Timed out','TimeoutError');}]){
   let calls=0;await assert.rejects(generateTarot(input,null,async()=>{calls++;return mock();}));assert.equal(calls,1);

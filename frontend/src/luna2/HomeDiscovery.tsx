@@ -1,42 +1,34 @@
-import { ArrowUpRight, BookOpen, Flame, Flower2, Sparkles, Wind,Orbit } from 'lucide-react';
-import type { AppLanguage } from '../api';
-import { CelestialArt } from './ExplorePage';
-import { luna2Copy } from './copy';
-import { tarotCopy } from '../features/tarot/copy';
+import {ArrowUpRight, Flame, Flower2, Sparkles} from 'lucide-react';
+import type {AppLanguage} from '../api';
+import {CelestialArt} from './ExplorePage';
+import {OptimizedImage} from '../design-system/components/OptimizedImage';
+import {luna2Copy} from './copy';
 import {luna21Flags} from '../config/luna21Flags';
 
 export function HomeLunaGuide({language,onTalk}:{language:AppLanguage;onTalk:()=>void;onPersonalize?:()=>void}){
- const en=language==='en';
- return <section className="luna2-home-guide" aria-label={en?'Your personal Luna guide':'Твоя персональная Luna'}>
-  <div><Sparkles size={22}/><span>Luna AI</span></div>
-  <h2>{en?'A space to find your clarity.':'Пространство для твоей ясности.'}</h2>
-  <button type="button" className="luna2-talk-primary" onClick={onTalk}><span className="luna2-talk-label">{en?'Talk to Luna':'Поговорить с Luna'}</span><ArrowUpRight size={19}/></button>
- </section>;
+ return <div className="luna25-hero-action"><button type="button" className="luna2-talk-primary" onClick={onTalk}><Sparkles size={19}/><span>{language==='en'?'Talk to Luna':'Поговорить с Luna'}</span><ArrowUpRight size={18}/></button></div>;
 }
 
-export function HomeDiscovery({ language, tarotEnabled, onTarot, onMeditate, onBreathe,onAstrology,onDaily }: {
-  language: AppLanguage; tarotEnabled: boolean; onTarot: () => void; onMeditate: () => void; onBreathe: () => void;onAstrology?:()=>void;onDaily?:()=>void;
-}) {
-  const t = luna2Copy[language];
-  return <>
-    <button type="button" disabled={!tarotEnabled} onClick={luna21Flags.daily_card_v2?onDaily??onTarot:onTarot} className="luna2-daily-card" aria-disabled={!tarotEnabled} data-feature-flag="tarot_daily" data-feature-enabled={tarotEnabled} aria-label={luna21Flags.daily_card_v2?(language==='en'?'Card of the day':'Карта дня'):tarotEnabled ? tarotCopy[language].homeTitle : t.dailyTarotNote}>
-      <CelestialArt kind="tarot" sizes="118px" /><div><span className="luna2-eyebrow">{luna21Flags.daily_card_v2?(language==='en'?'Card of the day':'Карта дня'):tarotEnabled ? tarotCopy[language].homeTitle : t.dailyTarot}</span><h2>{luna21Flags.daily_card_v2?(language==='en'?'A new perspective for today.':'Новый взгляд на сегодняшний день.'):tarotEnabled ? tarotCopy[language].homeBody : t.dailyTarotBody}</h2><p>{luna21Flags.daily_card_v2?(language==='en'?'Open your free card':'Открыть бесплатную карту'):tarotEnabled ? tarotCopy[language].homeTitle : t.dailyTarotNote}</p></div><span className="luna2-soon">{tarotEnabled ? tarotCopy[language].free : t.soon}</span>
-    </button>
-    <section className="luna2-quick-actions luna21-home-categories" aria-label={t.quickActions}>
-      <button type="button" onClick={onTarot}><Sparkles size={21} /><span>{t.tarot}</span>{!tarotEnabled && <small>{t.soon}</small>}</button>
-      <button type="button" onClick={onAstrology} disabled={!onAstrology}><Orbit size={21}/><span>{language==='en'?'Astrology':'Астрология'}</span><small>{t.soon}</small></button>
-      <button type="button" onClick={onMeditate}><BookOpen size={21} /><span>{t.meditate}</span></button>
-      <button type="button" onClick={onBreathe}><Wind size={21} /><span>{t.breathe}</span></button>
-    </section>
-  </>;
+export function HomeDiscovery({language,tarotEnabled,onTarot,onMeditate,onBreathe,onAstrology,onDaily}:{language:AppLanguage;tarotEnabled:boolean;onTarot:()=>void;onMeditate:()=>void;onBreathe:()=>void;onAstrology?:()=>void;onDaily?:()=>void}){
+ const t=luna2Copy[language],en=language==='en';
+ const categories=[
+  {id:'tarot',label:t.tarot,description:en?'A new perspective':'Новый взгляд',onOpen:onTarot},
+  {id:'astrology',label:t.astrology,description:en?'Your celestial portrait':'Твой небесный портрет',onOpen:onAstrology},
+  {id:'meditations',label:t.meditations,description:en?'Return to yourself':'Вернуться к себе',onOpen:onMeditate},
+  {id:'breathwork',label:t.breathwork,description:en?'Find your rhythm':'Найти свой ритм',onOpen:onBreathe}
+ ] as const;
+ return <>
+  <section className="luna25-home-categories" aria-label={t.quickActions}>{categories.map(c=><button type="button" key={c.id} data-category={c.id} className={`luna25-category is-${c.id}`} onClick={c.onOpen} disabled={!c.onOpen}>
+   <div className="luna25-category-art" aria-hidden="true">{c.id==='tarot'||c.id==='astrology'?<CelestialArt kind={c.id}/>:c.id==='meditations'?<OptimizedImage src="/images/home/hero-night.png" alt="" sizes="45vw"/>:<span className="luna25-breath-art"><i/><i/></span>}</div>
+   {c.id==='astrology'&&<small className="luna25-soon">{t.soon}</small>}<span className="luna25-category-copy"><strong>{c.label}</strong><span>{c.description}</span></span><ArrowUpRight size={16}/>
+  </button>)}</section>
+  <button type="button" disabled={!tarotEnabled} onClick={luna21Flags.daily_card_v2?onDaily??onTarot:onTarot} className="luna2-daily-card luna25-daily-card" aria-disabled={!tarotEnabled} data-feature-flag="tarot_daily" data-feature-enabled={tarotEnabled} aria-label={en?'Card of the day':'Карта дня'}>
+   <CelestialArt kind="tarot" sizes="88px"/><div><span className="luna2-eyebrow">{en?'Card of the day':'Карта дня'}</span><h2>{en?'Discover your symbol for today':'Открой свой символ дня'}</h2><p>{en?'Free · once a day':'Бесплатно · 1 раз в день'}</p></div><ArrowUpRight size={18}/>
+  </button>
+ </>;
 }
 
-export function HomeProgress({ language, streak, checkins, gardenLevel, onJourney, onGarden }: {
-  language: AppLanguage; streak: string; checkins: string; gardenLevel?: number; onJourney: () => void; onGarden: () => void;
-}) {
-  const t = luna2Copy[language];
-  return <section className="luna2-home-progress">
-    <button type="button" onClick={onJourney}><Flame size={21} /><span><strong>{t.progress}</strong><small>{streak} {t.days} · {checkins} {language === 'ru' ? 'отметок' : 'check-ins'}</small></span><ArrowUpRight size={18} /></button>
-    <button type="button" onClick={onGarden}><Flower2 size={21} /><span><strong>{t.garden}</strong><small>{gardenLevel === undefined ? t.gardenBody : `${t.gardenLevel} ${gardenLevel}`}</small></span><ArrowUpRight size={18} /></button>
-  </section>;
+export function HomeProgress({language,streak,checkins,gardenLevel,onJourney,onGarden}:{language:AppLanguage;streak:string;checkins:string;gardenLevel?:number;onJourney:()=>void;onGarden:()=>void}){
+ const t=luna2Copy[language];
+ return <section className="luna2-home-progress"><button type="button" onClick={onJourney}><Flame size={21}/><span><strong>{t.progress}</strong><small>{streak} {t.days} · {checkins} {language==='ru'?'отметок':'check-ins'}</small></span><ArrowUpRight size={18}/></button><button type="button" onClick={onGarden}><Flower2 size={21}/><span><strong>{t.garden}</strong><small>{gardenLevel===undefined?t.gardenBody:`${t.gardenLevel} ${gardenLevel}`}</small></span><ArrowUpRight size={18}/></button></section>;
 }

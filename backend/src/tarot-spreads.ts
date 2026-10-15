@@ -12,11 +12,13 @@ import {generateTarot} from './tarot.js';
 import {tarotInputSchema,tarotRequestHash,type TarotInput} from './tarot-policy.js';
 import {qaTarotEnabled,qaTarotLimits,qaTarotTransport} from './staging-tarot-budget.js';
 import {validateTarotV2} from './tarot-interpretation-v2.js';
+import {neutralRussianInterpretation} from './luna/russian-address.js';
+import {permittedPersonalContext} from './personalization-policy.js';
 export async function generateTarotSpread(input:SpreadInput,profile:Parameters<typeof buildSpreadAiRequest>[1],transport=requestLunaResponse,onMeter?:(meter:StagingAiMeterRecord)=>Promise<void>){
  const response=await transport(buildSpreadAiRequest(input,profile,env.AI_CHAT_MODEL),AbortSignal.timeout(env.AI_REQUEST_TIMEOUT_MS));
  if(!response.ok)throw new Error('provider_error');const payload=await response.json(),meter=stagingAiMeterRecord(payload);if(meter&&onMeter)await onMeter(meter);
  const text=responseOutputText(payload);if(!text)throw new Error('invalid_response');
- const result=spreadInterpretationSchema.parse(JSON.parse(text));
+ const result=spreadInterpretationSchema.parse(neutralRussianInterpretation(JSON.parse(text),input.language,permittedPersonalContext(profile),input.question));
  if('version' in result)return validateTarotV2(result,input.cards.map((c,i)=>({...c,position:spreadPositions[input.language][input.kind][i]})));
  if(result.cardInsights.length!==input.cards.length||result.cardInsights.some((c,i)=>c.cardId!==input.cards[i].cardId))throw new Error('wrong_spread_cards');
  return result;

@@ -13,6 +13,7 @@ import {confirmedMemoryPrompt} from './luna/prompts/memory-policy.js';
 import {hydrateLunaTarotMessages} from './luna24-chat.js';
 import {contextualActionIds} from './luna24-policy.js';
 import {permittedPersonalContext} from './personalization-policy.js';
+import {neutralRussianAddress,russianAddressInstructions} from './luna/russian-address.js';
 import {
   memoryCandidateSchema,
   memoryCategories,
@@ -588,11 +589,12 @@ export function buildLunaOpenAiRequest(input: {
   const selected=lunaModeSchema.safeParse(context?.modeContext?.mode);
   const mode=env.FEATURE_AI_MODES&&selected.success?selected.data:null;
   const modeContext=mode?boundedModeContext(context?.modeContext):null;
+  const addressContext=input.context as {personalContext?:unknown;modeContext?:{personalContext?:unknown}}|null;
   return {
     model: env.AI_CHAT_MODEL,
     store: false,
     reasoning: { effort: env.AI_REASONING_EFFORT },
-    instructions: (mode?systemPrompt(input.language,JSON.stringify(input.catalog.slice(0,8)),JSON.stringify(modeContext))+'\n\n'+buildModeInstructions(mode,input.language,modeContext):systemPrompt(input.language, JSON.stringify(input.catalog), JSON.stringify(input.context)))+(env.FEATURE_PERSONAL_MEMORY?'\n'+confirmedMemoryPrompt:''),
+    instructions: (mode?systemPrompt(input.language,JSON.stringify(input.catalog.slice(0,8)),JSON.stringify(modeContext))+'\n\n'+buildModeInstructions(mode,input.language,modeContext):systemPrompt(input.language, JSON.stringify(input.catalog), JSON.stringify(input.context)))+(env.FEATURE_PERSONAL_MEMORY?'\n'+confirmedMemoryPrompt:'')+'\n'+russianAddressInstructions(input.language,addressContext?.personalContext??addressContext?.modeContext?.personalContext,input.recent.at(-1)?.content),
     input: (mode||env.FEATURE_PERSONAL_MEMORY?input.recent.slice(-8):input.recent).map((message,index,array) => ({ role: message.role, content: mode||env.FEATURE_PERSONAL_MEMORY?message.content.slice(0,index===array.length-1?2000:1000):message.content })),
     max_output_tokens: input.maxOutputTokens ?? env.AI_MAX_OUTPUT_TOKENS,
     text: lunaStructuredTextFormat()
@@ -1478,7 +1480,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       ? repeatedClarificationFallback(responseLanguage)
       : visibleMessage;
     const attachedMeditationId = recommendedMeditationId;
-    const assistantContent = enforceCardClaimConsistency(safeVisibleMessage, responseLanguage, Boolean(attachedMeditationId));
+    const assistantContent = neutralRussianAddress(enforceCardClaimConsistency(safeVisibleMessage, responseLanguage, Boolean(attachedMeditationId)),responseLanguage,personal,input.message);
     if (!assistantContent) throw new LunaAiError('malformed_response', 'Luna returned no safe visible message.', 502);
     if (hasInternalDataLeak(assistantContent)) {
       console.warn('[Luna AI internal data guard]', {

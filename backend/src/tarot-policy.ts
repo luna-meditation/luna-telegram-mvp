@@ -3,6 +3,7 @@ import {createHash} from 'node:crypto';
 import {resolve} from 'node:path';
 import {z} from 'zod';
 import {buildModeInstructions} from './luna/modes.js';
+import {russianAddressInstructions} from './luna/russian-address.js';
 import {permittedPersonalContext,type PersonalProfile} from './personalization-policy.js';
 import {tarotInterpretationV2,tarotOutputSchemaV2,conciseTarotInstructions} from './tarot-interpretation-v2.js';
 const packed=new URL('./tarot-catalog.json',import.meta.url);
@@ -33,7 +34,7 @@ export function buildTarotAiRequest(input:TarotInput,profile:PersonalProfile|nul
  const card=tarotCatalog.find(c=>c.id===input.cardId)!;
  const data={card:{id:card.id,name:card.name[input.language],meaning:card.meaning[input.language][input.orientation],arcana:card.arcana,suit:card.suit,number:card.number},cards:[{cardId:card.id,orientation:input.orientation,position:input.language==='ru'?'Основной взгляд':'Main perspective'}],orientation:input.orientation,intention:input.intention,question:input.question,personalContext:permittedPersonalContext(profile)};
  return {model,store:false,reasoning:{effort:'minimal'},max_output_tokens:maxTokens,
-  instructions:buildModeInstructions('tarot',input.language,null)+'\n'+conciseTarotInstructions,
+  instructions:buildModeInstructions('tarot',input.language,null)+'\n'+conciseTarotInstructions+'\n'+russianAddressInstructions(input.language,data.personalContext,input.question),
   input:[{role:'user',content:[{type:'input_text',text:JSON.stringify(data)}]}],
   text:{format:{type:'json_schema',name:'luna_tarot_reflection_v2',strict:true,schema:tarotOutputSchemaV2}}};
 }
