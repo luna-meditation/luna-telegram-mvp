@@ -1,5 +1,6 @@
 import {z} from 'zod';
 export const personalMemoryCategories=['personal_facts','preferences','goals','interests','birth_information','life_context','reflections'] as const;
+export function messagesAfterMemoryBoundary<T extends {created_at:string}>(rows:T[],boundary?:string):T[]{if(!boundary)return rows;const cutoff=Date.parse(boundary);if(!Number.isFinite(cutoff))return [];return rows.filter(row=>Date.parse(row.created_at)>=cutoff);}
 export const memoryWriteSchema=z.object({
  category:z.enum(personalMemoryCategories),key:z.string().trim().min(2).max(64).regex(/^[\p{L}\p{N} _-]+$/u),value:z.string().trim().min(2).max(500),confirmed:z.boolean(),kind:z.enum(['fact','symbolic']).default('fact'),sourceMessageId:z.string().uuid().optional(),revision:z.number().int().positive().optional(),sensitiveConsent:z.boolean().default(false)
 }).strict().refine(v=>v.category!=='birth_information','Use the canonical optional birth profile, not a second copy.').refine(v=>v.kind!=='symbolic'||v.category==='reflections','Symbolic interpretations are reflections, never personal facts.');

@@ -7,7 +7,8 @@ import { buildLunaSystemPrompt, detectedIntents, recommendationGoals } from './l
 import {requestLunaResponse} from './luna/ai-provider.js';
 import {lunaModeSchema,buildModeInstructions,boundedModeContext} from './luna/modes.js';
 import {FoundationError} from './personalization.js';
-import {getAiPersonalProfile} from './personal-memory.js';
+import {getAiPersonalProfile,getMemoryContextBoundary,advanceMemoryContextBoundary} from './personal-memory.js';
+import {messagesAfterMemoryBoundary} from './personal-memory-policy.js';
 import {confirmedMemoryPrompt} from './luna/prompts/memory-policy.js';
 import {permittedPersonalContext} from './personalization-policy.js';
 import {
@@ -768,6 +769,7 @@ function relevantMemories(message: string, memories: Array<{ category: string; m
 }
 
 async function loadContext(telegramId: number, conversationId: string, currentMessage: string) {
+  const memoryBoundary=await getMemoryContextBoundary(telegramId);
   const [{ data: recent }, { data: memories }, { data: user }, { data: checkin }, { data: catalog }, { data: conversation }] = await Promise.all([
     supabase.from('ai_messages').select('role, content, metadata, created_at').eq('conversation_id', conversationId).eq('telegram_id', telegramId).order('created_at', { ascending: false }).limit(env.AI_RECENT_MESSAGE_LIMIT),
     supabase.from('user_memories').select('category, memory_key, memory_value').eq('telegram_id', telegramId).in('category', memoryCategories).eq('is_active', true).order('updated_at', { ascending: false }).limit(30),
@@ -777,7 +779,7 @@ async function loadContext(telegramId: number, conversationId: string, currentMe
     supabase.from('ai_conversations').select('pending_state, conversation_state').eq('id', conversationId).eq('telegram_id', telegramId).maybeSingle()
   ]);
 
-  const recentMessages = [...(recent ?? [])].reverse();
+  const recentMessages = [...messagesAfterMemoryBoundary(recent ?? [],memoryBoundary)].reverse();
   const pendingState = inferPendingStateFromRecent(conversation?.pending_state, recentMessages);
   const conversationState = recoverConversationState(conversation?.conversation_state, recentMessages);
   const context = {
@@ -887,11 +889,13 @@ export async function getLunaMemory(telegramId: number) {
 }
 
 export async function setLunaMemoryEnabled(telegramId: number, enabled: boolean) {
+  await advanceMemoryContextBoundary(telegramId);
   const { error } = await supabase.from('users').update({ ai_memory_enabled: enabled }).eq('telegram_id', telegramId);
   if (error) throw error;
 }
 
 export async function deleteLunaMemory(telegramId: number, memoryId?: string) {
+  await advanceMemoryContextBoundary(telegramId);
   let query = supabase.from('user_memories').delete().eq('telegram_id', telegramId);
   if (memoryId) query = query.eq('id', memoryId);
   const { error } = await query;
