@@ -11,6 +11,7 @@ const api=new URL(process.env.VITE_API_URL?.trim()||'https://invalid.invalid');
 assert.ok(api.protocol==='https:'&&!['invalid.invalid','localhost','127.0.0.1','::1'].includes(api.hostname),'Provide the verified production VITE_API_URL');
 assert.ok(!api.username&&!api.password&&!api.search&&!api.hash,'The public API URL must not carry credentials or tokens');
 const profile=process.env.LUNA_RELEASE_PROFILE??'tarot-phase2';
+assert.ok(!process.env.VITE_FEATURE_AI_CENTRAL_EXPERIENCE||process.env.VITE_FEATURE_AI_CENTRAL_EXPERIENCE==='false','Luna 2.4 development is not approved for production');
 assert.ok(['tarot-phase2','luna2','luna21','luna23'].includes(profile),'Unknown approved release profile');
 const foundation=['PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI'];
 const required=['NEW_NAVIGATION','TAROT_DAILY',...(['luna2','luna21','luna23'].includes(profile)?foundation:[]),...(['luna21','luna23'].includes(profile)?['DAILY_CARD_V2']:[]),...(profile==='luna23'?['PERSONAL_MEMORY']:[])];

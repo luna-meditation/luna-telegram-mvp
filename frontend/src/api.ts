@@ -367,6 +367,8 @@ export type LunaMessage = {
   role: 'user' | 'assistant';
   content: string;
   metadata?: {
+    contextualActions?:Array<'tarot'|'birth_profile'|'journal'|'meditation'>;
+    tarot?:{readingId:string;clientReadingId:string;kind:'single'|'three'|'five';revealed:number;requestHash:string;reading:TarotReading|null};
     recommendedMeditationId?: string | null;
     meditationAction?: {
       type: 'meditation_card';
@@ -714,8 +716,8 @@ export async function getProfile(initData?: string, localDate?: string): Promise
   return request(`/api/profile/me${localDate ? `?local_date=${encodeURIComponent(localDate)}` : ''}`, undefined, initData);
 }
 
-export async function getLunaConversations(initData?: string) {
-  const response = await request<{ conversations: LunaConversationSummary[] }>('/api/luna/conversations', undefined, initData);
+export async function getLunaConversations(initData?: string,offset=0) {
+  const response = await request<{ conversations: LunaConversationSummary[] }>('/api/luna/conversations'+(offset?`?offset=${offset}`:''), undefined, initData);
   return response.conversations;
 }
 
@@ -744,6 +746,10 @@ export async function sendLunaMessage(input: {
 export async function deleteLunaConversation(conversationId: string, initData?: string) {
   return request<{ ok: true }>(`/api/luna/conversations/${conversationId}`, { method: 'DELETE' }, initData);
 }
+
+export async function renameLunaConversation(id:string,title:string,initData?:string){return request<{id:string;title:string}>(`/api/luna/tools/conversations/${id}`,{method:'PATCH',body:JSON.stringify({title})},initData);}
+export async function openLunaTarot(input:{clientReadingId:string;conversationId?:string;kind:'single'|'three'|'five';intention:'general'|'love'|'career'|'growth';question:string;language:AppLanguage},initData?:string){return request<{conversationId:string;message:LunaMessage}>('/api/luna/tools/tarot',{method:'POST',body:JSON.stringify(input)},initData);}
+export async function revealLunaTarot(id:string,index:number,initData?:string){return request<{conversationId:string;message:LunaMessage}>(`/api/luna/tools/tarot/${id}/reveal`,{method:'POST',body:JSON.stringify({index})},initData);}
 
 export async function clearLunaConversations(initData?: string) {
   return request<{ ok: true }>('/api/luna/conversations', { method: 'DELETE' }, initData);

@@ -10,6 +10,8 @@ import {FoundationError} from './personalization.js';
 import {getAiPersonalProfile,getMemoryContextBoundary,advanceMemoryContextBoundary} from './personal-memory.js';
 import {messagesAfterMemoryBoundary,conversationStateAfterMemoryBoundary} from './personal-memory-policy.js';
 import {confirmedMemoryPrompt} from './luna/prompts/memory-policy.js';
+import {hydrateLunaTarotMessages} from './luna24-chat.js';
+import {contextualActionIds} from './luna24-policy.js';
 import {permittedPersonalContext} from './personalization-policy.js';
 import {
   memoryCandidateSchema,
@@ -844,26 +846,27 @@ async function saveMemories(telegramId: number, conversationId: string, sourceMe
   if (error) console.warn('[Luna AI memory save failed]', { user: userHash(telegramId), error: error.message });
 }
 
-export async function listLunaConversations(telegramId: number) {
+export async function listLunaConversations(telegramId: number,rawOffset:unknown=0) {
+  const offset=z.coerce.number().int().min(0).max(10000).parse(rawOffset);
   const { data, error } = await supabase
     .from('ai_conversations')
     .select('id, title, language, status, created_at, updated_at, last_message_at')
     .eq('telegram_id', telegramId)
     .eq('status', 'active')
     .order('last_message_at', { ascending: false })
-    .limit(20);
+    .range(offset,offset+19);
   if (error) throw error;
   return Promise.all((data ?? []).map(async (conversation) => {
-    const { data: latest } = await supabase.from('ai_messages').select('content').eq('conversation_id', conversation.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+    const { data: latest } = await supabase.from('ai_messages').select('content').eq('conversation_id', conversation.id).eq('telegram_id',telegramId).order('created_at', { ascending: false }).limit(1).maybeSingle();
     return { ...conversation, latestMessage: latest?.content ?? '' };
   }));
 }
 
 export async function getLunaConversation(telegramId: number, conversationId: string) {
   const conversation = await ownedConversation(telegramId, conversationId);
-  const { data: messages, error } = await supabase.from('ai_messages').select('id, role, content, metadata, created_at').eq('conversation_id', conversationId).order('created_at');
+  const { data: messages, error } = await supabase.from('ai_messages').select('id, role, content, metadata, created_at').eq('conversation_id', conversationId).eq('telegram_id',telegramId).order('created_at');
   if (error) throw error;
-  return { conversation, messages: messages ?? [] };
+  return { conversation, messages: await hydrateLunaTarotMessages(telegramId,messages ?? []) };
 }
 
 export async function deleteLunaConversation(telegramId: number, conversationId: string) {
@@ -927,7 +930,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
   }
 
   await upsertUser(user);
-  await pruneExpiredLunaConversations(telegramId, input.conversationId);
+  if(!env.FEATURE_AI_CENTRAL_EXPERIENCE)await pruneExpiredLunaConversations(telegramId, input.conversationId);
   const access = await getUserAccess(telegramId);
   const limit = access.hasPremium ? env.AI_PREMIUM_MAX_MESSAGES_PER_DAY : env.AI_MAX_MESSAGES_PER_DAY;
   const reservation = await reserveChatRequest(telegramId, input.requestId, limit, input.conversationId);
@@ -1527,6 +1530,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       request_id: input.requestId,
       metadata: {
         recommendedMeditationId: attachedMeditationId,
+        ...(env.FEATURE_AI_CENTRAL_EXPERIENCE?{contextualActions:contextualActionIds(input.message,null)}:{}),
         meditationAction,
         recommendedMeditation,
         safetyState: 'none',
@@ -1553,13 +1557,14 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
 
     const fallbackTitle = input.message.split(/\s+/).slice(0, 6).join(' ').slice(0, 60);
     const { error: conversationError } = await supabase.from('ai_conversations').update({
-      title: conversationTitle || parsed.conversationTitle?.trim() || fallbackTitle,
+      ...(!env.FEATURE_AI_CENTRAL_EXPERIENCE?{title:conversationTitle || parsed.conversationTitle?.trim() || fallbackTitle}:{}),
       language: responseLanguage,
       pending_state: nextPendingState ?? {},
       conversation_state: nextConversationState,
       updated_at: new Date().toISOString(), last_message_at: new Date().toISOString()
     }).eq('id', resolvedConversationId).eq('telegram_id', telegramId);
     if (conversationError) throw conversationError;
+    if(env.FEATURE_AI_CENTRAL_EXPERIENCE&&!conversationTitle){const named=await supabase.from('ai_conversations').update({title:parsed.conversationTitle?.trim()||fallbackTitle}).eq('id',resolvedConversationId).eq('telegram_id',telegramId).eq('title','');if(named.error)throw named.error;}
 
     if (memoryEnabled && !input.mode && userMessage?.id) await saveMemories(telegramId, resolvedConversationId, userMessage.id, parsed.memoryCandidates, input.message);
     await saveUsage({

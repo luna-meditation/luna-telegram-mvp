@@ -4,6 +4,7 @@ import { supportsNativeBack } from './telegramBack';
 
 type RouteOptions = {
   newNavigation: boolean;
+  nestedBack?: boolean;
   beforeBack?: () => boolean;
 };
 
@@ -32,7 +33,7 @@ export function useAppRouteState(initialPage: AppPage, options: RouteOptions) {
     dispatch({ type: 'back' });
   }, []);
 
-  const canGoBack = state.trail.length > 0;
+  const canGoBack = state.trail.length > 0 || Boolean(options.nestedBack);
 
   useEffect(() => {
     const backButton = window.Telegram?.WebApp?.BackButton;

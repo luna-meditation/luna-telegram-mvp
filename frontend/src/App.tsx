@@ -1941,10 +1941,12 @@ function App() {
   const [tarotSession, tarotDispatch] = useReducer(reduceTarotSession, undefined, createTarotSession);
   const [aiReadingId,setAiReadingId]=useState<string|undefined>();
   const tarotBackHandlerRef = useRef<(() => void) | null>(null);
-  const registerTarotBackHandler = useCallback((handler: (() => void) | null) => { tarotBackHandlerRef.current = handler; }, []);
+  const [nestedBack,setNestedBack]=useState(false);
+  const registerTarotBackHandler = useCallback((handler: (() => void) | null) => { tarotBackHandlerRef.current = handler;setNestedBack(Boolean(handler)); }, []);
   const initialPage = initialPageFromLaunch(window.location.pathname, window.location.hash, launchStartParam, featureFlags.new_navigation);
   const { page, setPage, navigatePrimary, goBack } = useAppRouteState(initialPage, {
     newNavigation: featureFlags.new_navigation,
+    nestedBack: featureFlags.ai_central_experience&&nestedBack,
     beforeBack: () => {
       const handler = tarotBackHandlerRef.current;
       if (!handler) return false;
@@ -1991,6 +1993,7 @@ function App() {
   const [profile, setProfile] = useState<ProfileStats | null>(() => initialAccountCache?.profile ?? null);
   const [profileNestedActive, setProfileNestedActive] = useState(false);
   const [profileEntry, setProfileEntry] = useState<'main'|'personalization'|'universe'>('main');
+  useEffect(()=>{if(!featureFlags.ai_central_experience)return;const activity=()=>setPage('activity'),astrology=()=>setPage('astrology');window.addEventListener('luna-open-activity',activity);window.addEventListener('luna-open-astrology',astrology);return()=>{window.removeEventListener('luna-open-activity',activity);window.removeEventListener('luna-open-astrology',astrology);};},[setPage]);
   useEffect(()=>{const open=()=>{if(!featureFlags.personal_memory)return;setProfileEntry('universe');navigatePrimary('profile');};window.addEventListener('luna-open-universe',open);return()=>window.removeEventListener('luna-open-universe',open);},[navigatePrimary]);
   const [personalDisplayName, setPersonalDisplayName] = useState<string|null>(null);
   useEffect(()=>{if(page!=='profile')setProfileEntry('main');},[page]);
@@ -3144,6 +3147,7 @@ function App() {
             onOpenMeditation={openMeditation}
             onTarot={featureFlags.new_navigation&&featureFlags.tarot_daily?()=>setPage('tarot'):undefined}
             readingContextId={aiReadingId}
+            registerBackHandler={registerTarotBackHandler}
             onClearReadingContext={()=>setAiReadingId(undefined)}
           />
         </Suspense>)}
@@ -3545,7 +3549,8 @@ function LunaPage({
   onOpenMeditation,
   onTarot,
   readingContextId,
-  onClearReadingContext
+  onClearReadingContext,
+  registerBackHandler
 }: {
   firstName: string;
   language: AppLanguage;
@@ -3556,6 +3561,7 @@ function LunaPage({
   onTarot?:()=>void;
   readingContextId?:string;
   onClearReadingContext?:()=>void;
+  registerBackHandler?:(handler:(()=>void)|null)=>void;
 }) {
   return (
     <LunaChat
@@ -3569,6 +3575,7 @@ function LunaPage({
       redesigned={featureFlags.new_navigation}
       readingContextId={readingContextId}
       onClearReadingContext={onClearReadingContext}
+      registerBackHandler={registerBackHandler}
     />
   );
 }

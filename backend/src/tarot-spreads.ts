@@ -29,10 +29,17 @@ export async function savePaidSingleTarot(telegramId:number,body:unknown){
  return saveExtendedReading(telegramId,{...r,kind:'single',cards:[{cardId:r.cardId,orientation:r.orientation}]},tarotRequestHash(r),parsed.orderId);
 }
 async function saveExtendedReading(telegramId:number,input:SpreadInput|(TarotInput&{kind:'single';cards:Array<{cardId:string;orientation:'upright'|'reversed'}>}),requestHash:string,orderId?:string){
- const safety=safetyCategory(input.question),generate=input.generate&&env.FEATURE_TAROT_AI&&Boolean(env.OPENAI_API_KEY)&&!safety&&(env.FEATURE_PREMIUM_V2||env.FEATURE_TAROT_PAID_READINGS);
+ // Explicit QA-only adapter: existing staging allowlist, same daily/global limits,
+ // no entitlement changes, no ledger call. Never available in production.
+ const freeQa=env.STAGING_MODE&&env.FEATURE_AI_CENTRAL_EXPERIENCE&&env.FEATURE_TAROT_SPREAD_AI_QA&&input.kind!=='single';
+ const safety=safetyCategory(input.question),generate=input.generate&&env.FEATURE_TAROT_AI&&Boolean(env.OPENAI_API_KEY)&&!safety&&(env.FEATURE_PREMIUM_V2||env.FEATURE_TAROT_PAID_READINGS||freeQa);
  const {data,error}=await supabase.rpc('reserve_luna_tarot_spread',{p_telegram_id:telegramId,p_client_reading_id:input.clientReadingId,p_request_hash:requestHash,p_kind:input.kind,p_cards:input.cards,p_intention:input.intention,p_question:input.question,p_language:input.language,p_generate:generate,p_order_id:env.FEATURE_TAROT_PAID_READINGS?orderId??null:null,p_premium_allowed:env.FEATURE_PREMIUM_V2,p_daily_limit:env.FEATURE_PREMIUM_V2||env.FEATURE_TAROT_PAID_READINGS?10:env.TAROT_AI_DAILY_LIMIT,p_global_limit:env.TAROT_AI_GLOBAL_DAILY_LIMIT});
  if(error||!data)throw new FoundationError(503,'history_unavailable','Could not save this reading.');
- const reserved=data as {status:string;acquired:boolean;reading?:StoredReading};
+ let reserved=data as {status:string;acquired:boolean;reading?:StoredReading};
+ if(freeQa&&generate&&reserved.reading?.status==='local'&&!reserved.acquired){
+  const qa=await supabase.rpc('reserve_luna_tarot_reading',{p_telegram_id:telegramId,p_client_reading_id:input.clientReadingId,p_request_hash:requestHash,p_card_id:input.cards[0].cardId,p_orientation:input.cards[0].orientation,p_intention:input.intention,p_question:input.question,p_language:input.language,p_generate:true,p_daily_limit:env.TAROT_AI_DAILY_LIMIT,p_global_limit:env.TAROT_AI_GLOBAL_DAILY_LIMIT});
+  if(qa.error||!qa.data)throw new FoundationError(503,'history_unavailable','Your reading remains saved.');reserved=qa.data as typeof reserved;
+ }
  if(!reserved.reading)throw new FoundationError(reserved.status==='conflict'?409:410,'reading_unavailable','This reading cannot be changed.');
  let reading=reserved.reading;
  if(safety&&reading.status==='local'){
