@@ -185,6 +185,9 @@ function CurrentRhythmHero({ profile, language }: { profile: ProfileStats | null
 }
 
 function achievementIcon(item: ProgressAchievement): LucideIcon {
+  if(item.id.startsWith('astrology_'))return Moon;
+  if(item.id==='first_confirmed_memory')return HeartHandshake;
+  if(item.id==='first_breathwork')return Flower2;
   if(item.id.startsWith('tarot_')||item.id==='first_luna_conversation')return Sparkles;
   if (item.id === 'moon_garden_level_3') return Sprout;
   if (item.id === 'moon_garden_level_5') return Leaf;
@@ -224,6 +227,7 @@ function AchievementCard({ item, language, compact = false }: { item: ProgressAc
       <div className="progress-v4-achievement-copy">
         <span>{status === 'unlocked' ? t.unlocked : status === 'progress' ? t.inProgress : t.locked}</span>
         <h4>{item.title}</h4>
+        {!compact&&<details><summary>{language==='en'?'How to unlock':'Как получить'}</summary><p>{item.description}</p>{(item.target??0)>0&&<p>{language==='en'?'Progress: ':'Прогресс: '}{item.current??0} / {item.target}</p>}</details>}
         {!compact && item.unlocked && earnedDate && <small>{progressText(language, 'earned', { date: earnedDate })}</small>}
         {!compact && !item.unlocked && (item.target ?? 0) > 0 && (
           <div className="progress-v4-achievement-progress">

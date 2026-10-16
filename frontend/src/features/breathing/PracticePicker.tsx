@@ -1,0 +1,11 @@
+import {useEffect,useRef,useState} from 'react';
+import {createPortal} from 'react-dom';
+import {ChevronDown,Check,X} from 'lucide-react';
+import {breathPractices,type BreathPracticeId} from './practices';
+import type {AppLanguage} from '../../api';
+export function PracticePicker({value,onChange,disabled,language,registerBackHandler}:{value:BreathPracticeId;onChange:(id:BreathPracticeId)=>void;disabled:boolean;language:AppLanguage;registerBackHandler?:(handler:(()=>void)|null)=>void}){
+ const [open,setOpen]=useState(false),dialog=useRef<HTMLDialogElement>(null),trigger=useRef<HTMLButtonElement>(null),en=language==='en';
+ const selected=breathPractices.find(p=>p.id===value)!;
+ useEffect(()=>{if(!open)return;dialog.current?.showModal();registerBackHandler?.(()=>setOpen(false));return()=>{dialog.current?.close();registerBackHandler?.(null);trigger.current?.focus({preventScroll:true});};},[open,registerBackHandler]);
+ return <><button ref={trigger} type="button" className="luna31-practice-trigger" disabled={disabled} aria-haspopup="dialog" aria-expanded={open} onClick={()=>setOpen(true)}><span><small>{en?'Breathing practice':'Дыхательная практика'}</small><strong>{selected.name[language]}</strong></span><span>{selected.timing[language]}</span><ChevronDown size={18}/></button>{open&&createPortal(<dialog ref={dialog} className="luna31-practice-sheet" aria-labelledby="breath-picker-title" onCancel={()=>setOpen(false)} onClick={e=>{if(e.target===e.currentTarget)setOpen(false);}}><header><h2 id="breath-picker-title">{en?'Find your rhythm':'Найдите свой ритм'}</h2><button type="button" aria-label={en?'Close':'Закрыть'} onClick={()=>setOpen(false)}><X size={20}/></button></header><p>{en?'Breathe comfortably, without effort. Stop if dizzy or uncomfortable.':'Дышите комфортно, без усилия. При головокружении или дискомфорте остановитесь.'}</p><div role="group" aria-label={en?'Nine breathing practices':'Девять дыхательных практик'}>{breathPractices.map(p=><button key={p.id} type="button" className="luna31-practice-option" aria-pressed={p.id===value} onClick={()=>{onChange(p.id);setOpen(false);}}><span><strong>{p.name[language]}</strong><small>{p.timing[language]}</small><p>{p.description[language]}</p></span>{p.id===value&&<Check size={20}/>}</button>)}</div></dialog>,document.body)}</>;
+}

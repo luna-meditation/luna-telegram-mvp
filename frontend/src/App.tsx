@@ -137,6 +137,8 @@ import { ExplorePage, FeaturePreview, SectionBack, type ExploreCategory } from '
 import { ProfileOverview, WalletPage } from './luna2/ProfileOverview';
 import { MyUniverse } from './luna2/MyUniverse';
 import { BreathAudioModes, BreathingVisual } from './luna2/BreathingVisual';
+import {PracticePicker} from './features/breathing/PracticePicker';
+import {ProgressMilestone} from './components/progress/ProgressMilestone';
 import {createSceneAudioUrl} from './features/breathing/ambient';
 import {useBreathAudio} from './features/breathing/useBreathAudio';
 import {LunaShareButton} from './features/sharing/LunaShareButton';
@@ -1885,8 +1887,8 @@ function App() {
   useEffect(()=>{document.documentElement.lang=language;},[language]);
   const [tarotSession, tarotDispatch] = useReducer(reduceTarotSession, undefined, createTarotSession);
   const [aiReadingId,setAiReadingId]=useState<string|undefined>();
-  const [aiChartId,setAiChartId]=useState<string|undefined>();
-  useEffect(()=>{const discuss=(event:Event)=>{const id=(event as CustomEvent).detail?.chartId;if(!featureFlags.astrology||typeof id!=='string'||!/^[-a-f0-9]{36}$/.test(id))return;setAiReadingId(undefined);setAiChartId(id);};window.addEventListener('luna-discuss-chart',discuss);return()=>window.removeEventListener('luna-discuss-chart',discuss);},[]);
+  const [aiChartId,setAiChartId]=useState<string|import('./api').AstrologyChatAttachment|undefined>();
+  useEffect(()=>{const discuss=(event:Event)=>{const detail=(event as CustomEvent).detail,id=detail?.chartId;if(!featureFlags.astrology||typeof id!=='string'||!/^[-a-f0-9]{36}$/.test(id))return;setAiReadingId(undefined);setAiChartId(detail);};window.addEventListener('luna-discuss-chart',discuss);return()=>window.removeEventListener('luna-discuss-chart',discuss);},[]);
   const [tarotSetupKey,setTarotSetupKey]=useState(0);
   const tarotBackHandlerRef = useRef<(() => void) | null>(null);
   const [nestedBack,setNestedBack]=useState(false);
@@ -2591,6 +2593,8 @@ function App() {
     telegram?.HapticFeedback?.impactOccurred('light');
     setPage('breathCircle');
   };
+  useEffect(()=>{const open=()=>setPage('breathCircle');window.addEventListener('luna-open-breathing',open);return()=>window.removeEventListener('luna-open-breathing',open);},[setPage]);
+  useEffect(()=>{if(aiReadingId)setAiChartId(undefined);},[aiReadingId]);
 
   const completeBreathCircle = async (mode: BreathMode, durationSeconds: number, breathCount: number) => {
     try {
@@ -2995,12 +2999,14 @@ function App() {
   return (
     <main className={`app-root overflow-x-clip bg-night text-cream ${page === 'home' ? 'home-v2-shell' : ''} ${featureFlags.new_navigation ? 'luna2-shell' : ''}`}>
       <div className="fixed inset-0 luna-bg" />
+      <ProgressMilestone owner={user.id} profile={accountLoading||accountUnavailable?null:profile} language={language}/>
       <section ref={appShellRef} data-page={page} className={`app-shell ${page === 'luna' ? 'app-shell-chat' : ''} ${page === 'admin' || (page === 'profile' && profileNestedActive) ? 'app-shell-no-nav' : ''}`}>
         {page !== 'luna' && !(featureFlags.new_navigation && page==='breathCircle') && <AppHeader statusLabel={(profile?.currentStreak ?? 0) > 0 ? streakLabel(profile?.currentStreak ?? 0, language) : planLabel(access.plan, language)} language={language} languageLabel={copy[language].language} onLanguageChange={changeLanguage} showSeeds={featureFlags.new_navigation} moonSeeds={profile ? availableMoonSeeds(profile) : undefined} onWallet={() => setPage('wallet')} />}
         {appNotice && <div className="theme-floating fixed left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+12px)] z-50 mx-auto max-w-md rounded-full border border-gold/20 px-4 py-3 text-center text-xs font-semibold text-cream shadow-glow backdrop-blur-xl luna-fade" role="status">{appNotice}</div>}
 
         {page === 'home' && (
           <HomeV2
+            initData={initData}
             newNavigation={featureFlags.new_navigation}
             tarotEnabled={featureFlags.tarot_daily}
             gardenLevel={profile?.gardenLevel}
@@ -3099,7 +3105,7 @@ function App() {
             chartContextId={aiChartId}
             tarotSetupKey={tarotSetupKey}
             registerBackHandler={registerTarotBackHandler}
-            onClearReadingContext={()=>setAiReadingId(undefined)}
+            onClearReadingContext={()=>{setAiReadingId(undefined);setAiChartId(undefined);}}
           />
         </Suspense>)}
 
@@ -3290,6 +3296,7 @@ function App() {
 
         {page === 'breathCircle' && (
           <BreathCirclePage
+            registerBackHandler={registerTarotBackHandler}
             onComplete={completeBreathCircle}
             onClose={() => featureFlags.new_navigation ? goBack() : setPage('home')}
             redesigned={featureFlags.new_navigation}
@@ -3318,7 +3325,7 @@ function App() {
 
         <audio ref={sceneAudioRef} loop preload="none" />
         <audio ref={moonGardenAudioRef} src={moonGardenAmbienceUrl} loop preload="none" />
-        {selectedScene && page !== 'home' && page !== 'scenePlayer' && page !== 'admin' && (
+        {selectedScene && page !== 'home' && page !== 'scenePlayer' && page !== 'breathCircle' && page !== 'admin' && (
           <SceneMiniPlayer
             scene={selectedScene}
             playing={scenePlaying}
@@ -3513,7 +3520,7 @@ function LunaPage({
   onOpenMeditation: (meditation: Meditation) => void;
   onTarot?:()=>void;
   readingContextId?:string;
-  chartContextId?:string;
+  chartContextId?:string|import('./api').AstrologyChatAttachment;
   tarotSetupKey?:number;
   onClearReadingContext?:()=>void;
   registerBackHandler?:(handler:(()=>void)|null)=>void;
@@ -3609,6 +3616,10 @@ type AchievementView = {
 };
 
 const achievementCopy: Record<string, Record<AppLanguage, { title: string; description: string }>> = {
+  astrology_first_chart:{en:{title:'Your Sky',description:'Calculate a natal chart from saved birth details.'},ru:{title:'Ваше небо',description:'Рассчитайте натальную карту по сохранённым данным рождения.'}},
+  astrology_two_perspectives:{en:{title:'Two Perspectives',description:'Save a symbolic reflection on two calculated charts.'},ru:{title:'Два взгляда',description:'Сохраните символическую интерпретацию двух рассчитанных карт.'}},
+  first_confirmed_memory:{en:{title:'A Little More You',description:'Choose and confirm one fact in Luna memory.'},ru:{title:'Чуть ближе к себе',description:'Выберите и подтвердите один факт в памяти Luna.'}},
+  first_breathwork:{en:{title:'Your Own Rhythm',description:'Complete one verified breathing practice.'},ru:{title:'Свой ритм',description:'Завершите одну дыхательную практику.'}},
   tarot_first_reading:{en:{title:'First Symbol',description:'Save your first completed Tarot reflection.'},ru:{title:'Первый символ',description:'Сохрани первую завершённую рефлексию Таро.'}},
   tarot_seven_daily_cards:{en:{title:'Seven Daily Reflections',description:'Explore seven different daily cards.'},ru:{title:'Семь дневных рефлексий',description:'Исследуй семь разных карт дня.'}},
   tarot_ten_readings:{en:{title:'The Oracle',description:'Explore ten completed Tarot reflections.'},ru:{title:'Оракул',description:'Исследуй десять завершённых рефлексий Таро.'}},
@@ -4655,12 +4666,14 @@ function BreathCirclePage({
   onComplete,
   onClose,
   language,
-  redesigned = false
+  redesigned = false,
+  registerBackHandler
 }: {
   onComplete: (mode: BreathMode, durationSeconds: number, breathCount: number) => Promise<void>;
   onClose: () => void;
   language: AppLanguage;
   redesigned?: boolean;
+  registerBackHandler?:(handler:(()=>void)|null)=>void;
 }) {
   const [mode, setMode] = useState<BreathMode>('calm');
   const [minutes, setMinutes] = useState(1);
@@ -4752,12 +4765,12 @@ function BreathCirclePage({
       {redesigned && <BreathAudioModes language={language} featureEnabled={featureFlags.breathwork_audio} mode={breathAudio.mode} onMode={mode=>breathAudio.setMode(mode,running)} volume={breathAudio.volume} onVolume={breathAudio.setVolume} muted={breathAudio.muted} onMute={()=>breathAudio.setMuted(value=>!value)} error={breathAudio.error}/>}
 
       <section className="breath-circle-controls">
-        <label className="breath-practice-select">
+        {redesigned?<PracticePicker value={mode} onChange={setMode} disabled={running||hasStarted} language={language} registerBackHandler={registerBackHandler}/>:<label className="breath-practice-select">
           <span>{language === 'en' ? 'Practice' : 'Практика'}</span>
           <select value={mode} onChange={(event) => setMode(event.currentTarget.value as BreathMode)} disabled={running || hasStarted} aria-label={language === 'en' ? 'Breathing practice' : 'Дыхательная практика'}>
             {breathPractices.map((item) => <option key={item.id} value={item.id}>{item.name[language]} — {item.timing[language]}</option>)}
           </select>
-        </label>
+        </label>}
         <details className="breath-practice-guide">
           <summary>{language === 'en' ? 'How it helps' : 'Как выполнять'}</summary>
           <p>{practice.guide[language]}</p>

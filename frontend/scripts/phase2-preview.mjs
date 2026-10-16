@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url';
 assert.equal(process.versions.node.split('.')[0], '22', 'Use Node.js 22');
 const frontend = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const tarotPreview = process.argv.includes('--tarot');
-const evolutionPreview=process.argv.includes('--luna30');
+const luna31Preview=process.argv.includes('--luna31');
+const evolutionPreview=luna31Preview||process.argv.includes('--luna30');
 const centralPreview=evolutionPreview||process.argv.includes('--luna24');
 const memoryPreview=process.argv.includes('--memory')||centralPreview;
 const luna21Preview=process.argv.includes('--luna21')||memoryPreview;
@@ -18,7 +19,7 @@ const productionFlags=process.argv.includes('--production-flags');
 const refinementPreview=process.argv.includes('--refinement')||luna21Preview;
 const legacyPreview = process.argv.includes('--legacy');
 assert.ok(!(tarotPreview&&legacyPreview),'Choose either Tarot or legacy preview');
-const outputDirectory = evolutionPreview?'dist-luna30-preview':centralPreview?'dist-luna24-preview':memoryPreview?'dist-memory-preview':productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
+const outputDirectory = luna31Preview?'dist-luna31-preview':evolutionPreview?'dist-luna30-preview':centralPreview?'dist-luna24-preview':memoryPreview?'dist-memory-preview':productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
 const output = resolve(frontend, outputDirectory);
 const flagNames = ['AI_CENTRAL_EXPERIENCE','PERSONAL_MEMORY','NEW_NAVIGATION','TAROT_DAILY','TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI','DAILY_CARD_V2','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2'];
 if(!process.argv.includes('--serve-only')){
@@ -108,6 +109,7 @@ const server=createServer(async(req,res)=>{
       if(refinementPreview&&url.pathname.startsWith('/api/tarot/readings/')&&req.method==='DELETE'){for(const[key,value]of readings)if(value.id===url.pathname.split('/').pop())readings.delete(key);return json({ok:true});}
       if(luna21Preview&&url.pathname==='/api/tarot/daily'){
         const day=new Date().toISOString().slice(0,10),key=`daily:${day}`;
+        if(req.method==='GET')return json({state:readings.has(key)?'saved':'new',day,resetAt:new Date(Date.parse(day+'T00:00:00Z')+86400000).toISOString()});
         if(body.generate&&body.expectedDay!==day)return json({code:'daily_changed'},409);
         let reading=readings.get(key);
         if(!reading){reading={id:randomUUID(),client_reading_id:randomUUID(),card_id:'the-star',orientation:'reversed',reading_kind:'daily',cards:[{cardId:'the-star',orientation:'reversed'}],intention:'general',question:'',language:body.language,status:'local',interpretation:null,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};readings.set(key,reading);}
@@ -166,7 +168,7 @@ const server=createServer(async(req,res)=>{
       const fixtures={
         '/api/access/me':{hasPremium:true,plan:'Lifetime',user},'/api/profile/me':profile,'/api/meditations':{meditations:[meditation]},'/api/categories':{categories:[{id:'calm',name:'Calm',slug:'calm',sort_order:1}]},'/api/favorites':{favorites:[]},'/api/history':{history:[{id:'offline-history',meditation_id:meditation.id,last_played:new Date().toISOString(),play_count:2,completion_percent:100,last_position:180,completed:true}]},
         '/api/payments/recent':{payments:[]},'/api/wellness/summary':{todayCheckin:checkin,weeklyCheckins:checkin?[checkin]:[],weeklyCheckinCount:checkin?1:0,achievements:[],level:{title:'Seeker',current:1,progress:20,next:'Adept'}},
-        '/api/luna/conversations':{conversations:messages.length?[conversation]:[]},'/api/luna/conversations/offline-qa':{conversation,messages},'/api/luna/health':{available:true,enabled:true,model:'offline-fixture',errorClass:null},'/api/luna/memory':{enabled:true,available:true,memories:[]},
+        '/api/luna/usage':{remaining:8,limit:8,resetAt:new Date(new Date().setUTCHours(24,0,0,0)).toISOString()},'/api/luna/conversations':{conversations:messages.length?[conversation]:[]},'/api/luna/conversations/offline-qa':{conversation,messages},'/api/luna/health':{available:true,enabled:true,model:'offline-fixture',errorClass:null},'/api/luna/memory':{enabled:true,available:true,memories:[]},
         '/api/plans':{plans:{annual:{id:'annual',title:'Annual Premium',amountStars:750,days:365},lifetime:{id:'lifetime',title:'Lifetime Access',amountStars:2499}}}
       };
       if(url.pathname==='/api/admin/me')return json({error:'Offline preview has no admin access'},403);
@@ -176,7 +178,7 @@ const server=createServer(async(req,res)=>{
     let path=resolve(output,`.${decodeURIComponent(url.pathname)}`);
     if(path!==output&&!path.startsWith(output+sep)){res.writeHead(403);return res.end();}
     if(!extname(path))path=resolve(output,'index.html');
-    let content=await readFile(path);if(extname(path)==='.html')content=Buffer.from(content.toString().replace(/<script\b[^>]*src=["']https:\/\/telegram\.org\/[^"']*["'][^>]*><\/script>/g,'').replace('<head>',`<head>${bridge}`).replace(/<title>[^<]+<\/title>/,evolutionPreview?'<title>Luna 3.0 — offline UI preview</title>':centralPreview?'<title>Luna 2.4 — offline UI preview</title>':memoryPreview?'<title>Luna 2.3 Personal Memory — sample data</title>':'<title>Luna 2.2 UI preview — sample data</title>'));
+    let content=await readFile(path);if(extname(path)==='.html')content=Buffer.from(content.toString().replace(/<script\b[^>]*src=["']https:\/\/telegram\.org\/[^"']*["'][^>]*><\/script>/g,'').replace('<head>',`<head>${bridge}`).replace(/<title>[^<]+<\/title>/,luna31Preview?'<title>Luna 3.1 — offline UI preview</title>':evolutionPreview?'<title>Luna 3.0 — offline UI preview</title>':centralPreview?'<title>Luna 2.4 — offline UI preview</title>':memoryPreview?'<title>Luna 2.3 Personal Memory — sample data</title>':'<title>Luna 2.2 UI preview — sample data</title>'));
     res.writeHead(200,{'content-type':mime[extname(path)]||'application/octet-stream','cache-control':extname(path)==='.html'?'no-store':'public, max-age=86400','x-luna-preview':'synthetic-local-only','content-security-policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; media-src 'self' blob:"});res.end(content);
   } catch {res.writeHead(404);res.end('Not available in the offline preview');}
 });

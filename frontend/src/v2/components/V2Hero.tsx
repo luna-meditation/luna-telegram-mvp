@@ -127,7 +127,7 @@ export function V2Hero({
     { mood: 'Calm', active: ['Calm'], visual: 'good', label: { en: 'Good', ru: 'Хорошо' } },
     { mood: 'Breath', active: ['Breath'], visual: 'meh', label: { en: 'Meh', ru: 'Норм' } },
     { mood: 'Anxiety', active: ['Anxiety'], visual: 'anxious', label: { en: 'Anxious', ru: 'Тревожно' } },
-    { mood: 'Sleep', active: ['Sleep'], visual: 'tired', label: { en: 'Tired', ru: 'Устал' } }
+    { mood: 'Sleep', active: ['Sleep'], visual: 'tired', label: { en: 'Tired', ru: 'Усталость' } }
   ];
   const [failedImages, setFailedImages] = useState<Record<keyof typeof homeHeroAssets, boolean>>({ dark: false, light: false });
   const resolvedTheme=useResolvedTheme();
@@ -156,8 +156,9 @@ export function V2Hero({
 
       <div className="home-v2-atmosphere-copy">
         <p className="home-v2-greeting">{greeting}{firstName ? `, ${firstName}` : ''}</p>
+        {premiumHome&&moodSaved&&<button className="luna31-mood-edit" type="button" onClick={onCheckinDetails} aria-label={language==='ru'?'Изменить сегодняшнее настроение':'Edit today’s mood'}>⋯</button>}
         <h1>{premiumHome ? language === 'ru' ? 'Что сегодня у тебя на душе?' : 'What’s on your mind today?' : headline}</h1>
-        {premiumHome && <p className="luna25-hero-subtitle">{language === 'ru' ? 'Луна рядом, чтобы помочь разобраться' : 'Luna is here to help you find clarity'}</p>}
+        {premiumHome && <p className="luna25-hero-subtitle">{language === 'ru' ? 'Поговорим о самом важном' : 'A little space for what matters'}</p>}
       </div>
 
       {showCheckinToast ? (
@@ -167,9 +168,7 @@ export function V2Hero({
         </div>
       ) : null}
 
-      {premiumHome && moodSaved && activeMood ? (
-        <button type="button" className="luna30-checkin-edit" onClick={onCheckinDetails} aria-label={language==='ru'?'Изменить сегодняшнюю отметку настроения':'Edit today’s mood check-in'}>{language==='ru'?'Отметка сохранена · изменить':'Check-in saved · edit'}</button>
-      ) : moodSaved && activeMood ? (
+      {!premiumHome && moodSaved && activeMood ? (
         <div className="home-v2-mood-saved" aria-label={`${language === 'ru' ? 'Сегодня' : 'Today'}: ${moodLabel(activeMood)}`}>
           <span>{selectedMood ? <MoodGlyph kind={selectedMood.visual} /> : null}</span>
           <span className="home-v2-mood-saved-copy">

@@ -1,9 +1,6 @@
-/** A small text-only renderer. Never interprets HTML or creates model-supplied links. */
-export function MessageText({text}:{text:string}){
- return <>{text.split(/\n\s*\n/).filter(Boolean).map((part,index)=>{
-  const lines=part.trim().split('\n');
-  if(lines.every(line=>/^[-*•] /.test(line)))return <ul key={index}>{lines.map((line,i)=><li key={i}>{line.replace(/^[-*•] /,'')}</li>)}</ul>;
-  if(/^#{1,3} /.test(part)&&lines.length===1)return <h4 key={index}>{part.replace(/^#{1,3} /,'')}</h4>;
-  return <p key={index}>{part.split(/(\*\*[^*]+\*\*)/g).map((text,i)=>text.startsWith('**')&&text.endsWith('**')?<strong key={i}>{text.slice(2,-2)}</strong>:text)}</p>;
- })}</>;
+import {messageBlocks,visibleMessageText} from './message-format';
+function inline(text:string){return text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g).map((part,i)=>part.startsWith('**')&&part.endsWith('**')?<strong key={i}>{part.slice(2,-2)}</strong>:part.startsWith('*')&&part.endsWith('*')?<em key={i}>{part.slice(1,-1)}</em>:part.startsWith('`')&&part.endsWith('`')?<code key={i}>{part.slice(1,-1)}</code>:part);}
+/** React escapes all text; no HTML parser, external links or heavy Markdown runtime. */
+export function MessageText({text,assistant=true,language='en'}:{text:string;assistant?:boolean;language?:string}){
+ return <>{messageBlocks(visibleMessageText(text,assistant,language)).map((block,i)=>block.kind==='separator'?<hr key={i}/>:block.kind==='heading'?<h4 key={i}>{inline(block.lines.join(' '))}</h4>:block.kind==='unordered'?<ul key={i}>{block.lines.map((line,j)=><li key={j}>{inline(line)}</li>)}</ul>:block.kind==='ordered'?<ol key={i}>{block.lines.map((line,j)=><li key={j}>{inline(line)}</li>)}</ol>:<p key={i}>{inline(block.lines.join('\n'))}</p>)}</>;
 }
