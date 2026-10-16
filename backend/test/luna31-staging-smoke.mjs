@@ -9,16 +9,17 @@ export async function run(event){
  await netlifyStagingHandler(new Request(host+'/health'),context);
  const {env}=await import('../dist/config.js'),{supabase}=await import('../dist/db.js');
  assert.ok(env.STAGING_MODE&&env.STAGING_TELEGRAM_IDS==='158467796'&&env.STAGING_SUPABASE_PROJECT_REF==='funvzpmpbgazsisehiru');
- const owner=158467796,runName='luna31-consultation-20261016-v3';
- const previous=await supabase.from('luna30_qa_report_runs').select('state,result').eq('run_name','luna31-consultation-20261016-v2').single();assert.ifError(previous.error);
+ const owner=158467796,runName='luna31-consultation-20261016-v4';
+ const previous=await supabase.from('luna30_qa_report_runs').select('state,result').eq('run_name','luna31-consultation-20261016-v3').single();assert.ifError(previous.error);
  const prior=previous.data.result;assert.equal(previous.data.state,'failed');assert.equal(prior.providerAttempts,3);assert.equal(prior.calls.length,3);assert.ok(prior.calls.every(c=>c.providerStatus==='completed'));assert.ok(Math.abs(prior.unsettledCostUpperBoundUsd)<1e-12);assert.ok(prior.costUsd>0&&prior.costUsd<0.01);
  const claim=await supabase.from('luna30_qa_report_runs').insert({run_name:runName,state:'running',result:{maxProviderCalls:6,maxUsd:0.03}}).select('run_name');if(claim.error?.code==='23505')return;assert.ifError(claim.error);
- const result={status:'running',checks:[...prior.checks],calls:[...prior.calls],answers:[...prior.answers],productionWrites:0,syntheticDataOnly:true,physicalDevice:false,actualTelegramLogin:false,signedQaFixture:true,resumedFrom:'luna31-consultation-20261016-v2'};
+ const result={status:'running',checks:[...prior.checks],calls:[...prior.calls],answers:[...prior.answers],productionWrites:0,syntheticDataOnly:true,physicalDevice:false,actualTelegramLogin:false,signedQaFixture:true,resumedFrom:'luna31-consultation-20261016-v3'};
  const check=(name,value)=>{assert.ok(value,name);result.checks.push({name,status:'PASS'});};
  const fingerprint=async()=>{const [user,garden]=await Promise.all([supabase.from('users').select('lifetime_access,active_until,free_used').eq('telegram_id',owner).single(),supabase.from('moon_gardens').select('*').eq('telegram_id',owner)]);assert.ifError(user.error);assert.ifError(garden.error);return createHash('sha256').update(JSON.stringify({user:user.data,garden:garden.data})).digest('hex');};
  const originalFetch=globalThis.fetch;let attempts=prior.providerAttempts,spent=prior.costUsd,held=0;
  try{
   const before=await fingerprint();
+  check('staging astrology and progress match the intended non-commercial configuration',env.FEATURE_ASTROLOGY&&env.LUNA30_ASTROLOGY_AI_ENABLED&&env.LUNA30_PROGRESSION_ENABLED&&!env.LUNA30_PREMIUM_ENABLED&&!env.FEATURE_MOON_SEEDS_PURCHASES&&!env.FEATURE_TAROT_PAID_READINGS);
   const {stagingAiMeterRecord}=await import('../dist/staging-ai-meter.js');
   const availability=await originalFetch('https://api.openai.com/v1/models/gpt-5-mini',{headers:{Authorization:`Bearer ${env.OPENAI_API_KEY}`}});check('existing server key has access to the configured model',availability.ok&&(await availability.json()).id==='gpt-5-mini');
   // These overrides affect this isolated event process only, never the app
@@ -41,6 +42,7 @@ export async function run(event){
   const signed=(id=owner)=>{const data=new URLSearchParams({auth_date:String(Math.floor(Date.now()/1000)),user:JSON.stringify({id,first_name:'Luna QA',language_code:'en'})}),checkString=[...data].sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>k+'='+v).join('\n'),key=createHmac('sha256','WebAppData').update(env.BOT_TOKEN).digest();data.set('hash',createHmac('sha256',key).update(checkString).digest('hex'));return data.toString();};
   const call=async(path,body,auth=signed())=>{const response=await netlifyStagingHandler(new Request(host+path,{method:body?'POST':'GET',headers:{'x-telegram-init-data':auth,'content-type':'application/json'},...(body?{body:JSON.stringify(body)}:{})}),context);return {status:response.status,data:await response.json()};};
   check('unsigned and non-QA requests fail before database/provider actions',(await call('/api/luna/conversations',undefined,'invalid')).status===401&&(await call('/api/luna/conversations',undefined,signed(880003199))).status===403);
+  const profile=await call('/api/profile/me');check('real staging profile and upgraded progression remain available',profile.status===200&&Boolean(profile.data.journeyV3)&&Array.isArray(profile.data.achievements?.items));
   const oldAnswer=name=>{const answer=prior.answers.find(a=>a.name===name);assert.ok(answer?.metadata.readingId&&answer.requestId&&answer.conversationId);return answer;};
   const reading={reading:{id:oldAnswer('single EN').metadata.readingId}},three={reading:{id:oldAnswer('three RU').metadata.readingId}},five={reading:{id:oldAnswer('five EN').metadata.readingId}};
   const {createAstrologyService}=await import('../dist/luna30-astrology-service.js'),service=createAstrologyService(supabase,()=>true),births=['35769e29-7986-48af-afab-77e89d273f01','35769e29-7986-48af-afab-77e89d273f02'];
