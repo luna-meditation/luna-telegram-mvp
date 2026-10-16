@@ -1,0 +1,179 @@
+{
+  "status": "PASS",
+  "release": "luna31",
+  "projectId": "vkcdtasbdoeilgfucoax",
+  "baseCommit": "232c6e08fdcbc8ec5cd550df88242a1728dc79ef",
+  "testedRuntimeCommit": "856eb96e386e04854c60577f7985956f78bcd6f2",
+  "sourceDigest": "0a5f6837a5771a77ca03ec953371b0c0bb87177a6acee53d249f8701e1fe4b94",
+  "productionWrites": 0,
+  "noDatabaseMigrations": true,
+  "backupRestorePasses": 2,
+  "backupTables": 48,
+  "backupRows": 1463,
+  "backupFunctions": 33,
+  "backupMediaObjects": 28,
+  "backupMediaBytes": 239528218,
+  "backupCapturedAt": "2026-10-16T08:29:08.04615+00:00",
+  "backupEncryptedEnvelopeSha256": "081a3c16e7914ef17471315f72750e8ff6abbd1b1a777efde912023dc3d8b5dc",
+  "backupEncryptedSqlSha256": "444e30a43d65011c1de5db9c4fccf13ac2318ffc64672562d941f926c8d246b1",
+  "schemaSecurityFingerprint": "9bfa2a4f3cde6b9af3ae60aab6905f54",
+  "mobileStatus": "PASS",
+  "mobileCases": 112,
+  "mobileWidths": [
+    360,
+    375,
+    390,
+    393
+  ],
+  "mobileThemes": [
+    "dark",
+    "light"
+  ],
+  "mobileLanguages": [
+    "en",
+    "ru"
+  ],
+  "browser": "Chrome; local fixtures separated from real staging verification",
+  "physicalIphoneOwnerReopenConfirmed": true,
+  "aiSmokeStatus": "PASS",
+  "aiSmokeCalls": 8,
+  "aiSmokeCostUsd": 0.01045605,
+  "aiAdditionalCalls": 2,
+  "aiAdditionalCostUsd": 0.0030465,
+  "aiQualityStatus": "PASS",
+  "aiQualityScope": "Final corrected RU compatibility and contextual EN follow-up; initial incomplete responses retained in raw audit, now rejected by local regression tests",
+  "rawFinalWorkerStatus": "FAIL",
+  "rawFinalWorkerFailure": "Old full-row financial guard included volatile updated_at; reconciled independently without changing the raw audit",
+  "supplementalFinancialStatus": "PASS_RECONCILED",
+  "supplementalFinancialEvidence": "qa/luna31-staging-verification.json",
+  "unexplainedFinancialChanges": 0,
+  "monetizationEnabled": false,
+  "node": "22.23.3",
+  "tests": {
+    "backend": {
+      "total": 282,
+      "passed": 281,
+      "failed": 0,
+      "optionalRpcSkipped": 1
+    },
+    "exactProductionRpcLocally": {
+      "passed": 1
+    },
+    "frontend": {
+      "passed": 175,
+      "failed": 0
+    },
+    "financialGuard": {
+      "passed": 8,
+      "failed": 0
+    },
+    "isolatedDatabaseChecks": 17,
+    "typecheck": "PASS",
+    "lint": "PASS",
+    "backendBuild": "PASS"
+  },
+  "checks": [
+    {
+      "name": "Fresh Luna-only encrypted backup verified and restored twice into isolated PostgreSQL 17",
+      "status": "PASS"
+    },
+    {
+      "name": "All 28 encrypted media archives verified against current production versions and content checksums",
+      "status": "PASS"
+    },
+    {
+      "name": "No Luna 3.1 migration; startup migrations remain disabled",
+      "status": "PASS"
+    },
+    {
+      "name": "Shared-project schema and permission fingerprint captured for post-release comparison",
+      "status": "PASS"
+    },
+    {
+      "name": "All existing frontend/backend suites pass under Node.js 22; optional RPC separately executed",
+      "status": "PASS"
+    },
+    {
+      "name": "17 isolated security and commerce checks preserve balances, legacy Lifetime and unrelated sentinel",
+      "status": "PASS"
+    },
+    {
+      "name": "Exact deployed runtime source matches the final staging code; only QA guard/reports added after staging",
+      "status": "PASS"
+    },
+    {
+      "name": "Signed staging QA allowed; unsigned and non-QA identities rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "Owned exact Tarot cards, orientations, question and saved interpretation in chat context",
+      "status": "PASS"
+    },
+    {
+      "name": "Owned exact two-chart compatibility and saved report carried into contextual follow-up",
+      "status": "PASS"
+    },
+    {
+      "name": "Calculated Mercury signs and natal Moon aspects independently verified with Astronomy Engine",
+      "status": "PASS"
+    },
+    {
+      "name": "Eight stored replays/history reopenings incur zero additional provider calls",
+      "status": "PASS"
+    },
+    {
+      "name": "Missing/foreign context rejected before provider",
+      "status": "PASS"
+    },
+    {
+      "name": "Deterministic RU/EN crisis and medical fixtures require no provider",
+      "status": "PASS"
+    },
+    {
+      "name": "Complete readable final RU and EN responses; no raw JSON or reasoning leakage",
+      "status": "PASS"
+    },
+    {
+      "name": "Request limit and reset time originate on server",
+      "status": "PASS"
+    },
+    {
+      "name": "Financial false positive independently reconciled; timestamp ignored but balances/rights protected",
+      "status": "PASS"
+    },
+    {
+      "name": "One physical-iPhone daily check-in earned exactly existing +1; no AI-related Seeds charge",
+      "status": "PASS"
+    },
+    {
+      "name": "No new AI requests during physical history reopen; no payments or garden purchases",
+      "status": "PASS"
+    },
+    {
+      "name": "112 mobile cases pass at four widths, both languages/themes",
+      "status": "PASS"
+    },
+    {
+      "name": "Real owner confirms staging Profile/history opening without errors or bottom-button overlap",
+      "status": "PASS"
+    },
+    {
+      "name": "New monetization disabled; existing prices and paid rights untouched",
+      "status": "PASS"
+    },
+    {
+      "name": "No additional paid provider calls or staging publication needed",
+      "status": "PASS"
+    },
+    {
+      "name": "Production release remains backend-first, PR-only, then one manually published frontend",
+      "status": "PASS"
+    }
+  ],
+  "limitations": [
+    "Physical iPhone confirmation covers opening/history; full native keyboard/audio/Stars regression remains manual",
+    "No automated WebKit/Safari evidence",
+    "No real Stars payment created or charged",
+    "Provider may still return incomplete content; rejected output is not displayed and retry is explicit"
+  ]
+}

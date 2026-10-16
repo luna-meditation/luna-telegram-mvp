@@ -1,0 +1,187 @@
+{
+  "status": "PASS_RECONCILED",
+  "scope": "staging-only",
+  "stagingProject": "funvzpmpbgazsisehiru",
+  "sourceCommit": "856eb96e386e04854c60577f7985956f78bcd6f2",
+  "rawWorkerStatus": "FAIL",
+  "rawWorkerFailure": "Moon Seeds, garden and subscription unchanged",
+  "rawWorkerResultRetained": true,
+  "functionalChecks": [
+    {
+      "name": "exact staging flags, migrations disabled and all new monetization OFF",
+      "status": "PASS"
+    },
+    {
+      "name": "configured model is accessible using the existing server-only key",
+      "status": "PASS"
+    },
+    {
+      "name": "unsigned and non-QA accounts denied",
+      "status": "PASS"
+    },
+    {
+      "name": "deterministic self_harm en needs no provider",
+      "status": "PASS"
+    },
+    {
+      "name": "deterministic self_harm ru needs no provider",
+      "status": "PASS"
+    },
+    {
+      "name": "deterministic medical_emergency en needs no provider",
+      "status": "PASS"
+    },
+    {
+      "name": "real staging profile, progression and achievements work",
+      "status": "PASS"
+    },
+    {
+      "name": "cost reservation remains within additional $0.01",
+      "status": "PASS"
+    },
+    {
+      "name": "final compatibility RU full authenticated request completes",
+      "status": "PASS"
+    },
+    {
+      "name": "final compatibility RU complete readable prose, no serialized payload",
+      "status": "PASS"
+    },
+    {
+      "name": "final compatibility RU carries both exact charts and saved report",
+      "status": "PASS"
+    },
+    {
+      "name": "final compatibility RU uses both actual Mercury signs",
+      "status": "PASS"
+    },
+    {
+      "name": "cost reservation remains within additional $0.01",
+      "status": "PASS"
+    },
+    {
+      "name": "final saved-context EN follow-up full authenticated request completes",
+      "status": "PASS"
+    },
+    {
+      "name": "final saved-context EN follow-up complete readable prose, no serialized payload",
+      "status": "PASS"
+    },
+    {
+      "name": "final saved-context EN follow-up carries both exact charts and saved report",
+      "status": "PASS"
+    },
+    {
+      "name": "final saved-context EN follow-up uses both actual Mercury signs",
+      "status": "PASS"
+    },
+    {
+      "name": "two new calls, all eight lifetime QA calls within approvals",
+      "status": "PASS"
+    },
+    {
+      "name": "three RU stored replay and reopening make zero provider calls",
+      "status": "PASS"
+    },
+    {
+      "name": "five EN stored replay and reopening make zero provider calls",
+      "status": "PASS"
+    },
+    {
+      "name": "single EN stored replay and reopening make zero provider calls",
+      "status": "PASS"
+    },
+    {
+      "name": "compatibility RU stored replay and reopening make zero provider calls",
+      "status": "PASS"
+    },
+    {
+      "name": "natal EN stored replay and reopening make zero provider calls",
+      "status": "PASS"
+    },
+    {
+      "name": "saved-context RU follow-up stored replay and reopening make zero provider calls",
+      "status": "PASS"
+    },
+    {
+      "name": "final compatibility RU stored replay and reopening make zero provider calls",
+      "status": "PASS"
+    },
+    {
+      "name": "final saved-context EN follow-up stored replay and reopening make zero provider calls",
+      "status": "PASS"
+    },
+    {
+      "name": "missing or foreign chart denied before provider",
+      "status": "PASS"
+    },
+    {
+      "name": "remaining allowance and reset come from server",
+      "status": "PASS"
+    }
+  ],
+  "providerCalls": 8,
+  "costUsd": 0.01045605,
+  "additionalCalls": 2,
+  "additionalCostUsd": 0.0030464999999999997,
+  "model": "gpt-5-mini-2025-08-07",
+  "costBasis": "Actual API usage with input, cached-input and output rates; not an OpenAI billing invoice",
+  "qualityRetest": {
+    "status": "PASS",
+    "initialDefects": [
+      "Incomplete introduction-only response",
+      "English self-harm phrase missing from deterministic filter",
+      "Legacy meditation intent misapplied to attached astrology"
+    ],
+    "fixes": [
+      "Reject terminal introductory promise without content; no hidden regeneration",
+      "Deterministic harm myself/harming myself/hurting myself handling",
+      "Artifact-scoped intent before conversation persistence"
+    ],
+    "finalAnswers": "Complete RU compatibility and EN follow-up; exact owned charts/report and both Mercury signs independently checked against Astronomy Engine",
+    "oldIncompleteAnswersRetained": true
+  },
+  "financialReview": {
+    "status": "PASS_RECONCILED",
+    "before": {
+      "seeds": 101,
+      "fingerprint": "5a2cdb93a46c413c64743221c11bd501"
+    },
+    "after": {
+      "seeds": 102,
+      "reconciledFingerprint": "5a2cdb93a46c413c64743221c11bd501"
+    },
+    "acknowledgedActivity": {
+      "type": "existing_daily_checkin_reward",
+      "checkins": 1,
+      "streak": 2,
+      "expectedAward": 1
+    },
+    "unexplainedFinancialChanges": 0,
+    "payments": 0,
+    "gardenPurchases": 0,
+    "newAiRequestsAfterIphoneReopen": 0,
+    "actualTelegramLogin": true,
+    "physicalIphoneOwnerConfirmed": true,
+    "providerCalls": 0,
+    "newDeployments": 0,
+    "productionWrites": 0,
+    "originalFailureRetained": true,
+    "note": "Raw worker timestamp fingerprint false positive retained. Physical owner submitted one daily check-in, reward +1 follows unchanged baseline updateStreak + moonSeedsForNewActiveDay logic. All remaining protected fields exactly match baseline after accounting for this single legitimate award."
+  },
+  "rawWorkerFinancialFailureExplanation": "The old full-row fingerprint included moon_gardens.updated_at, which ordinary GET profile synchronization changes. The corrected QA helper ignores only updated_at, and eight tests prove that balances, ownership and entitlements are still detected.",
+  "productionWrites": 0,
+  "newPaidAiCallsAfterFinalRun": 0,
+  "physicalIphone": {
+    "ownerConfirmed": true,
+    "flow": "Open QA bot -> Profile -> Luna AI history -> saved English Mercury answer",
+    "scope": "Opening and absence of bottom-button overlap only; not all device flows",
+    "newAiRequests": 0
+  },
+  "limitations": [
+    "No automated Safari/WebKit run",
+    "No live payment or subscription purchase performed",
+    "Initial incomplete provider output is rejected safely; a user retry may consume provider tokens",
+    "Local mobile fixtures are not evidence of real authenticated persistence"
+  ]
+}

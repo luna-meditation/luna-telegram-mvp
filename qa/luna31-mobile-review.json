@@ -1,0 +1,35 @@
+{
+  "status": "PASS",
+  "cases": 112,
+  "groups": [
+    {
+      "path": "/tmp/luna31-chat-mobile/results.json",
+      "cases": 16,
+      "status": "PASS"
+    },
+    {
+      "path": "/tmp/luna31-breath/results.json",
+      "cases": 16,
+      "status": "PASS"
+    },
+    {
+      "path": "/tmp/luna31-mobile-final/results.json",
+      "cases": 48,
+      "status": "PASS"
+    },
+    {
+      "path": "/tmp/luna31-astrology-mobile/results.json",
+      "cases": 16,
+      "status": "PASS"
+    },
+    {
+      "path": "/tmp/luna31-report-mobile/results.json",
+      "cases": 16,
+      "status": "PASS"
+    }
+  ],
+  "physicalDevice": false,
+  "authenticatedTelegram": false,
+  "realAiCalls": 0,
+  "productionWrites": 0
+}

@@ -1,7 +1,8 @@
 // Final owner-approved continuation: TWO additional neutral calls, <= $0.01.
 // Signed platform event, existing private staging only. Never a public QA API.
 import assert from 'node:assert/strict';
-import {createHash,createHmac,randomUUID} from 'node:crypto';
+import {createHmac,randomUUID} from 'node:crypto';
+import {protectedStateFingerprint} from './luna31-financial-guard.mjs';
 import {netlifyStagingHandler} from '../dist/netlify-staging-handler.js';
 export async function run(event){
  if(event.site?.id!=='a634a7fc-1ecb-47fa-8b43-edd81a7e3694'||Netlify.env.get('SUPABASE_URL')!=='https://funvzpmpbgazsisehiru.supabase.co'||Date.now()>Date.parse('2026-10-16T16:00:00Z'))return;
@@ -15,7 +16,7 @@ export async function run(event){
  const claim=await supabase.from('luna30_qa_report_runs').insert({run_name:runName,state:'running',result:{maxAdditionalCalls:2,maxAdditionalUsd:0.01,priorCostUsd:prior.costUsd}}).select('run_name');if(claim.error?.code==='23505')return;assert.ifError(claim.error);
  const result={status:'running',checks:[],calls:[...prior.calls],answers:[...prior.answers],providerAnswers:[],priorCalls:6,priorCostUsd:prior.costUsd,productionWrites:0,syntheticDataOnly:true,actualTelegramLogin:false,signedQaFixture:true,physicalDevice:false};
  const check=(name,value)=>{assert.ok(value,name);result.checks.push({name,status:'PASS'});};
- const fingerprint=async()=>{const [user,garden]=await Promise.all([supabase.from('users').select('lifetime_access,active_until,free_used').eq('telegram_id',owner).single(),supabase.from('moon_gardens').select('*').eq('telegram_id',owner)]);assert.ifError(user.error);assert.ifError(garden.error);return createHash('sha256').update(JSON.stringify({user:user.data,garden:garden.data})).digest('hex');};
+ const fingerprint=async()=>{const [user,garden]=await Promise.all([supabase.from('users').select('lifetime_access,active_until,free_used').eq('telegram_id',owner).single(),supabase.from('moon_gardens').select('*').eq('telegram_id',owner)]);assert.ifError(user.error);assert.ifError(garden.error);return protectedStateFingerprint(user.data,garden.data);};
  const originalFetch=globalThis.fetch;let calls=0,spent=0,held=0,armed=false,currentCase='';
  try{
   result.protectedBefore=await fingerprint();
