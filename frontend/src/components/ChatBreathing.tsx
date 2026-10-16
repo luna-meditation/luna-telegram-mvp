@@ -1,0 +1,7 @@
+import {useState} from 'react';
+import type {AppLanguage} from '../api';
+import {breathPractices,type BreathPracticeId} from '../features/breathing/practices';
+export function ChatBreathing({language}:{language:AppLanguage}){
+ const [id,setId]=useState<BreathPracticeId>('calm'),[minutes,setMinutes]=useState(1),en=language==='en';const practice=breathPractices.find(p=>p.id===id)!;
+ return <section className="luna33-workflow luna33-breath-card" data-testid="chat-breathing"><small>{en?'A moment of calm':'Минута спокойствия'}</small><h3>{practice.name[language]}</h3><p>{practice.description[language]}</p><label>{en?'Technique':'Техника'}<select value={id} onChange={e=>setId(e.target.value as BreathPracticeId)}>{breathPractices.map(p=><option key={p.id} value={p.id}>{p.name[language]}</option>)}</select></label><label>{en?'Duration':'Длительность'}<select value={minutes} onChange={e=>setMinutes(Number(e.target.value))}>{[1,3,5,10].map(n=><option key={n} value={n}>{n} {en?'min':'мин'}</option>)}</select></label><p>{practice.timing[language]}</p><button type="button" className="luna33-primary" onClick={()=>window.dispatchEvent(new CustomEvent('luna-open-breathing',{detail:{practiceId:id,minutes}}))}>{en?'Start practice':'Начать практику'}</button><small>{en?'A wellbeing practice, not treatment. Breathe gently and stop if uncomfortable.':'Практика для самочувствия, не лечение. Дышите мягко и остановитесь при дискомфорте.'}</small></section>;
+}

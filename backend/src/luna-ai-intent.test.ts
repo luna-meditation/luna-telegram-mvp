@@ -24,12 +24,11 @@ function resolveAndRank(message: string, state = normalizeConversationState(null
   return { intent, recommendation };
 }
 
-test('clear sleep, focus, reset, and breathing requests resolve immediately without clarification', () => {
+test('clear sleep, focus and reset requests resolve immediately without clarification', () => {
   const cases = [
     ["I can't sleep", 'sleep', 'sleep'],
     ['I need focus', 'focus', 'focus'],
-    ['I need reset', 'reset', 'reset'],
-    ['Show me breathing', 'breathing', 'reset']
+    ['I need reset', 'reset', 'reset']
   ] as const;
   for (const [message, expectedIntent, expectedMeditation] of cases) {
     const result = resolveAndRank(message);

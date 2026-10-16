@@ -11,7 +11,7 @@ type SceneDefinition = {
   access: 'free' | 'premium';
   sortOrder: number;
   cover: string;
-  sound: 'water' | 'ocean' | 'mist' | 'forest' | 'rain';
+  audioSrc: string;
 };
 
 export function V2Sound({

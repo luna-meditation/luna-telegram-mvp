@@ -13,7 +13,7 @@ test('retry reuses the stable client request id without another user bubble', ()
 
 test('quota exhaustion disables retry and the composer', () => {
   assert.match(source, /failedTurn\.state !== 'quota_exhausted'/);
-  assert.match(source, /thinking \|\| quotaExhausted/);
+  assert.match(source, /disabled=\{thinking \|\| contextBusy \|\| quotaExhausted\}/);
   assert.match(source, /The limit resets tomorrow/);
 });
 

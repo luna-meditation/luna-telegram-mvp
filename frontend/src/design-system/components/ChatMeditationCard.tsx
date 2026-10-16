@@ -1,7 +1,7 @@
 import {OptimizedImage} from './OptimizedImage';
 import { Crown, Play } from 'lucide-react';
 import type { AppLanguage, Meditation } from '../../api';
-import { formatMeditationDuration } from '../../utils/duration';
+import { formatMeditationDurationPrecise as formatMeditationDuration } from '../../utils/duration';
 
 export function ChatMeditationCard({ meditation, language, hasPremium, onOpen }: {
   meditation: Meditation;
@@ -13,13 +13,15 @@ export function ChatMeditationCard({ meditation, language, hasPremium, onOpen }:
   const title = translation?.title?.trim() || meditation.title;
   const subtitle = translation?.subtitle?.trim() || meditation.subtitle;
   const description = translation?.description?.trim() || meditation.description;
+  const audioLanguage=language==='ru'&&meditation.translations?.ru?.audioUrl?.trim()?'RU':'EN';
   const locked = meditation.premium && !hasPremium;
   return (
     <article className="chat-meditation-card" data-testid="chat-meditation-card">
       <OptimizedImage src={meditation.cover_image} alt="" loading="lazy" />
       <div className="chat-meditation-card-copy">
         <strong className="type-card-title">{title}</strong>
-        <small className="type-body-small">{subtitle} · {formatMeditationDuration(meditation.duration, language)} · {meditation.premium ? 'Premium' : (language === 'ru' ? 'Бесплатно' : 'Free')}</small>
+        <small className="type-body-small">{formatMeditationDuration(meditation.duration, language)} · {meditation.premium ? 'Premium' : (language === 'ru' ? 'Бесплатно' : 'Free')} · {language==='ru'?'Аудио':'Audio'}: {audioLanguage}</small>
+        {subtitle&&<span>{subtitle}</span>}
         <span>{description}</span>
       </div>
       <button type="button" className="chat-meditation-card-action" onClick={onOpen} aria-label={locked ? `${language === 'ru' ? 'Открыть Premium' : 'Open Premium'}: ${title}` : `${language === 'ru' ? 'Начать практику' : 'Start practice'}: ${title}`}>

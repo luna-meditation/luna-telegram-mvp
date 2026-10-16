@@ -391,6 +391,8 @@ export type LunaConversationSummary = {
 };
 
 export type AstrologyChatAttachment={chartId:string;secondChartId?:string;reportId?:string;planet?:'sun'|'moon'|'mercury'|'venus'|'mars'|'jupiter'|'saturn'|'uranus'|'neptune'|'pluto'};
+export type AstrologyWorkflow={version:1;kind:'natal'|'compatibility';state:'selecting'|'ready';firstProfileId?:string;secondProfileId?:string;firstChartId?:string;secondChartId?:string};
+export const openLunaAstrology=(input:{requestId:string;conversationId?:string;kind:'natal'|'compatibility';language:AppLanguage;firstProfileId?:string;secondProfileId?:string},initData?:string)=>request<{conversationId:string;message:LunaMessage}>('/api/luna/tools/astrology',{method:'POST',body:JSON.stringify(input)},initData);
 export type LunaMessage = {
   id: string;
   request_id?: string | null;
@@ -399,6 +401,9 @@ export type LunaMessage = {
   metadata?: {
     contextReset?:boolean;
     astrology?:AstrologyChatAttachment;
+    astrologyWorkflow?:AstrologyWorkflow;
+    astrologyConsent?:{version:1;chartId:string;secondChartId?:string};
+    workflowActions?:Array<'natal_chart'|'compatibility'|'breathing'>;
     readingId?:string;
     consultation?:{version:1;phase:string;actions:Array<'continue'|'alternative'|'tarot'|'natal_chart'|'compatibility'|'meditation'|'breathing'|'journal'|'history'>};
     contextualActions?:Array<'tarot'|'birth_profile'|'journal'|'meditation'>;
@@ -767,6 +772,7 @@ export const getLunaUsage=(initData?:string)=>request<{remaining:number;limit:nu
 
 export async function sendLunaMessage(input: {
   contextReset?:boolean;
+  astrologyConsent?:true;
   mode?:'companion'|'tarot'|'wellbeing'|'meditation'|'astrology'|'dream';
   chartId?:string;
   astrology?:AstrologyChatAttachment;

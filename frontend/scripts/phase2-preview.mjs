@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url';
 assert.equal(process.versions.node.split('.')[0], '22', 'Use Node.js 22');
 const frontend = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const tarotPreview = process.argv.includes('--tarot');
-const luna32Preview=process.argv.includes('--luna32');
+const luna33Preview=process.argv.includes('--luna33');
+const luna32Preview=luna33Preview||process.argv.includes('--luna32');
 const luna31Preview=luna32Preview||process.argv.includes('--luna31');
 const evolutionPreview=luna31Preview||process.argv.includes('--luna30');
 const centralPreview=evolutionPreview||process.argv.includes('--luna24');
@@ -20,7 +21,7 @@ const productionFlags=process.argv.includes('--production-flags');
 const refinementPreview=process.argv.includes('--refinement')||luna21Preview;
 const legacyPreview = process.argv.includes('--legacy');
 assert.ok(!(tarotPreview&&legacyPreview),'Choose either Tarot or legacy preview');
-const outputDirectory = luna32Preview?'dist-luna32-preview':luna31Preview?'dist-luna31-preview':evolutionPreview?'dist-luna30-preview':centralPreview?'dist-luna24-preview':memoryPreview?'dist-memory-preview':productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
+const outputDirectory = luna33Preview?'dist-luna33-preview':luna32Preview?'dist-luna32-preview':luna31Preview?'dist-luna31-preview':evolutionPreview?'dist-luna30-preview':centralPreview?'dist-luna24-preview':memoryPreview?'dist-memory-preview':productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
 const output = resolve(frontend, outputDirectory);
 const flagNames = ['AI_CENTRAL_EXPERIENCE','PERSONAL_MEMORY','NEW_NAVIGATION','TAROT_DAILY','TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI','DAILY_CARD_V2','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2'];
 if(!process.argv.includes('--serve-only')){
@@ -57,7 +58,7 @@ if(astrology){profile.journeyV3=astrology.buildLuna30Progress({meaningfulDays:12
 // LAN previews are HTTP. Supply an RFC4122 ID only in this isolated QA bridge;
 // production always uses the real SDK on HTTPS and never receives this script.
 const bridge=`<script>if(!crypto.randomUUID)Object.defineProperty(crypto,'randomUUID',{value:()=>{const b=crypto.getRandomValues(new Uint8Array(16));b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;const h=Array.from(b,x=>x.toString(16).padStart(2,'0')).join('');return [h.slice(0,8),h.slice(8,12),h.slice(12,16),h.slice(16,20),h.slice(20)].join('-');}});window.Telegram??={WebApp:{initData:'offline-local-qa',initDataUnsafe:{user:{id:880000002,first_name:'Alex',language_code:'en'}},platform:'web',ready(){},expand(){},onEvent(){},offEvent(){},setHeaderColor(){},setBackgroundColor(){},setBottomBarColor(){}}};</script>`;
-const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.png':'image/png','.webp':'image/webp','.svg':'image/svg+xml','.wav':'audio/wav','.woff2':'font/woff2','.webmanifest':'application/manifest+json'};
+const mime={'.html':'text/html; charset=utf-8','.js':'text/javascript','.css':'text/css','.png':'image/png','.webp':'image/webp','.svg':'image/svg+xml','.mp3':'audio/mpeg','.wav':'audio/wav','.woff2':'font/woff2','.webmanifest':'application/manifest+json'};
 function silentAudio(){const samples=8000*180;const wav=Buffer.alloc(44+samples*2);wav.write('RIFF');wav.writeUInt32LE(36+samples*2,4);wav.write('WAVEfmt ',8);wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);wav.writeUInt32LE(8000,24);wav.writeUInt32LE(16000,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(samples*2,40);return wav;}
 const server=createServer(async(req,res)=>{
   const url=new URL(req.url,'http://127.0.0.1');
@@ -136,6 +137,15 @@ const server=createServer(async(req,res)=>{
       if(url.pathname==='/api/checkins'&&req.method==='POST'){checkin={id:'offline-checkin',...body,local_date:body.local_date||date()};return json({checkin});}
       if(centralPreview){
         const summary=c=>({...c,latestMessage:c.messages.at(-1)?.content??''});
+        if(luna33Preview&&url.pathname==='/api/luna/tools/astrology'&&req.method==='POST'){
+          const previous=[...centralConversations.values()].find(c=>c.messages.some(m=>m.id===body.requestId)),id=previous?.id??body.conversationId??body.requestId;
+          let c=centralConversations.get(id);if(!c){c={id,title:body.kind==='compatibility'?'Compatibility · local QA':'Natal chart · local QA',language:body.language,status:'active',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),last_message_at:new Date().toISOString(),messages:[]};centralConversations.set(id,c);}
+          let message=c.messages.find(m=>m.id===body.requestId);if(message?.metadata?.astrologyWorkflow?.state==='ready')return json({conversationId:id,message});
+          let w={version:1,kind:body.kind,state:'selecting'},attachment=null;
+          if(body.firstProfileId){const chartFor=pid=>{const p=birthProfiles.get(pid);if(!p)throw Error('Local QA profile missing');let chart=[...birthCharts.values()].find(c=>c.profile_id===pid&&c.profile_revision===p.revision);if(!chart){chart={id:randomUUID(),profile_id:pid,profile_revision:p.revision,calculation:astrology.calculateNatalChart({date:p.birth_date,time:p.birth_time,location:p.location}),created_at:new Date().toISOString()};birthCharts.set(chart.id,chart);}return chart;};const first=chartFor(body.firstProfileId),second=body.secondProfileId?chartFor(body.secondProfileId):null;w={...w,state:'ready',firstProfileId:body.firstProfileId,secondProfileId:body.secondProfileId,firstChartId:first.id,secondChartId:second?.id};attachment={chartId:first.id,...(second?{secondChartId:second.id}:{})};}
+          const data={id:body.requestId,conversation_id:id,role:'assistant',content:'OFFLINE QA — real local astronomy engine; persistence is only an in-process fixture.',created_at:new Date().toISOString(),metadata:{astrologyWorkflow:w,...(attachment?{astrology:attachment}:{})}};
+          if(message)Object.assign(message,data);else{message=data;c.messages.push(message);}return json({conversationId:id,message});
+        }
         if(url.pathname==='/api/luna/tools/tarot/attach'&&req.method==='POST'){
           const reading=[...readings.values()].find(r=>r.id===body.readingId);if(!reading)return json({code:'reading_not_found'},404);
           for(const c of centralConversations.values()){const m=c.messages.find(m=>m.metadata?.tarot?.readingId===reading.id);if(m)return json({conversationId:c.id,message:m});}
@@ -163,7 +173,7 @@ const server=createServer(async(req,res)=>{
           const prior=[...centralConversations.values()].find(c=>c.messages.some(m=>m.request_id===body.requestId&&m.role==='assistant'));const id=prior?.id??body.conversationId??randomUUID();let c=centralConversations.get(id);
           if(!c){c={id,title:body.message.slice(0,60),language:body.language,status:'active',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),last_message_at:new Date().toISOString(),messages:[]};centralConversations.set(id,c);}
           let m=c.messages.find(m=>m.request_id===body.requestId&&m.role==='assistant');
-          if(!m){m={id:randomUUID(),request_id:body.requestId,role:'assistant',content:body.language==='ru'?'Локальный UI preview: серверный AI здесь не вызывается.':'Offline UI preview: no server AI is called here.',created_at:new Date().toISOString(),metadata:{}};c.messages.push({id:randomUUID(),role:'user',content:body.message,created_at:new Date().toISOString()},m);}
+          if(!m){m={id:randomUUID(),request_id:body.requestId,role:'assistant',content:body.language==='ru'?'Локальный UI preview: серверный AI здесь не вызывается.':'Offline UI preview: no server AI is called here.',created_at:new Date().toISOString(),metadata:luna33Preview?{...(body.astrology?{astrology:body.astrology,astrologyConsent:{version:1,chartId:body.astrology.chartId,...(body.astrology.secondChartId?{secondChartId:body.astrology.secondChartId}:{})}}:{}),...(/meditat|медитац/i.test(body.message)?{recommendedMeditationId:meditation.id,meditationAction:{type:'meditation_card',meditationId:meditation.id},recommendedMeditation:meditation}:{}),...(/breath|дых/i.test(body.message)?{workflowActions:['breathing'],resolvedIntent:'breathing'}:{})}:{}};c.messages.push({id:randomUUID(),role:'user',content:body.message,created_at:new Date().toISOString()},m);}
           return json({conversationId:id,message:m,duplicate:false,remaining:7,requestState:'completed'});
         }
       }
@@ -186,7 +196,7 @@ const server=createServer(async(req,res)=>{
     if(path!==output&&!path.startsWith(output+sep)){res.writeHead(403);return res.end();}
     if(!extname(path))path=resolve(output,'index.html');
     let content=await readFile(path);if(extname(path)==='.html')content=Buffer.from(content.toString().replace(/<script\b[^>]*src=["']https:\/\/telegram\.org\/[^"']*["'][^>]*><\/script>/g,'').replace('<head>',`<head>${bridge}`).replace(/<title>[^<]+<\/title>/,luna31Preview?'<title>Luna 3.1 — offline UI preview</title>':evolutionPreview?'<title>Luna 3.0 — offline UI preview</title>':centralPreview?'<title>Luna 2.4 — offline UI preview</title>':memoryPreview?'<title>Luna 2.3 Personal Memory — sample data</title>':'<title>Luna 2.2 UI preview — sample data</title>'));
-    res.writeHead(200,{'content-type':mime[extname(path)]||'application/octet-stream','cache-control':extname(path)==='.html'?'no-store':'public, max-age=86400','x-luna-preview':'synthetic-local-only','content-security-policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; media-src 'self' blob:"});res.end(content);
+    res.writeHead(200,{'content-length':content.length,'content-type':mime[extname(path)]||'application/octet-stream','cache-control':extname(path)==='.html'?'no-store':'public, max-age=86400','x-luna-preview':'synthetic-local-only','content-security-policy':"default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; media-src 'self' blob:"});res.end(content);
   } catch {res.writeHead(404);res.end('Not available in the offline preview');}
 });
 const port=Number(process.env.PHASE2_PREVIEW_PORT??(centralPreview?56024:memoryPreview?55990:tarotPreview?55448:55444));assert.ok(Number.isInteger(port)&&port>1024&&port<65536);

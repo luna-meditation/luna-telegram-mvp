@@ -9,7 +9,7 @@ import {featureFlags} from '../config/featureFlags';
 import homeArt from '../v2/home-art-32.json';
 
 export function HomeLunaGuide({language,onTalk}:{language:AppLanguage;onTalk:()=>void;onPersonalize?:()=>void}){
- return <div className="luna25-hero-action"><button type="button" className="luna2-talk-primary" onClick={onTalk}><Sparkles size={19}/><span>{language==='en'?'Talk to Luna':'Поговорить с Luna'}</span><ArrowUpRight size={18}/></button></div>;
+ return <div className="luna25-hero-action"><button type="button" className="luna2-talk-primary" onClick={onTalk}><Sparkles size={17}/><span>{language==='en'?'Talk to Luna':'Поговорить с Luna'}</span><ArrowUpRight size={16}/></button></div>;
 }
 
 export function HomeDiscovery({language,tarotEnabled,onTarot,onMeditate,onBreathe,onAstrology,onDaily,initData}:{language:AppLanguage;tarotEnabled:boolean;onTarot:()=>void;onMeditate:()=>void;onBreathe:()=>void;onAstrology?:()=>void;onDaily?:()=>void;initData?:string}){
@@ -23,13 +23,13 @@ export function HomeDiscovery({language,tarotEnabled,onTarot,onMeditate,onBreath
   {id:'breathwork',label:t.breathwork,description:en?'Find your rhythm':'Найти свой ритм',onOpen:onBreathe}
  ] as const;
  return <>
+  <button type="button" disabled={!tarotEnabled||dailyState==='removed'} onClick={luna21Flags.daily_card_v2?onDaily??onTarot:onTarot} className="luna2-daily-card luna25-daily-card" aria-disabled={!tarotEnabled} data-feature-flag="tarot_daily" data-feature-enabled={tarotEnabled} aria-label={en?'Card of the day':'Карта дня'}>
+   <CelestialArt kind="tarot" sizes="88px"/><div><h2>{en?'Card of the day':'Карта дня'}</h2><p>{dailyState==='saved'?(en?'View your saved card':'Посмотреть сохранённую карту'):dailyState==='removed'?(en?'A new card arrives at 00:00 UTC':'Новая карта — в 00:00 UTC'):(en?'Free · one saved card each day':'Бесплатно · одна сохранённая карта в день')}</p></div><ArrowUpRight size={18}/>
+  </button>
   <section className="luna25-home-categories" aria-label={t.quickActions}>{categories.map(c=><button type="button" key={c.id} data-category={c.id} className={`luna25-category is-${c.id}`} onClick={c.onOpen} disabled={!c.onOpen}>
    <div className="luna25-category-art" aria-hidden="true"><OptimizedImage src={homeArt[c.id].variants[0].src} asset={homeArt[c.id]} alt="" sizes="(max-width: 600px) calc((100vw - 44px) / 2), 260px"/></div>
    {c.id==='astrology'&&!featureFlags.astrology&&<small className="luna25-soon">{t.soon}</small>}<span className="luna25-category-copy"><strong>{c.label}</strong><span>{c.description}</span></span><ArrowUpRight size={16}/>
   </button>)}</section>
-  <button type="button" disabled={!tarotEnabled||dailyState==='removed'} onClick={luna21Flags.daily_card_v2?onDaily??onTarot:onTarot} className="luna2-daily-card luna25-daily-card" aria-disabled={!tarotEnabled} data-feature-flag="tarot_daily" data-feature-enabled={tarotEnabled} aria-label={en?'Card of the day':'Карта дня'}>
-   <CelestialArt kind="tarot" sizes="88px"/><div><h2>{en?'Card of the day':'Карта дня'}</h2><p>{dailyState==='saved'?(en?'View your saved card':'Посмотреть сохранённую карту'):dailyState==='removed'?(en?'A new card arrives at 00:00 UTC':'Новая карта — в 00:00 UTC'):(en?'Free · one saved card each day':'Бесплатно · одна сохранённая карта в день')}</p></div><ArrowUpRight size={18}/>
-  </button>
  </>;
 }
 

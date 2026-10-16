@@ -13,11 +13,11 @@ const api=new URL(process.env.VITE_API_URL?.trim()||'https://invalid.invalid');
 assert.ok(api.protocol==='https:'&&!['invalid.invalid','localhost','127.0.0.1','::1'].includes(api.hostname),'Provide the verified production VITE_API_URL');
 assert.ok(!api.username&&!api.password&&!api.search&&!api.hash,'The public API URL must not carry credentials or tokens');
 const profile=process.env.LUNA_RELEASE_PROFILE??'tarot-phase2';
-assert.ok(['luna24','luna25','luna251','luna30','luna31','luna32'].includes(profile)||!process.env.VITE_FEATURE_AI_CENTRAL_EXPERIENCE||process.env.VITE_FEATURE_AI_CENTRAL_EXPERIENCE==='false','Luna development is not approved for production');
-assert.ok(['tarot-phase2','luna2','luna21','luna23','luna24','luna25','luna251','luna30','luna31','luna32'].includes(profile),'Unknown approved release profile');
+assert.ok(['luna24','luna25','luna251','luna30','luna31','luna32','luna33'].includes(profile)||!process.env.VITE_FEATURE_AI_CENTRAL_EXPERIENCE||process.env.VITE_FEATURE_AI_CENTRAL_EXPERIENCE==='false','Luna development is not approved for production');
+assert.ok(['tarot-phase2','luna2','luna21','luna23','luna24','luna25','luna251','luna30','luna31','luna32','luna33'].includes(profile),'Unknown approved release profile');
 const foundation=['PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI'];
-const required=['NEW_NAVIGATION','TAROT_DAILY',...(['luna2','luna21','luna23','luna24','luna25','luna251','luna30','luna31','luna32'].includes(profile)?foundation:[]),...(['luna21','luna23','luna24','luna25','luna251','luna30','luna31','luna32'].includes(profile)?['DAILY_CARD_V2']:[]),...(['luna23','luna24','luna25','luna251','luna30','luna31','luna32'].includes(profile)?['PERSONAL_MEMORY']:[]),...(['luna24','luna25','luna251','luna30','luna31','luna32'].includes(profile)?['AI_CENTRAL_EXPERIENCE','TAROT_SPREADS']:[]),...(['luna30','luna31','luna32'].includes(profile)?['ASTROLOGY','BREATHWORK_AUDIO']:[])];
-const disabled=[...(['luna23','luna24','luna25','luna251','luna30','luna31','luna32'].includes(profile)?[]:['PERSONAL_MEMORY']),...(['luna24','luna25','luna251','luna30','luna31','luna32'].includes(profile)?[]:['TAROT_SPREADS']),...(['luna30','luna31','luna32'].includes(profile)?[]:['ASTROLOGY','BREATHWORK_AUDIO']),'MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2',...(['luna2','luna21','luna23','luna24','luna25','luna251','luna30','luna31','luna32'].includes(profile)?[]:foundation)];
+const required=['NEW_NAVIGATION','TAROT_DAILY',...(['luna2','luna21','luna23','luna24','luna25','luna251','luna30','luna31','luna32','luna33'].includes(profile)?foundation:[]),...(['luna21','luna23','luna24','luna25','luna251','luna30','luna31','luna32','luna33'].includes(profile)?['DAILY_CARD_V2']:[]),...(['luna23','luna24','luna25','luna251','luna30','luna31','luna32','luna33'].includes(profile)?['PERSONAL_MEMORY']:[]),...(['luna24','luna25','luna251','luna30','luna31','luna32','luna33'].includes(profile)?['AI_CENTRAL_EXPERIENCE','TAROT_SPREADS']:[]),...(['luna30','luna31','luna32','luna33'].includes(profile)?['ASTROLOGY','BREATHWORK_AUDIO']:[])];
+const disabled=[...(['luna23','luna24','luna25','luna251','luna30','luna31','luna32','luna33'].includes(profile)?[]:['PERSONAL_MEMORY']),...(['luna24','luna25','luna251','luna30','luna31','luna32','luna33'].includes(profile)?[]:['TAROT_SPREADS']),...(['luna30','luna31','luna32','luna33'].includes(profile)?[]:['ASTROLOGY','BREATHWORK_AUDIO']),'MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2',...(['luna2','luna21','luna23','luna24','luna25','luna251','luna30','luna31','luna32','luna33'].includes(profile)?[]:foundation)];
 for(const key of required)assert.equal(process.env[`VITE_FEATURE_${key}`],'true',`${key} must be explicitly enabled for this release`);
 for(const key of disabled)assert.ok(!process.env[`VITE_FEATURE_${key}`]||process.env[`VITE_FEATURE_${key}`]==='false',`${key} is not part of the approved release`);
 if(profile==='luna2'){
@@ -73,6 +73,16 @@ if(profile==='luna31'){
  assert.equal(review.backupRestorePasses,2);assert.equal(review.backupTables,48);assert.equal(review.backupFunctions,33);assert.equal(review.backupMediaObjects,28);
  assert.equal(review.mobileStatus,'PASS');assert.ok(review.mobileCases>=96);assert.equal(review.aiSmokeStatus,'PASS');assert.equal(review.aiSmokeCalls,8);assert.ok(review.aiSmokeCostUsd>0&&review.aiSmokeCostUsd<=0.04);assert.equal(review.aiAdditionalCalls,2);assert.ok(review.aiAdditionalCostUsd>0&&review.aiAdditionalCostUsd<=0.01);assert.equal(review.aiQualityStatus,'PASS');assert.equal(review.monetizationEnabled,false);
  assert.equal(review.sourceDigest,releaseSourceDigest(resolve(frontend,'..')),'Source changed after the verified release checks');
+}
+if(profile==='luna33'){
+ const review=JSON.parse(readFileSync(process.env.LUNA_RELEASE_DB_REVIEW,'utf8'));
+ assert.equal(review.status,'PASS');assert.equal(review.release,'luna33');assert.equal(review.baseCommit,'c2dc4adbeab51fc34bafca7111aee711a7037b37');
+ assert.equal(review.projectId,'vkcdtasbdoeilgfucoax');assert.equal(review.stagingProjectId,'funvzpmpbgazsisehiru');assert.equal(review.noDatabaseMigrations,true);
+ assert.equal(review.backupRestorePasses,2);assert.equal(review.backupTables,53);assert.ok(review.backupFunctions>=37);assert.equal(review.backupMediaObjects,28);
+ assert.equal(review.frontendTestsStatus,'PASS');assert.ok(review.frontendTests>=197);assert.equal(review.backendTestsStatus,'PASS');assert.ok(review.backendTests>=324);assert.ok(review.nativeDatabaseChecks>=15);
+ assert.equal(review.mobileStatus,'PASS');assert.ok(review.mobileCases>=8&&review.mobileChecks>=112);assert.equal(review.aiSmokeStatus,'PASS');assert.ok(review.aiSmokeCalls>0&&review.aiSmokeCalls<=4);assert.ok(review.aiSmokeCostUsd>0&&review.aiSmokeCostUsd<=.03);assert.equal(review.unknownAiSpendUsd,0);
+ assert.equal(review.balancesAndPaidRightsPreserved,true);assert.equal(review.sharedExistingDailyQuotasPreserved,true);assert.equal(review.monetizationEnabled,false);assert.equal(review.productionSettingsUnchanged,true);
+ assert.equal(review.sourceDigest,releaseSourceDigest(resolve(frontend,'..')),'Source changed after release verification');
 }
 if(profile==='luna32'){
  const reviewPath=process.env.LUNA_RELEASE_DB_REVIEW;

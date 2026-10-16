@@ -1,0 +1,34 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {createClient} from '@supabase/supabase-js';import {randomUUID} from 'node:crypto';
+import {createAstrologyWorkflowService} from './luna33-workflows.js';
+const owner=33001,foreignOwner=33002;
+function fixture(){
+ const first=randomUUID(),second=randomUUID(),foreign=randomUUID(),writes:string[]=[];
+ const profiles=[{id:first,telegram_id:owner,subject_kind:'self',display_label:'QA A',birth_date:'1990-05-10',birth_time:'12:00',revision:1,location:{latitude:51.5,longitude:-.12,timezone:'Europe/London',label:'London'}},{id:second,telegram_id:owner,subject_kind:'other',display_label:'QA B',birth_date:'1992-08-20',birth_time:null,revision:1,location:{latitude:40.4,longitude:-3.7,timezone:'Europe/Madrid',label:'Madrid'}},{id:foreign,telegram_id:foreignOwner,subject_kind:'self',display_label:'Private other account',birth_date:'1980-01-01',birth_time:null,revision:1,location:{latitude:0,longitude:0,timezone:'UTC',label:'QA'}}];
+ const tables:Record<string,Array<Record<string,unknown>>>={luna30_release_settings:[{id:true,astrology_enabled:true}],luna30_birth_profiles:profiles.map(p=>({...p,location:{...p.location,placeId:'qa:'+p.id,provider:'GeoNames',confirmed:true}})),ai_conversations:[],ai_messages:[],luna30_chart_cache:[]};
+ const db=createClient('https://fixture.invalid','synthetic-local-only',{auth:{persistSession:false},global:{fetch:async(input,init)=>{
+  const url=new URL(String(input)),table=url.pathname.split('/').at(-1)!;assert.ok(table in tables,'Unexpected table '+table);const method=init?.method??'GET',headers=new Headers(init?.headers);const rows=tables[table];
+  const matches=(r:Record<string,unknown>)=>[...url.searchParams].every(([k,v])=>{if(['select','order','limit','on_conflict'].includes(k))return true;if(v.startsWith('eq.'))return String(r[k])===v.slice(3);if(v.startsWith('cs.')){const subset=(actual:unknown,expected:unknown):boolean=>expected!==null&&typeof expected==='object'?Object.entries(expected).every(([key,value])=>subset((actual as Record<string,unknown>|null)?.[key],value)):actual===expected;return subset(r[k],JSON.parse(v.slice(3)));}throw Error('Unexpected filter '+k);});
+  let result=rows.filter(matches);
+  if(method==='POST'){writes.push(table);const payload=JSON.parse(String(init?.body));for(const value of Array.isArray(payload)?payload:[payload]){const existing=rows.find(r=>r.id&&r.id===value.id||table==='luna30_chart_cache'&&r.cache_key===value.cache_key&&r.telegram_id===value.telegram_id);if(existing){if(!headers.get('prefer')?.includes('ignore-duplicates'))Object.assign(existing,value);}else rows.push({id:randomUUID(),status:'active',created_at:new Date().toISOString(),...value});}result=rows.filter(matches);}
+  if(method==='PATCH'){writes.push(table);const value=JSON.parse(String(init?.body));for(const row of result)Object.assign(row,value);}
+  const data=headers.get('accept')?.includes('vnd.pgrst.object')?result[0]??null:result;
+  return Response.json(data,{headers:{'content-range':`0-${Math.max(0,result.length-1)}/${result.length}`}});
+ }}});
+ return{service:createAstrologyWorkflowService(db,()=>true),tables,writes,first,second,foreign};
+}
+test('inline compatibility persists selection, uses real calculated caches and reopens without a duplicate',async()=>{
+ const f=fixture(),requestId=randomUUID(),input={requestId,kind:'compatibility',language:'ru'};
+ const selecting=await f.service.open(owner,input);assert.equal(selecting.message.metadata.astrologyWorkflow.state,'selecting');
+ const complete=await f.service.open(owner,{...input,firstProfileId:f.first,secondProfileId:f.second});const w=complete.message.metadata.astrologyWorkflow;assert.equal(w.state,'ready');assert.equal(complete.message.metadata.astrology.secondChartId,w.secondChartId);assert.equal(f.tables.luna30_chart_cache.length,2);assert.ok((f.tables.luna30_chart_cache[0].calculation as {planets:unknown[]}).planets.length>=10);
+ const writes=f.writes.length,reopened=await f.service.open(owner,{...input,firstProfileId:f.first,secondProfileId:f.second});assert.equal(reopened.message.id,complete.message.id);assert.equal(f.writes.length,writes);assert.equal(f.tables.ai_messages.length,1);assert.equal(f.tables.ai_conversations.length,1);
+ assert.ok(f.writes.every(t=>['ai_messages','ai_conversations','luna30_chart_cache'].includes(t)));
+});
+test('foreign profiles and conversations never produce calculated context',async()=>{
+ const f=fixture(),id=randomUUID();f.tables.ai_conversations.push({id,telegram_id:foreignOwner,status:'active'});
+ await assert.rejects(f.service.open(owner,{requestId:randomUUID(),conversationId:id,kind:'natal',language:'en'}),/Conversation not found/);
+ await assert.rejects(f.service.open(owner,{requestId:randomUUID(),kind:'natal',language:'en',firstProfileId:f.foreign}),/saved profiles/);
+ assert.equal(f.tables.luna30_chart_cache.length,0);assert.equal(f.tables.ai_messages.length,0);
+});
+test('a ready workflow cannot be silently retargeted to different people',async()=>{
+ const f=fixture(),input={requestId:randomUUID(),kind:'natal',language:'en',firstProfileId:f.first};await f.service.open(owner,input);await assert.rejects(f.service.open(owner,{...input,firstProfileId:f.second}),/new comparison/);
+});
