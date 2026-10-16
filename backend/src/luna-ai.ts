@@ -56,7 +56,8 @@ import {safetyPolicyPrompt} from './luna/prompts/safety-policy.js';
 import {responseContractPrompt} from './luna/prompts/response-contract.js';
 import {tarotCatalog} from './tarot-policy.js';
 import {spreadPositions} from './tarot-spread-policy.js';
-import {astrologyAttachmentSchema,consultationActionIds,consultationActionsSchema,consultationPhase,consultationRuntimeInstructions,safeAssistantProse,savedConsultationContext,validatedConsultationActions} from './luna31-consultation.js';
+import {artifactScopedIntent,astrologyAttachmentSchema,consultationActionIds,consultationActionsSchema,consultationPhase,consultationRuntimeInstructions,safeAssistantProse,savedConsultationContext,validatedConsultationActions} from './luna31-consultation.js';
+import {hasDanglingConsultationPromise} from './luna-ai-quality.js';
 
 const languageSchema = z.enum(['en', 'ru']);
 const meditationActionSchema = z.object({
@@ -335,8 +336,7 @@ export function normalizeOpenAiModelResult(
   const parsedJson = text ? tryParseJson(text, context) : null;
 
   if (parsedJson && typeof parsedJson === 'object') {
-    const parsed = tolerantModelResultSchema.parse(parsedJson);
-    try{return modelResultSchema.parse({...parsed,message:safeAssistantProse(parsed.message,language)});}catch{throw new LunaAiError('malformed_response','The provider returned an invalid visible answer.',502,true);}
+    try{const parsed = tolerantModelResultSchema.parse(parsedJson);return modelResultSchema.parse({...parsed,message:safeAssistantProse(parsed.message,language)});}catch{throw new LunaAiError('malformed_response','The provider returned an invalid visible answer.',502,true);}
   }
 
   if (text) {
@@ -1066,16 +1066,17 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
         const metadata = message.metadata as { recommendedMeditationId?: string | null; meditationAction?: { meditationId?: string | null } | null } | null;
         return metadata?.recommendedMeditationId ?? metadata?.meditationAction?.meditationId ?? null;
       });
-    const pendingResolution = resolvePendingReply(input.message, pendingState, catalogForPolicy);
+    const artifactMode=input.mode==='tarot'||input.mode==='astrology';
+    const pendingResolution = artifactMode?null:resolvePendingReply(input.message, pendingState, catalogForPolicy);
     const resolvedPendingMeditation = pendingResolution && 'meditationId' in pendingResolution
       ? pendingResolution.meditationId
       : null;
-    const intentResolution = resolveLunaIntent({
+    const intentResolution = artifactScopedIntent(resolveLunaIntent({
       message: input.message,
       state: conversationState,
       pendingState,
       catalog: catalogForPolicy
-    });
+    }),input.mode);
     const validatedIntentMeditation = intentResolution.meditationId
       ? catalogForPolicy.find((item) => item.id === intentResolution.meditationId && item.published !== false)?.id ?? null
       : null;
@@ -1396,6 +1397,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       : visibleMessage;
     const attachedMeditationId = recommendedMeditationId;
     const assistantContent = neutralRussianAddress(enforceCardClaimConsistency(safeVisibleMessage, responseLanguage, Boolean(attachedMeditationId)),responseLanguage,personal,input.message);
+    if(hasDanglingConsultationPromise(assistantContent))throw new LunaAiError('incomplete_response','Luna returned an introduction without its promised explanation.',502,true);
     if (!assistantContent) throw new LunaAiError('malformed_response', 'Luna returned no safe visible message.', 502);
     if (hasInternalDataLeak(assistantContent)) {
       console.warn('[Luna AI internal data guard]', {
@@ -1425,7 +1427,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       ? pendingResolution.resolvedIntent
       : intentResolution.intent;
     const explicitTopicChange = ['journal', 'premium', 'relationship', 'science'].includes(intentResolution.intent);
-    const nextPendingState: PendingLunaState | null = recommendedMeditationId || explicitTopicChange
+    const nextPendingState: PendingLunaState | null = recommendedMeditationId || explicitTopicChange || artifactMode
       ? null
       : recommendationRequested
         ? createPendingClarification({ clarification: assistantContent })
@@ -1441,7 +1443,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       assistantMessage: assistantContent,
       userDecision: input.message,
       language: responseLanguage,
-      clearMeditationContext: ['journal', 'premium', 'relationship', 'science'].includes(intentResolution.intent)
+      clearMeditationContext: artifactMode||['journal', 'premium', 'relationship', 'science'].includes(intentResolution.intent)
     });
     const phase=consultationPhase({hasContext:Boolean(readingContext||chartContext),message:assistantContent,firstTurn:recent.filter(m=>m.role==='assistant').length===0});
     const actions=validatedConsultationActions(parsed.actions??(attachedMeditationId?['breathing','journal']:undefined),{reading:Boolean(readingContext),chart:Boolean(chartContext),comparison:Boolean(input.astrology?.secondChartId),safety:false,astrologyAvailable:env.FEATURE_ASTROLOGY});

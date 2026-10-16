@@ -276,3 +276,6 @@ test('normalizes a structured meditation action and validates it against publish
     { id: 'draft-focus', catalogKey: 'focused-calm', title: 'Focused Calm', published: false }
   ]), null);
 });
+test('invalid provider schema is a retryable upstream failure, never a user input error',()=>{
+ assert.throws(()=>normalizeOpenAiModelResult({text:JSON.stringify({message:'x'.repeat(5001)}),refusal:null},'en'),(error:unknown)=>error instanceof LunaAiError&&error.code==='malformed_response'&&error.status===502&&error.retryable);
+});

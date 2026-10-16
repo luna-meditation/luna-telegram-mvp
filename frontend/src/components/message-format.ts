@@ -18,5 +18,12 @@ export function messageBlocks(text:string):MessageBlock[]{
   const last=blocks[blocks.length-1];
   if(last?.kind===kind&&kind!=='heading'&&kind!=='separator')last.lines.push(content);else blocks.push({kind,lines:kind==='separator'?[]:[content]});
  }
- return blocks.filter((b,i)=>b.kind!=='break'&&(b.kind!=='separator'||i>0&&i<blocks.length-1&&blocks[i-1]?.kind!=='separator'));
+ return blocks.filter((b,i)=>b.kind!=='break'&&(b.kind!=='separator'||i>0&&i<blocks.length-1&&blocks[i-1]?.kind!=='separator')).flatMap(block=>{
+  const text=block.lines.join('\n');
+  if(block.kind!=='paragraph'||text.length<600||/[`*]/.test(text))return [block];
+  const sentences=text.split(/(?<=[.!?])\s+/u),paragraphs:string[]=[];let current='';
+  for(const sentence of sentences){if(current&&current.length+sentence.length>360){paragraphs.push(current);current='';}current+=(current?' ':'')+sentence;}
+  if(current)paragraphs.push(current);
+  return paragraphs.map(paragraph=>({kind:'paragraph' as const,lines:[paragraph]}));
+ });
 }

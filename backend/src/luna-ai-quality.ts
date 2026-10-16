@@ -2,6 +2,11 @@ import { assistantQuestionHash, type LunaConversationState } from './luna-ai-sta
 
 export type LunaResponseReview = { accepted: boolean; issues: string[] };
 
+/** A completed provider envelope can still contain only an introduction. */
+export function hasDanglingConsultationPromise(message:string){
+ return /(?:наблюдения\s+ниже|(?:ниже|дальше)\s*[—:-]\s*по\s+пунктам[^.!?\n]*[.!?]?|(?:observations|details|explanation|points)\s+(?:follow|below))\s*[:.!]?\s*$/iu.test(message.trim());
+}
+
 function normalizedSentences(message: string) {
   return message
     .split(/(?<=[.!?])\s+|\n+/u)

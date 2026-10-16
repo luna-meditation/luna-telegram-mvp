@@ -70,7 +70,7 @@ if(profile==='luna31'){
  assert.equal(review.status,'PASS');assert.equal(review.release,'luna31');assert.equal(review.baseCommit,'232c6e08fdcbc8ec5cd550df88242a1728dc79ef');
  assert.equal(review.projectId,'vkcdtasbdoeilgfucoax');assert.equal(review.productionWrites,0);assert.equal(review.noDatabaseMigrations,true);
  assert.equal(review.backupRestorePasses,2);assert.equal(review.backupTables,48);assert.equal(review.backupFunctions,33);assert.equal(review.backupMediaObjects,28);
- assert.equal(review.mobileStatus,'PASS');assert.ok(review.mobileCases>=96);assert.equal(review.aiSmokeStatus,'PASS');assert.equal(review.aiSmokeCalls,6);assert.ok(review.aiSmokeCostUsd>0&&review.aiSmokeCostUsd<=0.03);assert.equal(review.aiQualityStatus,'PASS');assert.equal(review.monetizationEnabled,false);
+ assert.equal(review.mobileStatus,'PASS');assert.ok(review.mobileCases>=96);assert.equal(review.aiSmokeStatus,'PASS');assert.equal(review.aiSmokeCalls,8);assert.ok(review.aiSmokeCostUsd>0&&review.aiSmokeCostUsd<=0.04);assert.equal(review.aiAdditionalCalls,2);assert.ok(review.aiAdditionalCostUsd>0&&review.aiAdditionalCostUsd<=0.01);assert.equal(review.aiQualityStatus,'PASS');assert.equal(review.monetizationEnabled,false);
  assert.equal(review.sourceDigest,releaseSourceDigest(resolve(frontend,'..')),'Source changed after the verified release checks');
 }
 assert.match(commit??'',/^[a-f0-9]{40}$/,'A verified source commit is required');

@@ -1,4 +1,10 @@
 import {z} from 'zod';
+import type {LunaIntentResolution} from './luna-ai-intent.js';
+
+export function artifactScopedIntent(intent:LunaIntentResolution,mode:string|undefined):LunaIntentResolution{
+ if(mode!=='tarot'&&mode!=='astrology')return intent;
+ return {...intent,intent:'general_chat',goal:null,topic:mode,action:'none',meditationId:null,confidence:1,continuation:false,reason:'verified_consultation_context'};
+}
 
 // IDs, never model-supplied URLs, commands, record IDs or executable arguments.
 export const consultationActionIds = ['continue','alternative','tarot','natal_chart','compatibility','meditation','breathing','journal','history'] as const;

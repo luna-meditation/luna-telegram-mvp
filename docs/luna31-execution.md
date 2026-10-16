@@ -16,7 +16,9 @@ Development branch: `feature/luna-3-1-cohesive-experience`.
 4. Verification: Node 22 tests/lint/types/build, isolated PostgreSQL security and
    request replay checks, EN/RU × dark/light × 360/375/390/393 mobile review.
 5. Only after local gates: one existing staging publication, no new project.
-   Owner approved at most six synthetic AI requests, total $0.03. Record usage,
+   Owner approved at most six synthetic AI requests, total $0.03, then explicitly
+   approved two additional neutral requests totaling at most $0.01 and one final
+   staging publication after the first run found regressions. Record usage,
    language, exact context, cached reopening, and duplicate replay separately.
 6. Before production: fresh encrypted Luna-only backup and isolated restore,
    compare shared-project objects, exact tested GitHub branch/PR, backend first,
@@ -39,6 +41,12 @@ Development branch: `feature/luna-3-1-cohesive-experience`.
   ID; completed requests reuse their stored response and charge no second quota.
   Incomplete output is not displayed. Failed attempts refund the app allowance;
   provider tokens already consumed are still logged when usage is available.
+- Terminal promises of an explanation without that explanation are rejected as
+  incomplete output. Provider schema failures are upstream errors, not user input
+  errors. Artifact modes cannot inherit unrelated legacy meditation actions.
+- Common English self-harm wording, including "harm myself", uses deterministic
+  support before a provider call. Neutral synthetic safety fixtures validate this
+  path; they are not claims about the real QA user's mental state.
 - Mode prompts are modular and bounded, not two duplicated copies of the legacy
   meditation prompt. Oversized chart context fails rather than silently vanishing.
 - Existing prices, payments, subscriptions, Lifetime rights, Moon Seeds balances
