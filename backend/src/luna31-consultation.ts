@@ -13,10 +13,14 @@ export const consultationPhases = ['greeting','discovering_intent','clarifying_q
 export type ConsultationPhase = typeof consultationPhases[number];
 export const astrologyAttachmentSchema = z.object({chartId:z.string().uuid(),secondChartId:z.string().uuid().optional(),reportId:z.string().uuid().optional(),planet:z.enum(['sun','moon','mercury','venus','mars','jupiter','saturn','uranus','neptune','pluto']).optional()}).strict();
 export type AstrologyAttachment = z.infer<typeof astrologyAttachmentSchema>;
+export function messagesAfterContextReset<T extends {role?:string;metadata?:unknown}>(messages:T[]):T[]{
+ let boundary=-1;messages.forEach((m,i)=>{if(m.role==='assistant'&&(m.metadata as {contextReset?:unknown}|null)?.contextReset===true)boundary=i;});return messages.slice(Math.max(0,boundary));
+}
 export function savedConsultationContext(messages:Array<{role?:string;metadata?:unknown}>){
  for(const message of [...messages].reverse()){
   if(message.role!=='assistant'||!message.metadata||typeof message.metadata!=='object')continue;
   const metadata=message.metadata as Record<string,unknown>;
+  if(metadata.contextReset===true)return {readingId:undefined,astrology:undefined};
   const astrology=astrologyAttachmentSchema.safeParse(metadata.astrology);
   if(astrology.success)return {astrology:astrology.data,readingId:undefined};
   const reading=z.string().uuid().safeParse((metadata.tarot as {readingId?:unknown}|undefined)?.readingId??metadata.readingId);

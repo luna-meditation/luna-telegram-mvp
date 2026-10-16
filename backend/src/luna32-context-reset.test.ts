@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {messagesAfterContextReset,savedConsultationContext} from './luna31-consultation.js';
+const chart={chartId:'00000000-0000-4000-8000-000000000001'};
+test('removing an attachment cannot silently recover it on the next turn or reopening',()=>{const messages=[{role:'assistant',metadata:{astrology:chart}},{role:'assistant',metadata:{contextReset:true}}];assert.deepEqual(savedConsultationContext(messages),{readingId:undefined,astrology:undefined});assert.deepEqual(messagesAfterContextReset(messages),[messages[1]]);});
+test('a new explicit attachment after removal becomes the active context',()=>{const messages=[{role:'assistant',metadata:{contextReset:true}},{role:'assistant',metadata:{astrology:chart}}];assert.deepEqual(savedConsultationContext(messages).astrology,chart);});

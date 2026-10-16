@@ -14,6 +14,8 @@ import {qaTarotEnabled,qaTarotLimits,qaTarotTransport} from './staging-tarot-bud
 import {validateTarotV2} from './tarot-interpretation-v2.js';
 import {neutralRussianInterpretation} from './luna/russian-address.js';
 import {permittedPersonalContext} from './personalization-policy.js';
+import {withAiOperation} from './luna32-ai-accounting.js';
+import {readLuna32Settings,hasBetaFeature} from './luna32-runtime.js';
 export async function generateTarotSpread(input:SpreadInput,profile:Parameters<typeof buildSpreadAiRequest>[1],transport=requestLunaResponse,onMeter?:(meter:StagingAiMeterRecord)=>Promise<void>){
  const response=await transport(buildSpreadAiRequest(input,profile,env.AI_CHAT_MODEL),AbortSignal.timeout(env.AI_REQUEST_TIMEOUT_MS));
  if(!response.ok)throw new Error('provider_error');const payload=await response.json(),meter=stagingAiMeterRecord(payload);if(meter&&onMeter)await onMeter(meter);
@@ -26,18 +28,21 @@ export async function generateTarotSpread(input:SpreadInput,profile:Parameters<t
 export async function saveTarotSpread(telegramId:number,body:unknown){
  if(!env.FEATURE_TAROT_SPREADS)throw new FoundationError(404,'feature_disabled','Spreads are unavailable.');
  const parsed=z.object({reading:spreadInputSchema,orderId:z.string().uuid().optional()}).strict().parse(body);
- return saveExtendedReading(telegramId,parsed.reading,spreadRequestHash(parsed.reading),parsed.orderId);
+ return withAiOperation(supabase,telegramId,'tarot:'+parsed.reading.clientReadingId,()=>saveExtendedReading(telegramId,parsed.reading,spreadRequestHash(parsed.reading),parsed.orderId),result=>result.reading.status==='ready');
 }
 export async function savePaidSingleTarot(telegramId:number,body:unknown){
  if(!env.FEATURE_TAROT_PAID_READINGS)throw new FoundationError(404,'feature_disabled','This offer is unavailable.');
  const parsed=z.object({reading:tarotInputSchema,orderId:z.string().uuid()}).strict().parse(body),r=parsed.reading;
- return saveExtendedReading(telegramId,{...r,kind:'single',cards:[{cardId:r.cardId,orientation:r.orientation}]},tarotRequestHash(r),parsed.orderId);
+ return withAiOperation(supabase,telegramId,'tarot:'+r.clientReadingId,()=>saveExtendedReading(telegramId,{...r,kind:'single',cards:[{cardId:r.cardId,orientation:r.orientation}]},tarotRequestHash(r),parsed.orderId),result=>result.reading.status==='ready');
 }
 async function saveExtendedReading(telegramId:number,input:SpreadInput|(TarotInput&{kind:'single';cards:Array<{cardId:string;orientation:'upright'|'reversed'}>}),requestHash:string,orderId?:string){
  // Explicit QA-only adapter: separate pinned staging/release grants and limits.
  // No entitlement changes or wallet calls; release access is owner-only.
- const freeQa=qaTarotEnabled(telegramId)&&input.kind!=='single';
+ const betaSettings=env.LUNA32_ENABLED?await readLuna32Settings(supabase):null;
+ const freeBeta=Boolean(betaSettings&&hasBetaFeature(betaSettings,'tarot'));
+ const freeQa=(qaTarotEnabled(telegramId)||freeBeta)&&input.kind!=='single';
  const limits=qaTarotLimits(telegramId);
+ if(env.LUNA32_ENABLED)limits.daily=500;
  const safety=safetyCategory(input.question),generate=input.generate&&env.FEATURE_TAROT_AI&&Boolean(env.OPENAI_API_KEY)&&!safety&&(env.FEATURE_PREMIUM_V2||env.FEATURE_TAROT_PAID_READINGS||freeQa);
  const {data,error}=await supabase.rpc('reserve_luna_tarot_spread',{p_telegram_id:telegramId,p_client_reading_id:input.clientReadingId,p_request_hash:requestHash,p_kind:input.kind,p_cards:input.cards,p_intention:input.intention,p_question:input.question,p_language:input.language,p_generate:generate,p_order_id:env.FEATURE_TAROT_PAID_READINGS?orderId??null:null,p_premium_allowed:env.FEATURE_PREMIUM_V2,p_daily_limit:env.FEATURE_PREMIUM_V2||env.FEATURE_TAROT_PAID_READINGS?10:env.TAROT_AI_DAILY_LIMIT,p_global_limit:env.TAROT_AI_GLOBAL_DAILY_LIMIT});
  if(error||!data)throw new FoundationError(503,'history_unavailable','Could not save this reading.');
@@ -59,7 +64,7 @@ async function saveExtendedReading(telegramId:number,input:SpreadInput|(TarotInp
  }
  if(reserved.acquired){
   let interpretation:unknown=null,status='fallback';
-  try{const profile=env.FEATURE_PERSONALIZATION?await getPersonalProfile(telegramId,input.intention+' '+input.question):null;const meter=async(value:StagingAiMeterRecord)=>{const {error:e}=await supabase.from('ai_usage').upsert({...value,telegram_id:telegramId,request_id:`tarot:${input.clientReadingId}`},{onConflict:'telegram_id,request_id'});if(e)throw new Error('usage_save_failed');};const transport=qaTarotEnabled(telegramId)?qaTarotTransport(telegramId,input.clientReadingId):requestLunaResponse;interpretation=input.kind==='single'?await generateTarot(input,profile,transport,meter):await generateTarotSpread(input,profile,transport,meter);status='ready';}catch{/* No implicit retries or additional debit. */}
+  try{const profile=env.FEATURE_PERSONALIZATION?await getPersonalProfile(telegramId,input.intention+' '+input.question):null;const meter=async(value:StagingAiMeterRecord)=>{const {error:e}=await supabase.from('ai_usage').upsert({...value,telegram_id:telegramId,request_id:`tarot:${input.clientReadingId}`},{onConflict:'telegram_id,request_id'});if(e)throw new Error('usage_save_failed');};const transport=!freeBeta&&qaTarotEnabled(telegramId)?qaTarotTransport(telegramId,input.clientReadingId):requestLunaResponse;interpretation=input.kind==='single'?await generateTarot(input,profile,transport,meter):await generateTarotSpread(input,profile,transport,meter);status='ready';}catch{/* No implicit retries or additional debit. */}
   const update=await supabase.rpc('settle_luna_tarot_spread',{p_telegram_id:telegramId,p_client_reading_id:input.clientReadingId,p_status:status,p_interpretation:interpretation});
   if(update.error||!update.data)throw new FoundationError(503,'reading_save_failed','Your reading is saved. Please reopen it.');reading=update.data as StoredReading;
  }

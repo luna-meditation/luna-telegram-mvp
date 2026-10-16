@@ -1,0 +1,16 @@
+import {Router} from 'express';
+import {z} from 'zod';
+import {requireTelegramWebApp,type AuthenticatedRequest} from './auth.js';
+import {env} from './config.js';
+import {supabase} from './db.js';
+import {betaEntitlement,readLuna32Settings} from './luna32-runtime.js';
+import {createDreamService} from './luna32-dreams.js';
+export const luna32Router=Router();
+const dreams=createDreamService(supabase),owner=(req:unknown)=>(req as AuthenticatedRequest).telegramUser.telegram_id;
+luna32Router.use(requireTelegramWebApp,(_req,res,next)=>{res.setHeader('Cache-Control','private, no-store');if(!env.LUNA32_ENABLED){res.status(404).json({code:'feature_disabled'});return;}next();});
+luna32Router.get('/access',async(_req,res,next)=>{try{const s=await readLuna32Settings(supabase);res.json({beta:betaEntitlement(s),generationEnabled:s.generation_enabled});}catch(e){next(e);}});
+luna32Router.get('/dreams',async(req,res,next)=>{try{res.json(await dreams.list(owner(req),z.coerce.number().int().min(0).max(10000).parse(req.query.offset??0)));}catch(e){next(e);}});
+luna32Router.get('/dreams/:id',async(req,res,next)=>{try{res.json(await dreams.open(owner(req),z.string().uuid().parse(req.params.id)));}catch(e){next(e);}});
+luna32Router.post('/dreams',async(req,res,next)=>{try{res.status(201).json(await dreams.save(owner(req),req.body));}catch(e){next(e);}});
+luna32Router.patch('/dreams/:id',async(req,res,next)=>{try{res.json(await dreams.save(owner(req),req.body,z.string().uuid().parse(req.params.id)));}catch(e){next(e);}});
+luna32Router.delete('/dreams/:id',async(req,res,next)=>{try{res.json(await dreams.remove(owner(req),z.string().uuid().parse(req.params.id)));}catch(e){next(e);}});

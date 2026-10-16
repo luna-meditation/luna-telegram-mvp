@@ -1,0 +1,123 @@
+{
+  "generator": "built-in image_gen",
+  "originalsPreserved": true,
+  "cropped": false,
+  "records": [
+    {
+      "id": "hero",
+      "sourceArtifact": "exec-61355cff-bf9e-4895-bee3-d0e6457224ce.png",
+      "sourceSha256": "2a303aa83717bc8ecfcfdaa2a668bd7d0d45137a6978e65807891452e6f93275",
+      "prompt": "Premium cinematic painted-realism for Luna. Midnight navy, luminous violet and rose, warm gold; natural material detail, no text, letters, numbers, logos, interface or borders. Full edge-to-edge original artwork, not a screenshot crop. Wide 3:2 violet-pink mountain lake. Large rose-gold moon upper-right, quiet dark sky on left 60%, distant pine silhouettes, reflected moonlight, no people.",
+      "width": 1536,
+      "height": 1024,
+      "variants": [
+        {
+          "width": 720,
+          "src": "/images/home/luna32-hero-720.webp",
+          "bytes": 41038,
+          "sha256": "441ac4367b925b826cc8f4328269602b2ab690967994ee4ee12002cb80039ae6"
+        },
+        {
+          "width": 1080,
+          "src": "/images/home/luna32-hero-1080.webp",
+          "bytes": 86040,
+          "sha256": "3a33886d72d71fceaf1e4f38ea334839fd6612127f7f2f0ce10d6e9fee5bce99"
+        },
+        {
+          "width": 1440,
+          "src": "/images/home/luna32-hero-1440.webp",
+          "bytes": 135840,
+          "sha256": "6e32d3ea33ab5f87c28dd23b33b6243c48278d8e1f147ab471a4f932c5ce6966"
+        }
+      ]
+    },
+    {
+      "id": "tarot",
+      "sourceArtifact": "exec-4d8611fd-be09-42bd-8e71-044c0079bb99.png",
+      "sourceSha256": "b2c3ce22d969cc3868910b0cd1f8072aae5ae6755f6f46a6b863f39ca12caaff",
+      "prompt": "Premium cinematic painted-realism for Luna. Midnight navy, luminous violet and rose, warm gold; natural material detail, no text, letters, numbers, logos, interface or borders. Full edge-to-edge original artwork, not a screenshot crop. Square: three navy Tarot cards fanned on velvet, gold celestial engraving, central crescent, candles and amethyst crystals; dark quiet lower quarter.",
+      "width": 1254,
+      "height": 1254,
+      "variants": [
+        {
+          "width": 360,
+          "src": "/images/home/luna32-tarot-360.webp",
+          "bytes": 22796,
+          "sha256": "28205831d704e3fd8883a579a80075d7a646ce75e4e0435cd3557cf7bb63731c"
+        },
+        {
+          "width": 540,
+          "src": "/images/home/luna32-tarot-540.webp",
+          "bytes": 45682,
+          "sha256": "37ebd95bf4523b99c79a5676554657934a3d0c6516bcd112c74b5fc44113da7e"
+        }
+      ]
+    },
+    {
+      "id": "astrology",
+      "sourceArtifact": "exec-db638d2a-98b5-4931-9d40-61dff18f00cc.png",
+      "sourceSha256": "4c9a0ab41c9bd562dbb3df456b4b9aa317ea3b6444f7fa4d02d74da0b76cc437",
+      "prompt": "Premium cinematic painted-realism for Luna. Midnight navy, luminous violet and rose, warm gold; natural material detail, no text, letters, numbers, logos, interface or borders. Full edge-to-edge original artwork, not a screenshot crop. Square: engraved gold zodiac instrument, luminous central star, concentric orbital rings, decorative pictograms and dimensional planets; quiet dark lower quarter.",
+      "width": 1254,
+      "height": 1254,
+      "variants": [
+        {
+          "width": 360,
+          "src": "/images/home/luna32-astrology-360.webp",
+          "bytes": 33428,
+          "sha256": "f8f3bbbd63c82d367ae52efde9c7338de2c498b6cca8da154fbad7a2945cbec4"
+        },
+        {
+          "width": 540,
+          "src": "/images/home/luna32-astrology-540.webp",
+          "bytes": 69282,
+          "sha256": "e90c44113c8c53e5863132caf6b52a06cd9340c858dfa31d6e92942d302e8a44"
+        }
+      ]
+    },
+    {
+      "id": "meditations",
+      "sourceArtifact": "exec-38efd83e-6e69-43aa-b4fa-abb15174de75.png",
+      "sourceSha256": "d8ac51d520072f40b7d30f9100b069c005545b1305864e6c6dcd106d08cee326",
+      "prompt": "Premium cinematic painted-realism for Luna. Midnight navy, luminous violet and rose, warm gold; natural material detail, no text, letters, numbers, logos, interface or borders. Full edge-to-edge original artwork, not a screenshot crop. Square: seated meditator seen from behind beside still lake, rose-gold moon upper-right, violet mountains and pink blossoms on left, quiet dark lower quarter.",
+      "width": 1254,
+      "height": 1254,
+      "variants": [
+        {
+          "width": 360,
+          "src": "/images/home/luna32-meditations-360.webp",
+          "bytes": 26354,
+          "sha256": "01c6e6c5d2d0ea1a91fbc70cb1afe92938833683233575733f0a3fb20d078e2a"
+        },
+        {
+          "width": 540,
+          "src": "/images/home/luna32-meditations-540.webp",
+          "bytes": 54388,
+          "sha256": "d7aeafbfe247880d6e7fd704df2466067c7023911a83909f974e8f8cfce30551"
+        }
+      ]
+    },
+    {
+      "id": "breathwork",
+      "sourceArtifact": "exec-4062d4bc-4587-4828-bc2c-e5b3cc610da9.png",
+      "sourceSha256": "3ec07ecf8a7be7e2cbab5823bf4e416ab33ca130a73f96f8a2f59f50592dc44c",
+      "prompt": "Premium cinematic painted-realism for Luna. Midnight navy, luminous violet and rose, warm gold; natural material detail, no text, letters, numbers, logos, interface or borders. Full edge-to-edge original artwork, not a screenshot crop. Square: dimensional electric-blue luminous ring, cyan highlights and violet halo floating over volumetric clouds in midnight starfield; quiet dark lower quarter.",
+      "width": 1254,
+      "height": 1254,
+      "variants": [
+        {
+          "width": 360,
+          "src": "/images/home/luna32-breathwork-360.webp",
+          "bytes": 17928,
+          "sha256": "4a64c04d5ba199e6228cb2ce5eff874f26ee3ff5323624d7faf730fe8e126f65"
+        },
+        {
+          "width": 540,
+          "src": "/images/home/luna32-breathwork-540.webp",
+          "bytes": 34956,
+          "sha256": "77ab616e4d57c77c596f25dabba50cc340e2817c70580af1833d26d6b995c6e3"
+        }
+      ]
+    }
+  ]
+}

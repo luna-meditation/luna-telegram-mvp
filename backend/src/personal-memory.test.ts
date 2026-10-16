@@ -16,7 +16,7 @@ test('memory cutoff invalidates cached decisions and clarifications without dele
  assert.equal(conversationStateAfterMemoryBoundary(old),old);
  const source=readFileSync(new URL('./luna-ai.ts',import.meta.url),'utf8');
  assert.match(source,/conversationStateAfterMemoryBoundary\(conversation\?\.conversation_state,memoryBoundary\)/);
- assert.match(source,/storedPending = !memoryBoundary \|\| storedState/);
+ assert.match(source,/storedPending = !resetAttachment\s*&&\s*\(!memoryBoundary \|\| storedState\)/);
  assert.match(confirmedMemoryPrompt,/latest explicitly confirmed memories/);
  assert.match(confirmedMemoryPrompt,/discard the older version/);
  assert.match(confirmedMemoryPrompt,/must not be reconstructed/);

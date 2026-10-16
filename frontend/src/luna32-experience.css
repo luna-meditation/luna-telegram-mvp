@@ -1,0 +1,129 @@
+/* Luna 3.2: one dark palette; preserve original illustrations and semantic tokens. */
+html,body,#root{color-scheme:dark;background-color:#030612}
+input,select,textarea,dialog{color-scheme:dark}
+.luna24-chat.luna2-chat .luna-live-empty{padding:10px 3px 8px;gap:8px;min-height:0}.luna24-chat.luna2-chat .luna-live-empty>.brand-logo{width:52px;height:52px;margin:0 auto 2px}.luna24-chat.luna2-chat .luna-live-empty h3{font-size:23px;line-height:1.25;margin:0}.luna24-chat.luna2-chat .luna-live-empty>p{font-size:14px;line-height:1.5;margin:0 auto;max-width:310px}.luna24-chat.luna2-chat .luna-live-empty>.luna2-ai-actions{margin-top:8px;gap:8px}.luna24-chat.luna2-chat .luna-live-empty>.luna2-ai-actions button{min-height:56px;padding:9px;font-size:14px;gap:8px}.luna24-chat.luna2-chat .luna-live-empty .luna2-ai-kicker{font-size:10px;letter-spacing:.13em}.luna32-personalize{min-height:40px;color:#d9c18b;font-size:12px;text-align:center;padding:4px 8px}.luna25-daily-card h2{font-size:17px}.luna25-daily-card p{font-size:13px}
+.luna32-beta-notice{padding:14px 16px;border:1px solid #8eabff33;border-radius:18px;background:#14213c}.luna32-beta-notice>strong{color:#d8c18c;font-size:15px}.luna32-beta-notice p{color:#c1cce4;font-size:13px;line-height:1.6;margin:7px 0}.luna32-beta-notice small{font-size:12px;color:#9daecf}
+.luna32-dream-explorer{border:1px solid #aabaff26;border-radius:22px;padding:16px;background:#11172c;text-align:left}.luna32-dream-explorer header{display:flex;align-items:center;gap:10px}.luna32-dream-explorer header>svg{color:#e4c980}.luna32-dream-explorer h3{font-size:21px;flex:1}.luna32-dream-explorer button{min-height:44px;min-width:44px}.luna32-dream-explorer p,.luna32-dream-explorer small{font-size:13px;line-height:1.6;color:#bec7df}.luna32-dream-explorer label{display:grid;gap:6px;margin:12px 0;font-size:14px}.luna32-dream-explorer input:not([type=checkbox]),.luna32-dream-explorer textarea{width:100%;min-width:0;font-size:16px;border:1px solid #b8c4ff29;border-radius:12px;background:#080e20;padding:11px;color:#edf0ff}.luna32-dream-explorer .luna32-dream-consent{display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.5}.luna32-dream-consent input{width:20px;height:20px;flex-shrink:0;margin-top:3px}.luna32-dream-actions{display:grid;gap:8px}.luna32-dream-actions button{padding:11px;border-radius:13px;background:#26314e;color:#ead6a5;font-size:15px}.luna32-dream-actions button:disabled{opacity:.45}.luna32-dream-history{margin-top:22px}.luna32-dream-history>button{display:flex;align-items:center;gap:8px;font-size:14px;color:#ead6a5}.luna32-dream-history article{display:flex;justify-content:space-between;gap:6px;border-top:1px solid #aabbff20;padding:6px 0}.luna32-dream-history article>button:first-child{display:grid;gap:4px;text-align:left;flex:1;overflow-wrap:anywhere}.luna32-dream-history strong{font-size:15px}
+.luna2-home .luna25-daily-card{min-height:70px;padding-block:10px}
+.luna2-home .luna25-daily-card strong{font-size:17px}
+.luna2-home .luna25-daily-card p{font-size:13px}
+.luna30-home-utilities{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:stretch}
+.luna30-home-utilities>section,.luna30-home-utilities>button{min-width:0;height:100%;margin:0}
+.luna30-home-utilities .home-v2-sound-ribbon{min-height:104px;height:100%;padding:12px;display:grid;grid-template-columns:1fr 38px;gap:5px;align-content:center}
+.luna30-home-utilities .home-v2-sound-ribbon-main{grid-column:1/-1;gap:8px;text-align:left;min-width:0}
+.luna30-home-utilities .home-v2-sound-ribbon-main>span{min-width:0}
+.luna30-home-utilities .home-v2-sound-ribbon-main strong{font-size:15px;line-height:1.3}
+.luna30-home-utilities .home-v2-sound-ribbon-main small{font-size:12px;line-height:1.35;white-space:normal}
+.luna30-home-utilities .home-v2-sound-text{grid-column:1;grid-row:2;justify-self:start;min-height:40px;font-size:13px;white-space:normal;text-align:left}
+.luna30-home-utilities .home-v2-sound-round{grid-column:2;grid-row:2;width:38px;height:40px}
+.luna30-home-utilities .luna30-install{padding:12px;gap:9px;min-height:104px;display:flex;align-items:center}
+.luna30-home-utilities .luna30-install>span{min-width:0}.luna30-home-utilities .luna30-install strong{font-size:15px;line-height:1.35}.luna30-home-utilities .luna30-install small{font-size:12px;line-height:1.4;white-space:normal}
+.luna-live-empty{padding:10px 4px 14px;gap:8px;min-height:0}
+.luna-live-empty>.brand-logo{width:54px;height:54px}
+.luna-live-empty h3{font-size:23px;line-height:1.25;margin:0}
+.luna-live-empty>p{font-size:14px;line-height:1.5;margin:0 auto 5px;max-width:310px}
+.luna-live-empty .luna2-ai-actions{gap:8px;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;margin-top:6px}
+.luna-live-empty .luna2-ai-actions button{min-height:58px;padding:10px;font-size:14px;line-height:1.35}
+.luna-live-composer textarea{font-size:16px;scroll-margin-bottom:20px}
+.luna32-context{display:flex;align-items:center;gap:8px;padding:8px 12px;margin-bottom:8px;border:1px solid var(--border-subtle);border-radius:14px;font-size:13px;color:var(--text-secondary)}
+.luna32-context span{flex:1}.luna32-context button{min-height:40px;padding:6px 10px;color:var(--accent-gold-text)}
+@media(prefers-reduced-motion:reduce){.luna32-context{animation:none;transition:none}}
+
+/* Four distinct destinations, with imagery separate from readable card copy. */
+.luna32-astrology-hub .luna2-page-heading{margin:12px 0 20px}
+.luna32-astrology-hub .luna2-page-heading>p{display:flex;align-items:center;gap:7px;color:#d8bc85;font-size:12px;letter-spacing:.03em}
+.luna32-astrology-hub h1{font-size:29px;line-height:1.18}
+.luna32-astrology-hub .luna2-page-heading>span{font-size:15px;line-height:1.5;color:#b8bfd8}
+.luna32-astro-categories{display:grid;grid-template-columns:minmax(0,1fr);gap:11px}
+.luna32-astrology-hub .luna32-astro-categories>button{position:relative;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:14px;min-height:132px;width:100%;padding:12px;border:1px solid #c8bbef20;border-radius:22px;background:#20213b;text-align:left;box-shadow:0 6px 20px #02051115;touch-action:manipulation;transition:background .18s ease,transform .18s ease}
+.luna32-astrology-hub .luna32-astro-categories>button:after{content:none}
+.luna32-astrology-hub .luna32-astro-categories>button>img{position:static;inset:auto;z-index:auto;flex:0 0 94px;align-self:center;width:94px;height:94px;object-fit:contain;opacity:1;border-radius:16px;border:1px solid #e2c88e21}
+.luna32-astro-card-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:7px}
+.luna32-astro-card-copy strong{font-size:18px;line-height:1.22;font-weight:650;letter-spacing:-.015em;color:#f5f0e9}
+.luna32-astro-card-copy>span{font-size:14px;line-height:1.4;color:#bbc0d5}
+.luna32-astro-card-copy .luna32-astro-cta{display:flex;align-items:center;gap:7px;font-size:14px;line-height:1.35;color:#e3c58e;padding-top:2px}
+.luna32-astro-cta svg{flex-shrink:0}
+.luna32-astro-categories button,.luna32-astro-categories button *{text-decoration:none!important}
+.luna32-astrology-hub .luna32-astro-categories>button:active{background:#2a2945;transform:scale(.99)}
+.luna32-astro-categories>button:focus-visible,.luna32-analysis button:focus-visible,.luna32-calendar button:focus-visible,.luna32-saved-profiles button:focus-visible{outline:2px solid #e3c58e;outline-offset:3px}
+.luna32-symbolic-note{font-size:13px;line-height:1.6;color:var(--text-secondary);margin:18px 0}
+.luna32-saved-profiles{margin-top:24px;padding-top:21px;border-top:1px solid #c5c6e525}
+.luna32-saved-profiles>header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.luna32-saved-profiles header>div{flex:1;min-width:0}
+.luna32-saved-profiles h2{font-size:20px;line-height:1.25;color:#f2edf1}
+.luna32-saved-profiles p{font-size:14px;line-height:1.45;color:#aeb7cf;margin:6px 0 0}
+.luna32-saved-profiles header>span{display:grid;place-items:center;min-width:32px;min-height:30px;padding:3px 9px;border-radius:20px;background:#292e47;font-size:14px;color:#d7d9e7}
+.luna32-saved-profiles>div{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.luna32-saved-profiles>div>button{display:grid;justify-items:start;align-content:start;gap:7px;min-height:113px;padding:14px;border:1px solid #bec7ee17;border-radius:18px;background:#20273e;text-align:left}
+.luna32-saved-profiles button>svg{color:#ddbd83}
+.luna32-saved-profiles strong{font-size:15px;line-height:1.3;color:#f2edf1}
+.luna32-saved-profiles button>span{font-size:12px;line-height:1.4;color:#b1bdd4}
+.luna32-saved-profiles .luna32-manage-profiles{display:flex;align-items:center;gap:9px;min-height:44px;padding:10px 0;font-size:14px;line-height:1.4;color:#d8c496}
+.luna32-analysis .luna30-astro-heading{margin:12px 0 20px}
+.luna32-analysis .luna30-astro-heading h1{font-size:28px;line-height:1.2;margin:8px 0}
+.luna32-analysis .luna30-astro-heading p{font-size:15px;line-height:1.5}
+.luna32-analysis button{min-height:44px}
+.luna32-profile-selection{padding:17px;border:1px solid #d0c4f124;border-radius:22px;background:#151b31;display:grid;gap:14px}
+.luna32-profile-selection label{display:grid;gap:8px;font-size:15px;line-height:1.4;color:#e0dce8}
+.luna32-profile-selection select{width:100%;min-width:0;min-height:48px;padding:12px;border-radius:13px;border:1px solid #c4c8ee35;background:#0c1226;font-size:16px;color:#f1eef5}
+.luna32-profile-selection small{font-size:13px;line-height:1.5;color:#abb8d1}
+.luna32-analysis-primary{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;padding:12px 16px;border:1px solid #d5bd8445;border-radius:14px;background:#38344b;color:#f2dba8;font-size:15px;font-weight:600;line-height:1.4;text-align:center}
+.luna32-analysis-primary:disabled{opacity:.45}
+.luna32-analysis-secondary{display:flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:9px 10px;border:1px solid #bec4ec22;border-radius:12px;background:#1b243b;color:#d7c699;font-size:14px;line-height:1.4}
+.luna32-analysis .luna30-birth-row{min-width:0}
+.luna32-analysis .luna30-birth-row>button:first-child{min-width:0;overflow-wrap:anywhere}
+.luna32-analysis .luna30-birth-row>button:not(:first-child){min-width:44px;flex-shrink:0}
+.luna32-analysis .luna30-chart-results>header{margin-bottom:15px}
+.luna32-analysis .luna30-chart-results>header>.luna32-analysis-secondary{margin-top:12px}
+.luna32-compatibility-report,.luna32-path-report{display:grid;gap:16px}
+.luna32-compatibility-report>header,.luna32-path-report>header{padding:18px;border:1px solid #c5b9ec22;border-radius:20px;background:#1b2037}
+.luna32-compatibility-report h2,.luna32-path-report h2{font-size:24px;line-height:1.3;overflow-wrap:anywhere;margin:7px 0 14px}
+.luna32-compatibility-report header p,.luna32-path-report header p{font-size:13px;color:#c9b68d}
+.luna32-thematic-sections{display:grid;gap:10px}
+.luna32-thematic-sections>details{padding:15px 16px;border:1px solid #b9bfdf25;border-radius:17px;background:#151b31}
+.luna32-thematic-sections summary{min-height:30px;font-size:17px;line-height:1.4;color:#ede4d3;cursor:pointer}
+.luna32-thematic-sections p{font-size:15px;line-height:1.65;color:#c6cce0;margin:13px 0}
+.luna32-thematic-sections ul{display:grid;gap:11px;margin:14px 0}
+.luna32-thematic-sections li{font-size:14px;line-height:1.5;color:#ddd6c4;overflow-wrap:anywhere}
+.luna32-thematic-sections li strong{display:block;font-weight:500}
+.luna32-thematic-sections li span{display:block;color:#aab8d0;margin-top:3px}
+.luna32-thematic-sections small{font-size:13px;line-height:1.5;color:#b6bfd5}
+.luna32-thematic-sections .luna32-reflection-question{color:#e3d3ae}
+.luna32-calendar-month{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.luna32-calendar-month label{display:grid;gap:4px;min-width:0;font-size:13px;color:#b4bed6;text-align:center}
+.luna32-calendar-month input{width:190px;max-width:100%;min-height:46px;min-width:0;padding:9px;border:1px solid #d0c3ee20;border-radius:12px;background:#171e34;color:#f0eaf5;font-size:16px}
+.luna32-calendar-month>button,.luna32-date-controls>button{display:grid;place-items:center;width:44px;min-width:44px;height:44px;border-radius:12px;background:#1e263d;color:#d9c391}
+.luna32-calendar button:disabled{opacity:.4}
+.luna32-calendar-weekdays{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;text-align:center;margin-top:18px;font-size:12px;color:#aeb8d0}
+.luna32-month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;margin-top:8px}
+.luna32-month-grid>button{display:grid;justify-items:center;align-content:center;gap:5px;min-height:56px;min-width:0;padding:6px 1px;border:1px solid #b8c3e119;border-radius:11px;background:#141a2e;font-size:14px;color:#e2e4f0}
+.luna32-month-grid>button[aria-pressed=true]{background:#39314d;border-color:#dfc180;color:#ffedbd}
+.luna32-month-grid>button[aria-current=date]>span{color:#e4c383;text-decoration:underline;text-underline-offset:3px}
+.luna32-selected-day{margin-top:18px;border:1px solid #c0c4ea26;border-radius:21px;padding:15px;background:#161c31}
+.luna32-date-controls{display:flex;align-items:center;justify-content:space-between;gap:5px}
+.luna32-date-controls h2{font-size:21px;line-height:1.3;text-align:center}
+.luna32-selected-moon{display:flex;align-items:center;gap:14px;margin:18px 0}
+.luna32-selected-moon>div{display:grid;gap:4px}
+.luna32-selected-moon strong{font-size:18px;line-height:1.4;color:#efddb8}
+.luna32-selected-moon span{font-size:13px;line-height:1.4;color:#b8c1d9}
+.luna32-selected-day>p{font-size:16px;line-height:1.6;color:#ded3bd}
+.luna32-selected-day>small{display:block;font-size:13px;line-height:1.5;color:#aebbd1;margin-top:8px}
+.luna32-transit-snapshot{padding-top:18px;margin-top:18px;border-top:1px solid #bbc4e525}
+.luna32-transit-snapshot h3{font-size:18px;line-height:1.4}
+.luna32-transit-snapshot>p{font-size:14px;line-height:1.6;color:#b7c3d8;margin:9px 0 16px}
+.luna32-transit-snapshot details{margin:12px 0}
+.luna32-transit-snapshot summary,.luna32-lunar-events>summary{font-size:16px;line-height:1.5;min-height:36px;color:#e2d1ae;cursor:pointer}
+.luna32-lunar-events{margin-top:18px}
+.luna32-lunar-events article{padding:13px 15px;margin:8px 0;border:1px solid #bac1e220;border-radius:14px;background:#141b31}
+.luna32-lunar-events strong{font-size:16px;line-height:1.4}
+.luna32-lunar-events time{display:block;color:#aebbd1;font-size:14px;margin-top:5px}
+/* The same pink-purple image stays mounted while the saved state contracts. */
+.luna2-home .luna25-hero .home-v2-hero-image{object-position:70% 50%}
+.luna2-home .luna25-hero:after{background:linear-gradient(90deg,#10132b73,transparent 82%),linear-gradient(0deg,#0e142b70,transparent 48%)}
+.luna2-home .luna25-category-art>img{opacity:1;object-position:50% 35%}
+.luna2-home .luna25-hero{min-height:278px;transition:min-height .32s cubic-bezier(.2,.7,.3,1)}
+.luna2-home .luna25-hero.is-checked-in{min-height:230px}
+.luna2-home .luna25-hero.is-checked-in .luna25-hero-action{margin-top:auto}
+.luna2-home .luna25-hero .home-v2-checkin-toast{font-size:13px;line-height:1.35;min-height:38px}
+@media(max-width:374px){.luna32-astrology-hub .luna32-astro-categories>button{gap:11px;padding:11px;min-height:128px}.luna32-astrology-hub .luna32-astro-categories>button>img{flex-basis:84px;width:84px;height:84px}.luna32-astro-card-copy strong{font-size:17px}.luna32-astro-card-copy>span{font-size:14px}.luna32-saved-profiles h2{font-size:19px}}
+@media(prefers-reduced-motion:reduce){.luna2-home .luna25-hero,.luna32-astrology-hub .luna32-astro-categories>button{transition:none}.luna32-astrology-hub .luna32-astro-categories>button:active{transform:none}}

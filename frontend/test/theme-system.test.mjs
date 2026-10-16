@@ -22,12 +22,10 @@ test('Light and Dark share semantic tokens instead of inversion', () => {
   assert.doesNotMatch(tokens, /filter:\s*invert/);
 });
 
-test('theme preference is persisted and System reacts live to device changes', () => {
+test('Dark-only ignores device preferences and changes only the legacy theme key', () => {
   assert.match(theme, /luna\.theme\.preference\.v1/);
-  assert.match(theme, /window\.matchMedia\(DARK_MEDIA_QUERY\)/);
-  assert.match(theme, /addEventListener\('change'/);
-  assert.match(theme, /removeEventListener\('change'/);
-  assert.match(theme, /window\.localStorage\.setItem\(THEME_STORAGE_KEY, preference\)/);
+  assert.doesNotMatch(theme, /matchMedia|localStorage.clear/);
+  assert.match(theme, /window\.localStorage\.setItem\(THEME_STORAGE_KEY,'dark'\)/);
   assert.match(app, /key !== THEME_STORAGE_KEY/);
 });
 
@@ -41,15 +39,8 @@ test('theme is applied before React and updates browser and Telegram chrome', ()
   assert.match(app, /setBottomBarColor\?\./);
 });
 
-test('Profile exposes Light, Dark, and System controls in English and Russian', () => {
-  assert.match(app, /'appearance'/);
-  assert.match(app, /Appearance/);
-  assert.match(app, /Оформление/);
-  assert.match(app, /Use device setting/);
-  assert.match(app, /Как на устройстве/);
-  assert.match(app, /onThemePreferenceChange\('light'\)/);
-  assert.match(app, /onThemePreferenceChange\('dark'\)/);
-  assert.match(app, /onThemePreferenceChange\(checked \? 'system'/);
+test('Profile no longer exposes obsolete Light and System controls; old artwork is retained', () => {
+  assert.doesNotMatch(app, /onThemePreferenceChange|setView\('appearance'\)|Use device setting|Как на устройстве/);
   assert.match(styles, /\.appearance-theme-grid/);
 });
 

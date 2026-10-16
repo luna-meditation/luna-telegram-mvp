@@ -1,0 +1,3 @@
+import test from 'node:test';import assert from 'node:assert/strict';import type{SupabaseClient}from'@supabase/supabase-js';import{approvedMonthlyAiCapUsd,createLuna32Admin}from'./luna32-admin.js';
+test('owner-approved Luna budget ceiling is $100, not a provider billing setting',()=>assert.equal(approvedMonthlyAiCapUsd,100));
+test('admin rejects amounts above the approval before touching the database',async()=>{const db={from(){throw Error('validated-budget-reaches-database');}} as unknown as SupabaseClient;await assert.rejects(createLuna32Admin(db).update({monthlyCapUsd:100.01}),e=>e instanceof Error&&e.name==='ZodError');await assert.rejects(createLuna32Admin(db).update({monthlyCapUsd:100}),/validated-budget-reaches-database/);});

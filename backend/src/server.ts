@@ -17,6 +17,8 @@ import {luna30CommerceRouter} from './luna30-commerce-router.js';
 import {luna30ReferralRouter} from './luna30-referral-router.js';
 import {attributeValidatedReferral,qualifyVerifiedReferral} from './luna30-referrals.js';
 import {luna30AstrologyRouter} from './luna30-astrology-router.js';
+import {luna32Router} from './luna32-routes.js';
+import {createLuna32Admin} from './luna32-admin.js';
 import { bot, configureTelegramBot, createStarsInvoiceLink, sendStarsInvoice } from './bot.js';
 import {
   createMeditation,
@@ -337,6 +339,7 @@ app.use('/api/luna21',rateLimit({max:20,windowMs:60_000}),luna21CommerceRouter);
 app.use('/api/luna30/commerce',rateLimit({max:20,windowMs:60_000}),luna30CommerceRouter);
 app.use('/api/referrals',rateLimit({max:12,windowMs:60_000}),luna30ReferralRouter);
 app.use('/api/astrology',rateLimit({max:30,windowMs:60_000}),luna30AstrologyRouter);
+app.use('/api/luna32',rateLimit({max:30,windowMs:60_000}),luna32Router);
 app.get('/api/debug/admin', requireTelegramWebApp, (req, res) => {
   if (!assertAdmin(req, res)) return;
 
@@ -965,6 +968,9 @@ app.get('/api/admin/luna21/analytics',requireTelegramWebApp,async(req,res,next)=
     if(error)throw new Error('Luna analytics unavailable.');res.json(data);
   }catch(error){next(error);}
 });
+
+app.get('/api/admin/luna32/runtime',requireTelegramWebApp,async(req,res,next)=>{try{if(!assertAdmin(req,res))return;if(!env.LUNA32_ENABLED){res.status(404).json({code:'feature_disabled'});return;}res.json(await createLuna32Admin(supabase).read());}catch(e){next(e);}});
+app.patch('/api/admin/luna32/runtime',requireTelegramWebApp,async(req,res,next)=>{try{if(!assertAdmin(req,res))return;if(!env.LUNA32_ENABLED){res.status(404).json({code:'feature_disabled'});return;}res.json(await createLuna32Admin(supabase).update(req.body));}catch(e){next(e);}});
 
 app.get('/api/admin/support', requireTelegramWebApp, async (req, res, next) => {
   try {

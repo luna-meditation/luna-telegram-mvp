@@ -13,6 +13,8 @@ import {qaTarotEnabled,qaTarotLimits,qaTarotTransport} from './staging-tarot-bud
 import {validateTarotV2} from './tarot-interpretation-v2.js';
 import {neutralRussianInterpretation} from './luna/russian-address.js';
 import {permittedPersonalContext} from './personalization-policy.js';
+import {withAiOperation} from './luna32-ai-accounting.js';
+import {hasBetaFeature,readLuna32Settings} from './luna32-runtime.js';
 export const readingFields='id,client_reading_id,card_id,orientation,intention,question,language,interpretation,status,fallback_reason,created_at,updated_at'+(env.FEATURE_DAILY_CARD_V2||env.FEATURE_TAROT_SPREADS?',reading_kind,cards':'');
 export type StoredReading={id:string;client_reading_id:string;card_id:string;orientation:'upright'|'reversed';intention:'general'|'love'|'career'|'growth';question:string;language:'en'|'ru';interpretation:TarotInterpretation|null;status:'local'|'processing'|'ready'|'fallback'|'safety';fallback_reason:string|null;created_at:string;updated_at:string};
 /** Home may inspect availability, never reserve a draw or invoke the provider. */
@@ -45,10 +47,16 @@ export async function generateTarot(input:TarotInput,profile:Parameters<typeof b
 }
 export async function saveTarotReading(telegramId:number,body:unknown,maintenance?:{excludePersonalContext:true;transport:typeof requestLunaResponse;onMeter:(meter:StagingAiMeterRecord)=>Promise<void>}){
  const input=tarotInputSchema.parse(body);
+ return withAiOperation(supabase,telegramId,'tarot:'+input.clientReadingId,()=>saveTarotReadingInternal(telegramId,input,maintenance),result=>result.reading.status==='ready');
+}
+async function saveTarotReadingInternal(telegramId:number,body:unknown,maintenance?:{excludePersonalContext:true;transport:typeof requestLunaResponse;onMeter:(meter:StagingAiMeterRecord)=>Promise<void>}){
+ const input=tarotInputSchema.parse(body);
  const safety=safetyCategory(input.question);
- const qaOnly=env.STAGING_MODE&&env.FEATURE_TAROT_SPREAD_AI_QA;
+ const freeBeta=env.LUNA32_ENABLED&&hasBetaFeature(await readLuna32Settings(supabase),'tarot');
+ const qaOnly=env.STAGING_MODE&&env.FEATURE_TAROT_SPREAD_AI_QA&&!freeBeta;
  const canGenerate=input.generate&&env.FEATURE_TAROT_AI&&Boolean(env.OPENAI_API_KEY)&&!safety&&(!qaOnly||qaTarotEnabled(telegramId));
  const limits=qaTarotLimits(telegramId);
+ if(env.LUNA32_ENABLED)limits.daily=500; // Shared atomic Luna allowance is authoritative; keep global anti-abuse cap.
  const {data,error}=await supabase.rpc('reserve_luna_tarot_reading',{p_telegram_id:telegramId,p_client_reading_id:input.clientReadingId,p_request_hash:tarotRequestHash(input),p_card_id:input.cardId,p_orientation:input.orientation,p_intention:input.intention,p_question:input.question,p_language:input.language,p_generate:canGenerate,p_daily_limit:limits.daily,p_global_limit:limits.global});
  if(error||!data)throw new FoundationError(503,'history_unavailable','Reading history is unavailable.');
  return completeReservedReading(telegramId,input,data as TarotReservation,maintenance);
@@ -68,7 +76,7 @@ async function completeReservedReading(telegramId:number,input:TarotInput,reserv
  }
  if(reserved.acquired){
   let interpretation:TarotInterpretation|null=null;let status:StoredReading['status']='fallback';let reason:string|null='provider_error';
-  try{const profile=!maintenance?.excludePersonalContext&&env.FEATURE_PERSONALIZATION?await getPersonalProfile(telegramId,input.intention+' '+input.question):null;const baseTransport=maintenance?.transport??requestLunaResponse;const transport=qaTarotEnabled(telegramId)||env.STAGING_MODE&&env.FEATURE_TAROT_SPREAD_AI_QA?qaTarotTransport(telegramId,input.clientReadingId,baseTransport):baseTransport;interpretation=await generateTarot(input,profile,transport,maintenance?.onMeter??(async meter=>{
+  try{const profile=!maintenance?.excludePersonalContext&&env.FEATURE_PERSONALIZATION?await getPersonalProfile(telegramId,input.intention+' '+input.question):null;const baseTransport=maintenance?.transport??requestLunaResponse;const freeBeta=env.LUNA32_ENABLED&&hasBetaFeature(await readLuna32Settings(supabase),'tarot');const transport=!freeBeta&&(qaTarotEnabled(telegramId)||env.STAGING_MODE&&env.FEATURE_TAROT_SPREAD_AI_QA)?qaTarotTransport(telegramId,input.clientReadingId,baseTransport):baseTransport;interpretation=await generateTarot(input,profile,transport,maintenance?.onMeter??(async meter=>{
    // Meter every actual response, including invalid/incomplete AI output. No text or preferences.
    const {error:meterError}=await supabase.from('ai_usage').upsert({...meter,telegram_id:telegramId,request_id:`tarot:${input.clientReadingId}`},{onConflict:'telegram_id,request_id'});
    if(meterError)throw new Error('usage_save_failed');
@@ -85,18 +93,21 @@ async function completeReservedReading(telegramId:number,input:TarotInput,reserv
  return {reading,reason:reserved.status==='limit'?'daily_limit':input.generate&&!canGenerate&&!safety?'ai_unavailable':null};
 }
 export async function openDailyTarot(telegramId:number,body:unknown){
+ return openDailyTarotInternal(telegramId,body);
+}
+async function openDailyTarotInternal(telegramId:number,body:unknown){
  if(!env.FEATURE_DAILY_CARD_V2)throw new FoundationError(404,'feature_disabled','Daily card is unavailable.');
  const request=z.object({language:z.enum(['en','ru']),generate:z.boolean().default(false),expectedDay:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional()}).strict().refine(v=>!v.generate||Boolean(v.expectedDay)).parse(body);
  const candidate=tarotCatalog[randomInt(tarotCatalog.length)];
  const canGenerate=request.generate&&env.FEATURE_TAROT_AI&&Boolean(env.OPENAI_API_KEY);
- const {data,error}=await supabase.rpc('reserve_luna_daily_card',{p_telegram_id:telegramId,p_card_id:candidate.id,p_orientation:randomInt(2)?'reversed':'upright',p_language:request.language,p_generate:canGenerate,p_daily_limit:env.TAROT_AI_DAILY_LIMIT,p_global_limit:env.TAROT_AI_GLOBAL_DAILY_LIMIT,p_expected_day:request.expectedDay??null});
+ const {data,error}=await supabase.rpc('reserve_luna_daily_card',{p_telegram_id:telegramId,p_card_id:candidate.id,p_orientation:randomInt(2)?'reversed':'upright',p_language:request.language,p_generate:canGenerate,p_daily_limit:env.LUNA32_ENABLED?500:env.TAROT_AI_DAILY_LIMIT,p_global_limit:env.TAROT_AI_GLOBAL_DAILY_LIMIT,p_expected_day:request.expectedDay??null});
  if(error||!data)throw new FoundationError(503,'daily_unavailable','Could not open your daily card.');
  const value=data as TarotReservation&{day:string;resetsAt:string};
  if(value.status==='day_changed')throw new FoundationError(409,'daily_changed','A new daily card is available.');
  if(!value.reading)throw new FoundationError(value.status==='deleted'?410:503,value.status==='deleted'?'reading_deleted':'daily_unavailable','The daily card is unavailable.');
  // Never send the new random candidate to AI after an idempotent reservation.
  const r=value.reading;const input=tarotInputSchema.parse({clientReadingId:r.client_reading_id,cardId:r.card_id,orientation:r.orientation,intention:r.intention,question:r.question,language:r.language,generate:request.generate});
- const result=await completeReservedReading(telegramId,input,value,undefined,'daily');
+ const result=await withAiOperation(supabase,telegramId,'tarot:'+r.client_reading_id,()=>completeReservedReading(telegramId,input,value,undefined,'daily'),result=>result.reading.status==='ready');
  return {...result,day:value.day,resetsAt:value.resetsAt,timezone:'UTC' as const};
 }
 export async function listTarotReadings(telegramId:number,offset:unknown){

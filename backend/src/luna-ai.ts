@@ -58,6 +58,12 @@ import {tarotCatalog} from './tarot-policy.js';
 import {spreadPositions} from './tarot-spread-policy.js';
 import {artifactScopedIntent,astrologyAttachmentSchema,consultationActionIds,consultationActionsSchema,consultationPhase,consultationRuntimeInstructions,safeAssistantProse,savedConsultationContext,validatedConsultationActions} from './luna31-consultation.js';
 import {hasDanglingConsultationPromise} from './luna-ai-quality.js';
+import {responseTokenBudget as consultationTokenBudget,safeValidationIssues} from './luna32-response-budget.js';
+import {withAiOperation} from './luna32-ai-accounting.js';
+import {messagesAfterContextReset} from './luna31-consultation.js';
+import {stagingAiMeterRecord} from './staging-ai-meter.js';
+import {readLuna32Settings,successfulAiLimit} from './luna32-runtime.js';
+import {createLunaTools,runLunaToolTurn,lunaToolInstructions} from './luna32-tools.js';
 
 const languageSchema = z.enum(['en', 'ru']);
 const meditationActionSchema = z.object({
@@ -89,7 +95,9 @@ const tolerantModelResultSchema = z.object({
   meditationAction: z.unknown().optional(),
   action: z.unknown().optional(),
   recommendedMeditationId: z.string().trim().min(1).nullable().optional(),
-  memoryCandidates: z.array(memoryCandidateSchema).max(3).optional()
+  // Memory suggestions are optional, untrusted side data. An invalid suggestion
+  // must never discard an otherwise valid answer or be repaired into a fact.
+  memoryCandidates: z.unknown().optional()
   ,actions:consultationActionsSchema.optional()
 }).passthrough().transform((value) => {
   const actionCandidate = value.meditationAction ?? value.action ?? null;
@@ -105,7 +113,7 @@ const tolerantModelResultSchema = z.object({
     },
     meditationAction: action.success ? action.data : null,
     conversationTitle: value.conversationTitle ?? null,
-    memoryCandidates: value.memoryCandidates ?? []
+    memoryCandidates: validMemoryCandidates(Array.isArray(value.memoryCandidates) ? value.memoryCandidates.slice(0, 3) : [])
   };
 });
 
@@ -114,6 +122,7 @@ export const lunaChatInputSchema = z.object({
   readingId:z.string().uuid().optional(),
   chartId:z.string().uuid().optional(),
   astrology:astrologyAttachmentSchema.optional(),
+  contextReset:z.boolean().optional(),
   conversationId: z.string().uuid().optional(),
   message: z.string().trim().min(1).max(env.AI_MAX_MESSAGE_LENGTH),
   language: languageSchema,
@@ -145,6 +154,8 @@ type OpenAiContentItem = {
 };
 
 type OpenAiOutputItem = {
+  [key:string]:unknown;
+  name?:string;arguments?:string;call_id?:string;
   type?: string;
   role?: string;
   status?: string;
@@ -336,7 +347,7 @@ export function normalizeOpenAiModelResult(
   const parsedJson = text ? tryParseJson(text, context) : null;
 
   if (parsedJson && typeof parsedJson === 'object') {
-    try{const parsed = tolerantModelResultSchema.parse(parsedJson);return modelResultSchema.parse({...parsed,message:safeAssistantProse(parsed.message,language)});}catch{throw new LunaAiError('malformed_response','The provider returned an invalid visible answer.',502,true);}
+    try{const parsed = tolerantModelResultSchema.parse(parsedJson);return modelResultSchema.parse({...parsed,message:safeAssistantProse(parsed.message,language)});}catch(error){console.warn('[Luna response validation]',{requestId:context?.requestId,issues:safeValidationIssues(error),category:error instanceof Error&&error.message==='unexpected_response_language'?'language':'schema'});throw new LunaAiError('malformed_response','The provider returned an invalid visible answer.',502,true);}
   }
 
   if (text) {
@@ -582,7 +593,7 @@ export function buildLunaOpenAiRequest(input: {
 }
 
 async function callOpenAiResponses(input: {
-  requestBody: ReturnType<typeof buildLunaOpenAiRequest>;
+  requestBody: Record<string,unknown>&{model?:unknown;max_output_tokens?:unknown;input:unknown[]};
   signal: AbortSignal;
   telegramId: number;
   requestId?: string;
@@ -603,6 +614,7 @@ async function callOpenAiResponses(input: {
     response = await requestLunaResponse(input.requestBody,input.signal);
   } catch (error) {
     logBackendError(error, { endpoint: 'POST https://api.openai.com/v1/responses', telegramId: input.telegramId, requestId: input.requestId });
+    if(error instanceof FoundationError)throw error;
     if (error instanceof Error && error.name === 'AbortError') throw error;
     throw new LunaAiError('temporary_upstream', 'OpenAI could not be reached.', 502, true);
   }
@@ -726,6 +738,7 @@ async function existingCompletedResponse(telegramId: number, requestId: string, 
 }
 
 export function classifyLunaFailure(error: unknown) {
+  if(error instanceof FoundationError)return {code:error.code,retryable:['ai_budget_unavailable','ai_accounting_failed','request_in_progress'].includes(error.code)};
   if (error instanceof LunaAiError) {
     const retryableCodes = new Set(['timeout', 'rate_limit', 'openai_rate_limit', 'malformed_response', 'max_output_tokens', 'temporary_upstream', 'request_in_progress']);
     return { code: error.code, retryable: error.retryable || retryableCodes.has(error.code) };
@@ -752,7 +765,7 @@ function relevantMemories(message: string, memories: Array<{ category: string; m
   }).slice(0, 12);
 }
 
-async function loadContext(telegramId: number, conversationId: string, currentMessage: string) {
+async function loadContext(telegramId: number, conversationId: string, currentMessage: string,resetAttachment=false) {
   const memoryBoundary=await getMemoryContextBoundary(telegramId);
   const [{ data: recent }, { data: memories }, { data: user }, { data: checkin }, { data: catalog }, { data: conversation }] = await Promise.all([
     supabase.from('ai_messages').select('role, content, metadata, created_at').eq('conversation_id', conversationId).eq('telegram_id', telegramId).order('created_at', { ascending: false }).limit(env.AI_RECENT_MESSAGE_LIMIT),
@@ -763,14 +776,14 @@ async function loadContext(telegramId: number, conversationId: string, currentMe
     supabase.from('ai_conversations').select('pending_state, conversation_state').eq('id', conversationId).eq('telegram_id', telegramId).maybeSingle()
   ]);
 
-  const recentMessages = [...messagesAfterMemoryBoundary(recent ?? [],memoryBoundary)].reverse();
+  const recentMessages = resetAttachment?[{role:'user',content:currentMessage,metadata:null,created_at:new Date().toISOString()}]:messagesAfterContextReset([...messagesAfterMemoryBoundary(recent ?? [],memoryBoundary)].reverse());
   // Same-millisecond timestamps are conservatively excluded; the authenticated
   // current request is always explicit context, never recovered historical memory.
   if(memoryBoundary&&(recentMessages.at(-1)?.role!=='user'||recentMessages.at(-1)?.content!==currentMessage)){
     recentMessages.push({role:'user',content:currentMessage,metadata:null,created_at:new Date().toISOString()});
   }
-  const storedState = conversationStateAfterMemoryBoundary(conversation?.conversation_state,memoryBoundary);
-  const storedPending = !memoryBoundary || storedState ? conversation?.pending_state : null;
+  const storedState = resetAttachment?null:conversationStateAfterMemoryBoundary(conversation?.conversation_state,memoryBoundary);
+  const storedPending = !resetAttachment&&(!memoryBoundary || storedState) ? conversation?.pending_state : null;
   const pendingState = inferPendingStateFromRecent(storedPending, recentMessages);
   const conversationState = recoverConversationState(storedState, recentMessages);
   const context = {
@@ -794,6 +807,7 @@ async function saveUsage(input: {
   telegramId: number; conversationId?: string; requestId: string; status: string; latencyMs: number;
   usage?: OpenAiResponse['usage']; errorClass?: string;
 }) {
+  const meter=input.usage?stagingAiMeterRecord({model:env.AI_CHAT_MODEL,status:'completed',service_tier:'default',usage:input.usage}):null;
   const { error } = await supabase.from('ai_usage').upsert({
     telegram_id: input.telegramId,
     conversation_id: input.conversationId ?? null,
@@ -802,6 +816,7 @@ async function saveUsage(input: {
     input_tokens: input.usage?.input_tokens ?? 0,
     output_tokens: input.usage?.output_tokens ?? 0,
     total_tokens: input.usage?.total_tokens ?? 0,
+    estimated_cost:meter?.estimated_cost??null,
     request_status: input.status,
     latency_ms: input.latencyMs,
     error_class: input.errorClass ?? null
@@ -829,8 +844,9 @@ async function saveMemories(telegramId: number, conversationId: string, sourceMe
 }
 
 export async function getLunaUsage(telegramId:number){
- const access=await getUserAccess(telegramId),limit=access.hasPremium?env.AI_PREMIUM_MAX_MESSAGES_PER_DAY:env.AI_MAX_MESSAGES_PER_DAY;
+ const access=await getUserAccess(telegramId),settings=env.LUNA32_ENABLED?await readLuna32Settings(supabase):null,limit=settings?successfulAiLimit(settings,access.hasPaidPremium,{free:env.AI_MAX_MESSAGES_PER_DAY,premium:env.AI_PREMIUM_MAX_MESSAGES_PER_DAY}):access.hasPaidPremium?env.AI_PREMIUM_MAX_MESSAGES_PER_DAY:env.AI_MAX_MESSAGES_PER_DAY;
  const start=new Date().toISOString().slice(0,10)+'T00:00:00.000Z';
+ if(env.LUNA32_ENABLED){const usage=await supabase.rpc('luna32_ai_used',{p_owner:telegramId,p_exclude:null});if(usage.error||!Number.isSafeInteger(usage.data))throw new LunaAiError('usage_unavailable','Could not load the daily allowance.',503,true);return {remaining:Math.max(0,limit-usage.data),limit,resetAt:nextUtcReset()};}
  const usage=await supabase.from('ai_chat_requests').select('id',{count:'exact',head:true}).eq('telegram_id',telegramId).eq('quota_charged',true).gte('created_at',start);
  if(usage.error)throw new LunaAiError('usage_unavailable','Could not load the daily allowance.',503,true);
  return {remaining:Math.max(0,limit-(usage.count??0)),limit,resetAt:nextUtcReset()};
@@ -903,13 +919,20 @@ export async function deleteLunaMemory(telegramId: number, memoryId?: string) {
 }
 
 export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown) {
+  if(!env.LUNA32_ENABLED)return sendLunaMessageInternal(user,rawInput);
+  const input=lunaChatInputSchema.parse(rawInput);
+  await upsertUser(user);
+  return withAiOperation(supabase,user.telegram_id,'chat:'+input.requestId,()=>sendLunaMessageInternal(user,input));
+}
+async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknown) {
   if (!env.AI_CHAT_ENABLED) throw new LunaAiError('chat_disabled', 'Luna AI chat is not enabled.', 503);
   if (!env.OPENAI_API_KEY) throw new LunaAiError('missing_api_key', 'Luna AI is not configured.', 503);
   const input = lunaChatInputSchema.parse(rawInput);
   let responseLanguage = resolveResponseLanguage(input.message, input.language, [], env.FEATURE_AI_CENTRAL_EXPERIENCE);
   const telegramId = user.telegram_id;
   const memoryBoundaryAtStart=env.FEATURE_PERSONAL_MEMORY?await getMemoryContextBoundary(telegramId):undefined;
-  if(input.conversationId&&!input.readingId&&!input.chartId&&!input.astrology&&(!input.mode||input.mode==='tarot'||input.mode==='astrology')){
+  if(input.contextReset&&(input.readingId||input.chartId||input.astrology))throw new FoundationError(400,'conflicting_context','Choose an attachment or remove it, not both.');
+  if(input.conversationId&&!input.contextReset&&!input.readingId&&!input.chartId&&!input.astrology&&(!input.mode||input.mode==='tarot'||input.mode==='astrology')){
     await ownedConversation(telegramId,input.conversationId);
     const boundary=memoryBoundaryAtStart;
     const saved=await supabase.from('ai_messages').select('role,metadata,created_at').eq('telegram_id',telegramId).eq('conversation_id',input.conversationId).order('created_at',{ascending:false}).limit(env.AI_RECENT_MESSAGE_LIMIT);
@@ -939,7 +962,8 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
   await upsertUser(user);
   if(!env.FEATURE_AI_CENTRAL_EXPERIENCE)await pruneExpiredLunaConversations(telegramId, input.conversationId);
   const access = await getUserAccess(telegramId);
-  const limit = access.hasPremium ? env.AI_PREMIUM_MAX_MESSAGES_PER_DAY : env.AI_MAX_MESSAGES_PER_DAY;
+  const runtimeSettings=env.LUNA32_ENABLED?await readLuna32Settings(supabase):null;
+  const limit = runtimeSettings?successfulAiLimit(runtimeSettings,access.hasPaidPremium,{free:env.AI_MAX_MESSAGES_PER_DAY,premium:env.AI_PREMIUM_MAX_MESSAGES_PER_DAY}):access.hasPaidPremium ? env.AI_PREMIUM_MAX_MESSAGES_PER_DAY : env.AI_MAX_MESSAGES_PER_DAY;
   const reservation = await reserveChatRequest(telegramId, input.requestId, limit, input.conversationId);
   console.info('[Luna AI request transition]', {
     user: userHash(telegramId), clientRequestId: input.requestId, state: reservation.status,
@@ -1021,7 +1045,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       return { conversationId: resolvedConversationId, message: assistant, duplicate: false, remaining: reservation.remaining, requestState: 'completed' as const };
     }
 
-    const { recent, context, catalog, memoryEnabled, pendingState, conversationState } = await loadContext(telegramId, resolvedConversationId, input.message);
+    const { recent, context, catalog, memoryEnabled, pendingState, conversationState } = await loadContext(telegramId, resolvedConversationId, input.message,Boolean(input.contextReset));
     const allowMeditationActions = !input.mode || ['companion','wellbeing','meditation'].includes(input.mode);
     responseLanguage = resolveResponseLanguage(input.message, input.language, recent, env.FEATURE_AI_CENTRAL_EXPERIENCE);
     console.info('[Luna AI pending state loaded]', {
@@ -1110,9 +1134,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     ) ? resolvedRuntimeMeditation : null;
     const guidedPracticeRequested = isGuidedPracticeRequest(input.message)
       || (intentResolution.intent === 'breathing' && intentResolution.action === 'none');
-    const responseTokenBudget = guidedPracticeRequested
-      ? Math.min(8192, Math.max(env.AI_MAX_OUTPUT_TOKENS, 2600))
-      : env.AI_MAX_OUTPUT_TOKENS;
+    const responseTokenBudget = consultationTokenBudget({ordinary:env.LUNA32_ENABLED?env.AI_STRUCTURED_MAX_OUTPUT_TOKENS:env.AI_MAX_OUTPUT_TOKENS,structured:env.AI_STRUCTURED_MAX_OUTPUT_TOKENS,hasArtifact:Boolean(readingContext||chartContext),detailed:isLongFormRequest(input.message),guided:guidedPracticeRequested});
     console.info('[Luna AI pending state resolved]', {
       user: userHash(telegramId),
       requestId: input.requestId,
@@ -1202,20 +1224,23 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
           pendingActionEnforced: false,
           model: env.AI_CHAT_MODEL
         });
-        openAiResponse = await callOpenAiResponses({
-          requestBody: buildLunaOpenAiRequest({
+        const request=buildLunaOpenAiRequest({
             language: responseLanguage,
             catalog: catalogForModel,
             context: modelContext,
             recent,
             maxOutputTokens: responseTokenBudget
-          }),
+          });
+        const invoke=(requestBody:Record<string,unknown>&{input:unknown[]})=>callOpenAiResponses({
+          requestBody,
           signal: controller.signal,
           telegramId,
           requestId: input.requestId,
           conversationId: resolvedConversationId,
           attempt: 1
         });
+        const tools=createLunaTools({db:supabase,owner:telegramId,language:responseLanguage,readingId:input.readingId,astrology:input.astrology??input.chartId,readingContext,catalog:catalogForModel,personalContext:personal,access:{hasPaidPremium:access.hasPaidPremium,beta:access.beta,plan:access.plan},quota:()=>getLunaUsage(telegramId),astrologyEnabled:env.FEATURE_ASTROLOGY&&env.LUNA30_ASTROLOGY_AI_ENABLED});
+        openAiResponse=env.LUNA32_ENABLED?await runLunaToolTurn({...request,instructions:request.instructions+'\n'+lunaToolInstructions},tools,invoke):await invoke(request);
         consumedUsage=openAiResponse.usage;
         console.info('[Luna AI model result received]', {
           user: userHash(telegramId),
@@ -1224,8 +1249,8 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
           model: openAiResponse.model ?? env.AI_CHAT_MODEL,
           status: openAiResponse.status ?? null
         });
-        // One provider call per turn. Incomplete answers are never displayed or
-        // automatically paid-retried. Explicit retry reuses the durable request ID.
+        // One answer, with at most one bounded read-only tool continuation in
+        // 3.2. Incomplete output is never automatically regenerated or displayed.
         if(openAiResponse.status&&openAiResponse.status!=='completed')throw new LunaAiError('incomplete_response','The provider did not complete this answer.',502,true);
         extracted = extractOpenAiText(openAiResponse);
       } finally {
@@ -1452,6 +1477,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       request_id: input.requestId,
       metadata: {
         recommendedMeditationId: attachedMeditationId,
+        ...(input.contextReset?{contextReset:true}:{}),
         ...(input.chartId?{astrology:input.astrology??{chartId:input.chartId}}:{}),
         ...(input.readingId?{readingId:input.readingId}:{}),
         consultation:{version:1,phase,actions},

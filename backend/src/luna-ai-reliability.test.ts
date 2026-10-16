@@ -39,9 +39,13 @@ test('failed requests are refunded and remain retryable with the same turn', () 
   assert.match(frontend, /retry\?\.clientRequestId/);
 });
 
-test('each logical chat turn has one provider attempt, never hidden paid regeneration', () => {
+test('each chat turn has no hidden paid regeneration; 3.2 permits one bounded tool continuation', () => {
   assert.doesNotMatch(backend, /attempt: [23]/);
-  assert.equal((backend.match(/await callOpenAiResponses\(/g)??[]).length,1);
+  assert.equal((backend.match(/=>callOpenAiResponses\(/g)??[]).length,1);
+  const tools=readFileSync(resolve(process.cwd(),'src/luna32-tools.ts'),'utf8');
+  assert.equal((tools.match(/await invoke\(/g)??[]).length,2);
+  assert.match(tools,/tool_choice:'none'/);
+  assert.match(tools,/first.status!=='completed'/);
   const usageWrites = backend.match(/await saveUsage\(/g) ?? [];
   assert.equal(usageWrites.length >= 2, true);
   assert.doesNotMatch(backend.slice(backend.indexOf("if (shouldRetryOpenAiResponse"), backend.indexOf("if (!extracted)")), /saveUsage/);

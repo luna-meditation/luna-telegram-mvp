@@ -1,0 +1,191 @@
+# Luna 3.2 execution
+
+Authoritative source: `luna-meditation/luna-telegram-mvp`, production `main`
+`2eaad97551637bdc1112fd4c1d55a00844028f89`; development branch
+`feature/luna-3-2-complete-upgrade`. All four specification parts read together;
+Part 4 wins on beta access, existing daily quotas and three-tab navigation.
+
+## Order
+
+1. P0: diagnose both supplied production request references; fix bounded output,
+   context switching/removal, safe diagnostics, retry/idempotency and metering.
+2. Server foundation: reusable typed tools, explicit consent for durable writes,
+   reversible promotional beta entitlement and shared successful-answer quota,
+   atomic global cost reservations and editable private admin configuration.
+3. Product: Dark-only, compact Home/chat, astrology discovery/calendar/path,
+   inline profile/compatibility tools, explicit saved dreams, preserved Tarot.
+4. Commercial readiness: existing payment adapters/ledgers remain authoritative;
+   new proposed prices, packages and rewards stay OFF pending owner approval.
+5. Node 22 tests/build/lint, isolated PostgreSQL migration/reapply/rollback and
+   authorization/concurrency tests; authenticated staging E2E and mobile checks.
+6. Fresh encrypted Luna-only backup/two restores before production schema
+   changes. PR/backend-first/frontend release only if every P0 gate passes.
+
+## Verified initial diagnosis
+
+Read-only Railway logs show both supplied astrology requests reached OpenAI.
+HTTP 200 returned `status: incomplete`, `finishReason: max_output_tokens`, with
+an 800-token request cap. No evidence of failed Telegram authentication, missing
+chart ownership or failed context lookup in these two traces. One explicit retry
+also failed visible-output validation. The database records both requests as
+`failed_retryable`, `quota_charged: false`, user message present, no assistant
+message. Existing successful-answer refund works for those failures. Metering
+currently overwrites attempts by logical request ID and leaves estimated cost
+NULL, so spend protection needs immutable per-attempt accounting.
+
+No private birth data, user messages, API response text or secrets belong here.
+
+## Approvals and gates
+
+- Initial authorization: six neutral staging provider calls / $0.03. Five calls
+  have completed, actual usage-derived cost $0.00693655, rounded immutable
+  ledger total6939 micro-USD, unknown spend0. Saved single RU, three EN and five
+  RU readings reopen and replay without any new generation or Seed charge.
+- The real `calculate_compatibility` tool completed. Its final provider answer
+  was completed too, but validation rejected `memoryCandidates.0.key` (safe log
+  category `schema`, code `invalid_string`). Raw private/provider text was not
+  logged. Fix: discard invalid optional memory suggestions, never repair them
+  into facts, while keeping strict visible-answer validation and consent gates.
+  EN/RU regression tests pass. The subsequent real staging continuation passes
+  all34 checks, including the tool answer, durable replay and no regeneration.
+- Owner then explicitly approved one more staging publication and at most two
+  additional calls/$0.01: seven cumulative calls, still below the original
+  $0.03 total. The next one-shot worker reuses all three saved readings and both
+  synthetic charts; unpaid persistence tests run before AI. Its short QA-only
+  answer cap1100 keeps conservative reservations within the additional budget;
+  the normal backend cap2600 is unchanged. Generation/beta restore OFF on exit.
+- Final approved staging deployment `6ad2266ce945a04bc95b9fe7` is Ready, source
+  `4b2ac9119346d0f8b34a9f0958d01732e1674996` (GitHub equivalent-tree commit
+  `c1080b9eb1dd791fa3426fcdb4c69747d0da6500`). Its two completed provider calls
+  cost $0.00202010 including cached-input pricing; seven cumulative calls cost
+  $0.00895665 from actual provider usage. No unknown outcomes or cost holds.
+  Moon Seeds/garden/paid-rights fingerprints match. Beta/generation restored OFF.
+  The short RU answer cites the correct two calculated Mercury positions and
+  available natal aspects; it still uses an English sign label alongside Russian
+  prose and could distinguish natal/synastry wording more clearly. Do not claim
+  that one synthetic conversation proves every AI answer's quality.
+- No existing monthly global budget setting found in exposed Railway variable
+  names or audited release tables. Owner approved $30/month inside Luna on
+  2026-10-16. This does not change the OpenAI account's billing configuration.
+  Owner explicitly selected a TOTAL $30 October ceiling, including spend before
+  the release, not an additional $30. Owner will provide October spend. Until
+  then production activation remains blocked; never assume a zero baseline.
+  The later owner estimate "$1 or $2, unsure" is not verified billing evidence
+  and must not be recorded as a confirmed baseline.
+- Part 4 preserves existing daily limits; do not silently substitute Part 3's
+  provisional 30/day. Owner can adjust private runtime settings later.
+- Beta access is promotional, never a paid subscription or balance mutation.
+- Proposed 500/3500-Star plans and unapproved Seed packages stay disabled.
+- No new project, paid service, real payment or production QA transaction.
+- Existing unrelated local QA drafts are not part of this release.
+
+## Local verification / staging preparation
+
+- New additive migration applied/reapplied only to `funvzpmpbgazsisehiru` under
+  `luna32_beta_ai_budget_and_dreams` / `luna32_reviewed_budget_attempt_guard`.
+  Five forced-RLS tables; four service-only SECURITY INVOKER RPCs. All beta and
+  generation switches are OFF. Unrelated schema fingerprint unchanged:
+  `59d78828d25b31907f42ae2c229d9216`.
+- Isolated native PostgreSQL17: 14 new checks plus 17 existing foundation checks
+  pass, including rollback, permission denials, concurrency, unknown spend,
+  account erasure, duplicate leases, attempt cap and crash recovery.
+- Full Node22 tests: backend310 passed / 1 integration fixture skipped by
+  default; frontend183 passed, including the staging-command guard and strict
+  production baseline/recovery release gate. The optional exact-production-RPC
+  integration check runs separately on synthetic local PostgreSQL.
+- Backend/frontend TypeScript, lint, backend build and real-SDK staging frontend
+  production-mode build pass locally. No cloud build is needed.
+- Browser mobile checks: 24 viewport/language/stale-theme cases, 192 screen
+  states. This uses offline UI fixtures and does NOT prove real Telegram login,
+  Supabase persistence, Safari or physical-device behavior.
+- Three additional local browser regressions pass: opening an older conversation
+  beyond history page one, preserving cache on503 and clearing it on404.
+- Another24 Tarot browser cases pass: widths360/375/390/393, EN/RU, one/three/five
+  cards, interactive reveal, zoom, full images, orientation metadata and tab
+  persistence. These too are offline fixtures, not physical Telegram proof.
+- Staging package uses the existing site only. Its temporary QA command needs
+  a high-entropy bearer credential, exact site/database, short expiry and a
+  one-shot private database claim. Credentials never enter Git or public files.
+  The worker permits at most seven cumulative actual provider calls/$0.03 and
+  two new calls/$0.01 under the latest explicit owner approval, respects the
+  existing tool-route limiter, and restores beta/generation OFF after testing.
+- Four explicitly bounded staging publications so far: `6ad21861c936e638a960d11c`, configuration
+  fix `6ad21d042da3472f7614b604`, and `6ad22185dc733b2b581122af` (Ready, source
+  `f561800d152170aa99672a34677ed71221a45e22`), and the final memory-validation
+  retest `6ad2266ce945a04bc95b9fe7`. Connector upsert reported success
+  for a missing flag; the flag was verified absent. Personal rejects explicit
+  scope customization; creating the nonsecret flag with default scopes worked.
+  The owner's additional publication authorization has now been used. Do not
+  create another cloud publication without permission. No production publication is allowed
+  while the critical verification/budget gates fail.
+- Fresh encrypted backup captured2026-10-16T12:46:10Z:48 tables/1484 rows/33
+  functions, restored twice with exact checksums, RLS, definitions and ACLs.
+  Media28 objects/239528218 bytes, current immutable versions matched and every
+  encrypted archive decrypted/content hash verified locally. Other application
+  rows/buckets excluded; no plaintext backup or recovery keys in Git/chat.
+- The exact restored production schema also passes apply/reapply/transactional
+  rollback of the new migration,12 anon/authenticated permission denials and
+  service-role positives; all48 old tables/1484 rows and ACLs stay unchanged.
+
+## Final staging evidence / remaining gates
+
+The real staging API checks now cover owner/unsigned/non-QA denial, all three
+saved Tarot spreads while generation is OFF, explicit dream consent, real
+save/reopen/edit RU/EN/delete, context reset, both existing synthetic chart caches,
+a real `calculate_compatibility` call and completed Russian assistant answer,
+idempotent replay/history reopening with zero provider calls, independently
+settled attempts and unchanged protected financial state. Authentication used a
+server-signed QA fixture, not an automated physical Telegram launch. The owner
+separately confirmed on2026-10-16 that the final staging opens on iPhone and the
+saved one/three/five-card readings, Mercury conversation, text, enlarged cards
+and lower controls are accessible/readable without overlap. This is an
+owner-reported manual check, not independent Safari automation or proof of new
+generation, keyboard behavior or all OS/device combinations.
+
+Production release remains blocked on verified TOTAL October provider spend
+and cutover/in-flight accounting. The requested manual iPhone gate has passed. A
+read-only attempt to obtain provider Usage reached the saved account's Apple
+sign-in form; no credentials were entered or requested in chat. The owner can
+use OpenAI Usage, select the actual Luna project and October1 to now, then give
+only the total and its cutoff time. An uncertain estimate cannot become the
+verified baseline. The production build gate intentionally remains closed.
+
+Status: implementation in progress; production is still Luna 3.1. No new
+production migration, environment update, merge or deployment has occurred.
+
+## Final Astrology and Home release candidate
+
+- Four horizontal Astrology entries now open independent natal, two-person
+  compatibility, interactive calendar and path experiences. Profile management
+  is separate. Existing owner-scoped CRUD, real Astronomy Engine calculations,
+  cached reports, consent and contextual chat attachments are reused.
+- Calendar includes general-sky positions/aspects at12:00 UTC. It does not claim
+  personalized transits or exact aspect peaks. Path questions are explicitly
+  local symbolic reflections, not invented AI output or proven traits.
+- Four original decorative astrology images and five original Home images were
+  prepared with built-in imagegen. Source outputs are preserved. Home has
+  responsive WebP720/1080/1440 hero and360/540 category variants; no screenshot
+  crops, no new layouts/copy/navigation, and no server OpenAI calls for visuals.
+  Provenance/prompt summaries: frontend/asset-reports/luna32-{home,astrology}.json.
+- The same Home background stays mounted after check-in while the hero contracts
+  from278 to230px, preserving mood editing and Talk to Luna. Card of the Day
+  retains its previous artwork and behavior.
+- Local Node22: frontend192 tests; backend313 pass plus the optional RPC check
+  separately passes on isolated PG17. Types/lint/build pass. Native review:
+  15 new checks plus17 foundation checks. New UI checks:8 astrology flows,
+  4 report-cache/error cases,8 cold-load/missing-art cases; existing24 mobile
+  and24 Tarot cases also pass. This is Chromium/offline UI evidence, not new
+  physical-iPhone evidence or real production persistence proof.
+- New encrypted production snapshot2026-10-16T14:27:30Z:48 tables/1484 rows,
+  33 functions, two exact local restores. The unchanged reviewed migration also
+  passes apply/reapply/rollback on this freshly restored schema with12 direct
+  permission denials. Media versions/hashes are rechecked before production SQL.
+- Owner explicitly superseded the earlier $30 total-October rule: $100 from
+  this release through October, then $100 each calendar month. The release
+  budget gate requires that specific approval, an empty new production ledger,
+  generation-disabled cutover and legacy-worker drain. A prospective zero
+  baseline must never be described as zero historical provider spend.
+- All new monetization remains OFF. Existing daily quotas, balances, Stars
+  conditions and paid entitlements are unchanged. Production changes begin
+  only after fresh recovery/preflight checks pass; backend-first, then one
+  prebuilt frontend publication. No further paid QA calls are planned.

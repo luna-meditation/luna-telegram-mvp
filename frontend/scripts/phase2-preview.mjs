@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url';
 assert.equal(process.versions.node.split('.')[0], '22', 'Use Node.js 22');
 const frontend = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const tarotPreview = process.argv.includes('--tarot');
-const luna31Preview=process.argv.includes('--luna31');
+const luna32Preview=process.argv.includes('--luna32');
+const luna31Preview=luna32Preview||process.argv.includes('--luna31');
 const evolutionPreview=luna31Preview||process.argv.includes('--luna30');
 const centralPreview=evolutionPreview||process.argv.includes('--luna24');
 const memoryPreview=process.argv.includes('--memory')||centralPreview;
@@ -19,7 +20,7 @@ const productionFlags=process.argv.includes('--production-flags');
 const refinementPreview=process.argv.includes('--refinement')||luna21Preview;
 const legacyPreview = process.argv.includes('--legacy');
 assert.ok(!(tarotPreview&&legacyPreview),'Choose either Tarot or legacy preview');
-const outputDirectory = luna31Preview?'dist-luna31-preview':evolutionPreview?'dist-luna30-preview':centralPreview?'dist-luna24-preview':memoryPreview?'dist-memory-preview':productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
+const outputDirectory = luna32Preview?'dist-luna32-preview':luna31Preview?'dist-luna31-preview':evolutionPreview?'dist-luna30-preview':centralPreview?'dist-luna24-preview':memoryPreview?'dist-memory-preview':productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
 const output = resolve(frontend, outputDirectory);
 const flagNames = ['AI_CENTRAL_EXPERIENCE','PERSONAL_MEMORY','NEW_NAVIGATION','TAROT_DAILY','TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI','DAILY_CARD_V2','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2'];
 if(!process.argv.includes('--serve-only')){
@@ -39,7 +40,7 @@ const astrology=evolutionPreview?{
  ...await import('../../backend/dist/progress-achievements.js'),
  ...await import('../../backend/dist/luna30-astrology-policy.js')
 }:null;
-const birthProfiles=new Map(),birthCharts=new Map();
+const birthProfiles=new Map(),birthCharts=new Map(),dreamEntries=new Map();
 const date = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const monday=new Date();monday.setDate(monday.getDate()-((monday.getDay()+6)%7));
 const meditation={id:'00000000-0000-4000-8000-000000000001',title:'A quiet return',subtitle:'Come back to the present moment',description:'Offline QA practice. The audio is a silent local fixture, not a production meditation.',category:'calm',duration:180,cover_image:'/images/home/hero-night.png',audio_file:'/preview-audio.wav',premium:false,published:true,mood:'Calm',play_count:24,created_at:new Date().toISOString(),translations:{ru:{title:'Тихое возвращение',subtitle:'Вернись в настоящий момент',description:'Локальная QA-практика. Аудио — тестовая тишина, не production-медитация.'}}};
@@ -64,9 +65,14 @@ const server=createServer(async(req,res)=>{
   try {
     if(url.pathname.startsWith('/api/')){
       let body={};if(req.method!=='GET'){let input='';for await(const part of req){input+=part;if(input.length>20000)return json({error:'Preview input too large'},413);}if(input)body=JSON.parse(input);}
+      if(luna32Preview&&url.pathname==='/api/luna32/local-reset'&&req.method==='POST'){checkin=null;if(body.resetAstrology===true){birthProfiles.clear();birthCharts.clear();}return json({ok:true,localFixtureOnly:true});}
       if(astrology&&url.pathname.startsWith('/api/astrology/')){
+       if(luna32Preview&&url.pathname==='/api/astrology/calendar')return json(astrology.calculateCelestialMonth(url.searchParams.get('month')));
        if(url.pathname==='/api/astrology/locations')return json({locations:astrology.searchBirthLocations(url.searchParams.get('q')??'')});
        if(url.pathname==='/api/astrology/profiles'&&req.method==='GET')return json({profiles:[...birthProfiles.values()]});
+       if(url.pathname.startsWith('/api/astrology/charts/')&&req.method==='GET'){const chart=birthCharts.get(url.pathname.split('/')[4]);return chart?json({chart}):json({code:'chart_not_found'},404);}
+       if(url.pathname==='/api/astrology/reports'&&req.method==='GET')return json({report:null,cached:true});
+       if(url.pathname==='/api/astrology/reports'&&req.method==='POST')return json({code:'offline_provider_disabled',error:'Offline UI preview never calls a real provider.'},503);
        const id=url.pathname.split('/')[4];
        if(url.pathname.startsWith('/api/astrology/profiles')&&(req.method==='PUT'||req.method==='POST')&&!url.pathname.endsWith('/chart')){
         let value,calculation;try{({value,calculation}=astrology.trustedBirthInput(body));astrology.calculateNatalChart(calculation);}catch{return json({code:'ambiguous_birth_time'},400);}
@@ -79,6 +85,7 @@ const server=createServer(async(req,res)=>{
        if(url.pathname==='/api/astrology/compatibility'){const first=birthCharts.get(body.firstChartId),second=birthCharts.get(body.secondChartId);if(!first||!second)return json({code:'chart_not_found'},404);return json({firstChartId:first.id,secondChartId:second.id,...astrology.calculateSynastry(first.calculation,second.calculation)});}
        return json({code:'not_found'},404);
       }
+      if(luna32Preview&&url.pathname.startsWith('/api/luna32/dreams')){const id=url.pathname.split('/')[4];if(req.method==='GET')return json({dreams:[...dreamEntries.values()],nextOffset:null});if(req.method==='DELETE'){dreamEntries.delete(id);return json({ok:true});}if(!body.saveConsent)return json({code:'consent_required'},400);const old=id?dreamEntries.get(id):[...dreamEntries.values()].find(e=>e.client_id===body.clientId);if(old&&req.method==='POST')return json(old);const entry={id:id??randomUUID(),client_id:body.clientId,title:body.title,description:body.description,language:body.language,dream_date:body.date,created_at:old?.created_at??new Date().toISOString(),updated_at:new Date().toISOString()};dreamEntries.set(entry.id,entry);return json(entry);}
       if(memoryPreview&&url.pathname==='/api/universe')return json({memories:[...previewMemories.values()],profile:personal,identity:{firstName:user.first_name,language:user.language_code,goals:user.profile_goals},memoryEnabled:previewMemoryEnabled,contextConsent:personal.ai_context_consent});
       if(memoryPreview&&url.pathname.startsWith('/api/universe/memories')){
         const id=url.pathname.split('/')[4],old=id?previewMemories.get(id):null;
