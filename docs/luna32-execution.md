@@ -135,11 +135,15 @@ save/reopen/edit RU/EN/delete, context reset, both existing synthetic chart cach
 a real `calculate_compatibility` call and completed Russian assistant answer,
 idempotent replay/history reopening with zero provider calls, independently
 settled attempts and unchanged protected financial state. Authentication used a
-server-signed QA fixture, not a physical Telegram launch. A physical iPhone
-history/reveal/zoom/navigation check has been requested separately.
+server-signed QA fixture, not an automated physical Telegram launch. The owner
+separately confirmed on2026-10-16 that the final staging opens on iPhone and the
+saved one/three/five-card readings, Mercury conversation, text, enlarged cards
+and lower controls are accessible/readable without overlap. This is an
+owner-reported manual check, not independent Safari automation or proof of new
+generation, keyboard behavior or all OS/device combinations.
 
-Production release remains blocked on verified TOTAL October provider spend,
-cutover/in-flight accounting and completion of the physical-device gate. A
+Production release remains blocked on verified TOTAL October provider spend
+and cutover/in-flight accounting. The requested manual iPhone gate has passed. A
 read-only attempt to obtain provider Usage reached the saved account's Apple
 sign-in form; no credentials were entered or requested in chat. The owner can
 use OpenAI Usage, select the actual Luna project and October1 to now, then give
