@@ -17,6 +17,7 @@ create table if not exists public.luna30_commercial_receipts(
  foreign key(telegram_id,order_id) references public.luna30_commercial_orders(telegram_id,id)
 );
 create index if not exists luna30_commercial_receipts_owner on public.luna30_commercial_receipts(telegram_id,created_at desc);
+create unique index if not exists luna30_one_pending_subscription on public.luna30_commercial_orders(telegram_id) where days>0 and state in('pending','accepted');
 alter table public.luna_seed_ledger drop constraint if exists luna_seed_ledger_kind_check;
 alter table public.luna_seed_ledger add constraint luna_seed_ledger_kind_check check(kind in('meditation','breath','checkin','seven_days','reading_purchase','stars_package','referral','premium_renewal','refund'));
 do $$declare t text;begin foreach t in array array['luna30_commercial_orders','luna30_commercial_receipts'] loop
@@ -49,6 +50,7 @@ begin
   if o.product<>p_product or o.stars<>p_expected then return jsonb_build_object('status','conflict');end if;
   return jsonb_build_object('status','duplicate','order',to_jsonb(o)-'telegram_id');
  end if;
+ if v_days>0 and exists(select 1 from public.luna30_commercial_orders where telegram_id=p_owner and days>0 and state in('pending','accepted')) then return jsonb_build_object('status','pending_subscription');end if;
  insert into public.luna30_commercial_orders(telegram_id,request_id,product,stars,seeds,days) values(p_owner,p_request,p_product,v_stars,v_seeds,v_days) returning * into o;
  return jsonb_build_object('status','pending','order',to_jsonb(o)-'telegram_id');
 end $$;
@@ -80,11 +82,11 @@ begin
  if o.state='paid' and (o.product<>'premium_month' or not p_recurring) then raise exception 'Unexpected duplicate purchase';end if;
  if o.days=30 then
   if p_expires is null or p_expires<o.accepted_at or p_expires>now()+interval '35 days' then raise exception 'Invalid subscription expiry';end if;
-  v_end:=p_expires;v_start:=v_end-interval '30 days';
+  v_end:=p_expires;v_start:=v_end-interval '720 hours';
   if exists(select 1 from public.luna30_entitlement_periods where telegram_id=p_owner and revoked_at is null and period_start<v_end and period_end>v_start) then raise exception 'Overlapping subscription receipt';end if;
  elsif o.days=365 then
   if p_recurring or p_expires is not null then raise exception 'Annual access is prepaid, not recurring';end if;
-  v_start:=now();v_end:=v_start+interval '365 days';
+  v_start:=now();v_end:=v_start+interval '8760 hours';
  elsif p_recurring or p_expires is not null then raise exception 'Unexpected recurring receipt';end if;
  if o.days>0 then
   insert into public.luna30_entitlement_periods(telegram_id,source_charge_id,period_start,period_end) values(p_owner,p_charge,v_start,v_end) returning id into v_period;

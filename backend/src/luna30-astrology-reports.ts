@@ -28,13 +28,17 @@ export function createAstrologyReportService(db:SupabaseClient,options:{enabled:
    // remains failed/pending until reviewed; opening the page cannot spend tokens.
    try{
     const subject=await db.from('luna30_birth_profiles').select('subject_kind').eq('telegram_id',owner).eq('id',first.profile_id).single();if(subject.error)throw unavailable();
-    const profile=subject.data.subject_kind==='self'?await options.personalProfile(owner):null;
+    const personal=subject.data.subject_kind==='self';
+    const before=personal?await db.from('luna_personal_profiles').select('updated_at,ai_context_consent').eq('telegram_id',owner).maybeSingle():null;
+    if(before?.error)throw unavailable();
+    const profile=personal?await options.personalProfile(owner):null;
     const body=buildAstrologyReportRequest({kind,language:input.language,first:first.calculation as NatalCalculation,...(second?{second:second.calculation as NatalCalculation}:{}),profile});
     const response=await(options.transport??requestLunaResponse)(body,AbortSignal.timeout(45000));if(!response.ok)throw unavailable();
     const payload=await response.json(),meter=stagingAiMeterRecord(payload);
     if(!meter||meter.estimated_cost===null)throw unavailable();
     const usage=await db.from('ai_usage').upsert({...meter,telegram_id:owner,request_id:`astro:${key}`},{onConflict:'telegram_id,request_id'});if(usage.error)throw unavailable();
     const text=responseOutputText(payload);if(!text)throw unavailable();const report=validateAstrologyReport(JSON.parse(text),kind);
+    if(personal){const after=await db.from('luna_personal_profiles').select('updated_at,ai_context_consent').eq('telegram_id',owner).maybeSingle();if(after.error||JSON.stringify(after.data)!==JSON.stringify(before?.data))throw unavailable();}
     const settled=await db.rpc('luna30_finish_astrology_report',{p_owner:owner,p_key:key,p_report:report,p_model:meter.model,p_input:meter.input_tokens,p_output:meter.output_tokens});
     if(settled.error||!settled.data)throw unavailable();return {report:settled.data,cached:false};
    }catch{
