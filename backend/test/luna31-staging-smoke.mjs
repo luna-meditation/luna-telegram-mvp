@@ -9,12 +9,14 @@ export async function run(event){
  await netlifyStagingHandler(new Request(host+'/health'),context);
  const {env}=await import('../dist/config.js'),{supabase}=await import('../dist/db.js');
  assert.ok(env.STAGING_MODE&&env.STAGING_TELEGRAM_IDS==='158467796'&&env.STAGING_SUPABASE_PROJECT_REF==='funvzpmpbgazsisehiru');
- const owner=158467796,runName='luna31-consultation-20261016-v2';
+ const owner=158467796,runName='luna31-consultation-20261016-v3';
+ const previous=await supabase.from('luna30_qa_report_runs').select('state,result').eq('run_name','luna31-consultation-20261016-v2').single();assert.ifError(previous.error);
+ const prior=previous.data.result;assert.equal(previous.data.state,'failed');assert.equal(prior.providerAttempts,3);assert.equal(prior.calls.length,3);assert.ok(prior.calls.every(c=>c.providerStatus==='completed'));assert.ok(Math.abs(prior.unsettledCostUpperBoundUsd)<1e-12);assert.ok(prior.costUsd>0&&prior.costUsd<0.01);
  const claim=await supabase.from('luna30_qa_report_runs').insert({run_name:runName,state:'running',result:{maxProviderCalls:6,maxUsd:0.03}}).select('run_name');if(claim.error?.code==='23505')return;assert.ifError(claim.error);
- const result={status:'running',checks:[],calls:[],answers:[],productionWrites:0,syntheticDataOnly:true,physicalDevice:false,actualTelegramLogin:false,signedQaFixture:true};
+ const result={status:'running',checks:[...prior.checks],calls:[...prior.calls],answers:[...prior.answers],productionWrites:0,syntheticDataOnly:true,physicalDevice:false,actualTelegramLogin:false,signedQaFixture:true,resumedFrom:'luna31-consultation-20261016-v2'};
  const check=(name,value)=>{assert.ok(value,name);result.checks.push({name,status:'PASS'});};
  const fingerprint=async()=>{const [user,garden]=await Promise.all([supabase.from('users').select('lifetime_access,active_until,free_used').eq('telegram_id',owner).single(),supabase.from('moon_gardens').select('*').eq('telegram_id',owner)]);assert.ifError(user.error);assert.ifError(garden.error);return createHash('sha256').update(JSON.stringify({user:user.data,garden:garden.data})).digest('hex');};
- const originalFetch=globalThis.fetch;let attempts=0,spent=0,held=0;
+ const originalFetch=globalThis.fetch;let attempts=prior.providerAttempts,spent=prior.costUsd,held=0;
  try{
   const before=await fingerprint();
   const {stagingAiMeterRecord}=await import('../dist/staging-ai-meter.js');
@@ -39,11 +41,8 @@ export async function run(event){
   const signed=(id=owner)=>{const data=new URLSearchParams({auth_date:String(Math.floor(Date.now()/1000)),user:JSON.stringify({id,first_name:'Luna QA',language_code:'en'})}),checkString=[...data].sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>k+'='+v).join('\n'),key=createHmac('sha256','WebAppData').update(env.BOT_TOKEN).digest();data.set('hash',createHmac('sha256',key).update(checkString).digest('hex'));return data.toString();};
   const call=async(path,body,auth=signed())=>{const response=await netlifyStagingHandler(new Request(host+path,{method:body?'POST':'GET',headers:{'x-telegram-init-data':auth,'content-type':'application/json'},...(body?{body:JSON.stringify(body)}:{})}),context);return {status:response.status,data:await response.json()};};
   check('unsigned and non-QA requests fail before database/provider actions',(await call('/api/luna/conversations',undefined,'invalid')).status===401&&(await call('/api/luna/conversations',undefined,signed(880003199))).status===403);
-  const {saveTarotReading}=await import('../dist/tarot.js'),{saveTarotSpread}=await import('../dist/tarot-spreads.js');
-  const cards=['the-star','the-moon','the-sun','the-hermit','strength'].map((cardId,i)=>({cardId,orientation:i%2?'reversed':'upright'}));
-  const reading=await saveTarotReading(owner,{clientReadingId:randomUUID(),...cards[0],intention:'growth',question:'How can I make space for a small creative habit?',language:'en',generate:false});
-  const three=await saveTarotSpread(owner,{reading:{clientReadingId:randomUUID(),kind:'three',cards:cards.slice(0,3),intention:'growth',question:'Как спокойно начать небольшой творческий проект?',language:'ru',generate:false}});
-  const five=await saveTarotSpread(owner,{reading:{clientReadingId:randomUUID(),kind:'five',cards,intention:'general',question:'How can I approach a small creative project thoughtfully?',language:'en',generate:false}});
+  const oldAnswer=name=>{const answer=prior.answers.find(a=>a.name===name);assert.ok(answer?.metadata.readingId&&answer.requestId&&answer.conversationId);return answer;};
+  const reading={reading:{id:oldAnswer('single EN').metadata.readingId}},three={reading:{id:oldAnswer('three RU').metadata.readingId}},five={reading:{id:oldAnswer('five EN').metadata.readingId}};
   const {createAstrologyService}=await import('../dist/luna30-astrology-service.js'),service=createAstrologyService(supabase,()=>true),births=['35769e29-7986-48af-afab-77e89d273f01','35769e29-7986-48af-afab-77e89d273f02'];
   const first=(await service.calculate(owner,births[0])).chart,second=(await service.calculate(owner,births[1])).chart;
   // Use the application cache key, including the current prompt version. Older
@@ -58,20 +57,21 @@ export async function run(event){
    {name:'natal EN',mode:'astrology',astrology:{chartId:first.id,planet:'moon'},language:'en',message:'Explain this calculated Moon placement as a symbolic reflection, without claiming it proves my personality.'},
    {name:'compatibility RU',mode:'astrology',astrology:{chartId:first.id,secondChartId:second.id,reportId:savedReport.report.id},language:'ru',message:'Объясни тему общения по этим двум конкретным картам и сохранённому отчёту. Можно ли по ним знать, что другой человек чувствует?'}
   ];
-  const replayChecks=[];
-  async function turn(test){const requestId='qa31_'+randomUUID(),{name,...input}=test,response=await call('/api/luna/chat',{...input,requestId});check(name+' full authenticated chat request completes',response.status===200&&Boolean(response.data.message?.content));
+  const replayChecks=cases.slice(0,3).map(({name,...input})=>{const old=oldAnswer(name);return{name,input:{...input,requestId:old.requestId,conversationId:old.conversationId},message:{id:null,content:old.text}};});
+  async function turn(test){const requestId='qa31_'+randomUUID(),{name,...input}=test,response=await call('/api/luna/chat',{...input,requestId});if(response.status!==200)result.failureResponse={name,status:response.status,code:response.data.code??response.data.error};check(name+' full authenticated chat request completes',response.status===200&&Boolean(response.data.message?.content));
    const message=response.data.message;check(name+' no serialized JSON, Korean or literal newline escapes',!/^\s*[{[]/.test(message.content)&&!/[\uac00-\ud7af]/u.test(message.content)&&!message.content.includes('\\n'));
    result.answers.push({name,text:message.content,metadata:message.metadata,requestId,conversationId:response.data.conversationId});
    replayChecks.push({name,input:{...input,requestId,conversationId:response.data.conversationId},message});
    return response.data;
   }
   async function batch(items){const settled=await Promise.allSettled(items.map(turn));const failure=settled.find(r=>r.status==='rejected');if(failure)throw failure.reason;return settled.map(r=>r.value);}
-  const firstBatch=await batch(cases.slice(0,3));await batch(cases.slice(3));
+  await batch(cases.slice(3));
   // No reading ID or mode in this follow-up: the server must recover its own
   // latest attachment. The language switch must not lose that exact reading.
-  const follow=await turn({name:'saved-context RU follow-up',conversationId:firstBatch[0].conversationId,language:'ru',message:'Теперь ответь по-русски: какой один небольшой шаг связан с этой же картой и моим вопросом?'});
-  check('follow-up retained exact saved reading ID',follow.message.metadata.readingId===reading.reading.id);
-  for(const {name,input,message}of replayChecks){const count=attempts,replay=await call('/api/luna/chat',input),history=await call('/api/luna/conversations/'+input.conversationId);check(name+' replay and reopening reuse the stored response without generation',replay.status===200&&replay.data.message.id===message.id&&history.status===200&&history.data.messages.some(m=>m.id===message.id&&m.content===message.content)&&attempts===count);}
+  const follow=await turn({name:'saved-context RU follow-up',conversationId:oldAnswer('three RU').conversationId,language:'ru',message:'Продолжим этот же расклад. Объясни каждую из трёх карт и её позицию в трёх коротких пунктах, затем предложи один небольшой шаг по моему вопросу. Не обещай будущее.'});
+  check('follow-up retained exact saved three-card reading ID',follow.message.metadata.readingId===three.reading.id);
+  check('structured RU reading is not clipped to an introductory paragraph',follow.message.content.length>400&&/Звезд|Звёзд/iu.test(follow.message.content)&&/Лун/iu.test(follow.message.content)&&/Солнц/iu.test(follow.message.content));
+  for(const {name,input,message}of replayChecks){const count=attempts,replay=await call('/api/luna/chat',input),history=await call('/api/luna/conversations/'+input.conversationId);check(name+' replay and reopening reuse the stored response without generation',replay.status===200&&(!message.id||replay.data.message.id===message.id)&&replay.data.message.content===message.content&&history.status===200&&history.data.messages.some(m=>(!message.id||m.id===message.id)&&m.content===message.content)&&attempts===count);}
   const count=attempts;
   const missing=await call('/api/luna/chat',{requestId:'qa31_'+randomUUID(),mode:'astrology',chartId:randomUUID(),language:'en',message:'Discuss this chart.'});check('missing/foreign chart fails closed before provider call',missing.status===404&&attempts===count);
   const crisis=await call('/api/luna/chat',{requestId:'qa31_'+randomUUID(),mode:'companion',language:'en',message:'I want to harm myself.'});check('crisis response uses safe deterministic support, not Tarot or an extra provider request',crisis.status===200&&crisis.data.message.metadata.safetyState!=='none'&&attempts===count);

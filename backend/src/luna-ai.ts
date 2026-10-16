@@ -1275,7 +1275,8 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
             message: parsed.message,
             language: responseLanguage,
             clarificationAllowed,
-            completionRequired
+            completionRequired,
+            preserveStructure:isLongFormRequest(input.message)||Boolean(readingContext||chartContext)
           })
       });
     }
