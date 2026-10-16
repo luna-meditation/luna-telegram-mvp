@@ -266,7 +266,9 @@ function recommendationScoreDetails(item: RecommendationCatalogItem, intent: str
   const profile = recommendationMetadataTerms[intent];
   if (!profile) return { score: 0, matchedFields: [] as RecommendationMetadataField[] };
   const fields: Record<RecommendationMetadataField, string> = {
-    title: item.title ?? '',
+    // Rank canonical catalog metadata even when the visible title is translated.
+    // An empty/missing translation must not erase the real sleep/focus identity.
+    title: [item.title, item.catalogKey].filter(Boolean).join(' '),
     category: item.category ?? '',
     mood: item.mood ?? '',
     summary: item.summary ?? '',

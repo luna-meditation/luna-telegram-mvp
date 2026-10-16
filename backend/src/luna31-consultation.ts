@@ -37,7 +37,7 @@ export function validatedConsultationActions(requested:unknown,context:{reading:
  if(context.safety)return [];
  const parsed=consultationActionsSchema.safeParse(requested);
  const candidates=parsed.success?parsed.data:context.reading?['continue','alternative','journal'] as const:context.chart?['continue','journal'] as const:['tarot','meditation','breathing'] as const;
- return [...new Set(candidates)].filter(id=>id!=='natal_chart'||context.chart||context.astrologyAvailable).filter(id=>id!=='compatibility'||context.comparison).slice(0,3);
+ return [...new Set(candidates)].filter(id=>id!=='natal_chart'||context.chart||context.astrologyAvailable).filter(id=>id!=='compatibility'||context.comparison||context.astrologyAvailable).slice(0,3);
 }
 /** Reject corrupt serialization; never repair arbitrary JSON with regexes. */
 export function safeAssistantProse(raw:string,language:'en'|'ru'){

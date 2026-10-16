@@ -1,0 +1,240 @@
+{
+  "status": "PASS",
+  "scope": "predeployment-verification",
+  "release": "luna33",
+  "baseCommit": "c2dc4adbeab51fc34bafca7111aee711a7037b37",
+  "projectId": "vkcdtasbdoeilgfucoax",
+  "stagingProjectId": "funvzpmpbgazsisehiru",
+  "noDatabaseMigrations": true,
+  "productionWrites": 0,
+  "backupRestorePasses": 2,
+  "backupTables": 53,
+  "backupFunctions": 37,
+  "backupRows": 1570,
+  "backupMediaObjects": 28,
+  "backupMediaBytes": 239528218,
+  "backupDirectory": "/Users/evgeniy_eger/Documents/LUNA/release-backups/luna-connector-rwA9c2/pre-luna33-release-20261017.lha3Ni",
+  "backupCapturedAt": "2026-10-16T16:02:48.306349Z",
+  "backupSchemaAndSecurityExact": true,
+  "backupPortableSqlRestored": true,
+  "frontendTestsStatus": "PASS",
+  "frontendTests": 199,
+  "backendTestsStatus": "PASS",
+  "backendTests": 325,
+  "legacyRpcIntegrationStatus": "PASS",
+  "nativeDatabaseChecks": 15,
+  "nativeFoundationDatabaseChecks": 17,
+  "nodeVersion": "22.23.3",
+  "types": "PASS",
+  "lint": "PASS",
+  "mobileStatus": "PASS",
+  "mobileCases": 76,
+  "mobileChecks": 112,
+  "mobileEvidence": {
+    "mobile": {
+      "status": "PASS",
+      "cases": 8,
+      "checks": 112,
+      "path": "/tmp/luna33-mobile/results.json"
+    },
+    "sounds": {
+      "status": "PASS",
+      "cases": 8,
+      "path": "/tmp/luna33-sound-home-results.json"
+    },
+    "general": {
+      "status": "PASS",
+      "cases": 24,
+      "screens": 192,
+      "path": "/tmp/luna33-general-mobile/results.json"
+    },
+    "tarot": {
+      "status": "PASS",
+      "cases": 24,
+      "path": "/tmp/luna33-tarot-mobile/results.json"
+    },
+    "homeLoading": {
+      "status": "PASS",
+      "cases": 8,
+      "path": "/tmp/luna32-home-loading-results.json"
+    },
+    "reportCache": {
+      "status": "PASS",
+      "cases": 4,
+      "path": "/tmp/luna33-astrology-cache-results.json"
+    },
+    "chatCache": {
+      "status": "PASS",
+      "checks": [
+        "owner-checked older conversation opens beyond page one",
+        "temporary error preserves same-session cached messages",
+        "explicit 404 removes deleted cached messages"
+      ],
+      "path": "/tmp/luna32-chat-cache-results.json"
+    }
+  },
+  "physicalIPhoneTested": false,
+  "browserEngine": "Chrome; real iPhone still required",
+  "aiSmokeStatus": "PASS",
+  "aiSmokeCalls": 3,
+  "aiSmokeCostUsd": 0.00320285,
+  "unknownAiSpendUsd": 0,
+  "aiResponses": 2,
+  "stagingFollowupNewProviderCalls": 0,
+  "stagingAiChecks": [
+    {
+      "name": "staging generation disabled before finite smoke",
+      "status": "PASS"
+    },
+    {
+      "name": "payments and automatic migrations remain disabled",
+      "status": "PASS"
+    },
+    {
+      "name": "no unknown prior provider outcome",
+      "status": "PASS"
+    },
+    {
+      "name": "configured server-only key can access gpt-5-mini",
+      "status": "PASS"
+    },
+    {
+      "name": "unsigned and non-QA accounts rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "natural chat command opens a real inline selector without a provider call",
+      "status": "PASS"
+    },
+    {
+      "name": "two actual charts calculated and selection saved in chat",
+      "status": "PASS"
+    },
+    {
+      "name": "duplicate selection and history reopen reuse exact charts without AI",
+      "status": "PASS"
+    },
+    {
+      "name": "external processing requires explicit scoped consent before provider",
+      "status": "PASS"
+    },
+    {
+      "name": "compatibility ru prior real authenticated answer reopens with final code",
+      "status": "PASS"
+    },
+    {
+      "name": "compatibility ru exact context and consent persisted",
+      "status": "PASS"
+    },
+    {
+      "name": "compatibility ru readable localized prose, not serialized payload",
+      "status": "PASS"
+    },
+    {
+      "name": "compatibility ru uses the actual engine-computed Mercury signs",
+      "status": "PASS"
+    },
+    {
+      "name": "compatibility ru duplicate and reopen are free",
+      "status": "PASS"
+    },
+    {
+      "name": "compatibility en prior real authenticated answer reopens with final code",
+      "status": "PASS"
+    },
+    {
+      "name": "compatibility en exact context and consent persisted",
+      "status": "PASS"
+    },
+    {
+      "name": "compatibility en readable localized prose, not serialized payload",
+      "status": "PASS"
+    },
+    {
+      "name": "compatibility en uses the actual engine-computed Mercury signs",
+      "status": "PASS"
+    },
+    {
+      "name": "compatibility en duplicate and reopen are free",
+      "status": "PASS"
+    },
+    {
+      "name": "clear sleep request detaches old chart and opens actual meditation without another provider request",
+      "status": "PASS"
+    },
+    {
+      "name": "context reset withdraws reuse of chart consent",
+      "status": "PASS"
+    },
+    {
+      "name": "single saved real reading remains available",
+      "status": "PASS"
+    },
+    {
+      "name": "single reopening stored interpretation does not generate",
+      "status": "PASS"
+    },
+    {
+      "name": "three saved real reading remains available",
+      "status": "PASS"
+    },
+    {
+      "name": "three reopening stored interpretation does not generate",
+      "status": "PASS"
+    },
+    {
+      "name": "five saved real reading remains available",
+      "status": "PASS"
+    },
+    {
+      "name": "five reopening stored interpretation does not generate",
+      "status": "PASS"
+    },
+    {
+      "name": "all real calls within bounded approved infrastructure budget",
+      "status": "PASS"
+    },
+    {
+      "name": "staging settings restored and generation disabled",
+      "status": "PASS"
+    },
+    {
+      "name": "Moon Seeds, garden and subscriber rights unchanged",
+      "status": "PASS"
+    }
+  ],
+  "aiQualityStatus": "PASS",
+  "stagingSourceCommit": "d5e103ebb477ffef209c2affe86b5d5f9ccc53c9",
+  "stagingDeployId": "6ad24e77d602d031187e6583",
+  "firstStagingDeployId": "6ad24c080ebb863a2b0ba6fc",
+  "qaOnlySignedAuthFixture": true,
+  "noSyntheticProductionAuth": true,
+  "balancesAndPaidRightsPreserved": true,
+  "sharedExistingDailyQuotasPreserved": true,
+  "monetizationEnabled": false,
+  "productionSettingsUnchanged": true,
+  "monthlyBudgetUsd": 100,
+  "budgetScope": "existing_prospective_release_allowance_unchanged",
+  "publicBetaExpiresAt": "2026-10-31T16:00:00Z",
+  "publicSchemaSecurityBeforeSha256": "bed2f9207b5fa9c5175f5f45a1cc1adf34780cbd683cc74abddbfc30a95d7c2c",
+  "sourceDigest": "90bb1bf5a9b3c9bc3190059d807d363dfbe142dca32bf4c8025dce872d304657",
+  "homeAudio": {
+    "files": 3,
+    "bytes": 15345995,
+    "preload": "none",
+    "loops": true,
+    "originalsUnchanged": true,
+    "sourceManifest": "frontend/public/assets/audio/soundscapes/CREDITS.md",
+    "accessSlotsUnchanged": true
+  },
+  "netlifyProductionBranch": "main",
+  "netlifyDevelopmentAutobuilds": false,
+  "netlifyDeployPreviews": false,
+  "productionDeployment": "not_started",
+  "limitations": [
+    "No physical iPhone/Safari test in this execution; Chrome mobile simulation is not Telegram WebView proof.",
+    "iOS playback after backgrounding, Bluetooth/headphones and hardware silent mode need manual checks.",
+    "Generation remains subject to existing provider balance, daily quotas and the unchanged $100 monthly safeguard.",
+    "Current production experience stays dark-only as in Luna 3.2; legacy Light/System preferences do not activate a new theme."
+  ]
+}

@@ -26,13 +26,14 @@ test('retry keeps one user turn and reuses its client request id', () => {
 test('quota exhaustion has no Retry and disables the composer', () => {
   const source = readFileSync(componentPath, 'utf8');
   assert.match(source, /failedTurn\.state !== 'quota_exhausted'/);
-  assert.match(source, /disabled=\{thinking \|\| quotaExhausted\}/);
+  assert.match(source, /disabled=\{thinking \|\| contextBusy \|\| quotaExhausted\}/);
   assert.match(source, /Сообщения Luna на сегодня закончились/);
 });
 
-test('suggestion chips fill the input instead of hiding typing behind a start step', () => {
+test('explicit suggestion taps perform actions without polluting the manual draft', () => {
   const source = readFileSync(componentPath, 'utf8');
-  assert.match(source, /setDraft\(prompt\)/);
+  assert.doesNotMatch(source, /setDraft\(prompt\)/);
+  assert.match(source, /else void submit\(prompt\)/);
   assert.match(source, /className="luna-quick-prompts"/);
   assert.doesNotMatch(source, /prompts\.slice/);
   assert.doesNotMatch(source, /prompts\.map\(\(prompt\) => <button key=\{prompt\} type="button" onClick=\{\(\) => beginConversation\(prompt\)/);

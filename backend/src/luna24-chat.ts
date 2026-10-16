@@ -9,6 +9,7 @@ import {getTarotReading,saveTarotReading,readingFields,type StoredReading} from 
 import {saveTarotSpread} from './tarot-spreads.js';
 import {chatTarotInput,chatTarotState,chatTarotHash,drawChatTarot,nextReveal,readingSize,type ChatTarotState} from './luna24-policy.js';
 import {safetyCategory} from './luna-ai-policy.js';
+import {createAstrologyWorkflowService} from './luna33-workflows.js';
 const messageFields='id,conversation_id,request_id,role,content,metadata,created_at';
 const fail=(code:string,status=503)=>new FoundationError(status,code,'Your conversation remains saved.');
 async function ownedConversation(user:number,id:string){const {data,error}=await supabase.from('ai_conversations').select('id,title').eq('id',id).eq('telegram_id',user).eq('status','active').maybeSingle();if(error)throw fail('chat_unavailable');if(!data)throw fail('conversation_not_found',404);return data;}
@@ -76,6 +77,8 @@ export async function revealChatTarot(user:number,id:string,body:unknown){
 }
 export const luna24Router=Router();
 luna24Router.use(requireTelegramWebApp,(_req,res,next)=>env.FEATURE_AI_CENTRAL_EXPERIENCE?next():res.status(404).json({code:'feature_disabled'}));
+const astrologyWorkflows=createAstrologyWorkflowService(supabase,()=>env.FEATURE_ASTROLOGY);
+luna24Router.post('/astrology',async(req,res,next)=>{try{const user=(req as unknown as AuthenticatedRequest).telegramUser;await upsertUser(user);res.json(await astrologyWorkflows.open(user.telegram_id,req.body));}catch(e){next(e);}});
 luna24Router.post('/conversations/:id/context-reset',async(req,res,next)=>{try{
  if(!env.LUNA32_ENABLED)throw fail('feature_disabled',404);
  const user=(req as unknown as AuthenticatedRequest).telegramUser.telegram_id,id=z.string().uuid().parse(req.params.id),input=z.object({requestId:z.string().uuid(),language:z.enum(['en','ru'])}).strict().parse(req.body);

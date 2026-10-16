@@ -51,7 +51,7 @@ function namedMeditation(message: string, catalog: RecommendationCatalogItem[]) 
 
 function detectedGoal(message: string): LunaConversationGoal | null {
   const patterns: Array<[LunaConversationGoal, RegExp]> = [
-    ['sleep', /\b(?:can(?:not|'t) sleep|need sleep|help me sleep|go to sleep|insomnia|sleep meditation|bedtime)\b|(?:не могу уснуть|не спится|хочу уснуть|нуж(?:ен|на) сон|для сна|бессон|помоги уснуть)/i],
+    ['sleep', /\b(?:can(?:not|'t) sleep|need sleep|help me sleep|go to sleep|insomnia|sleep meditation|for sleep|to fall asleep|bedtime)\b|(?:не могу уснуть|не спится|хочу уснуть|нуж(?:ен|на) сон|для сна|перед сном|бессон|помоги уснуть)/i],
     ['focus', /\b(?:need (?:to )?focus|help me focus|cannot focus|can't focus|concentrate|mental clarity|focus meditation)\b|(?:нужен фокус|не могу сосредоточ|хочу сосредоточ|для фокуса|нужна ясность|внимание|концентрац)/i],
     ['reset', /\b(?:need (?:a )?reset|soft reset|gentle reset|stress reset|restart my mind)\b|(?:нужна перезагрузка|хочу перезагруз|мягк(?:ая|ую) перезагруз|сбросить напряжение|начать заново)/i],
     ['breathing', /\b(?:show me breathing|breathing practice|breathwork|breath exercise|help me breathe)\b|(?:покажи дыхан|дыхательн(?:ая|ую) практик|дыхательное упражнение|помоги дышать)/i],
@@ -141,11 +141,12 @@ export function resolveLunaIntent(input: {
     ));
     return {
       intent: intentForGoal(goal), goal, topic: goal,
-      action: 'recommend_meditation', meditationId: null, confidence: conciseGoal || messageGoal ? 0.98 : 0.9,
+      action: goal==='breathing'?'none':'recommend_meditation', meditationId: null, confidence: conciseGoal || messageGoal ? 0.98 : 0.9,
       continuation, reason: continuation ? 'short_reply_resolves_previous_meditation_choice' : 'clear_goal_requires_immediate_practice'
     };
   }
 
+  if(/\b(?:tarot|natal|astrology|compatibility|birth chart)\b|(?:таро|натальн|астролог|совместим)/i.test(input.message))return {intent:'general_chat',goal:null,topic:'self_discovery',action:'none',meditationId:null,confidence:0.98,continuation:false,reason:'explicit_discovery_topic_not_a_meditation_action'};
   const otherIntent = nonMeditationIntent(input.message);
   if (otherIntent) {
     return {

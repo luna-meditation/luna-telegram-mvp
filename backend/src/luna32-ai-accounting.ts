@@ -48,12 +48,15 @@ export function guardedProviderTransport(transport:(body:unknown,signal:AbortSig
     // An operator can reconcile the conservative hold against provider billing.
     await settle(null,null,null,null,'http_'+response.status);return response;
    }
-   const payload=await response.clone().json(),meter=stagingAiMeterRecord(payload);
+   // Own the provider stream exactly once. Metering must never hand a disturbed
+   // stream to chat/Tarot/report consumers (observed in the production runtime).
+   const responseBody=await response.text();
+   const payload=JSON.parse(responseBody),meter=stagingAiMeterRecord(payload);
    if(!meter||meter.estimated_cost===null){await settle(null,null,null,null,'unverified_usage');throw new FoundationError(503,'ai_usage_unverified','Provider usage could not be verified.');}
    const cached=payload.usage?.input_tokens_details?.cached_tokens??0,cost=Math.ceil(meter.estimated_cost*1000000);
    await settle(cost,meter.input_tokens,cached,meter.output_tokens,String(payload.status??'unknown').slice(0,40));
    if(cost>ceiling)throw new FoundationError(503,'ai_cost_overrun','Generation paused for review.');
-   return response;
+   return new Response(responseBody,{status:response.status,statusText:response.statusText,headers:response.headers});
   }catch(error){if(!settled){try{await settle(null,null,null,null,'unknown_outcome');}catch{/* Reserved cost remains held; never silently release unknown spend. */}}throw error;}
  };
 }

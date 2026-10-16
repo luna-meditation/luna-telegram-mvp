@@ -8,6 +8,7 @@ import {
   Camera,
   CheckCircle,
   ChevronRight,
+  ChevronDown,
   CreditCard,
   Crown,
   Edit3,
@@ -136,7 +137,6 @@ import { MyUniverse } from './luna2/MyUniverse';
 import { BreathAudioModes, BreathingVisual } from './luna2/BreathingVisual';
 import {PracticePicker} from './features/breathing/PracticePicker';
 import {ProgressMilestone} from './components/progress/ProgressMilestone';
-import {createSceneAudioUrl} from './features/breathing/ambient';
 import {useBreathAudio} from './features/breathing/useBreathAudio';
 import {LunaShareButton} from './features/sharing/LunaShareButton';
 import { luna2Copy } from './luna2/copy';
@@ -175,7 +175,7 @@ type SceneDefinition = {
   access: SceneAccess;
   sortOrder: number;
   cover: string;
-  sound: 'water' | 'ocean' | 'mist' | 'forest' | 'rain';
+  audioSrc: string;
 };
 type MantraDefinition = {
   id: string;
@@ -238,67 +238,11 @@ function sceneCover(seed: string, accent: string, glow: string) {
   return `data:image/svg+xml,${encodeURIComponent(svg)}`;
 }
 
+// Keep stable scene IDs/access slots: no new reward identity or entitlement change.
 const scenes = ([
-  {
-    id: 'moon-lake',
-    title: { en: 'Moon Lake', ru: 'Лунное озеро' },
-    subtitle: { en: 'Soft water · Night', ru: 'Тихая вода · Ночь' },
-    description: { en: 'A slow night lake for sleep and soft calm.', ru: 'Медленное ночное озеро для сна и спокойствия.' },
-    mood: 'Sleep / Calm',
-    category: 'sleep',
-    access: 'free',
-    sortOrder: 1,
-    cover: sceneCover('MOON LAKE', '#4b2d68', '#8e5fd6'),
-    sound: 'water'
-  },
-  {
-    id: 'ocean-breath',
-    title: { en: 'Ocean Breath', ru: 'Дыхание океана' },
-    subtitle: { en: 'Gentle waves · Breath', ru: 'Мягкие волны · Дыхание' },
-    description: { en: 'A breathing ocean pulse for exhale-led rest.', ru: 'Океанский ритм для мягкого выдоха и отдыха.' },
-    mood: 'Breath / Calm',
-    category: 'breath',
-    access: 'premium',
-    sortOrder: 2,
-    cover: sceneCover('OCEAN', '#214562', '#77b8d8'),
-    sound: 'ocean'
-  },
-  {
-    id: 'morning-mist',
-    title: { en: 'Morning Mist', ru: 'Утренний туман' },
-    subtitle: { en: 'Soft air · Focus', ru: 'Мягкий воздух · Фокус' },
-    description: { en: 'A clear, airy layer for gentle focus.', ru: 'Прозрачный воздушный фон для мягкого фокуса.' },
-    mood: 'Morning / Focus',
-    category: 'focus',
-    access: 'premium',
-    sortOrder: 3,
-    cover: sceneCover('MIST', '#5c4a82', '#e0b7c9'),
-    sound: 'mist'
-  },
-  {
-    id: 'forest-calm',
-    title: { en: 'Forest Calm', ru: 'Лесное спокойствие' },
-    subtitle: { en: 'Leaves · Calm', ru: 'Листья · Спокойствие' },
-    description: { en: 'A quiet forest bed with slow leaf movement.', ru: 'Тихий лесной фон с мягким движением листвы.' },
-    mood: 'Calm / Nature',
-    category: 'nature',
-    access: 'premium',
-    sortOrder: 4,
-    cover: sceneCover('FOREST', '#1f513b', '#9fcf9d'),
-    sound: 'forest'
-  },
-  {
-    id: 'soft-rain',
-    title: { en: 'Soft Rain', ru: 'Мягкий дождь' },
-    subtitle: { en: 'Light rain · Rest', ru: 'Лёгкий дождь · Отдых' },
-    description: { en: 'A soft rain loop for winding down.', ru: 'Мягкий дождевой цикл для замедления.' },
-    mood: 'Sleep / Rest',
-    category: 'sleep',
-    access: 'premium',
-    sortOrder: 5,
-    cover: sceneCover('RAIN', '#28375e', '#9fb5ff'),
-    sound: 'rain'
-  }
+  {id:'moon-lake',title:{en:'Deep Space Ambient',ru:'Глубокий космос'},subtitle:{en:'Cosmic ambient · 2:22',ru:'Космический эмбиент · 2:22'},description:{en:'A spacious ambient recording by Universfield, accompanying your quiet time.',ru:'Пространственный эмбиент Universfield для спокойного времени наедине с собой.'},mood:'Calm / Focus',category:'sleep',access:'free',sortOrder:1,cover:sceneCover('DEEP SPACE','#214562','#8e5fd6'),audioSrc:'/assets/audio/soundscapes/deep-space-ambient.mp3'},
+  {id:'ocean-breath',title:{en:'Dark Cinematic Drone',ru:'Ночной дрон'},subtitle:{en:'Deep cinematic ambient · 3:50',ru:'Глубокий атмосферный дрон · 3:50'},description:{en:'A slow cinematic drone by nxtlvl_snds, with deep bass and a dark atmosphere.',ru:'Медленный кинематографичный дрон nxtlvl_snds с глубоким басом и ночной атмосферой.'},mood:'Calm / Night',category:'breath',access:'premium',sortOrder:2,cover:sceneCover('NIGHT DRONE','#4b2d68','#8e5fd6'),audioSrc:'/assets/audio/soundscapes/dark-cinematic-drone.mp3'},
+  {id:'morning-mist',title:{en:'Relax Beat',ru:'Спокойный ритм'},subtitle:{en:'Relaxed beat · 1:48',ru:'Мягкий расслабленный ритм · 1:48'},description:{en:'Relax Beat from Mixkit: an easy rhythmic background for your pause.',ru:'Relax Beat из Mixkit — спокойный ритмичный фон для небольшой паузы.'},mood:'Calm / Focus',category:'focus',access:'premium',sortOrder:3,cover:sceneCover('RELAX BEAT','#5c4a82','#e0b7c9'),audioSrc:'/assets/audio/soundscapes/relax-beat.mp3'}
 ] satisfies SceneDefinition[]).sort((left, right) => left.sortOrder - right.sortOrder);
 
 function mantraCover(seed: string) {
@@ -1956,6 +1900,8 @@ function App() {
   const [selectedScene, setSelectedScene] = useState<SceneDefinition | null>(null);
   const [selectedMantra, setSelectedMantra] = useState<MantraDefinition | null>(null);
   const [scenePlaying, setScenePlaying] = useState(false);
+  const [sceneMiniHidden,setSceneMiniHidden]=useState(false);
+  const [sceneAudioError,setSceneAudioError]=useState(false);
   const [sceneVolume, setSceneVolume] = useState(0.35);
   const [sceneAudioUrl, setSceneAudioUrl] = useState('');
   const [homeScreenMessage, setHomeScreenMessage] = useState('');
@@ -2373,6 +2319,7 @@ function App() {
   };
 
   const openScene = (scene: SceneDefinition) => {
+    setSceneMiniHidden(false);setSceneAudioError(false);
     telegram?.HapticFeedback?.impactOccurred('light');
     if (scene.access === 'premium' && !effectiveHasPremium) {
       setPaymentMessage(copy[language].scenePremiumLocked);
@@ -2383,7 +2330,7 @@ function App() {
 
     const shouldContinuePlaying = Boolean(selectedScene && selectedScene.id !== scene.id && scenePlaying);
     if (selectedScene?.id !== scene.id) {
-      const nextUrl = createSceneAudioUrl(scene.sound);
+      const nextUrl = scene.audioSrc;
       const audio = sceneAudioRef.current;
       sceneListenSecondsRef.current = 0;
       sceneMoonSeedAwardedRef.current = false;
@@ -2404,6 +2351,7 @@ function App() {
   };
 
   const selectHomeSoundscape = (scene: SceneDefinition) => {
+    setSceneMiniHidden(false);setSceneAudioError(false);
     telegram?.HapticFeedback?.impactOccurred('light');
     if (scene.access === 'premium' && !effectiveHasPremium) {
       setPaymentMessage(copy[language].scenePremiumLocked);
@@ -2411,7 +2359,7 @@ function App() {
       return;
     }
 
-    const nextUrl = createSceneAudioUrl(scene.sound);
+    const nextUrl = scene.audioSrc;
     const audio = sceneAudioRef.current;
     if (selectedScene?.id !== scene.id) {
       audio?.pause();
@@ -2438,7 +2386,7 @@ function App() {
     }
 
     if (!sceneAudioUrl) {
-      const nextUrl = createSceneAudioUrl(activeScene.sound);
+      const nextUrl = activeScene.audioSrc;
       setSceneAudioUrl(nextUrl);
       audio.src = nextUrl;
     }
@@ -2447,8 +2395,7 @@ function App() {
     audio.volume = sceneVolume;
 
     if (audio.paused) {
-      await audio.play();
-      setScenePlaying(true);
+      try{setSceneAudioError(false);await audio.play();setScenePlaying(true);}catch{setScenePlaying(false);setSceneAudioError(true);}
       return;
     }
 
@@ -2463,6 +2410,7 @@ function App() {
   };
 
   const stopSoundscape = () => {
+    setSceneMiniHidden(false);setSceneAudioError(false);
     sceneAudioRef.current?.pause();
     if (sceneAudioRef.current) {
       sceneAudioRef.current.removeAttribute('src');
@@ -2587,11 +2535,13 @@ function App() {
     return result.profile;
   };
 
+  const [breathLaunch,setBreathLaunch]=useState<{practiceId:BreathPracticeId;minutes:number;key:number}|null>(null);
   const openBreathCircle = () => {
+    setBreathLaunch(null);
     telegram?.HapticFeedback?.impactOccurred('light');
     setPage('breathCircle');
   };
-  useEffect(()=>{const open=()=>setPage('breathCircle');window.addEventListener('luna-open-breathing',open);return()=>window.removeEventListener('luna-open-breathing',open);},[setPage]);
+  useEffect(()=>{const open=(event:Event)=>{const value=(event as CustomEvent<{practiceId?:string;minutes?:number}>).detail;const practice=breathPractices.find(p=>p.id===value?.practiceId);setBreathLaunch(practice?{practiceId:practice.id,minutes:[1,3,5,10].includes(value.minutes??0)?value.minutes!:1,key:Date.now()}:null);setPage('breathCircle');};window.addEventListener('luna-open-breathing',open);return()=>window.removeEventListener('luna-open-breathing',open);},[setPage]);
   useEffect(()=>{if(aiReadingId)setAiChartId(undefined);},[aiReadingId]);
 
   const completeBreathCircle = async (mode: BreathMode, durationSeconds: number, breathCount: number) => {
@@ -2932,7 +2882,7 @@ function App() {
   useEffect(() => {
     const audio = sceneAudioRef.current;
     if (!audio || !sceneAudioUrl) return;
-    if (audio.src !== sceneAudioUrl) audio.src = sceneAudioUrl;
+    if (audio.getAttribute('src') !== sceneAudioUrl) audio.src = sceneAudioUrl;
     audio.loop = true;
     audio.volume = sceneVolume;
   }, [sceneAudioUrl, sceneVolume]);
@@ -3098,6 +3048,7 @@ function App() {
             hasPremium={effectiveHasPremium}
             initData={initData}
             onOpenMeditation={openMeditation}
+            ambientSound={selectedScene?{title:selectedScene.title[language],playing:scenePlaying,onToggle:()=>void toggleScenePlayback(),onStop:stopSoundscape}:undefined}
             onTarot={featureFlags.new_navigation&&featureFlags.tarot_daily?()=>setPage('tarot'):undefined}
             readingContextId={aiReadingId}
             chartContextId={aiChartId}
@@ -3291,6 +3242,8 @@ function App() {
 
         {page === 'breathCircle' && (
           <BreathCirclePage
+            key={breathLaunch?.key??'default'}
+            launch={breathLaunch}
             registerBackHandler={registerTarotBackHandler}
             onComplete={completeBreathCircle}
             onClose={() => featureFlags.new_navigation ? goBack() : setPage('home')}
@@ -3318,17 +3271,17 @@ function App() {
           />
         )}
 
-        <audio ref={sceneAudioRef} loop preload="none" />
+        <audio ref={sceneAudioRef} loop preload="none" onError={()=>{setScenePlaying(false);setSceneAudioError(true);}} />
+        {sceneAudioError&&page==='home'&&<p className="luna33-sound-error" role="status">{language==='ru'?'Не удалось включить запись. Проверьте соединение и нажмите воспроизведение ещё раз.':'Could not play the recording. Check your connection and tap play again.'}</p>}
         <audio ref={moonGardenAudioRef} src={moonGardenAmbienceUrl} loop preload="none" />
-        {selectedScene && page !== 'home' && page !== 'scenePlayer' && page !== 'breathCircle' && page !== 'admin' && (
+        {selectedScene && !sceneMiniHidden && page !== 'home' && page !== 'scenePlayer' && page !== 'breathCircle' && page !== 'admin' && page !== 'luna' && (
           <SceneMiniPlayer
             scene={selectedScene}
             playing={scenePlaying}
-            volume={sceneVolume}
             onToggle={() => void toggleScenePlayback()}
             onOpen={() => setPage('scenePlayer')}
             onClose={stopSoundscape}
-            onVolume={setSceneVolume}
+            onHide={()=>setSceneMiniHidden(true)}
             language={language}
           />
         )}
@@ -3494,6 +3447,7 @@ function FilterPill({ active, label, onClick }: { active: boolean; label: string
 }
 
 function LunaPage({
+  ambientSound,
   firstName,
   language,
   meditations,
@@ -3507,6 +3461,7 @@ function LunaPage({
   onClearReadingContext,
   registerBackHandler
 }: {
+  ambientSound?:{title:string;playing:boolean;onToggle:()=>void;onStop:()=>void};
   firstName: string;
   language: AppLanguage;
   meditations: Meditation[];
@@ -3522,6 +3477,7 @@ function LunaPage({
 }) {
   return (
     <LunaChat
+      ambientSound={ambientSound}
       key={initData??'browser'}
       firstName={firstName}
       language={language}
@@ -3926,48 +3882,15 @@ function ScenePlayerPage({
   );
 }
 
-function SceneMiniPlayer({ scene, playing, volume, onToggle, onOpen, onClose, onVolume, language }: {
-  scene: SceneDefinition;
-  playing: boolean;
-  volume: number;
-  onToggle: () => void;
-  onOpen: () => void;
-  onClose: () => void;
-  onVolume: (volume: number) => void;
-  language: AppLanguage;
+function SceneMiniPlayer({ scene, playing, onToggle, onOpen, onClose, onHide, language }: {
+  scene:SceneDefinition;playing:boolean;onToggle:()=>void;onOpen:()=>void;onClose:()=>void;onHide:()=>void;language:AppLanguage;
 }) {
-  const [expanded, setExpanded] = useState(false);
-  return (
-    <div className="theme-floating fixed inset-x-3 bottom-[calc(82px+env(safe-area-inset-bottom))] z-20 mx-auto max-w-md overflow-hidden rounded-[20px] border border-white/10 shadow-glow backdrop-blur-2xl">
-      <div className="flex min-h-[60px] items-center gap-2 px-3 py-2">
-        <button onClick={onOpen} className="flex min-w-0 flex-1 items-center gap-3 text-left">
-          <OptimizedImage src={scene.cover} alt="" className="h-10 w-10 shrink-0 rounded-[14px] object-cover" />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{scene.title[language]}</p>
-            <p className="truncate text-[11px] text-lavender">{playing ? copy[language].soundscapeActive : scene.subtitle[language]}</p>
-          </div>
-        </button>
-        <button onClick={() => setExpanded((value) => !value)} aria-label={copy[language].sceneVolume} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-cream/10 text-gold">
-          <Volume2 size={16} />
-        </button>
-        <button onClick={onToggle} className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gold text-night">
-          {playing ? <Pause size={18} /> : <Play size={18} />}
-        </button>
-        <button onClick={onClose} aria-label={copy[language].closeScene} className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-cream/10 text-cream">
-          <X size={16} />
-        </button>
-      </div>
-      {expanded && (
-        <div className="border-t border-white/10 px-3 pb-3 pt-2">
-          <div className="mb-1 flex items-center justify-between text-[11px] text-lavender">
-            <span>{copy[language].sceneVolume}</span>
-            <span>{Math.round(volume * 100)}%</span>
-          </div>
-          <input aria-label={copy[language].sceneVolume} type="range" min={0} max={1} step={0.01} value={volume} onChange={(event) => onVolume(Number(event.target.value))} className="h-6 w-full accent-gold" />
-        </div>
-      )}
-    </div>
-  );
+  return <aside className="theme-floating luna33-scene-mini" aria-label={language==='ru'?'Фоновая музыка':'Background audio'}>
+    <button type="button" onClick={onOpen} className="luna33-scene-mini-title"><OptimizedImage src={scene.cover} alt="" loading="lazy"/><span>{scene.title[language]}</span></button>
+    <button type="button" onClick={onToggle} aria-label={playing?(language==='ru'?'Приостановить звук':'Pause ambient sound'):(language==='ru'?'Включить звук':'Play ambient sound')}>{playing?<Pause size={18}/>:<Play size={18}/>}</button>
+    <button type="button" onClick={onHide} aria-label={language==='ru'?'Скрыть плеер; управление звуком на главной':'Hide player; sound controls remain on Home'}><ChevronDown size={18}/></button>
+    <button type="button" onClick={onClose} aria-label={copy[language].closeScene}><X size={18}/></button>
+  </aside>;
 }
 
 function FavoritesPage({ meditations, favoritePendingIds, onOpen, onFavorite, language }: { meditations: Meditation[]; favoritePendingIds: Set<string>; onOpen: (meditation: Meditation) => void; onFavorite: (meditation: Meditation) => void; language: AppLanguage }) {
@@ -4660,27 +4583,30 @@ function IconButton({ label, children, onClick }: { label: string; children: Rea
 }
 
 function BreathCirclePage({
+  launch,
   onComplete,
   onClose,
   language,
   redesigned = false,
   registerBackHandler
 }: {
+  launch?:{practiceId:BreathPracticeId;minutes:number}|null;
   onComplete: (mode: BreathMode, durationSeconds: number, breathCount: number) => Promise<void>;
   onClose: () => void;
   language: AppLanguage;
   redesigned?: boolean;
   registerBackHandler?:(handler:(()=>void)|null)=>void;
 }) {
-  const [mode, setMode] = useState<BreathMode>('calm');
-  const [minutes, setMinutes] = useState(1);
-  const [running, setRunning] = useState(false);
+  const [mode, setMode] = useState<BreathMode>(launch?.practiceId??'calm');
+  const [minutes, setMinutes] = useState(launch?.minutes??1);
+  const [running, setRunning] = useState(Boolean(launch));
   const [elapsed, setElapsed] = useState(0);
   const [done, setDone] = useState(false);
   const [savingError, setSavingError] = useState('');
-  const startedAtRef = useRef<number | null>(null);
-  const [sessionStarted, setSessionStarted] = useState(false);
+  const startedAtRef = useRef<number | null>(launch?Date.now():null);
+  const [sessionStarted, setSessionStarted] = useState(Boolean(launch));
   const breathAudio=useBreathAudio(redesigned&&featureFlags.breathwork_audio);
+  useEffect(()=>{if(launch)breathAudio.start();},[]);
   useEffect(()=>{if(!running)breathAudio.pause();},[running]);
   const durationSeconds = minutes * 60;
   const practice = breathPractices.find((item) => item.id === mode) ?? breathPractices[0];

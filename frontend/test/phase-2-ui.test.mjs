@@ -114,7 +114,9 @@ test('AI starters use real app actions without sending or generating automatical
   assert.match(actions,/id==='dream'\?onDream/);
   assert.match(actions,/id==='tarot'\?onTarot:undefined/);
   assert.doesNotMatch(actions,/sendLunaMessage|fetch\(|random/);
-  assert.match(src('components/LunaChat.tsx'),/setDraft\(prompt\); textareaRef\.current\?\.focus\(\)/);
+  assert.match(src('components/LunaChat.tsx'),/onPrompt=\{prompt=>/);
+  assert.match(src('components/LunaChat.tsx'),/else void submit\(prompt\)/);
+  assert.doesNotMatch(src('components/LunaChat.tsx'),/setDraft\(prompt\)/);
 });
 
 test('all nine breath rings interpolate continuously across phases and cycles', () => {

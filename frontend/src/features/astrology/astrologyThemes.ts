@@ -28,11 +28,23 @@ export function pathThemes(chart:NatalCalculation,language:AppLanguage){
 export function compatibilityThemes(comparison:SynastryResult,language:AppLanguage){
  const en=language==='en';
  const rows=[
-  {id:'relationship',title:en?'Relationship themes':'Темы отношений',planets:['venus','mars','sun'],question:en?'What do you each value in the way you spend time together?':'Что каждый из вас ценит в совместном времени?'},
+  {id:'relationship',title:en?'Attraction & shared time':'Притяжение и совместное время',planets:['venus','mars','sun'],question:en?'What do you each value in the way you spend time together?':'Что каждый из вас ценит в совместном времени?'},
   {id:'communication',title:en?'Communication':'Общение',planets:['mercury'],question:en?'How can you check that you understood one another?':'Как вы можете проверить, что правильно поняли друг друга?'},
   {id:'emotions',title:en?'Emotional dynamics':'Эмоциональная динамика',planets:['moon','venus'],question:en?'What support can you ask for directly, without guessing feelings?':'О какой поддержке можно попросить прямо, не угадывая чувства?'},
   {id:'strengths',title:en?'Potential points of connection':'Возможные точки опоры',planets:[],question:en?'Which shared habits already work well for you?':'Какие совместные привычки уже помогают вашим отношениям?'},
   {id:'challenges',title:en?'Differences to discuss':'Различия для обсуждения',planets:[],question:en?'Which difference would benefit from a clear agreement?':'О каком различии полезно договориться прямо?'}
  ];
- return rows.map(row=>({...row,aspects:comparison.aspects.filter(a=>row.id==='strengths'?['trine','sextile'].includes(a.type):row.id==='challenges'?['square','opposition'].includes(a.type):row.planets.includes(a.from)||row.planets.includes(a.to)).slice(0,5)}));
+ return rows.map(row=>{
+  const aspects=comparison.aspects.filter(a=>row.id==='strengths'?['trine','sextile'].includes(a.type):row.id==='challenges'?['square','opposition'].includes(a.type):row.planets.includes(a.from)||row.planets.includes(a.to)).slice(0,5);
+  const easy=aspects.some(a=>['trine','sextile'].includes(a.type)),contrast=aspects.some(a=>['square','opposition'].includes(a.type));
+  const meanings:Record<string,[string,string]>={
+   relationship:['The selected Sun, Venus and Mars links offer a symbolic way to discuss affection, initiative and how you enjoy time together. They do not tell us whether either person is attracted.','Связи Солнца, Венеры и Марса в выбранных картах — символический повод обсудить проявления симпатии, инициативу и совместное время. Они не говорят, испытывает ли человек влечение.'],
+   communication:['The Mercury links invite you to compare how you explain ideas, listen and make decisions. Try checking the meaning of a message before assuming agreement.','Связи Меркурия предлагают сравнить, как вы объясняете идеи, слушаете и принимаете решения. Уточняйте смысл сказанного, прежде чем считать, что вы согласны.'],
+   emotions:['The Moon and Venus links are a starting point for discussing comfort, support and ways of showing care. Real needs are best learned by asking, not by reading a chart.','Связи Луны и Венеры помогают начать разговор об уюте, поддержке и проявлениях заботы. Реальные потребности лучше узнавать в разговоре, а не выводить из карты.'],
+   strengths:['The calculated flowing links traditionally symbolize areas where cooperation may feel easier. Compare this possibility with the habits that actually support you.','Рассчитанные гармоничные связи традиционно связывают с более лёгким сотрудничеством. Сопоставьте этот символ с привычками, которые действительно поддерживают вас.'],
+   challenges:['The calculated contrasting links can be used to discuss different rhythms, priorities or expectations. A difference is not a verdict; a clear agreement may matter more.','Рассчитанные напряжённые связи можно использовать для разговора о разных ритмах, приоритетах и ожиданиях. Различие — не приговор: конкретные договорённости могут быть важнее.']
+  };
+  const overview=!aspects.length?(en?'No supported major links were found for this theme. That is not a judgment about your relationship.':'Для этой темы не найдено поддерживаемых основных связей. Это не оценка ваших отношений.'):(en?meanings[row.id][0]:meanings[row.id][1])+(row.id==='strengths'||row.id==='challenges'?'':easy&&contrast?(en?' Both flowing and contrasting patterns are present.':' Есть и гармоничные, и напряжённые связи.'):contrast?(en?' The selected links emphasize differences to discuss.':' Выбранные связи подчёркивают различия для обсуждения.'):easy?(en?' The selected links include flowing patterns.':' Среди выбранных связей есть гармоничные.'):en?' The selected links include close conjunctions.':' Среди выбранных связей есть соединения.');
+  return {...row,aspects,overview};
+ });
 }

@@ -23,7 +23,7 @@ type SceneDefinition = {
   access: 'free' | 'premium';
   sortOrder: number;
   cover: string;
-  sound: 'water' | 'ocean' | 'mist' | 'forest' | 'rain';
+  audioSrc: string;
 };
 
 type MeditationView = {
@@ -243,14 +243,6 @@ export function HomeV2(props: HomeV2Props) {
             onExpand={() => setSoundExpanded((value) => !value)}
           />
         ) : null}
-      </section>
-
-      {props.newNavigation && <button type="button" onClick={props.onAddHome} className="home-v2-home-action luna30-install">
-        <BrandLogo size={28} alt="Luna" />
-        <span><strong>{props.labels.addHomeTitle}</strong><small>{props.homeScreenMessage || props.labels.addHomeBody}</small></span>
-      </button>}
-      </div>
-
       {soundExpanded ? (
         <div ref={soundChooserRef} className={`home-v2-sound-chooser ${soundOverflow ? 'home-v2-sound-chooser-overflow' : ''}`}>
           {props.scenes.map((scene) => {
@@ -268,6 +260,14 @@ export function HomeV2(props: HomeV2Props) {
           })}
         </div>
       ) : null}
+      </section>
+
+      {props.newNavigation && <button type="button" onClick={props.onAddHome} className="home-v2-home-action luna30-install">
+        <BrandLogo size={28} alt="Luna" />
+        <span><strong>{props.labels.addHomeTitle}</strong><small>{props.homeScreenMessage || props.labels.addHomeBody}</small></span>
+      </button>}
+      </div>
+
 
       {!props.newNavigation && <button type="button" onClick={props.onAddHome} className="home-v2-home-action">
         <BrandLogo size={42} alt={props.language === 'ru' ? 'Логотип Luna Meditation' : 'Luna Meditation logo'} />
