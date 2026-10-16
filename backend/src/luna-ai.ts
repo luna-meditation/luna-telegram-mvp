@@ -95,7 +95,9 @@ const tolerantModelResultSchema = z.object({
   meditationAction: z.unknown().optional(),
   action: z.unknown().optional(),
   recommendedMeditationId: z.string().trim().min(1).nullable().optional(),
-  memoryCandidates: z.array(memoryCandidateSchema).max(3).optional()
+  // Memory suggestions are optional, untrusted side data. An invalid suggestion
+  // must never discard an otherwise valid answer or be repaired into a fact.
+  memoryCandidates: z.unknown().optional()
   ,actions:consultationActionsSchema.optional()
 }).passthrough().transform((value) => {
   const actionCandidate = value.meditationAction ?? value.action ?? null;
@@ -111,7 +113,7 @@ const tolerantModelResultSchema = z.object({
     },
     meditationAction: action.success ? action.data : null,
     conversationTitle: value.conversationTitle ?? null,
-    memoryCandidates: value.memoryCandidates ?? []
+    memoryCandidates: validMemoryCandidates(Array.isArray(value.memoryCandidates) ? value.memoryCandidates.slice(0, 3) : [])
   };
 });
 

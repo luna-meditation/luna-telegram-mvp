@@ -85,7 +85,7 @@ if(profile==='luna32'){
  const name='20261016112135_luna32_beta_ai_budget_and_dreams.sql';
  assert.equal(createHash('sha256').update(readFileSync(resolve(frontend,'../supabase/migrations',name))).digest('hex'),review.migrationHashes?.[name],'Migration changed since native and staging review');
  assert.ok(review.nativeDatabaseChecks>=14);assert.equal(review.mobileStatus,'PASS');assert.ok(review.mobileCases>=24&&review.mobileScreenStates>=192);
- assert.equal(review.aiSmokeStatus,'PASS');assert.equal(review.aiQualityStatus,'PASS');assert.ok(review.aiSmokeCalls>0&&review.aiSmokeCalls<=6);assert.ok(review.aiSmokeCostUsd>0&&review.aiSmokeCostUsd<=0.03);assert.equal(review.unknownAiSpendUsd,0);
+ assert.equal(review.aiSmokeStatus,'PASS');assert.equal(review.aiQualityStatus,'PASS');assert.ok(review.aiSmokeCalls>0&&review.aiSmokeCalls<=7);assert.ok(review.aiSmokeCostUsd>0&&review.aiSmokeCostUsd<=0.03);assert.ok(review.aiAdditionalCalls>0&&review.aiAdditionalCalls<=2&&review.aiAdditionalCostUsd>0&&review.aiAdditionalCostUsd<=0.01);assert.equal(review.unknownAiSpendUsd,0);
  assert.equal(review.monthlyBudgetUsd,30);assert.equal(review.budgetMonth,new Date().toISOString().slice(0,7));
  assert.equal(review.budgetBaselineVerified,true);assert.equal(review.budgetBaselineEvidence,'owner_verified_provider_usage');
  assert.ok(Number.isFinite(review.legacySpendBaselineUsd)&&review.legacySpendBaselineUsd>=0,'Never assume a zero historical spend baseline');

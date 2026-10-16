@@ -242,6 +242,38 @@ test('normalizes partial JSON OpenAI output with defaults', () => {
   });
 });
 
+test('an invalid optional memory key does not reject a completed EN/RU answer', () => {
+  for (const [language, message] of [
+    ['en', 'These calculated chart differences can invite a conversation about your needs.'],
+    ['ru', 'Эти различия в рассчитанных картах могут стать поводом обсудить ваши потребности.']
+  ] as const) {
+    const normalized = normalizeOpenAiModelResult({
+      text: JSON.stringify({
+        message,
+        memoryCandidates: [{ category: 'ongoing_context', key: 'Натальная карта', value: 'Unconfirmed symbolic interpretation.', confidence: 0.95 }]
+      }),
+      refusal: null
+    }, language);
+    assert.equal(normalized.message, message);
+    assert.deepEqual(normalized.memoryCandidates, []);
+  }
+});
+
+test('optional memory candidates stay strictly validated and are never repaired', () => {
+  const valid = { category: 'communication_preference', key: 'concise_answers', value: 'I prefer concise answers.', confidence: 0.9 };
+  const normalized = normalizeOpenAiModelResult({
+    text: JSON.stringify({ message: 'I can keep this concise.', memoryCandidates: [
+      { ...valid, key: 'Needs Repair' }, valid, { ...valid, key: 'uncertain_goal', confidence: 0.5 }
+    ] }),
+    refusal: null
+  }, 'en');
+  assert.deepEqual(normalized.memoryCandidates, [valid]);
+  for (const memoryCandidates of [null, 'not an array', { key: 'not_an_array' }, [{ ...valid, confidence: 2 }]]) {
+    assert.deepEqual(normalizeOpenAiModelResult({text: JSON.stringify({message: 'A valid answer.', memoryCandidates}), refusal: null}, 'en').memoryCandidates, []);
+  }
+  assert.throws(() => normalizeOpenAiModelResult({text: JSON.stringify({message: '', memoryCandidates: [valid]}), refusal: null}, 'en'), LunaAiError);
+});
+
 test('normalizes fenced JSON OpenAI output', () => {
   assert.deepEqual(normalizeOpenAiModelResult({
     text: '```json\n{"message":"Fenced answer.","conversationTitle":"Evening","recommendedMeditationId":"not-a-real-id"}\n```',

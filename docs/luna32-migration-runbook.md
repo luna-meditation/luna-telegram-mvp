@@ -44,7 +44,10 @@ checks pass. New `public_beta` and `generation_enabled` are false by default.
 Activation needs an explicit finite promotion window, verified baseline month,
 approved cap $30 (30,000,000 micro-USD) and the existing daily quota policy.
 Do not activate new prices, Seed packages, paid readings or referral rewards.
-Staging's neutral AI test additionally has a 6-provider-call/$0.03 ceiling.
+Staging's initial neutral AI test had a6-provider-call/$0.03 ceiling. After five
+calls ($0.00693655), the owner separately authorized at most two more calls
+costing at most $0.01, capped at seven cumulative calls and the original $0.03.
+The uncertain owner estimate "$1 or $2" is not a verified production baseline.
 
 The old backend can still incur provider cost after the owner's billing cutoff.
 During the approved backend-first cutover, the new backend must initially be
