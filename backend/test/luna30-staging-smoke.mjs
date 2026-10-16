@@ -1,5 +1,5 @@
 // Explicit deploy-event QA only; NEVER copy into production functions.
-// Two synthetic requests, at most $0.02, no arbitrary HTTP/prompt interface.
+// Additional owner-approved two synthetic requests, at most $0.01.
 import assert from 'node:assert/strict';import {createHash} from 'node:crypto';
 import {netlifyStagingHandler} from '../dist/netlify-staging-handler.js';
 export async function run(event){
@@ -7,7 +7,7 @@ export async function run(event){
  await netlifyStagingHandler(new Request('https://luna-staging-itfl.netlify.app/health'),{site:event.site,ip:'127.0.0.1'});
  const {env}=await import('../dist/config.js'),{supabase}=await import('../dist/db.js');
  assert.ok(env.STAGING_MODE&&env.STAGING_TELEGRAM_IDS==='158467796'&&env.STAGING_SUPABASE_PROJECT_REF==='funvzpmpbgazsisehiru');
- const runName='luna30-astrology-20261016';const claim=await supabase.from('luna30_qa_report_runs').insert({run_name:runName,state:'running',result:{maxProviderCalls:2,maxUsd:0.02}}).select('run_name');if(claim.error?.code==='23505')return;assert.ifError(claim.error);
+ const runName='luna30-astrology-20261016-v2';const claim=await supabase.from('luna30_qa_report_runs').insert({run_name:runName,state:'running',result:{maxProviderCalls:2,maxUsd:0.01}}).select('run_name');if(claim.error?.code==='23505')return;assert.ifError(claim.error);
  const result={status:'running',checks:[],calls:[],productionWrites:0,syntheticDataOnly:true,actualTelegramLogin:false};let attempts=0;
  const check=(name,value)=>{assert.ok(value,name);result.checks.push({name,status:'PASS'});};
  const hash=x=>createHash('sha256').update(JSON.stringify(x)).digest('hex');
@@ -22,15 +22,20 @@ export async function run(event){
   const charts=createAstrologyService(supabase,()=>true),first=(await charts.calculate(owner,ids[0])).chart,second=(await charts.calculate(owner,ids[1])).chart;
   const transport=createLunaResponseTransport(()=>env.OPENAI_API_KEY);
   const reports=createAstrologyReportService(supabase,{enabled:()=>true,personalProfile:async()=>null,dailyLimit:async()=>100,transport:async(body,signal)=>{
-   const request=body;check('bounded standard gpt-5-mini request',request.model==='gpt-5-mini'&&request.store===false&&request.service_tier==='default'&&request.max_output_tokens===2400&&Buffer.byteLength(JSON.stringify(request))<=20000&&attempts<2);
+   const request={...body};
+   // Conservative byte-based input-token bound, including schema and overhead.
+   // Each request is capped at $0.005 even if output fills its entire allowance.
+   const inputBound=Buffer.byteLength(JSON.stringify(request))+256;
+   request.max_output_tokens=Math.min(request.max_output_tokens,Math.floor((0.005-inputBound*0.00000025)/0.000002));
+   check('bounded standard gpt-5-mini request',request.model==='gpt-5-mini'&&request.store===false&&request.service_tier==='default'&&request.max_output_tokens>=800&&request.max_output_tokens<=2400&&inputBound*0.00000025+request.max_output_tokens*0.000002<=0.005&&attempts<2);
    check('no personal context or raw birth data sent',JSON.parse(request.input[1].content).personal===null&&!JSON.stringify(request).includes('1990-01-01')&&!JSON.stringify(request).includes('2000-02-01'));
-   attempts++;const response=await transport(body,signal),payload=await response.clone().json(),meter=stagingAiMeterRecord(payload);result.calls.push({httpStatus:response.status,...meter,providerStatus:payload.status,diagnostic:payload.error?.code??payload.incomplete_details?.reason??null});await supabase.from('luna30_qa_report_runs').update({result}).eq('run_name',runName);return response;
+   attempts++;const response=await transport(request,signal),payload=await response.clone().json(),meter=stagingAiMeterRecord(payload);result.calls.push({httpStatus:response.status,...meter,maxOutputTokens:request.max_output_tokens,providerStatus:payload.status,diagnostic:payload.error?.code??payload.incomplete_details?.reason??null});await supabase.from('luna30_qa_report_runs').update({result}).eq('run_name',runName);return response;
   }});
   for(const [language,secondChartId]of [['en',null],['ru',second.id]]){
    const saved=await reports.generate(owner,{firstChartId:first.id,...(secondChartId?{secondChartId}:{}),language,consent:true});check(language+' persisted real AI report',Boolean(saved.report?.id)&&saved.report.report.sections.length===(secondChartId?5:7));
    const count=attempts,reopened=await reports.open(owner,first.id,secondChartId,language),replayed=await reports.generate(owner,{firstChartId:first.id,...(secondChartId?{secondChartId}:{}),language,consent:true});check(language+' reopen and duplicate use saved report without provider',reopened.report.id===saved.report.id&&replayed.report.id===saved.report.id&&attempts===count);
   }
-  check('existing Moon Seeds and subscription untouched',await protection()===before);check('two real provider requests within approved allowance',attempts===2&&result.calls.every(c=>c.request_status==='success'&&c.estimated_cost!==null)&&result.calls.reduce((sum,c)=>sum+c.estimated_cost,0)<=0.02);
+  check('existing Moon Seeds and subscription untouched',await protection()===before);check('two real provider requests within approved allowance',attempts===2&&result.calls.every(c=>c.request_status==='success'&&c.estimated_cost!==null)&&result.calls.reduce((sum,c)=>sum+c.estimated_cost,0)<=0.01);
   result.status='PASS';
  }catch(error){result.status='FAIL';result.failure={code:error.code??error.name,message:String(error.message).slice(0,180)};}
  result.providerAttempts=attempts;await supabase.from('luna30_qa_report_runs').update({state:result.status==='PASS'?'completed':'failed',result}).eq('run_name',runName);
