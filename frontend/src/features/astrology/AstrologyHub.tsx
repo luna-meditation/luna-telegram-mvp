@@ -1,0 +1,31 @@
+import {useEffect,useState} from 'react';
+import {CalendarDays,ChevronRight,Compass,Orbit,Stars} from 'lucide-react';
+import {getCelestialMonth,type AppLanguage,type CelestialMonth} from '../../api';
+import {SectionBack} from '../../luna2/ExplorePage';
+import {OptimizedImage} from '../../design-system/components/OptimizedImage';
+import AstrologyPage from './AstrologyPage';
+type Section='home'|'natal'|'compatibility'|'calendar'|'path';
+export default function AstrologyHub(props:{language:AppLanguage;initData?:string;onBack:()=>void;registerBackHandler?:(handler:(()=>void)|null)=>void;initialSection?:'natal'|'compatibility'}){
+ const {language,initData,onBack,registerBackHandler}=props,en=language==='en';
+ const [section,setSection]=useState<Section>(props.initialSection??'home');
+ useEffect(()=>{if(props.initialSection)setSection(props.initialSection);},[props.initialSection]);
+ const back=()=>section==='home'?onBack():setSection('home');
+ useEffect(()=>{registerBackHandler?.(section==='calendar'?()=>setSection('home'):null);return()=>registerBackHandler?.(null);},[section,registerBackHandler]);
+ if(section==='natal'||section==='compatibility'||section==='path')return <AstrologyPage {...props} onBack={()=>setSection('home')} experience={section}/>;
+ return <div className="luna2-page luna32-astrology-hub"><SectionBack language={language} onBack={back}/><header className="luna2-page-heading"><p>{en?'A different perspective':'Новый взгляд'}</p><h1>{en?'Your celestial space':'Ваше звёздное пространство'}</h1><span>{en?'Calculated sky. Symbolic meaning. Your own decisions.':'Рассчитанное небо. Символический смысл. Ваши собственные решения.'}</span></header>
+  {section==='calendar'?<CelestialCalendar language={language} initData={initData}/>:<><div className="luna32-astro-categories">{[
+   {id:'natal' as const,Icon:Stars,title:en?'Natal chart':'Натальная карта',body:en?'Understand your calculated birth sky':'Познакомьтесь с небом вашего рождения'},
+   {id:'compatibility' as const,Icon:Orbit,title:en?'Compatibility':'Совместимость',body:en?'Explore two charts without a made-up score':'Две карты — без выдуманного процента'},
+   {id:'calendar' as const,Icon:CalendarDays,title:en?'Celestial calendar':'Небесный календарь',body:en?'Real lunar phases, one month at a time':'Реальные лунные фазы по месяцам'},
+   {id:'path' as const,Icon:Compass,title:en?'Path & potential':'Путь и потенциал',body:en?'Reflect on purpose, learning and growth':'Исследуйте ценности, обучение и развитие'}
+  ].map(({id,Icon,title,body})=><button type="button" key={id} onClick={()=>setSection(id)}><OptimizedImage src="/images/explore/astrology-zodiac-v1.png" sizes="180px" alt=""/><span className="luna32-astro-icon"><Icon size={23}/></span><strong>{title}</strong><small>{body}</small><ChevronRight size={17}/></button>)}</div><button type="button" className="luna32-my-charts" onClick={()=>setSection('natal')}><Stars size={20}/><span>{en?'My charts & birth profiles':'Мои карты и данные рождения'}</span><ChevronRight size={18}/></button><p className="luna32-symbolic-note">{en?'Astrology is a symbolic reflection practice, not a scientifically validated personality test or a prediction. Birth details are optional and private.':'Астрология — символическая практика для размышления, а не научный тест личности или предсказание. Данные рождения необязательны и доступны только вам.'}</p></>}
+ </div>;
+}
+function CelestialCalendar({language,initData}:{language:AppLanguage;initData?:string}){
+ const en=language==='en';const [month,setMonth]=useState(()=>new Date().toISOString().slice(0,7)),[result,setResult]=useState<CelestialMonth|null>(null),[error,setError]=useState('');
+ useEffect(()=>{let alive=true;setResult(null);setError('');getCelestialMonth(month,initData).then(v=>{if(alive)setResult(v);}).catch(()=>{if(alive)setError(en?'The calculated calendar could not load. No AI request was made.':'Не удалось загрузить рассчитанный календарь. AI-запрос не выполнялся.');});return()=>{alive=false;};},[month,initData,en]);
+ const names=en?['New Moon','First quarter','Full Moon','Last quarter']:['Новолуние','Первая четверть','Полнолуние','Последняя четверть'];
+ const reflections=en?['What would you like to begin?','What small step can you take?','What deserves your attention?','What is no longer useful?']:['С чего вам хотелось бы начать?','Какой небольшой шаг вы можете сделать?','Что заслуживает вашего внимания?','Что больше не приносит пользы?'];
+ return <section className="luna32-calendar"><label>{en?'Month':'Месяц'}<input type="month" min="1800-01" max="2100-12" value={month} onChange={e=>{if(e.target.value)setMonth(e.target.value);}}/></label>{error&&<p role="alert">{error}</p>}{!result&&!error&&<p role="status">{en?'Calculating lunar phases…':'Рассчитываем лунные фазы…'}</p>}{result&&<><div className="luna32-month-grid" aria-label={en?'Moon illumination at 12:00 UTC':'Освещённость Луны в 12:00 UTC'}>{result.days.map(day=><div key={day.date}><span>{Number(day.date.slice(-2))}</span><i aria-hidden="true" style={{background:`linear-gradient(90deg,#151c35 ${Math.round((1-day.illuminatedFraction)*100)}%,#d9ddf4 ${Math.round((1-day.illuminatedFraction)*100)}%)`}}/><small>{Math.round(day.illuminatedFraction*100)}%</small></div>)}</div><p className="luna32-symbolic-note">{en?'Times below are UTC. The lunar disc is a simplified illumination indicator, not a sky photograph.':'Время ниже — UTC. Диск Луны схематично показывает освещённость, а не вид неба.'}</p><div className="luna32-lunar-events">{result.events.map(event=><article key={event.at}><CalendarDays size={20}/><div><strong>{names[event.quarter]}</strong><time dateTime={event.at}>{new Intl.DateTimeFormat(en?'en-GB':'ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit',timeZone:'UTC'}).format(new Date(event.at))} UTC</time><p>{reflections[event.quarter]}</p></div></article>)}</div><p className="luna32-symbolic-note">{en?'Phase times are astronomical calculations. Reflection prompts are symbolic, not claims about mood, health or future events. No AI generation or Moon Seeds are used.':'Время фаз рассчитано астрономически. Вопросы для размышления символические: это не утверждения о настроении, здоровье или будущем. AI-запросов и списаний Moon Seeds нет.'}</p></>}
+ </section>;
+}

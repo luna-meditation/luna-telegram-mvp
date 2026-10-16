@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark" data-theme-preference="dark" style="color-scheme:dark;background:#030612">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -7,18 +7,15 @@
     <script>
       (() => {
         const key = 'luna.theme.preference.v1';
-        let preference = 'dark';
+        const preference = 'dark';
         try {
-          const stored = window.localStorage.getItem(key);
-          if (stored === 'light' || stored === 'dark' || stored === 'system') preference = stored;
+          window.localStorage.setItem(key, 'dark');
         } catch {}
-        const resolved = preference === 'system'
-          ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-          : preference;
+        const resolved = 'dark';
         document.documentElement.dataset.theme = resolved;
         document.documentElement.dataset.themePreference = preference;
         document.documentElement.style.colorScheme = resolved;
-        document.querySelector('meta[name="theme-color"]').setAttribute('content', resolved === 'dark' ? '#030612' : '#f8f5f1');
+        document.querySelector('meta[name="theme-color"]').setAttribute('content', '#030612');
       })();
     </script>
     <link rel="manifest" href="/manifest.webmanifest?v=20260718-2" />

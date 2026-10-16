@@ -168,7 +168,7 @@ export function V2Hero({
         </div>
       ) : null}
 
-      {!premiumHome && moodSaved && activeMood ? (
+      {premiumHome && moodSaved ? null : !premiumHome && moodSaved && activeMood ? (
         <div className="home-v2-mood-saved" aria-label={`${language === 'ru' ? 'Сегодня' : 'Today'}: ${moodLabel(activeMood)}`}>
           <span>{selectedMood ? <MoodGlyph kind={selectedMood.visual} /> : null}</span>
           <span className="home-v2-mood-saved-copy">

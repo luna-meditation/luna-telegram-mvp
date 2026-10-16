@@ -55,6 +55,8 @@ export const getReadingOrder=(id:string,initData?:string)=>request<ReadingOrder>
 
 export type AccessState = {
   hasPremium: boolean;
+  hasPaidPremium?:boolean;
+  beta?:{active:boolean;startsAt:string|null;expiresAt:string|null;features:string[];source:'promotion';autoCharge:false}|null;
   plan: string;
   user?: {
     language_code?: string | null;
@@ -73,6 +75,12 @@ export type BirthLocationResult={placeId:string;label:string;country:string;time
 export type SynastryResult={firstChartId:string;secondChartId:string;aspects:Array<{from:string;to:string;type:string;orb:number}>;unknownTime:boolean;excluded:{first:string[];second:string[]};percentage:null;disclaimer:string};
 export const findBirthLocations=(q:string,initData?:string)=>request<{locations:BirthLocationResult[]}>(`/api/astrology/locations?q=${encodeURIComponent(q)}`,undefined,initData);
 export const getBirthProfiles=(initData?:string)=>request<{profiles:BirthProfile[]}>('/api/astrology/profiles',undefined,initData);
+export type CelestialMonth={month:string;timezone:'UTC';events:Array<{quarter:number;at:string}>;days:Array<{date:string;moonPhaseDegrees:number;illuminatedFraction:number}>;personalPrediction:false};
+export const getCelestialMonth=(month:string,initData?:string)=>request<CelestialMonth>(`/api/astrology/calendar?month=${encodeURIComponent(month)}`,undefined,initData);
+export type DreamEntry={id:string;client_id:string;title:string;description:string;language:AppLanguage;dream_date:string;created_at:string;updated_at:string};
+export const getDreams=(initData?:string)=>request<{dreams:DreamEntry[];nextOffset:number|null}>('/api/luna32/dreams',undefined,initData);
+export const saveDream=(value:{clientId:string;title:string;description:string;language:AppLanguage;date:string;saveConsent:true},initData?:string,id?:string)=>request<DreamEntry>(`/api/luna32/dreams${id?'/'+id:''}`,{method:id?'PATCH':'POST',body:JSON.stringify(value)},initData);
+export const removeDream=(id:string,initData?:string)=>request<{ok:boolean}>(`/api/luna32/dreams/${id}`,{method:'DELETE'},initData);
 export const saveBirthProfile=(input:BirthProfileInput,initData?:string,id?:string)=>request<{profile:BirthProfile}>(`/api/astrology/profiles${id?'/'+id:''}`,{method:id?'PUT':'POST',body:JSON.stringify(input)},initData);
 export const removeBirthProfile=(id:string,initData?:string)=>request<{ok:boolean}>(`/api/astrology/profiles/${id}`,{method:'DELETE'},initData);
 export const calculateBirthChart=(id:string,initData?:string)=>request<{chart:NatalChart;cached:boolean}>(`/api/astrology/profiles/${id}/chart`,{method:'POST',body:'{}'},initData);
@@ -389,6 +397,7 @@ export type LunaMessage = {
   role: 'user' | 'assistant';
   content: string;
   metadata?: {
+    contextReset?:boolean;
     astrology?:AstrologyChatAttachment;
     readingId?:string;
     consultation?:{version:1;phase:string;actions:Array<'continue'|'alternative'|'tarot'|'natal_chart'|'compatibility'|'meditation'|'breathing'|'journal'|'history'>};
@@ -757,7 +766,8 @@ export async function getLunaConversation(conversationId: string, initData?: str
 export const getLunaUsage=(initData?:string)=>request<{remaining:number;limit:number;resetAt:string}>('/api/luna/usage',undefined,initData);
 
 export async function sendLunaMessage(input: {
-  mode?:'companion'|'tarot'|'wellbeing'|'meditation'|'astrology';
+  contextReset?:boolean;
+  mode?:'companion'|'tarot'|'wellbeing'|'meditation'|'astrology'|'dream';
   chartId?:string;
   astrology?:AstrologyChatAttachment;
   readingId?:string;
@@ -779,7 +789,8 @@ export async function deleteLunaConversation(conversationId: string, initData?: 
 export async function renameLunaConversation(id:string,title:string,initData?:string){return request<{id:string;title:string}>(`/api/luna/tools/conversations/${id}`,{method:'PATCH',body:JSON.stringify({title})},initData);}
 export async function openLunaTarot(input:{clientReadingId:string;conversationId?:string;kind:'single'|'three'|'five';intention:'general'|'love'|'career'|'growth';question:string;language:AppLanguage},initData?:string){return request<{conversationId:string;message:LunaMessage}>('/api/luna/tools/tarot',{method:'POST',body:JSON.stringify(input)},initData);}
 export async function revealLunaTarot(id:string,index:number,initData?:string){return request<{conversationId:string;message:LunaMessage}>(`/api/luna/tools/tarot/${id}/reveal`,{method:'POST',body:JSON.stringify({index})},initData);}
-export async function attachSavedLunaTarot(readingId:string,initData?:string){return request<{conversationId:string;message:LunaMessage}>('/api/luna/tools/tarot/attach',{method:'POST',body:JSON.stringify({readingId})},initData);}
+export async function attachSavedLunaTarot(readingId:string,initData?:string,conversationId?:string){return request<{conversationId:string;message:LunaMessage}>('/api/luna/tools/tarot/attach',{method:'POST',body:JSON.stringify({readingId,...(conversationId?{conversationId}:{})})},initData);}
+export const resetLunaContext=(conversationId:string,requestId:string,language:AppLanguage,initData?:string)=>request<{message:LunaMessage}>(`/api/luna/tools/conversations/${conversationId}/context-reset`,{method:'POST',body:JSON.stringify({requestId,language})},initData);
 
 export async function clearLunaConversations(initData?: string) {
   return request<{ ok: true }>('/api/luna/conversations', { method: 'DELETE' }, initData);

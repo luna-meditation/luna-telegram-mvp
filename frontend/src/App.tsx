@@ -15,8 +15,6 @@ import {
   Heart,
   Image as ImageIcon,
   Lock,
-  Monitor,
-  Moon,
   Pause,
   Play,
   Search,
@@ -26,8 +24,6 @@ import {
   User,
   SkipForward,
   Sparkles,
-  Sun,
-  SunMoon,
   Target,
   Timer,
   Upload,
@@ -120,7 +116,7 @@ import { MeditationCard as SharedMeditationCard } from './design-system/componen
 import { PageHeader } from './design-system/components/PageHeader';
 import { SegmentedTabs } from './design-system/components/SegmentedTabs';
 import { useAppViewport } from './hooks/useChatViewport';
-import { THEME_STORAGE_KEY, useThemePreference, type ResolvedTheme, type ThemePreference } from './hooks/useTheme';
+import { THEME_STORAGE_KEY, useThemePreference } from './hooks/useTheme';
 import { featureFlags } from './config/featureFlags';
 import {
   initialPageFromLaunch,
@@ -135,6 +131,7 @@ import { breathCycleSeconds, breathPhaseAt, breathPhaseLabel, breathPractices, t
 import { HomeV2 } from './v2/pages/HomeV2';
 import { ExplorePage, FeaturePreview, SectionBack, type ExploreCategory } from './luna2/ExplorePage';
 import { ProfileOverview, WalletPage } from './luna2/ProfileOverview';
+import {BetaNotice} from './luna2/BetaNotice';
 import { MyUniverse } from './luna2/MyUniverse';
 import { BreathAudioModes, BreathingVisual } from './luna2/BreathingVisual';
 import {PracticePicker} from './features/breathing/PracticePicker';
@@ -148,7 +145,7 @@ import { frontendBuildMetadata, recordPaymentStage, useRuntimeDiagnostics, type 
 
 type Page = AppPage;
 const TarotPage = lazy(() => import('./features/tarot/TarotPage'));
-const AstrologyPage = lazy(() => import('./features/astrology/AstrologyPage'));
+const AstrologyPage = lazy(() => import('./features/astrology/AstrologyHub'));
 const LunaChat=lazy(()=>import('./components/LunaChat').then(module=>({default:module.LunaChat})));
 const ActivityPage=lazy(()=>import('./luna2/JournalPage').then(module=>({default:module.JournalPage})));
 type Mood = 'Calm' | 'Stressed' | 'Tired' | 'Anxious' | 'Focused';
@@ -1868,7 +1865,7 @@ function durationLabel(value: DailyCheckin['available_minutes'] | null | undefin
 
 function App() {
   useAppViewport(true);
-  const { themePreference, resolvedTheme, setThemePreference } = useThemePreference();
+  const { resolvedTheme } = useThemePreference();
   const telegram = getTelegram();
   const runtimeDiagnostics = useRuntimeDiagnostics();
   const user = telegram?.initDataUnsafe.user ?? fallbackUser;
@@ -1888,6 +1885,7 @@ function App() {
   const [tarotSession, tarotDispatch] = useReducer(reduceTarotSession, undefined, createTarotSession);
   const [aiReadingId,setAiReadingId]=useState<string|undefined>();
   const [aiChartId,setAiChartId]=useState<string|import('./api').AstrologyChatAttachment|undefined>();
+  const [astrologyEntry,setAstrologyEntry]=useState<'natal'|'compatibility'|undefined>();
   useEffect(()=>{const discuss=(event:Event)=>{const detail=(event as CustomEvent).detail,id=detail?.chartId;if(!featureFlags.astrology||typeof id!=='string'||!/^[-a-f0-9]{36}$/.test(id))return;setAiReadingId(undefined);setAiChartId(detail);};window.addEventListener('luna-discuss-chart',discuss);return()=>window.removeEventListener('luna-discuss-chart',discuss);},[]);
   const [tarotSetupKey,setTarotSetupKey]=useState(0);
   const tarotBackHandlerRef = useRef<(() => void) | null>(null);
@@ -1944,7 +1942,7 @@ function App() {
   const [profile, setProfile] = useState<ProfileStats | null>(() => initialAccountCache?.profile ?? null);
   const [profileNestedActive, setProfileNestedActive] = useState(false);
   const [profileEntry, setProfileEntry] = useState<'main'|'personalization'|'universe'>('main');
-  useEffect(()=>{if(!featureFlags.ai_central_experience)return;const activity=()=>setPage('activity'),astrology=()=>setPage('astrology');window.addEventListener('luna-open-activity',activity);window.addEventListener('luna-open-astrology',astrology);return()=>{window.removeEventListener('luna-open-activity',activity);window.removeEventListener('luna-open-astrology',astrology);};},[setPage]);
+  useEffect(()=>{if(!featureFlags.ai_central_experience)return;const activity=()=>setPage('activity'),astrology=(event:Event)=>{const value=(event as CustomEvent).detail?.section;setAstrologyEntry(value==='natal'||value==='compatibility'?value:undefined);setPage('astrology');};window.addEventListener('luna-open-activity',activity);window.addEventListener('luna-open-astrology',astrology);return()=>{window.removeEventListener('luna-open-activity',activity);window.removeEventListener('luna-open-astrology',astrology);};},[setPage]);
   useEffect(()=>{const open=()=>{if(!featureFlags.personal_memory)return;setProfileEntry('universe');navigatePrimary('profile');};window.addEventListener('luna-open-universe',open);return()=>window.removeEventListener('luna-open-universe',open);},[navigatePrimary]);
   const [personalDisplayName, setPersonalDisplayName] = useState<string|null>(null);
   useEffect(()=>{if(page!=='profile')setProfileEntry('main');},[page]);
@@ -3012,7 +3010,7 @@ function App() {
             gardenLevel={profile?.gardenLevel}
             onTarot={() => {if(featureFlags.ai_central_experience){setAiReadingId(undefined);setTarotSetupKey(key=>key+1);navigatePrimary('luna');}else{tarotDispatch({type:'screen',value:'hub'});setPage('tarot');}}}
             onDaily={() => {tarotDispatch({type:'screen',value:'daily'});setPage('tarot');}}
-            onAstrology={() => setPage('astrology')}
+            onAstrology={() => {setAstrologyEntry(undefined);setPage('astrology');}}
             onJourney={() => setPage('progress')}
             onGarden={() => setPage('moonGarden')}
             onPersonalize={featureFlags.personalization?()=>{setProfileEntry('personalization');navigatePrimary('profile');}:undefined}
@@ -3111,7 +3109,7 @@ function App() {
 
         {featureFlags.new_navigation && page === 'explore' && <ExplorePage language={language} tarotEnabled={featureFlags.tarot_daily} onOpen={openExploreCategory} />}
         {featureFlags.new_navigation && page === 'tarot' && (featureFlags.tarot_daily ? <Suspense fallback={<PageSkeleton rows={2} />}><TarotPage language={language} onBack={goBack} session={tarotSession} dispatch={tarotDispatch} registerBackHandler={registerTarotBackHandler} initData={initData} onContinue={id=>{setAiReadingId(id);navigatePrimary('luna');}} /></Suspense> : <FeaturePreview kind="tarot" language={language} featureEnabled={false} onBack={goBack} onMeditate={() => openExploreCategory('meditations')} />)}
-        {featureFlags.new_navigation && page === 'astrology' && (featureFlags.astrology?<Suspense fallback={<PageSkeleton rows={3}/>}><AstrologyPage language={language} initData={initData} onBack={goBack} registerBackHandler={registerTarotBackHandler}/></Suspense>:<FeaturePreview kind="astrology" language={language} featureEnabled={false} onBack={goBack} onMeditate={() => openExploreCategory('meditations')} />)}
+        {featureFlags.new_navigation && page === 'astrology' && (featureFlags.astrology?<Suspense fallback={<PageSkeleton rows={3}/>}><AstrologyPage language={language} initData={initData} onBack={goBack} initialSection={astrologyEntry} registerBackHandler={registerTarotBackHandler}/></Suspense>:<FeaturePreview kind="astrology" language={language} featureEnabled={false} onBack={goBack} onMeditate={() => openExploreCategory('meditations')} />)}
         {featureFlags.new_navigation && page === 'wallet' && <WalletPage language={language} profile={profile} onBack={goBack} onGarden={() => setPage('moonGarden')} />}
         {featureFlags.new_navigation && page === 'activity' && <Suspense fallback={<PageSkeleton rows={3}/>}><ActivityPage language={language} history={history} meditations={decoratedMeditations} wellness={wellness} onBack={goBack} onOpen={openMeditation} initData={initData} onReading={reading=>{tarotDispatch({type:'resume',reading});setPage('tarot');}} /></Suspense>}
         {featureFlags.new_navigation && page === 'achievements' && <AchievementsStory items={buildAchievementViews(profile, language)} language={language} initiallyOpen onClose={goBack} version3={Boolean(profile?.journeyV3)} />}
@@ -3228,9 +3226,6 @@ function App() {
             runtimeDiagnostics={runtimeDiagnostics}
             telegramUserId={user.id}
             onRefreshDiagnostics={refreshProductionDiagnostics}
-            themePreference={themePreference}
-            resolvedTheme={resolvedTheme}
-            onThemePreferenceChange={setThemePreference}
           />
         )}
 
@@ -3527,6 +3522,7 @@ function LunaPage({
 }) {
   return (
     <LunaChat
+      key={initData??'browser'}
       firstName={firstName}
       language={language}
       meditations={meditations}
@@ -4127,7 +4123,7 @@ function PricingPage({
   const t = copy[language];
   const [restoreState, setRestoreState] = useState<RestoreState>('idle');
   const isLifetime = access.plan === 'Lifetime';
-  const isFixedTerm = access.hasPremium && !isLifetime;
+  const isFixedTerm = (access.hasPaidPremium??access.hasPremium) && !isLifetime;
   const activeUntil = access.user?.active_until
     ? new Date(access.user.active_until).toLocaleDateString(language === 'ru' ? 'ru-RU' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric' })
     : null;
@@ -4164,6 +4160,7 @@ function PricingPage({
 
   return (
     <div className="luna-page premium-page">
+      <BetaNotice access={access} language={language}/>
       <section className="premium-page-header">
         <p className="type-label">{t.premiumTitle}</p>
         <h2 className="type-editorial">{isLifetime ? (language === 'ru' ? 'Premium навсегда активен' : 'Lifetime Premium active') : isFixedTerm ? (language === 'ru' ? 'Premium активен' : 'Premium is active') : t.premiumHeadline}</h2>
@@ -5326,10 +5323,7 @@ function ProfilePage({
   backendVersion,
   runtimeDiagnostics,
   telegramUserId,
-  onRefreshDiagnostics,
-  themePreference,
-  resolvedTheme,
-  onThemePreferenceChange
+  onRefreshDiagnostics
 }: {
   initialView?: 'main'|'personalization'|'universe';
   profile: ProfileStats | null;
@@ -5361,9 +5355,6 @@ function ProfilePage({
   runtimeDiagnostics: RuntimeDiagnostics;
   telegramUserId: number;
   onRefreshDiagnostics: () => void | Promise<void>;
-  themePreference: ThemePreference;
-  resolvedTheme: ResolvedTheme;
-  onThemePreferenceChange: (preference: ThemePreference) => void;
 }) {
   const [view, setView] = useState<ProfileSettingsView>(initialView);
   const universeBackRef = useRef<(()=>boolean)|null>(null);
@@ -5442,13 +5433,14 @@ function ProfilePage({
   }, [initData, language, view]);
 
   const avatarUrl = profile?.user?.avatar_url ?? null;
+  const paidAccess=access.hasPaidPremium??access.hasPremium;
   const planStatus = !accessVerified
     ? (language === 'en' ? 'Status unavailable' : 'Статус недоступен')
-    : access.hasPremium
+    : paidAccess
     ? access.plan.toLowerCase().includes('lifetime')
       ? copy[language].lifetimePremium
       : copy[language].premiumActive
-    : copy[language].premiumFree;
+    : access.beta?.active?'Public Beta':copy[language].premiumFree;
   const localizedPlanStatus = planStatus;
   const journeyStatus = resolveJourneyStatus(profile);
   const journeyStatusName = profile?.journeyV3?(profile.journeyV3.current?.names[language]??(language==='en'?'Your first step':'Ваш первый шаг')):journeyStatusNames[language][journeyStatus.id];
@@ -5461,8 +5453,8 @@ function ProfilePage({
       ? (language === 'en' ? 'Available' : 'Доступна')
       : (language === 'en' ? 'Temporarily unavailable' : 'Временно недоступна');
   const languageLabel = language === 'en' ? 'English' : 'Русский';
-  const isLifetime = access.hasPremium && access.plan.toLowerCase().includes('lifetime');
-  const isFixedTerm = access.hasPremium && !isLifetime;
+  const isLifetime = paidAccess && access.plan.toLowerCase().includes('lifetime');
+  const isFixedTerm = paidAccess && !isLifetime;
 
   const updateAvatarInProfile = (avatar_url: string | null) => {
     onProfileUpdate((current) => current ? { ...current, user: { ...current.user, avatar_url } } : current);
@@ -5584,7 +5576,6 @@ function ProfilePage({
     <section className="luna-surface rounded-[22px] p-2">
       <ProfileSettingsRow icon={Target} title={language==='en'?'Goals':'Цели'} value={goalsLabel} onClick={()=>setView('goals')}/>
       <ProfileSettingsRow icon={Globe2} title={copy[language].language} value={languageLabel} onClick={()=>setView('language')}/>
-      <ProfileSettingsRow icon={SunMoon} title={language==='en'?'Appearance':'Оформление'} value={themePreference==='system'?(language==='en'?'System':'Системная'):themePreference==='light'?(language==='en'?'Light':'Светлая'):(language==='en'?'Dark':'Тёмная')} onClick={()=>setView('appearance')}/>
       <ProfileSettingsRow icon={Bell} title={language==='en'?'Notifications':'Уведомления'} value={notificationLabel} onClick={()=>setView('notifications')}/>
       {featureFlags.personalization&&<ProfileSettingsRow icon={User} title={language==='en'?'AI personalization':'AI-персонализация'} value={language==='en'?'Optional':'Необязательно'} onClick={()=>setView('personalization')}/>}
       <ProfileSettingsRow icon={Bot} title={language==='en'?'Luna AI':'Луна ИИ'} value={companionStatus} onClick={onLuna}/>
@@ -5596,55 +5587,6 @@ function ProfilePage({
   if (view === 'universe'&&featureFlags.personal_memory) return <ProfileChildScreen title={language==='en'?'My Universe':'Мой космос'} onBack={()=>{if(!universeBackRef.current?.())setView('main');}} language={language}><MyUniverse language={language} initData={initData} firstName={firstName} goalOptions={profileGoalOptions} onBackChange={handler=>{universeBackRef.current=handler;}}/></ProfileChildScreen>;
   if (view === 'personalization') return <ProfileChildScreen title={language==='en'?'Personal Luna profile':'Личный профиль Luna'} onBack={()=>setView(initialView==='personalization'?'main':'settings')} language={language}><PersonalizationSettings language={language} firstName={firstName} initData={initData} onLanguageChange={onLanguageChange} onClose={()=>setView(initialView==='personalization'?'main':'settings')}/></ProfileChildScreen>;
 
-  if (view === 'appearance') {
-    const systemEnabled = themePreference === 'system';
-    const resolvedLabel = resolvedTheme === 'light'
-      ? (language === 'en' ? 'Light' : 'Светлая')
-      : (language === 'en' ? 'Dark' : 'Тёмная');
-    return (
-      <ProfileChildScreen title={language === 'en' ? 'Appearance' : 'Оформление'} onBack={() => setView('settings')} language={language}>
-        <p className="text-sm leading-6 text-lavender">
-          {language === 'en'
-            ? 'Choose the atmosphere that feels most comfortable. Luna keeps its artwork natural in every mode.'
-            : 'Выбери оформление, в котором тебе комфортнее. Иллюстрации Luna сохраняют свой естественный вид в любом режиме.'}
-        </p>
-        <div className="appearance-theme-grid" role="radiogroup" aria-label={language === 'en' ? 'Color theme' : 'Цветовая тема'}>
-          <button type="button" className={`appearance-theme-card ${themePreference === 'light' ? 'is-selected' : ''}`} aria-pressed={themePreference === 'light'} onClick={() => onThemePreferenceChange('light')}>
-            <span className="appearance-preview appearance-preview-light" aria-hidden="true">
-              <i className="appearance-preview-header"><b /><em /></i>
-              <i className="appearance-preview-hero"><b /><em /></i>
-              <i className="appearance-preview-row"><b /><em /></i>
-            </span>
-            <span className="appearance-theme-label"><Sun size={17} /><strong>{language === 'en' ? 'Light' : 'Светлая'}</strong></span>
-            <small>{language === 'en' ? 'Warm ivory and soft lavender' : 'Тёплая слоновая кость и лаванда'}</small>
-          </button>
-          <button type="button" className={`appearance-theme-card ${themePreference === 'dark' ? 'is-selected' : ''}`} aria-pressed={themePreference === 'dark'} onClick={() => onThemePreferenceChange('dark')}>
-            <span className="appearance-preview appearance-preview-dark" aria-hidden="true">
-              <i className="appearance-preview-header"><b /><em /></i>
-              <i className="appearance-preview-hero"><b /><em /></i>
-              <i className="appearance-preview-row"><b /><em /></i>
-            </span>
-            <span className="appearance-theme-label"><Moon size={17} /><strong>{language === 'en' ? 'Dark' : 'Тёмная'}</strong></span>
-            <small>{language === 'en' ? 'Deep navy and moonlight' : 'Глубокий синий и лунный свет'}</small>
-          </button>
-        </div>
-        <section className="luna-surface rounded-[24px] p-2">
-          <ProfileToggleRow
-            title={language === 'en' ? 'Use device setting' : 'Как на устройстве'}
-            checked={systemEnabled}
-            onChange={(checked) => onThemePreferenceChange(checked ? 'system' : resolvedTheme)}
-          />
-        </section>
-        <div className="appearance-system-note">
-          <Monitor size={16} />
-          <p>
-            <strong>{systemEnabled ? (language === 'en' ? `System · ${resolvedLabel}` : `Системная · ${resolvedLabel}`) : resolvedLabel}</strong>
-            <span>{language === 'en' ? 'System mode updates instantly when your device appearance changes.' : 'Системный режим сразу меняется вместе с оформлением устройства.'}</span>
-          </p>
-        </div>
-      </ProfileChildScreen>
-    );
-  }
 
   if (view === 'goals') {
     return (
@@ -5969,6 +5911,7 @@ function ProfilePage({
   return (
     <div className="luna-page space-y-4">
       <PageHeader title={copy[language].profile} />
+      <BetaNotice access={access} language={language}/>
 
       <section className="profile-identity">
         <button

@@ -5,6 +5,7 @@ import type {NatalCalculation} from './luna30-astrology-engine.js';
 import type {PersonalProfile} from './personalization-policy.js';
 import {requestLunaResponse,responseOutputText} from './luna/ai-provider.js';
 import {stagingAiMeterRecord} from './staging-ai-meter.js';
+import {withAiOperation} from './luna32-ai-accounting.js';
 const fields='id,first_chart_id,second_chart_id,report_kind,language,report,created_at';
 const unavailable=()=>new FoundationError(503,'astrology_ai_unavailable','The report is unavailable. Your chart and Moon Seeds are unchanged.');
 export function createAstrologyReportService(db:SupabaseClient,options:{enabled:()=>boolean;personalProfile:(owner:number)=>Promise<PersonalProfile|null>;dailyLimit:(owner:number)=>Promise<number>;transport?:typeof requestLunaResponse}){
@@ -17,6 +18,7 @@ export function createAstrologyReportService(db:SupabaseClient,options:{enabled:
    return {report:await cached(owner,astrologyReportKey(owner,firstId,secondId,secondId?'compatibility':'portrait',language)),cached:true};
   },
   async generate(owner:number,input:{firstChartId:string;secondChartId?:string;language:'en'|'ru';consent:true}){
+   return withAiOperation(db,owner,'report:'+astrologyReportKey(owner,input.firstChartId,input.secondChartId??null,input.secondChartId?'compatibility':'portrait',input.language),async()=>{
    await available();const kind:AstrologyReportKind=input.secondChartId?'compatibility':'portrait';
    const first=await chart(owner,input.firstChartId),second=input.secondChartId?await chart(owner,input.secondChartId):null;
    if(second?.profile_id===first.profile_id)throw new FoundationError(400,'different_charts_required','Select two different profiles.');
@@ -46,6 +48,7 @@ export function createAstrologyReportService(db:SupabaseClient,options:{enabled:
     await db.from('ai_chat_requests').update({status:'failed_non_retryable',quota_charged:false,updated_at:new Date().toISOString()}).eq('telegram_id',owner).eq('client_request_id',`astro_${key}`).eq('status','processing');
     throw unavailable();
    }
+   });
   }
  };
 }

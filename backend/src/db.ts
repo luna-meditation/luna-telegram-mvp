@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
 import { env } from './config.js';
+import {readLuna32Settings,betaEntitlement} from './luna32-runtime.js';
 import {stagingUserRecord} from './staging-policy.js';
 import {buildLuna30Progress,type Luna30ProgressInput} from './luna30-progression.js';
 import {loadLuna30ActivityMetadata} from './luna30-progress-source.js';
@@ -206,11 +207,15 @@ export async function getUserAccess(telegramId: number) {
     if(period.error)throw period.error;
     if(period.data)activeUntil=Math.max(activeUntil,Date.parse(period.data.period_end));
   }
-  const hasPremium = Boolean(data?.lifetime_access || activeUntil > now);
+  const hasPaidPremium = Boolean(data?.lifetime_access || activeUntil > now);
+  const beta=env.LUNA32_ENABLED?betaEntitlement(await readLuna32Settings(supabase),now):null;
+  const hasPremium=hasPaidPremium||Boolean(beta?.active&&beta.features.includes('meditations'));
 
   return {
     user: data,
     hasPremium,
+    hasPaidPremium,
+    beta,
     plan: data?.lifetime_access ? 'Lifetime' : activeUntil > now ? 'Monthly' : 'Free'
   };
 }

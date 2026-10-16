@@ -8,9 +8,10 @@ assert.equal(process.versions.node.split('.')[0],'22','Staging requires Node.js 
 const frontend=resolve(dirname(fileURLToPath(import.meta.url)),'..');
 const commit=process.env.VITE_COMMIT_SHA;
 assert.match(commit??'',/^[a-f0-9]{40}$/,'Provide the verified development commit SHA');
-const profile=process.env.LUNA_STAGING_PROFILE??'luna23';assert.ok(['luna23','luna24','luna30','luna31'].includes(profile));
-const enabled=[...(profile==='luna31'?['DAILY_CARD_V2']:[]),'NEW_NAVIGATION','TAROT_DAILY','PERSONALIZATION','PERSONAL_MEMORY','AI_MODES','TAROT_HISTORY','TAROT_AI',...(['luna24','luna30','luna31'].includes(profile)?['AI_CENTRAL_EXPERIENCE','TAROT_SPREADS']:[]),...(['luna30','luna31'].includes(profile)?['ASTROLOGY','BREATHWORK_AUDIO']:[])];
-const disabled=[...(['luna24','luna30','luna31'].includes(profile)?[]:['AI_CENTRAL_EXPERIENCE','TAROT_SPREADS']),...(['luna30','luna31'].includes(profile)?[]:['ASTROLOGY','BREATHWORK_AUDIO']),'MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES',...(profile==='luna31'?[]:['DAILY_CARD_V2']),'ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2','PAYMENT_ATOMIC'];
+const profile=process.env.LUNA_STAGING_PROFILE??'luna23';assert.ok(['luna23','luna24','luna30','luna31','luna32'].includes(profile));
+const current=['luna31','luna32'].includes(profile);
+const enabled=[...(current?['DAILY_CARD_V2']:[]),'NEW_NAVIGATION','TAROT_DAILY','PERSONALIZATION','PERSONAL_MEMORY','AI_MODES','TAROT_HISTORY','TAROT_AI',...(['luna24','luna30','luna31','luna32'].includes(profile)?['AI_CENTRAL_EXPERIENCE','TAROT_SPREADS']:[]),...(['luna30','luna31','luna32'].includes(profile)?['ASTROLOGY','BREATHWORK_AUDIO']:[])];
+const disabled=[...(['luna24','luna30','luna31','luna32'].includes(profile)?[]:['AI_CENTRAL_EXPERIENCE','TAROT_SPREADS']),...(['luna30','luna31','luna32'].includes(profile)?[]:['ASTROLOGY','BREATHWORK_AUDIO']),'MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES',...(current?[]:['DAILY_CARD_V2']),'ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2','PAYMENT_ATOMIC'];
 // Public fields only: never spread server secrets into the bundler environment.
 const env={PATH:process.env.PATH,HOME:process.env.HOME,TMPDIR:process.env.TMPDIR,
  NODE_ENV:'production',VITE_API_URL:'',VITE_BOT_USERNAME:process.env.VITE_BOT_USERNAME??'',
