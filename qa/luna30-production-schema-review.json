@@ -1,0 +1,68 @@
+{
+  "status": "PASS",
+  "projectId": "vkcdtasbdoeilgfucoax",
+  "migrations": [
+    {
+      "version": "20261016063713",
+      "name": "luna30_referral_foundation"
+    },
+    {
+      "version": "20261016064626",
+      "name": "luna30_astrology_cache"
+    },
+    {
+      "version": "20261016064643",
+      "name": "luna30_usage_reservations"
+    },
+    {
+      "version": "20261016064655",
+      "name": "luna30_astrology_reports"
+    },
+    {
+      "version": "20261016064704",
+      "name": "luna30_commercial_orders"
+    },
+    {
+      "version": "20261016064716",
+      "name": "luna30_commercial_receipts_and_refunds"
+    }
+  ],
+  "canonicalMigrationFiles": 5,
+  "sqlTransactions": 6,
+  "backupRestorePasses": 2,
+  "originalTables": 37,
+  "originalRows": 1397,
+  "originalRowsUnchanged": true,
+  "legacyRlsAclRpcUnchanged": true,
+  "otherApplication": {
+    "tables": 27,
+    "functions": 2,
+    "fingerprintBefore": "8050aa1ad5436d8f32a9da6803643cacba0a9593c2596534e67034c9afd8da0e",
+    "fingerprintAfter": "8050aa1ad5436d8f32a9da6803643cacba0a9593c2596534e67034c9afd8da0e"
+  },
+  "intentionalExistingSchemaChanges": [
+    "luna_seed_ledger_kind_check expanded, no ledger rows changed",
+    "Luna personal-profile privacy trigger"
+  ],
+  "newTables": {
+    "count": 11,
+    "forcedRls": true,
+    "anonAuthenticatedDenied": true,
+    "serviceRead": true
+  },
+  "newFunctions": {
+    "count": 17,
+    "invokerOnly": true,
+    "directAnonAuthenticatedDenied": true,
+    "serviceExecute": true
+  },
+  "negativeProbes": {
+    "anonRpc": "42501 permission denied",
+    "authenticatedTable": "42501 permission denied"
+  },
+  "servicePurchaseProbe": "disabled; transaction rolled back",
+  "astrologyEnabled": true,
+  "astrologyAiEnabled": true,
+  "newMonetizationEnabled": false,
+  "legacyBalanceSubscriptionPaymentMutations": 0
+}

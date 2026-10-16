@@ -1,0 +1,87 @@
+{
+  "status": "PASS",
+  "engine": "native PostgreSQL; pool with up to 20 simultaneous connections",
+  "migrations": [
+    "20261016032749_luna30_referral_foundation.sql",
+    "20261016032750_luna30_astrology_cache.sql",
+    "20261016032751_luna30_usage_reservations.sql",
+    "20261016050656_luna30_astrology_reports.sql",
+    "20261016051056_luna30_commercial_lifecycle.sql"
+  ],
+  "checks": [
+    {
+      "name": "apply and reapply all three migrations, preserving balances, legacy rights and unrelated app",
+      "status": "PASS"
+    },
+    {
+      "name": "all gates are false; referral and quota RPCs cannot mutate when disabled",
+      "status": "PASS"
+    },
+    {
+      "name": "anon/authenticated denied direct tables, ownership changes and RPCs even with forged claims",
+      "status": "PASS"
+    },
+    {
+      "name": "referral attribution: signed-code contract, no self/old accounts/re-attribution",
+      "status": "PASS"
+    },
+    {
+      "name": "only verified first 90% meditation qualifies; reward pair is atomic and duplicate-safe",
+      "status": "PASS"
+    },
+    {
+      "name": "referral monthly cap limits the sixth pair without deleting legitimate rewards",
+      "status": "PASS"
+    },
+    {
+      "name": "quota reserve concurrency: at most ten free successful/in-flight responses per calendar month",
+      "status": "PASS"
+    },
+    {
+      "name": "settlement requires owner-matching successful provider usage and is idempotent",
+      "status": "PASS"
+    },
+    {
+      "name": "Lifetime is never silently downgraded; included paid-period allowances are distinct",
+      "status": "PASS"
+    },
+    {
+      "name": "birth data/calculation/report owners are enforced by composite foreign keys; edit invalidates derivatives",
+      "status": "PASS"
+    },
+    {
+      "name": "verified self birth reuses My Universe; raw edits invalidate only its chart and keep other private profiles",
+      "status": "PASS"
+    },
+    {
+      "name": "privacy erase deletes all birth profiles and derivatives even with astrology off; unrelated owner preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "stale calculation revision and birth profile limit cannot be bypassed by service callers",
+      "status": "PASS"
+    },
+    {
+      "name": "AI reports serialize duplicate claims, share legacy allowance, cache once and reject foreign charts",
+      "status": "PASS"
+    },
+    {
+      "name": "commercial sales OFF, server prices, accepted receipt and exact-once Seeds/refunds",
+      "status": "PASS"
+    },
+    {
+      "name": "subscription renewal/cancel/expire/refund keeps existing Lifetime and fixed-term rights",
+      "status": "PASS"
+    },
+    {
+      "name": "safe feature-off rollback preserves audit records, earned balances and the other application",
+      "status": "PASS"
+    }
+  ],
+  "syntheticDataOnly": true,
+  "productionWrites": 0,
+  "realAiRequests": 0,
+  "caveats": [
+    "Feature-off rollback intentionally retains private records and valid ledger entries."
+  ]
+}

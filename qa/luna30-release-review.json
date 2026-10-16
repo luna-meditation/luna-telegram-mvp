@@ -1,0 +1,130 @@
+{
+  "status": "PASS",
+  "release": "luna30",
+  "projectId": "vkcdtasbdoeilgfucoax",
+  "baseCommit": "c04f78c59f8a5bd5aaf394bb73d44e43d2808020",
+  "productionWrites": 0,
+  "backupRestorePasses": 2,
+  "backupCapturedAt": "2026-10-16T05:07:10.827148+00:00",
+  "backupSha256": "a7b1b377f1fda0d1d1d8f0c156908c8d8a0b1dbc3b0ca7afa9736021e3f059d8",
+  "migrationHashes": {
+    "20261016032749_luna30_referral_foundation.sql": "c1e0cf88e72d1bcefb44de7ace57b0a9a0e1b1db28341d69e9f75a54ad30156d",
+    "20261016032750_luna30_astrology_cache.sql": "52a11356b899658850b7c12b6772ab5baf83f2b4df4cab669523bc082c15581c",
+    "20261016032751_luna30_usage_reservations.sql": "57b35b28449edcaf93b28a1ece71ef8b3df3eea8108b0b6964da3aafbb76de06",
+    "20261016050656_luna30_astrology_reports.sql": "023e40f5be1b028e87792d610bddb5310d9c8048d08a553ab87ee716f72aad78",
+    "20261016051056_luna30_commercial_lifecycle.sql": "787fa3535007892a732d37a450c64f61fe82965c831f78fb95cea0be238625d2"
+  },
+  "checks": [
+    {
+      "name": "apply and reapply all three migrations, preserving balances, legacy rights and unrelated app",
+      "status": "PASS"
+    },
+    {
+      "name": "all gates are false; referral and quota RPCs cannot mutate when disabled",
+      "status": "PASS"
+    },
+    {
+      "name": "anon/authenticated denied direct tables, ownership changes and RPCs even with forged claims",
+      "status": "PASS"
+    },
+    {
+      "name": "referral attribution: signed-code contract, no self/old accounts/re-attribution",
+      "status": "PASS"
+    },
+    {
+      "name": "only verified first 90% meditation qualifies; reward pair is atomic and duplicate-safe",
+      "status": "PASS"
+    },
+    {
+      "name": "referral monthly cap limits the sixth pair without deleting legitimate rewards",
+      "status": "PASS"
+    },
+    {
+      "name": "quota reserve concurrency: at most ten free successful/in-flight responses per calendar month",
+      "status": "PASS"
+    },
+    {
+      "name": "settlement requires owner-matching successful provider usage and is idempotent",
+      "status": "PASS"
+    },
+    {
+      "name": "Lifetime is never silently downgraded; included paid-period allowances are distinct",
+      "status": "PASS"
+    },
+    {
+      "name": "birth data/calculation/report owners are enforced by composite foreign keys; edit invalidates derivatives",
+      "status": "PASS"
+    },
+    {
+      "name": "verified self birth reuses My Universe; raw edits invalidate only its chart and keep other private profiles",
+      "status": "PASS"
+    },
+    {
+      "name": "privacy erase deletes all birth profiles and derivatives even with astrology off; unrelated owner preserved",
+      "status": "PASS"
+    },
+    {
+      "name": "stale calculation revision and birth profile limit cannot be bypassed by service callers",
+      "status": "PASS"
+    },
+    {
+      "name": "AI reports serialize duplicate claims, share legacy allowance, cache once and reject foreign charts",
+      "status": "PASS"
+    },
+    {
+      "name": "commercial sales OFF, server prices, accepted receipt and exact-once Seeds/refunds",
+      "status": "PASS"
+    },
+    {
+      "name": "subscription renewal/cancel/expire/refund keeps existing Lifetime and fixed-term rights",
+      "status": "PASS"
+    },
+    {
+      "name": "safe feature-off rollback preserves audit records, earned balances and the other application",
+      "status": "PASS"
+    },
+    {
+      "name": "all five migrations apply to the freshly restored exact production schema",
+      "status": "PASS"
+    },
+    {
+      "name": "all 37 original Luna tables, rows, RLS, ACLs, old RPCs and unrelated sentinel remain exact",
+      "status": "PASS"
+    },
+    {
+      "name": "transaction rollback restores the original schema and all protected data",
+      "status": "PASS"
+    },
+    {
+      "name": "apply and reapply preserve real restored balances, subscriptions, payments, history and memory",
+      "status": "PASS"
+    },
+    {
+      "name": "all new private tables force RLS and deny anon/authenticated",
+      "status": "PASS"
+    },
+    {
+      "name": "all new RPCs are invoker-only, narrow grants and explicit empty search_path",
+      "status": "PASS"
+    },
+    {
+      "name": "all new features and monetization remain disabled after migration",
+      "status": "PASS"
+    }
+  ],
+  "monetizationEnabled": false,
+  "backupMediaObjects": 28,
+  "backupMediaBytes": 239528218,
+  "backupFreshnessCheckedAt": "2026-10-16T06:28:57.214Z",
+  "mobileStatus": "PASS",
+  "mobileCases": 96,
+  "physicalTelegramDevice": false,
+  "aiSmokeStatus": "PASS",
+  "aiSmokeCalls": 2,
+  "aiSmokeCostUsd": 0.002938,
+  "allAiTestCalls": 4,
+  "allAiTestCostUsd": 0.00614275,
+  "aiQualityStatus": "PASS",
+  "qaDailyLimitRestored": true,
+  "node": "22.23.3"
+}

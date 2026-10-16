@@ -228,6 +228,7 @@ export function HomeV2(props: HomeV2Props) {
         onAsk={props.onAskLuna}
       />}
 
+      <div className="luna30-home-utilities">
       <section className="home-v2-sound-section">
         {activeScene ? (
           <V2Sound
@@ -242,6 +243,12 @@ export function HomeV2(props: HomeV2Props) {
           />
         ) : null}
       </section>
+
+      {props.newNavigation && <button type="button" onClick={props.onAddHome} className="home-v2-home-action luna30-install">
+        <BrandLogo size={28} alt="Luna" />
+        <span><strong>{props.labels.addHomeTitle}</strong><small>{props.homeScreenMessage || props.labels.addHomeBody}</small></span>
+      </button>}
+      </div>
 
       {soundExpanded ? (
         <div ref={soundChooserRef} className={`home-v2-sound-chooser ${soundOverflow ? 'home-v2-sound-chooser-overflow' : ''}`}>
@@ -261,14 +268,14 @@ export function HomeV2(props: HomeV2Props) {
         </div>
       ) : null}
 
-      <button type="button" onClick={props.onAddHome} className="home-v2-home-action">
+      {!props.newNavigation && <button type="button" onClick={props.onAddHome} className="home-v2-home-action">
         <BrandLogo size={42} alt={props.language === 'ru' ? 'Логотип Luna Meditation' : 'Luna Meditation logo'} />
         <span>
           <strong>{props.labels.addHomeTitle}</strong>
           <small>{props.homeScreenMessage || props.labels.addHomeBody}</small>
         </span>
         {props.homeScreenStatus === 'idle' ? <em>{props.labels.addHomeAction} →</em> : null}
-      </button>
+      </button>}
     </div>
   );
 }

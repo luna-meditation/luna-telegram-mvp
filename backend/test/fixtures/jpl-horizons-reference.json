@@ -1,0 +1,64 @@
+{
+  "source": "NASA/JPL Horizons DE441",
+  "retrievedAt": "2026-10-16T04:10:17.677Z",
+  "frame": "Geocentric apparent IAU76/80 ecliptic of date; quantity 31; UT",
+  "references": [
+    {
+      "body": "sun",
+      "url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%2710%27&EPHEM_TYPE=%27OBSERVER%27&CENTER=%27500%40399%27&QUANTITIES=%2731%27&CSV_FORMAT=%27YES%27&OBJ_DATA=%27NO%27&MAKE_EPHEM=%27YES%27&TIME_TYPE=%27UT%27&TLIST=%271990-Apr-15+12%3A00%27+%272000-Jan-01+12%3A00%27+%272020-Jun-15+12%3A00%27&TLIST_TYPE=%27CAL%27",
+      "responseSha256": "9e63f4f1b1b8466b627808741563411fb76b84334f85aad99ed61108008a4bde",
+      "positions": [
+        {
+          "utc": "1990-04-15T12:00:00.000Z",
+          "longitude": 25.2565906
+        },
+        {
+          "utc": "2000-01-01T12:00:00.000Z",
+          "longitude": 280.3689092
+        },
+        {
+          "utc": "2020-06-15T12:00:00.000Z",
+          "longitude": 84.8384797
+        }
+      ]
+    },
+    {
+      "body": "moon",
+      "url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%27301%27&EPHEM_TYPE=%27OBSERVER%27&CENTER=%27500%40399%27&QUANTITIES=%2731%27&CSV_FORMAT=%27YES%27&OBJ_DATA=%27NO%27&MAKE_EPHEM=%27YES%27&TIME_TYPE=%27UT%27&TLIST=%271990-Apr-15+12%3A00%27+%272000-Jan-01+12%3A00%27+%272020-Jun-15+12%3A00%27&TLIST_TYPE=%27CAL%27",
+      "responseSha256": "c41a21ca9caf581f706a8df78309a65274015ca7cbc4596ad7b8c7f016b87150",
+      "positions": [
+        {
+          "utc": "1990-04-15T12:00:00.000Z",
+          "longitude": 263.8832665
+        },
+        {
+          "utc": "2000-01-01T12:00:00.000Z",
+          "longitude": 223.323786
+        },
+        {
+          "utc": "2020-06-15T12:00:00.000Z",
+          "longitude": 19.2861233
+        }
+      ]
+    },
+    {
+      "body": "mars",
+      "url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=json&COMMAND=%27499%27&EPHEM_TYPE=%27OBSERVER%27&CENTER=%27500%40399%27&QUANTITIES=%2731%27&CSV_FORMAT=%27YES%27&OBJ_DATA=%27NO%27&MAKE_EPHEM=%27YES%27&TIME_TYPE=%27UT%27&TLIST=%271990-Apr-15+12%3A00%27+%272000-Jan-01+12%3A00%27+%272020-Jun-15+12%3A00%27&TLIST_TYPE=%27CAL%27",
+      "responseSha256": "e2edce2d5e3cd4926bfe8e26bba7cdcbcb699ffe8fa87ee92c2a40111bd266fd",
+      "positions": [
+        {
+          "utc": "1990-04-15T12:00:00.000Z",
+          "longitude": 325.9436707
+        },
+        {
+          "utc": "2000-01-01T12:00:00.000Z",
+          "longitude": 327.9632921
+        },
+        {
+          "utc": "2020-06-15T12:00:00.000Z",
+          "longitude": 352.158222
+        }
+      ]
+    }
+  ]
+}

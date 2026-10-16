@@ -13,6 +13,10 @@ import {runAuthorizedReleaseQa} from './release-qa.js';
 import {luna24Router} from './luna24-chat.js';
 import {runLuna21Qa} from './luna21-qa.js';
 import {luna21CommerceRouter} from './luna21-commerce-router.js';
+import {luna30CommerceRouter} from './luna30-commerce-router.js';
+import {luna30ReferralRouter} from './luna30-referral-router.js';
+import {attributeValidatedReferral,qualifyVerifiedReferral} from './luna30-referrals.js';
+import {luna30AstrologyRouter} from './luna30-astrology-router.js';
 import { bot, configureTelegramBot, createStarsInvoiceLink, sendStarsInvoice } from './bot.js';
 import {
   createMeditation,
@@ -325,10 +329,13 @@ app.get('/health', async (req, res) => {
     res.json({ok:true,service:'luna-staging',commit:getBackendVersion().commitSha});
     return;
   }
-  res.json({ ok: true, service: 'luna-backend',...(env.STAGING_MODE?{runtimeNode:process.versions.node}:{}),runtime:publicRuntimeReadiness({node:process.versions.node,commit:getBackendVersion().commitSha,supabaseUrl:env.SUPABASE_URL,model:env.AI_CHAT_MODEL,aiEnabled:env.AI_CHAT_ENABLED,keyConfigured:Boolean(env.OPENAI_API_KEY),flags:backendFeatureFlags}),luna21:{dailyCard:env.FEATURE_DAILY_CARD_V2,spreads:env.FEATURE_TAROT_SPREADS,walletV2:env.FEATURE_MOON_SEEDS_WALLET_V2,rewardsV2:env.FEATURE_ECONOMY_REWARDS_V2,paidReadings:env.FEATURE_TAROT_PAID_READINGS,premiumV2:env.FEATURE_PREMIUM_V2,paymentAtomic:env.FEATURE_PAYMENT_ATOMIC,telegramReady:telegramStartupReady} });
+  res.json({ ok: true, service: 'luna-backend',...(env.STAGING_MODE?{runtimeNode:process.versions.node}:{}),runtime:publicRuntimeReadiness({node:process.versions.node,commit:getBackendVersion().commitSha,supabaseUrl:env.SUPABASE_URL,model:env.AI_CHAT_MODEL,aiEnabled:env.AI_CHAT_ENABLED,keyConfigured:Boolean(env.OPENAI_API_KEY),flags:backendFeatureFlags}),luna21:{dailyCard:env.FEATURE_DAILY_CARD_V2,spreads:env.FEATURE_TAROT_SPREADS,walletV2:env.FEATURE_MOON_SEEDS_WALLET_V2,rewardsV2:env.FEATURE_ECONOMY_REWARDS_V2,paidReadings:env.FEATURE_TAROT_PAID_READINGS,premiumV2:env.FEATURE_PREMIUM_V2,paymentAtomic:env.FEATURE_PAYMENT_ATOMIC,telegramReady:telegramStartupReady},luna30:{astrologyAi:env.LUNA30_ASTROLOGY_AI_ENABLED,progression:env.LUNA30_PROGRESSION_ENABLED,premium:env.LUNA30_PREMIUM_ENABLED,entitlementReader:env.LUNA30_PREMIUM_ENTITLEMENTS_ENABLED,annual:env.LUNA30_ANNUAL_ENABLED,seedPackages:env.LUNA30_SEED_PACKAGES_ENABLED,paidCompatibility:env.LUNA30_PAID_COMPATIBILITY_ENABLED,support:env.LUNA30_SUPPORT_ENABLED,monthlyQuotas:env.LUNA30_MONTHLY_QUOTAS_ENABLED,referralRewards:env.LUNA30_REFERRAL_REWARDS_ENABLED} });
 });
 
 app.use('/api/luna21',rateLimit({max:20,windowMs:60_000}),luna21CommerceRouter);
+app.use('/api/luna30/commerce',rateLimit({max:20,windowMs:60_000}),luna30CommerceRouter);
+app.use('/api/referrals',rateLimit({max:12,windowMs:60_000}),luna30ReferralRouter);
+app.use('/api/astrology',rateLimit({max:30,windowMs:60_000}),luna30AstrologyRouter);
 app.get('/api/debug/admin', requireTelegramWebApp, (req, res) => {
   if (!assertAdmin(req, res)) return;
 
@@ -414,6 +421,7 @@ app.post('/api/users/sync', requireTelegramWebApp, async (req, res, next) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const user = await upsertUser(authReq.telegramUser);
+    if(env.LUNA30_REFERRALS_ENABLED&&authReq.telegramStartParam){try{await attributeValidatedReferral(authReq.telegramUser.telegram_id,authReq.telegramStartParam);}catch(error){logBackendError(error,{endpoint:'Luna referral attribution'});}}
     res.json({ user });
   } catch (error) {
     next(error);
@@ -512,11 +520,13 @@ app.post('/api/history/session', requireTelegramWebApp, async (req, res, next) =
 app.post('/api/history/session/heartbeat', requireTelegramWebApp, async (req, res, next) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    res.json(await heartbeatPlaybackSession(
+    const result=await heartbeatPlaybackSession(
       authReq.telegramUser.telegram_id,
       String(req.body.session_id ?? ''),
       req.body?.last_position
-    ));
+    );
+    if(env.LUNA30_REFERRAL_REWARDS_ENABLED&&'newlyCompleted' in result&&result.newlyCompleted){try{await qualifyVerifiedReferral(authReq.telegramUser.telegram_id,String(req.body.session_id??''));}catch(error){logBackendError(error,{endpoint:'Luna referral qualification'});}}
+    res.json(result);
   } catch (error) {
     next(error);
   }

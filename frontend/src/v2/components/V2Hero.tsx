@@ -167,7 +167,9 @@ export function V2Hero({
         </div>
       ) : null}
 
-      {moodSaved && activeMood ? (
+      {premiumHome && moodSaved && activeMood ? (
+        <button type="button" className="luna30-checkin-edit" onClick={onCheckinDetails} aria-label={language==='ru'?'Изменить сегодняшнюю отметку настроения':'Edit today’s mood check-in'}>{language==='ru'?'Отметка сохранена · изменить':'Check-in saved · edit'}</button>
+      ) : moodSaved && activeMood ? (
         <div className="home-v2-mood-saved" aria-label={`${language === 'ru' ? 'Сегодня' : 'Today'}: ${moodLabel(activeMood)}`}>
           <span>{selectedMood ? <MoodGlyph kind={selectedMood.visual} /> : null}</span>
           <span className="home-v2-mood-saved-copy">

@@ -1,4 +1,5 @@
 import {OptimizedImage,imageSource} from './design-system/components/OptimizedImage';
+import {Luna30FinancePanel} from './components/Luna30FinancePanel';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -136,12 +137,16 @@ import { ExplorePage, FeaturePreview, SectionBack, type ExploreCategory } from '
 import { ProfileOverview, WalletPage } from './luna2/ProfileOverview';
 import { MyUniverse } from './luna2/MyUniverse';
 import { BreathAudioModes, BreathingVisual } from './luna2/BreathingVisual';
+import {createSceneAudioUrl} from './features/breathing/ambient';
+import {useBreathAudio} from './features/breathing/useBreathAudio';
+import {LunaShareButton} from './features/sharing/LunaShareButton';
 import { luna2Copy } from './luna2/copy';
 import './luna2/luna2.css';
 import { frontendBuildMetadata, recordPaymentStage, useRuntimeDiagnostics, type RuntimeDiagnostics } from './runtime-diagnostics';
 
 type Page = AppPage;
 const TarotPage = lazy(() => import('./features/tarot/TarotPage'));
+const AstrologyPage = lazy(() => import('./features/astrology/AstrologyPage'));
 const LunaChat=lazy(()=>import('./components/LunaChat').then(module=>({default:module.LunaChat})));
 const ActivityPage=lazy(()=>import('./luna2/JournalPage').then(module=>({default:module.JournalPage})));
 type Mood = 'Calm' | 'Stressed' | 'Tired' | 'Anxious' | 'Focused';
@@ -192,7 +197,6 @@ const languageStorageKey = 'luna.language.v1';
 const moonGardenVolumeStorageKey = 'luna.moonGarden.volume.v1';
 const moonGardenAmbienceUrl = '/assets/audio/moon-garden/moon-garden-ambience.wav';
 const playerFixVersion = 'pause-seek-isolation-v5';
-const sceneAudioCache = new Map<string, string>();
 const mantraAudioCache = new Map<string, string>();
 type LibraryCache = {
   categories: Category[];
@@ -471,65 +475,6 @@ const gardenStages = [
   }
 ];
 
-function createSceneAudioUrl(kind: SceneDefinition['sound']) {
-  const cached = sceneAudioCache.get(kind);
-  if (cached) return cached;
-
-  const sampleRate = 22050;
-  const seconds = 5;
-  const totalSamples = sampleRate * seconds;
-  const samples = new Float32Array(totalSamples);
-  const base = kind === 'ocean' ? 0.18 : kind === 'rain' ? 0.12 : kind === 'forest' ? 0.1 : kind === 'mist' ? 0.08 : 0.11;
-
-  for (let index = 0; index < totalSamples; index += 1) {
-    const t = index / sampleRate;
-    const cycle = t / seconds;
-    const fade = Math.min(1, index / 1400, (totalSamples - index) / 1400);
-    const wave = Math.sin(Math.PI * 2 * cycle);
-    const noise = (Math.random() * 2 - 1) * base;
-    const low = Math.sin(Math.PI * 2 * (kind === 'mist' ? 110 : 72) * t) * 0.025;
-    const pulse = kind === 'ocean'
-      ? Math.sin(Math.PI * 2 * 0.32 * t) * 0.12
-      : kind === 'water'
-        ? Math.sin(Math.PI * 2 * 0.21 * t) * 0.08
-        : kind === 'rain'
-          ? Math.random() * 0.12
-          : kind === 'forest'
-            ? Math.sin(Math.PI * 2 * 0.17 * t) * 0.05
-            : Math.sin(Math.PI * 2 * 0.12 * t) * 0.035;
-    samples[index] = Math.max(-0.8, Math.min(0.8, (noise * (0.55 + Math.abs(wave) * 0.45) + low + pulse) * fade));
-  }
-
-  const dataSize = totalSamples * 2;
-  const buffer = new ArrayBuffer(44 + dataSize);
-  const view = new DataView(buffer);
-  const writeString = (offset: number, value: string) => {
-    for (let index = 0; index < value.length; index += 1) view.setUint8(offset + index, value.charCodeAt(index));
-  };
-  writeString(0, 'RIFF');
-  view.setUint32(4, 36 + dataSize, true);
-  writeString(8, 'WAVE');
-  writeString(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, 1, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * 2, true);
-  view.setUint16(32, 2, true);
-  view.setUint16(34, 16, true);
-  writeString(36, 'data');
-  view.setUint32(40, dataSize, true);
-
-  let offset = 44;
-  samples.forEach((sample) => {
-    view.setInt16(offset, sample * 32767, true);
-    offset += 2;
-  });
-
-  const url = URL.createObjectURL(new Blob([view], { type: 'audio/wav' }));
-  sceneAudioCache.set(kind, url);
-  return url;
-}
 
 function createMantraAudioUrl(id: string) {
   const cached = mantraAudioCache.get(id);
@@ -1940,6 +1885,9 @@ function App() {
   useEffect(()=>{document.documentElement.lang=language;},[language]);
   const [tarotSession, tarotDispatch] = useReducer(reduceTarotSession, undefined, createTarotSession);
   const [aiReadingId,setAiReadingId]=useState<string|undefined>();
+  const [aiChartId,setAiChartId]=useState<string|undefined>();
+  useEffect(()=>{const discuss=(event:Event)=>{const id=(event as CustomEvent).detail?.chartId;if(!featureFlags.astrology||typeof id!=='string'||!/^[-a-f0-9]{36}$/.test(id))return;setAiReadingId(undefined);setAiChartId(id);};window.addEventListener('luna-discuss-chart',discuss);return()=>window.removeEventListener('luna-discuss-chart',discuss);},[]);
+  const [tarotSetupKey,setTarotSetupKey]=useState(0);
   const tarotBackHandlerRef = useRef<(() => void) | null>(null);
   const [nestedBack,setNestedBack]=useState(false);
   const registerTarotBackHandler = useCallback((handler: (() => void) | null) => { tarotBackHandlerRef.current = handler;setNestedBack(Boolean(handler)); }, []);
@@ -1966,6 +1914,7 @@ function App() {
     resetPrimaryScroll();
     window.requestAnimationFrame(resetPrimaryScroll);
   }, [navigatePrimary, resetPrimaryScroll]);
+  useEffect(()=>{const open=()=>{if(featureFlags.astrology)navigatePrimaryPage('luna');};window.addEventListener('luna-discuss-chart',open);return()=>window.removeEventListener('luna-discuss-chart',open);},[navigatePrimaryPage]);
 
   useLayoutEffect(() => {
     if (!featureFlags.new_navigation && !primaryNavigation(false).some((item) => item.page === page)) return;
@@ -3047,7 +2996,7 @@ function App() {
     <main className={`app-root overflow-x-clip bg-night text-cream ${page === 'home' ? 'home-v2-shell' : ''} ${featureFlags.new_navigation ? 'luna2-shell' : ''}`}>
       <div className="fixed inset-0 luna-bg" />
       <section ref={appShellRef} data-page={page} className={`app-shell ${page === 'luna' ? 'app-shell-chat' : ''} ${page === 'admin' || (page === 'profile' && profileNestedActive) ? 'app-shell-no-nav' : ''}`}>
-        {page !== 'luna' && <AppHeader statusLabel={(profile?.currentStreak ?? 0) > 0 ? streakLabel(profile?.currentStreak ?? 0, language) : planLabel(access.plan, language)} language={language} languageLabel={copy[language].language} onLanguageChange={changeLanguage} showSeeds={featureFlags.new_navigation} moonSeeds={profile ? availableMoonSeeds(profile) : undefined} onWallet={() => setPage('wallet')} />}
+        {page !== 'luna' && !(featureFlags.new_navigation && page==='breathCircle') && <AppHeader statusLabel={(profile?.currentStreak ?? 0) > 0 ? streakLabel(profile?.currentStreak ?? 0, language) : planLabel(access.plan, language)} language={language} languageLabel={copy[language].language} onLanguageChange={changeLanguage} showSeeds={featureFlags.new_navigation} moonSeeds={profile ? availableMoonSeeds(profile) : undefined} onWallet={() => setPage('wallet')} />}
         {appNotice && <div className="theme-floating fixed left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+12px)] z-50 mx-auto max-w-md rounded-full border border-gold/20 px-4 py-3 text-center text-xs font-semibold text-cream shadow-glow backdrop-blur-xl luna-fade" role="status">{appNotice}</div>}
 
         {page === 'home' && (
@@ -3055,7 +3004,7 @@ function App() {
             newNavigation={featureFlags.new_navigation}
             tarotEnabled={featureFlags.tarot_daily}
             gardenLevel={profile?.gardenLevel}
-            onTarot={() => {tarotDispatch({type:'screen',value:'hub'});setPage('tarot');}}
+            onTarot={() => {if(featureFlags.ai_central_experience){setAiReadingId(undefined);setTarotSetupKey(key=>key+1);navigatePrimary('luna');}else{tarotDispatch({type:'screen',value:'hub'});setPage('tarot');}}}
             onDaily={() => {tarotDispatch({type:'screen',value:'daily'});setPage('tarot');}}
             onAstrology={() => setPage('astrology')}
             onJourney={() => setPage('progress')}
@@ -3147,6 +3096,8 @@ function App() {
             onOpenMeditation={openMeditation}
             onTarot={featureFlags.new_navigation&&featureFlags.tarot_daily?()=>setPage('tarot'):undefined}
             readingContextId={aiReadingId}
+            chartContextId={aiChartId}
+            tarotSetupKey={tarotSetupKey}
             registerBackHandler={registerTarotBackHandler}
             onClearReadingContext={()=>setAiReadingId(undefined)}
           />
@@ -3154,10 +3105,10 @@ function App() {
 
         {featureFlags.new_navigation && page === 'explore' && <ExplorePage language={language} tarotEnabled={featureFlags.tarot_daily} onOpen={openExploreCategory} />}
         {featureFlags.new_navigation && page === 'tarot' && (featureFlags.tarot_daily ? <Suspense fallback={<PageSkeleton rows={2} />}><TarotPage language={language} onBack={goBack} session={tarotSession} dispatch={tarotDispatch} registerBackHandler={registerTarotBackHandler} initData={initData} onContinue={id=>{setAiReadingId(id);navigatePrimary('luna');}} /></Suspense> : <FeaturePreview kind="tarot" language={language} featureEnabled={false} onBack={goBack} onMeditate={() => openExploreCategory('meditations')} />)}
-        {featureFlags.new_navigation && page === 'astrology' && <FeaturePreview kind="astrology" language={language} featureEnabled={featureFlags.astrology} onBack={goBack} onMeditate={() => openExploreCategory('meditations')} />}
+        {featureFlags.new_navigation && page === 'astrology' && (featureFlags.astrology?<Suspense fallback={<PageSkeleton rows={3}/>}><AstrologyPage language={language} initData={initData} onBack={goBack} registerBackHandler={registerTarotBackHandler}/></Suspense>:<FeaturePreview kind="astrology" language={language} featureEnabled={false} onBack={goBack} onMeditate={() => openExploreCategory('meditations')} />)}
         {featureFlags.new_navigation && page === 'wallet' && <WalletPage language={language} profile={profile} onBack={goBack} onGarden={() => setPage('moonGarden')} />}
         {featureFlags.new_navigation && page === 'activity' && <Suspense fallback={<PageSkeleton rows={3}/>}><ActivityPage language={language} history={history} meditations={decoratedMeditations} wellness={wellness} onBack={goBack} onOpen={openMeditation} initData={initData} onReading={reading=>{tarotDispatch({type:'resume',reading});setPage('tarot');}} /></Suspense>}
-        {featureFlags.new_navigation && page === 'achievements' && <AchievementsStory items={buildAchievementViews(profile, language)} language={language} initiallyOpen onClose={goBack} />}
+        {featureFlags.new_navigation && page === 'achievements' && <AchievementsStory items={buildAchievementViews(profile, language)} language={language} initiallyOpen onClose={goBack} version3={Boolean(profile?.journeyV3)} />}
 
         {page === 'library' && (
           <>
@@ -3549,6 +3500,8 @@ function LunaPage({
   onOpenMeditation,
   onTarot,
   readingContextId,
+  chartContextId,
+  tarotSetupKey,
   onClearReadingContext,
   registerBackHandler
 }: {
@@ -3560,6 +3513,8 @@ function LunaPage({
   onOpenMeditation: (meditation: Meditation) => void;
   onTarot?:()=>void;
   readingContextId?:string;
+  chartContextId?:string;
+  tarotSetupKey?:number;
   onClearReadingContext?:()=>void;
   registerBackHandler?:(handler:(()=>void)|null)=>void;
 }) {
@@ -3574,6 +3529,8 @@ function LunaPage({
       onTarot={onTarot}
       redesigned={featureFlags.new_navigation}
       readingContextId={readingContextId}
+      chartContextId={chartContextId}
+      tarotSetupKey={tarotSetupKey}
       onClearReadingContext={onClearReadingContext}
       registerBackHandler={registerBackHandler}
     />
@@ -4713,6 +4670,8 @@ function BreathCirclePage({
   const [savingError, setSavingError] = useState('');
   const startedAtRef = useRef<number | null>(null);
   const [sessionStarted, setSessionStarted] = useState(false);
+  const breathAudio=useBreathAudio(redesigned&&featureFlags.breathwork_audio);
+  useEffect(()=>{if(!running)breathAudio.pause();},[running]);
   const durationSeconds = minutes * 60;
   const practice = breathPractices.find((item) => item.id === mode) ?? breathPractices[0];
   const phase = breathPhaseAt(practice, elapsed);
@@ -4736,6 +4695,7 @@ function BreathCirclePage({
   }, [durationSeconds, language, mode, onComplete, practice, running]);
 
   const startOrResume = () => {
+    breathAudio.start();
     const resumeElapsed = done ? 0 : elapsed;
     setSavingError('');
     setDone(false);
@@ -4769,7 +4729,7 @@ function BreathCirclePage({
       </div>
 
       <section className="breath-circle-visual" aria-live={redesigned ? undefined : 'polite'}>
-        {redesigned ? <BreathingVisual practice={practice} phase={phase} active={hasStarted || running} done={done} minutes={minutes} language={language} /> : (
+        {redesigned ? <BreathingVisual practice={practice} phase={phase} active={hasStarted || running} done={done} minutes={minutes} language={language} running={running} onToggle={running?()=>setRunning(false):startOrResume} /> : (
         <div className={`breath-circle-orbit ${running ? 'is-running' : ''}`} data-phase={hasStarted || running ? phase.kind : 'ready'}>
           <div
             className={`breath-circle-core ${running ? 'is-running' : ''}`}
@@ -4789,7 +4749,7 @@ function BreathCirclePage({
         </div>
       </section>
 
-      {redesigned && <BreathAudioModes language={language} featureEnabled={featureFlags.breathwork_audio} />}
+      {redesigned && <BreathAudioModes language={language} featureEnabled={featureFlags.breathwork_audio} mode={breathAudio.mode} onMode={mode=>breathAudio.setMode(mode,running)} volume={breathAudio.volume} onVolume={breathAudio.setVolume} muted={breathAudio.muted} onMute={()=>breathAudio.setMuted(value=>!value)} error={breathAudio.error}/>}
 
       <section className="breath-circle-controls">
         <label className="breath-practice-select">
@@ -4798,10 +4758,10 @@ function BreathCirclePage({
             {breathPractices.map((item) => <option key={item.id} value={item.id}>{item.name[language]} — {item.timing[language]}</option>)}
           </select>
         </label>
-        <div className="breath-practice-guide">
-          <strong>{language === 'en' ? 'How it helps' : 'Как выполнять'}</strong>
+        <details className="breath-practice-guide">
+          <summary>{language === 'en' ? 'How it helps' : 'Как выполнять'}</summary>
           <p>{practice.guide[language]}</p>
-        </div>
+        </details>
         <div className="breath-duration-options" role="group" aria-label={language === 'en' ? 'Session duration' : 'Длительность сессии'}>
           {[1, 3, 5, 10].map((item) => (
             <button key={item} onClick={() => setMinutes(item)} disabled={running || hasStarted} aria-pressed={minutes === item}>
@@ -4823,15 +4783,16 @@ function BreathCirclePage({
       ) : null}
 
       <div className="breath-circle-actions">
+        {redesigned && done && <button type="button" onClick={onClose} className="breath-circle-primary">{language==='ru'?'Завершить':'Finish'}</button>}
         {(hasStarted || done) && <button type="button" onClick={restart} className="breath-circle-restart">{language === 'en' ? 'Restart' : 'Сначала'}</button>}
-        <button
+        {!redesigned && <button
           type="button"
           onClick={running ? () => setRunning(false) : startOrResume}
           className="breath-circle-primary"
           aria-label={running ? (language === 'en' ? 'Pause breathing practice' : 'Пауза дыхательной практики') : undefined}
         >
           {running ? (language === 'en' ? 'Pause' : 'Пауза') : hasStarted ? (language === 'en' ? 'Resume' : 'Продолжить') : done ? (language === 'en' ? 'Start again' : 'Начать снова') : copy[language].startBreathing}
-        </button>
+        </button>}
       </div>
     </div>
   );
@@ -5063,6 +5024,7 @@ function MoonGardenPage({
       {embedded && <p className="journey-garden-meta" aria-label={copy[language].moonGarden}>
         <span>{language==='en'?`Level ${stage.level}`:`Уровень ${stage.level}`}</span><i aria-hidden="true">·</i><span>{plantedCount}/7 {language==='en'?'upgrades':'улучшений'}</span><i aria-hidden="true">·</i><span>{seeds} Moon Seeds</span>{isGardenComplete&&<strong>{copy[language].gardenComplete}</strong>}
       </p>}
+      <LunaShareButton language={language} registerBackHandler={registerBackHandler} content={{kind:'garden',title:copy[language].moonGarden,subtitle:stage.title[language],image:`/assets/moon-garden/${['level-0-empty-garden','level-1-first-bloom','level-2-lantern-glow','level-3-stone-path','level-4-twin-bloom','level-5-moon-bridge','level-6-reflection-garden','level-7-full-moon-garden'][Math.min(7,Math.max(0,stage.level))]}.png`,badge:language==='ru'?`Уровень ${stage.level} · ${plantedCount}/7 улучшений`:`Level ${stage.level} · ${plantedCount}/7 upgrades`}}/>
       <MoonGardenScene
         profile={activeProfile}
         language={language}
@@ -5476,7 +5438,7 @@ function ProfilePage({
     : copy[language].premiumFree;
   const localizedPlanStatus = planStatus;
   const journeyStatus = resolveJourneyStatus(profile);
-  const journeyStatusName = journeyStatusNames[language][journeyStatus.id];
+  const journeyStatusName = profile?.journeyV3?(profile.journeyV3.current?.names[language]??(language==='en'?'Your first step':'Ваш первый шаг')):journeyStatusNames[language][journeyStatus.id];
   const journeyStatusRank = Math.max(1, journeyStatus.rank + 1);
   const goalsLabel = goalsCountLabel(goals.length, language);
   const notificationLabel = notificationStatusLabel(notificationPrefs, language);
@@ -6688,7 +6650,7 @@ function AdminPage({
 
       {dashboard && activeTab === 'users' && <UsersPanel users={filteredUsers} search={userSearch} selectedUser={selectedUser} onSearch={setUserSearch} onSelect={setSelectedUser} onAction={updateUserAccess} />}
       {dashboard && activeTab === 'subscriptions' && <SubscriptionsPanel dashboard={dashboard} onAction={updateUserAccess} />}
-      {dashboard && activeTab === 'revenue' && <RevenuePanel dashboard={dashboard} />}
+      {dashboard && activeTab === 'revenue' && <><RevenuePanel dashboard={dashboard} /><Luna30FinancePanel initData={initData}/></>}
       {dashboard && activeTab === 'analytics' && <AnalyticsPanel dashboard={dashboard} />}
       {activeTab === 'support' && <SupportInbox requests={supportRequests} onStatus={updateSupportStatus} />}
       {dashboard && activeTab === 'settings' && <SettingsPanel plans={plans} />}

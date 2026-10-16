@@ -11,11 +11,11 @@ const api=new URL(process.env.VITE_API_URL?.trim()||'https://invalid.invalid');
 assert.ok(api.protocol==='https:'&&!['invalid.invalid','localhost','127.0.0.1','::1'].includes(api.hostname),'Provide the verified production VITE_API_URL');
 assert.ok(!api.username&&!api.password&&!api.search&&!api.hash,'The public API URL must not carry credentials or tokens');
 const profile=process.env.LUNA_RELEASE_PROFILE??'tarot-phase2';
-assert.ok(['luna24','luna25','luna251'].includes(profile)||!process.env.VITE_FEATURE_AI_CENTRAL_EXPERIENCE||process.env.VITE_FEATURE_AI_CENTRAL_EXPERIENCE==='false','Luna 2.4 development is not approved for production');
-assert.ok(['tarot-phase2','luna2','luna21','luna23','luna24','luna25','luna251'].includes(profile),'Unknown approved release profile');
+assert.ok(['luna24','luna25','luna251','luna30'].includes(profile)||!process.env.VITE_FEATURE_AI_CENTRAL_EXPERIENCE||process.env.VITE_FEATURE_AI_CENTRAL_EXPERIENCE==='false','Luna development is not approved for production');
+assert.ok(['tarot-phase2','luna2','luna21','luna23','luna24','luna25','luna251','luna30'].includes(profile),'Unknown approved release profile');
 const foundation=['PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI'];
-const required=['NEW_NAVIGATION','TAROT_DAILY',...(['luna2','luna21','luna23','luna24','luna25','luna251'].includes(profile)?foundation:[]),...(['luna21','luna23','luna24','luna25','luna251'].includes(profile)?['DAILY_CARD_V2']:[]),...(['luna23','luna24','luna25','luna251'].includes(profile)?['PERSONAL_MEMORY']:[]),...(['luna24','luna25','luna251'].includes(profile)?['AI_CENTRAL_EXPERIENCE','TAROT_SPREADS']:[])];
-const disabled=[...(['luna23','luna24','luna25','luna251'].includes(profile)?[]:['PERSONAL_MEMORY']),...(['luna24','luna25','luna251'].includes(profile)?[]:['TAROT_SPREADS']),'ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2',...(['luna2','luna21','luna23','luna24','luna25','luna251'].includes(profile)?[]:foundation)];
+const required=['NEW_NAVIGATION','TAROT_DAILY',...(['luna2','luna21','luna23','luna24','luna25','luna251','luna30'].includes(profile)?foundation:[]),...(['luna21','luna23','luna24','luna25','luna251','luna30'].includes(profile)?['DAILY_CARD_V2']:[]),...(['luna23','luna24','luna25','luna251','luna30'].includes(profile)?['PERSONAL_MEMORY']:[]),...(['luna24','luna25','luna251','luna30'].includes(profile)?['AI_CENTRAL_EXPERIENCE','TAROT_SPREADS']:[]),...(profile==='luna30'?['ASTROLOGY','BREATHWORK_AUDIO']:[])];
+const disabled=[...(['luna23','luna24','luna25','luna251','luna30'].includes(profile)?[]:['PERSONAL_MEMORY']),...(['luna24','luna25','luna251','luna30'].includes(profile)?[]:['TAROT_SPREADS']),...(profile==='luna30'?[]:['ASTROLOGY','BREATHWORK_AUDIO']),'MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2',...(['luna2','luna21','luna23','luna24','luna25','luna251','luna30'].includes(profile)?[]:foundation)];
 for(const key of required)assert.equal(process.env[`VITE_FEATURE_${key}`],'true',`${key} must be explicitly enabled for this release`);
 for(const key of disabled)assert.ok(!process.env[`VITE_FEATURE_${key}`]||process.env[`VITE_FEATURE_${key}`]==='false',`${key} is not part of the approved release`);
 if(profile==='luna2'){
@@ -55,6 +55,14 @@ if(profile==='luna251'){
  assert.equal(review.baseCommit,'56199e8849e342921dbf15f387d6838156eeabe8');
  assert.equal(review.mobileCases,48);assert.equal(review.mobileStatus,'PASS');
  assert.equal(review.savedAttachmentProviderCalls,0);assert.equal(review.isolatedDbChecks,17);
+}
+if(profile==='luna30'){
+ const review=JSON.parse(readFileSync(process.env.LUNA_RELEASE_DB_REVIEW,'utf8'));
+ assert.equal(review.status,'PASS');assert.equal(review.release,'luna30');assert.equal(review.projectId,'vkcdtasbdoeilgfucoax');assert.equal(review.baseCommit,'c04f78c59f8a5bd5aaf394bb73d44e43d2808020');
+ assert.equal(review.productionWrites,0);assert.equal(review.backupRestorePasses,2);assert.equal(review.backupMediaObjects,28);assert.ok(review.checks.length>=24);
+ assert.equal(review.mobileStatus,'PASS');assert.ok(review.mobileCases>=80);assert.equal(review.aiSmokeStatus,'PASS');assert.equal(review.aiSmokeCalls,2);assert.ok(review.aiSmokeCostUsd>0&&review.aiSmokeCostUsd<=0.02);assert.equal(review.monetizationEnabled,false);
+ for(const [name,expected]of Object.entries(review.migrationHashes))assert.equal(createHash('sha256').update(readFileSync(resolve(frontend,'../supabase/migrations',name))).digest('hex'),expected,`Migration changed since review: ${name}`);
+ assert.equal(Object.keys(review.migrationHashes).length,5);
 }
 assert.match(commit??'',/^[a-f0-9]{40}$/,'A verified source commit is required');
 const env={...process.env,VITE_COMMIT_SHA:commit,VITE_DEPLOY_ENV:'production',VITE_RELEASE_PROFILE:profile};

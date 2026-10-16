@@ -6,6 +6,8 @@ import { logBackendError, type RequestWithId } from './error-logging.js';
 
 export type AuthenticatedRequest = Request & {
   telegramUser: TelegramUserInput;
+  /** Only from signed Telegram initData, never a body/query parameter. */
+  telegramStartParam?: string;
 };
 
 function safeCompare(left: string, right: string) {
@@ -15,17 +17,24 @@ function safeCompare(left: string, right: string) {
   return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer);
 }
 
-export function validateTelegramInitData(initData: string) {
+export function validateTelegramSession(initData: string) {
+  if (initData.length > 16384) throw new Error('Telegram WebApp auth data is too large.');
   const params = new URLSearchParams(initData);
+  const keys = new Set<string>();
+  for (const key of params.keys()) {
+    if (keys.has(key)) throw new Error('Duplicate Telegram WebApp auth field.');
+    keys.add(key);
+  }
   const hash = params.get('hash');
   const userJson = params.get('user');
   const authDate = Number(params.get('auth_date'));
 
-  if (!hash || !userJson || !authDate) {
+  if (!hash || !/^[0-9a-f]{64}$/i.test(hash) || !userJson || !Number.isSafeInteger(authDate) || authDate <= 0) {
     throw new Error('Missing Telegram WebApp auth data.');
   }
 
   const ageSeconds = Math.floor(Date.now() / 1000) - authDate;
+  if (ageSeconds < -60) throw new Error('Telegram WebApp auth date is in the future.');
   if (ageSeconds > env.TELEGRAM_AUTH_MAX_AGE_SECONDS) {
     throw new Error('Telegram WebApp auth data expired.');
   }
@@ -51,17 +60,23 @@ export function validateTelegramInitData(initData: string) {
     language_code?: string;
   };
 
-  if (!user.id) {
+  if (!Number.isSafeInteger(user.id) || !user.id || user.id < 1) {
     throw new Error('Telegram WebApp user is missing.');
   }
 
-  return {
+  const telegramUser = {
     telegram_id: user.id,
     username: user.username,
     first_name: user.first_name,
     last_name: user.last_name,
     language_code: user.language_code
   } satisfies TelegramUserInput;
+  const startParam=params.get('start_param');
+  return {telegramUser,startParam:startParam&&/^[A-Za-z0-9_-]{1,512}$/.test(startParam)?startParam:undefined};
+}
+
+export function validateTelegramInitData(initData: string) {
+  return validateTelegramSession(initData).telegramUser;
 }
 
 export function requireTelegramWebApp(req: Request, res: Response, next: NextFunction) {
@@ -69,7 +84,9 @@ export function requireTelegramWebApp(req: Request, res: Response, next: NextFun
 
   try {
     if (initData) {
-      (req as AuthenticatedRequest).telegramUser = validateTelegramInitData(initData);
+      const verified = validateTelegramSession(initData);
+      (req as AuthenticatedRequest).telegramUser = verified.telegramUser;
+      (req as AuthenticatedRequest).telegramStartParam = verified.startParam;
       next();
       return;
     }

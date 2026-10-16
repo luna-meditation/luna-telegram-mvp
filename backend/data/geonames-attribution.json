@@ -1,0 +1,31 @@
+{
+  "provider": "GeoNames",
+  "dataset": "cities15000",
+  "source": "https://download.geonames.org/export/dump/cities15000.zip",
+  "license": "CC BY 4.0",
+  "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+  "attribution": "Contains GeoNames geographical data, https://www.geonames.org/",
+  "retrievedAt": "2026-10-16T04:36:35.029Z",
+  "archiveSha256": "da8eca618fb5a0aff0150b2c2caa89b9bf6fb279e6720ac4c287823049cf2069",
+  "dataSha256": "6d4afb2dfc1254d1117cbf2897bb8e26d99caed2fafe0d3b69c35b04bed60b75",
+  "rows": 34165,
+  "columns": [
+    "id",
+    "name",
+    "aliases",
+    "latitude",
+    "longitude",
+    "country",
+    "timezone",
+    "population",
+    "modified"
+  ],
+  "caveats": [
+    "City centres, not birth addresses. User must select and confirm the correct city.",
+    "Not all villages are included. Do not invent or automatically substitute a place.",
+    "Historical offsets use the runtime IANA database, never current GMT offsets."
+  ],
+  "packaging": "gzip",
+  "compressedBytes": 1486498,
+  "compressedSha256": "c16e096fdf027ecbad081a9d8169e6728f0a8d0396e5d554e560314be4acdab0"
+}

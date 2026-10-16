@@ -17,6 +17,7 @@ website/.env
 # Build output
 dist/
 dist-phase2/
+dist-luna30-preview/
 dist-tarot-preview/
 dist-refinement/
 dist-refinement-preview/
@@ -48,3 +49,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Public server gazetteer is committed compressed with attribution/integrity hashes.
+backend/data/geonames-cities15000.json
