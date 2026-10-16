@@ -1,0 +1,58 @@
+{
+  "status": "PASS",
+  "node": "22.23.3",
+  "results": [
+    {
+      "name": "frontend-tests",
+      "status": "PASS",
+      "exitCode": 0,
+      "summary": [
+        "# tests 163",
+        "# pass 163",
+        "# fail 0",
+        "# skipped 0"
+      ]
+    },
+    {
+      "name": "backend-tests",
+      "status": "PASS",
+      "exitCode": 0,
+      "summary": [
+        "# tests 256",
+        "# pass 255",
+        "# fail 0",
+        "# skipped 1"
+      ]
+    },
+    {
+      "name": "frontend-types",
+      "status": "PASS",
+      "exitCode": 0,
+      "summary": []
+    },
+    {
+      "name": "backend-types",
+      "status": "PASS",
+      "exitCode": 0,
+      "summary": []
+    },
+    {
+      "name": "frontend-lint",
+      "status": "PASS",
+      "exitCode": 0,
+      "summary": []
+    },
+    {
+      "name": "backend-lint",
+      "status": "PASS",
+      "exitCode": 0,
+      "summary": []
+    },
+    {
+      "name": "backend-build",
+      "status": "PASS",
+      "exitCode": 0,
+      "summary": []
+    }
+  ]
+}

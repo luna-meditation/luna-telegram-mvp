@@ -1,0 +1,94 @@
+{
+  "calls": [
+    {
+      "model": "gpt-5-mini-2025-08-07",
+      "diagnostic": null,
+      "httpStatus": 200,
+      "input_tokens": 865,
+      "total_tokens": 1409,
+      "output_tokens": 544,
+      "estimated_cost": 0.00130425,
+      "providerStatus": "completed",
+      "request_status": "success",
+      "maxOutputTokens": 1896
+    },
+    {
+      "model": "gpt-5-mini-2025-08-07",
+      "diagnostic": null,
+      "httpStatus": 200,
+      "input_tokens": 1767,
+      "total_tokens": 2363,
+      "output_tokens": 596,
+      "estimated_cost": 0.00163375,
+      "providerStatus": "completed",
+      "request_status": "success",
+      "maxOutputTokens": 1471
+    }
+  ],
+  "checks": [
+    {
+      "name": "configured model is accessible to the existing server key",
+      "status": "PASS"
+    },
+    {
+      "name": "bounded standard gpt-5-mini request",
+      "status": "PASS"
+    },
+    {
+      "name": "no personal context or raw birth data sent",
+      "status": "PASS"
+    },
+    {
+      "name": "en persisted real AI report",
+      "status": "PASS"
+    },
+    {
+      "name": "en reopen and duplicate use saved report without provider",
+      "status": "PASS"
+    },
+    {
+      "name": "bounded standard gpt-5-mini request",
+      "status": "PASS"
+    },
+    {
+      "name": "no personal context or raw birth data sent",
+      "status": "PASS"
+    },
+    {
+      "name": "ru persisted real AI report",
+      "status": "PASS"
+    },
+    {
+      "name": "ru reopen and duplicate use saved report without provider",
+      "status": "PASS"
+    },
+    {
+      "name": "existing Moon Seeds and subscription untouched",
+      "status": "PASS"
+    },
+    {
+      "name": "two real provider requests within approved allowance",
+      "status": "PASS"
+    }
+  ],
+  "status": "PASS",
+  "productionWrites": 0,
+  "providerAttempts": 2,
+  "syntheticDataOnly": true,
+  "actualTelegramLogin": false,
+  "runName": "luna30-astrology-20261016-v2",
+  "stagingDeployId": "6ad1c5139c6e33ade0813d18",
+  "sourceCommit": "386444c96fbf915080a9f8cf77319d4a0380427a",
+  "qualityReview": {
+    "status": "PASS",
+    "calculatedFactsNamed": true,
+    "technicalRestatementsRejected": true,
+    "separatePortraitAndCompatibilitySections": true,
+    "meaningfulQuestion": true,
+    "symbolicDisclaimer": true,
+    "caveat": "Stylistic AI imperfections remain possible; no scientific validity is claimed."
+  },
+  "qaDailyLimitRestored": true,
+  "unsignedApiStatus": 401,
+  "unsignedEventStatus": 403
+}

@@ -1,0 +1,1035 @@
+{
+  "status": "PASS",
+  "cases": 96,
+  "groups": [
+    {
+      "status": "PASS",
+      "cases": 48,
+      "fixtureOnly": true,
+      "productionWrites": 0,
+      "realAiRequests": 0,
+      "results": [
+        {
+          "width": 360,
+          "height": 800,
+          "language": "en",
+          "theme": "dark",
+          "kind": "single",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 2
+        },
+        {
+          "width": 360,
+          "height": 800,
+          "language": "en",
+          "theme": "dark",
+          "kind": "three",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 4
+        },
+        {
+          "width": 360,
+          "height": 800,
+          "language": "en",
+          "theme": "dark",
+          "kind": "five",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 6
+        },
+        {
+          "width": 360,
+          "height": 800,
+          "language": "en",
+          "theme": "light",
+          "kind": "single",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 2
+        },
+        {
+          "width": 360,
+          "height": 800,
+          "language": "en",
+          "theme": "light",
+          "kind": "three",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 4
+        },
+        {
+          "width": 360,
+          "height": 800,
+          "language": "en",
+          "theme": "light",
+          "kind": "five",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 6
+        },
+        {
+          "width": 360,
+          "height": 800,
+          "language": "ru",
+          "theme": "dark",
+          "kind": "single",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 2
+        },
+        {
+          "width": 360,
+          "height": 800,
+          "language": "ru",
+          "theme": "dark",
+          "kind": "three",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 4
+        },
+        {
+          "width": 360,
+          "height": 800,
+          "language": "ru",
+          "theme": "dark",
+          "kind": "five",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 6
+        },
+        {
+          "width": 360,
+          "height": 800,
+          "language": "ru",
+          "theme": "light",
+          "kind": "single",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 2
+        },
+        {
+          "width": 360,
+          "height": 800,
+          "language": "ru",
+          "theme": "light",
+          "kind": "three",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 4
+        },
+        {
+          "width": 360,
+          "height": 800,
+          "language": "ru",
+          "theme": "light",
+          "kind": "five",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 6
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "en",
+          "theme": "dark",
+          "kind": "single",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 2
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "en",
+          "theme": "dark",
+          "kind": "three",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 4
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "en",
+          "theme": "dark",
+          "kind": "five",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 6
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "en",
+          "theme": "light",
+          "kind": "single",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 2
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "en",
+          "theme": "light",
+          "kind": "three",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 4
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "en",
+          "theme": "light",
+          "kind": "five",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 6
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "ru",
+          "theme": "dark",
+          "kind": "single",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 2
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "ru",
+          "theme": "dark",
+          "kind": "three",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 4
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "ru",
+          "theme": "dark",
+          "kind": "five",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 6
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "ru",
+          "theme": "light",
+          "kind": "single",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 2
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "ru",
+          "theme": "light",
+          "kind": "three",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 4
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "ru",
+          "theme": "light",
+          "kind": "five",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 6
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "en",
+          "theme": "dark",
+          "kind": "single",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 2
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "en",
+          "theme": "dark",
+          "kind": "three",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 4
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "en",
+          "theme": "dark",
+          "kind": "five",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 6
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "en",
+          "theme": "light",
+          "kind": "single",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 2
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "en",
+          "theme": "light",
+          "kind": "three",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 4
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "en",
+          "theme": "light",
+          "kind": "five",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 6
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "ru",
+          "theme": "dark",
+          "kind": "single",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 2
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "ru",
+          "theme": "dark",
+          "kind": "three",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 4
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "ru",
+          "theme": "dark",
+          "kind": "five",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 6
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "ru",
+          "theme": "light",
+          "kind": "single",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 2
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "ru",
+          "theme": "light",
+          "kind": "three",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 4
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "ru",
+          "theme": "light",
+          "kind": "five",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 6
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "en",
+          "theme": "dark",
+          "kind": "single",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 2
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "en",
+          "theme": "dark",
+          "kind": "three",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 4
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "en",
+          "theme": "dark",
+          "kind": "five",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 6
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "en",
+          "theme": "light",
+          "kind": "single",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 2
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "en",
+          "theme": "light",
+          "kind": "three",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 4
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "en",
+          "theme": "light",
+          "kind": "five",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 6
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "ru",
+          "theme": "dark",
+          "kind": "single",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 2
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "ru",
+          "theme": "dark",
+          "kind": "three",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 4
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "ru",
+          "theme": "dark",
+          "kind": "five",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 6
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "ru",
+          "theme": "light",
+          "kind": "single",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 2
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "ru",
+          "theme": "light",
+          "kind": "three",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 4
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "ru",
+          "theme": "light",
+          "kind": "five",
+          "status": "PASS",
+          "realAiCalls": 0,
+          "selectedImageRequests": 6
+        }
+      ]
+    },
+    {
+      "status": "PASS",
+      "cases": 16,
+      "results": [
+        {
+          "width": 360,
+          "height": 800,
+          "language": "en",
+          "theme": "dark",
+          "status": "PASS",
+          "audioPlaybackMocked": true
+        },
+        {
+          "width": 360,
+          "height": 800,
+          "language": "en",
+          "theme": "light",
+          "status": "PASS",
+          "audioPlaybackMocked": true
+        },
+        {
+          "width": 360,
+          "height": 800,
+          "language": "ru",
+          "theme": "dark",
+          "status": "PASS",
+          "audioPlaybackMocked": true
+        },
+        {
+          "width": 360,
+          "height": 800,
+          "language": "ru",
+          "theme": "light",
+          "status": "PASS",
+          "audioPlaybackMocked": true
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "en",
+          "theme": "dark",
+          "status": "PASS",
+          "audioPlaybackMocked": true
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "en",
+          "theme": "light",
+          "status": "PASS",
+          "audioPlaybackMocked": true
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "ru",
+          "theme": "dark",
+          "status": "PASS",
+          "audioPlaybackMocked": true
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "ru",
+          "theme": "light",
+          "status": "PASS",
+          "audioPlaybackMocked": true
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "en",
+          "theme": "dark",
+          "status": "PASS",
+          "audioPlaybackMocked": true
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "en",
+          "theme": "light",
+          "status": "PASS",
+          "audioPlaybackMocked": true
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "ru",
+          "theme": "dark",
+          "status": "PASS",
+          "audioPlaybackMocked": true
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "ru",
+          "theme": "light",
+          "status": "PASS",
+          "audioPlaybackMocked": true
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "en",
+          "theme": "dark",
+          "status": "PASS",
+          "audioPlaybackMocked": true
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "en",
+          "theme": "light",
+          "status": "PASS",
+          "audioPlaybackMocked": true
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "ru",
+          "theme": "dark",
+          "status": "PASS",
+          "audioPlaybackMocked": true
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "ru",
+          "theme": "light",
+          "status": "PASS",
+          "audioPlaybackMocked": true
+        }
+      ],
+      "productionWrites": 0,
+      "realAiRequests": 0,
+      "physicalDevice": false
+    },
+    {
+      "status": "PASS",
+      "cases": 16,
+      "results": [
+        {
+          "width": 360,
+          "height": 800,
+          "language": "en",
+          "theme": "dark",
+          "status": "PASS",
+          "actualAstronomyEngine": true,
+          "persistence": "local process fixture; NOT Supabase",
+          "cachedReopen": true,
+          "editInvalidation": true,
+          "delete": true,
+          "tenStatuses": true,
+          "legacyAchievementArchive": true
+        },
+        {
+          "width": 360,
+          "height": 800,
+          "language": "en",
+          "theme": "light",
+          "status": "PASS",
+          "actualAstronomyEngine": true,
+          "persistence": "local process fixture; NOT Supabase",
+          "cachedReopen": true,
+          "editInvalidation": true,
+          "delete": true,
+          "tenStatuses": true,
+          "legacyAchievementArchive": true
+        },
+        {
+          "width": 360,
+          "height": 800,
+          "language": "ru",
+          "theme": "dark",
+          "status": "PASS",
+          "actualAstronomyEngine": true,
+          "persistence": "local process fixture; NOT Supabase",
+          "cachedReopen": true,
+          "editInvalidation": true,
+          "delete": true,
+          "tenStatuses": true,
+          "legacyAchievementArchive": true
+        },
+        {
+          "width": 360,
+          "height": 800,
+          "language": "ru",
+          "theme": "light",
+          "status": "PASS",
+          "actualAstronomyEngine": true,
+          "persistence": "local process fixture; NOT Supabase",
+          "cachedReopen": true,
+          "editInvalidation": true,
+          "delete": true,
+          "tenStatuses": true,
+          "legacyAchievementArchive": true
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "en",
+          "theme": "dark",
+          "status": "PASS",
+          "actualAstronomyEngine": true,
+          "persistence": "local process fixture; NOT Supabase",
+          "cachedReopen": true,
+          "editInvalidation": true,
+          "delete": true,
+          "tenStatuses": true,
+          "legacyAchievementArchive": true
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "en",
+          "theme": "light",
+          "status": "PASS",
+          "actualAstronomyEngine": true,
+          "persistence": "local process fixture; NOT Supabase",
+          "cachedReopen": true,
+          "editInvalidation": true,
+          "delete": true,
+          "tenStatuses": true,
+          "legacyAchievementArchive": true
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "ru",
+          "theme": "dark",
+          "status": "PASS",
+          "actualAstronomyEngine": true,
+          "persistence": "local process fixture; NOT Supabase",
+          "cachedReopen": true,
+          "editInvalidation": true,
+          "delete": true,
+          "tenStatuses": true,
+          "legacyAchievementArchive": true
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "ru",
+          "theme": "light",
+          "status": "PASS",
+          "actualAstronomyEngine": true,
+          "persistence": "local process fixture; NOT Supabase",
+          "cachedReopen": true,
+          "editInvalidation": true,
+          "delete": true,
+          "tenStatuses": true,
+          "legacyAchievementArchive": true
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "en",
+          "theme": "dark",
+          "status": "PASS",
+          "actualAstronomyEngine": true,
+          "persistence": "local process fixture; NOT Supabase",
+          "cachedReopen": true,
+          "editInvalidation": true,
+          "delete": true,
+          "tenStatuses": true,
+          "legacyAchievementArchive": true
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "en",
+          "theme": "light",
+          "status": "PASS",
+          "actualAstronomyEngine": true,
+          "persistence": "local process fixture; NOT Supabase",
+          "cachedReopen": true,
+          "editInvalidation": true,
+          "delete": true,
+          "tenStatuses": true,
+          "legacyAchievementArchive": true
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "ru",
+          "theme": "dark",
+          "status": "PASS",
+          "actualAstronomyEngine": true,
+          "persistence": "local process fixture; NOT Supabase",
+          "cachedReopen": true,
+          "editInvalidation": true,
+          "delete": true,
+          "tenStatuses": true,
+          "legacyAchievementArchive": true
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "ru",
+          "theme": "light",
+          "status": "PASS",
+          "actualAstronomyEngine": true,
+          "persistence": "local process fixture; NOT Supabase",
+          "cachedReopen": true,
+          "editInvalidation": true,
+          "delete": true,
+          "tenStatuses": true,
+          "legacyAchievementArchive": true
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "en",
+          "theme": "dark",
+          "status": "PASS",
+          "actualAstronomyEngine": true,
+          "persistence": "local process fixture; NOT Supabase",
+          "cachedReopen": true,
+          "editInvalidation": true,
+          "delete": true,
+          "tenStatuses": true,
+          "legacyAchievementArchive": true
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "en",
+          "theme": "light",
+          "status": "PASS",
+          "actualAstronomyEngine": true,
+          "persistence": "local process fixture; NOT Supabase",
+          "cachedReopen": true,
+          "editInvalidation": true,
+          "delete": true,
+          "tenStatuses": true,
+          "legacyAchievementArchive": true
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "ru",
+          "theme": "dark",
+          "status": "PASS",
+          "actualAstronomyEngine": true,
+          "persistence": "local process fixture; NOT Supabase",
+          "cachedReopen": true,
+          "editInvalidation": true,
+          "delete": true,
+          "tenStatuses": true,
+          "legacyAchievementArchive": true
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "ru",
+          "theme": "light",
+          "status": "PASS",
+          "actualAstronomyEngine": true,
+          "persistence": "local process fixture; NOT Supabase",
+          "cachedReopen": true,
+          "editInvalidation": true,
+          "delete": true,
+          "tenStatuses": true,
+          "legacyAchievementArchive": true
+        }
+      ],
+      "productionWrites": 0,
+      "realAiRequests": 0,
+      "physicalDevice": false
+    },
+    {
+      "status": "PASS",
+      "cases": 16,
+      "results": [
+        {
+          "width": 360,
+          "height": 800,
+          "language": "en",
+          "theme": "dark",
+          "status": "PASS",
+          "fixture": "local UI only",
+          "realProviderCalls": 0,
+          "cachedReopen": true
+        },
+        {
+          "width": 360,
+          "height": 800,
+          "language": "en",
+          "theme": "light",
+          "status": "PASS",
+          "fixture": "local UI only",
+          "realProviderCalls": 0,
+          "cachedReopen": true
+        },
+        {
+          "width": 360,
+          "height": 800,
+          "language": "ru",
+          "theme": "dark",
+          "status": "PASS",
+          "fixture": "local UI only",
+          "realProviderCalls": 0,
+          "cachedReopen": true
+        },
+        {
+          "width": 360,
+          "height": 800,
+          "language": "ru",
+          "theme": "light",
+          "status": "PASS",
+          "fixture": "local UI only",
+          "realProviderCalls": 0,
+          "cachedReopen": true
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "en",
+          "theme": "dark",
+          "status": "PASS",
+          "fixture": "local UI only",
+          "realProviderCalls": 0,
+          "cachedReopen": true
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "en",
+          "theme": "light",
+          "status": "PASS",
+          "fixture": "local UI only",
+          "realProviderCalls": 0,
+          "cachedReopen": true
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "ru",
+          "theme": "dark",
+          "status": "PASS",
+          "fixture": "local UI only",
+          "realProviderCalls": 0,
+          "cachedReopen": true
+        },
+        {
+          "width": 375,
+          "height": 812,
+          "language": "ru",
+          "theme": "light",
+          "status": "PASS",
+          "fixture": "local UI only",
+          "realProviderCalls": 0,
+          "cachedReopen": true
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "en",
+          "theme": "dark",
+          "status": "PASS",
+          "fixture": "local UI only",
+          "realProviderCalls": 0,
+          "cachedReopen": true
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "en",
+          "theme": "light",
+          "status": "PASS",
+          "fixture": "local UI only",
+          "realProviderCalls": 0,
+          "cachedReopen": true
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "ru",
+          "theme": "dark",
+          "status": "PASS",
+          "fixture": "local UI only",
+          "realProviderCalls": 0,
+          "cachedReopen": true
+        },
+        {
+          "width": 390,
+          "height": 844,
+          "language": "ru",
+          "theme": "light",
+          "status": "PASS",
+          "fixture": "local UI only",
+          "realProviderCalls": 0,
+          "cachedReopen": true
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "en",
+          "theme": "dark",
+          "status": "PASS",
+          "fixture": "local UI only",
+          "realProviderCalls": 0,
+          "cachedReopen": true
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "en",
+          "theme": "light",
+          "status": "PASS",
+          "fixture": "local UI only",
+          "realProviderCalls": 0,
+          "cachedReopen": true
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "ru",
+          "theme": "dark",
+          "status": "PASS",
+          "fixture": "local UI only",
+          "realProviderCalls": 0,
+          "cachedReopen": true
+        },
+        {
+          "width": 393,
+          "height": 852,
+          "language": "ru",
+          "theme": "light",
+          "status": "PASS",
+          "fixture": "local UI only",
+          "realProviderCalls": 0,
+          "cachedReopen": true
+        }
+      ],
+      "productionWrites": 0,
+      "physicalDevice": false
+    }
+  ],
+  "physicalDevice": false,
+  "productionWrites": 0
+}

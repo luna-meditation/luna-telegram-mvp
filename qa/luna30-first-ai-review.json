@@ -1,0 +1,84 @@
+{
+  "status": "BLOCKED_QUALITY",
+  "transportStatus": "PASS",
+  "runName": "luna30-astrology-20261016",
+  "providerAttempts": 2,
+  "calls": [
+    {
+      "model": "gpt-5-mini-2025-08-07",
+      "diagnostic": null,
+      "httpStatus": 200,
+      "input_tokens": 782,
+      "total_tokens": 1460,
+      "output_tokens": 678,
+      "estimated_cost": 0.0015515,
+      "providerStatus": "completed",
+      "request_status": "success"
+    },
+    {
+      "model": "gpt-5-mini-2025-08-07",
+      "diagnostic": null,
+      "httpStatus": 200,
+      "input_tokens": 1661,
+      "total_tokens": 2280,
+      "output_tokens": 619,
+      "estimated_cost": 0.00165325,
+      "providerStatus": "completed",
+      "request_status": "success"
+    }
+  ],
+  "totalCostUsd": 0.00320475,
+  "checks": [
+    {
+      "name": "configured model is accessible to the existing server key",
+      "status": "PASS"
+    },
+    {
+      "name": "bounded standard gpt-5-mini request",
+      "status": "PASS"
+    },
+    {
+      "name": "no personal context or raw birth data sent",
+      "status": "PASS"
+    },
+    {
+      "name": "en persisted real AI report",
+      "status": "PASS"
+    },
+    {
+      "name": "en reopen and duplicate use saved report without provider",
+      "status": "PASS"
+    },
+    {
+      "name": "bounded standard gpt-5-mini request",
+      "status": "PASS"
+    },
+    {
+      "name": "no personal context or raw birth data sent",
+      "status": "PASS"
+    },
+    {
+      "name": "ru persisted real AI report",
+      "status": "PASS"
+    },
+    {
+      "name": "ru reopen and duplicate use saved report without provider",
+      "status": "PASS"
+    },
+    {
+      "name": "existing Moon Seeds and subscription untouched",
+      "status": "PASS"
+    },
+    {
+      "name": "two real provider requests within approved allowance",
+      "status": "PASS"
+    }
+  ],
+  "qualityReview": {
+    "status": "FAIL",
+    "issue": "The generated English portrait labeled calculated Moon Pisces as Aquarius. Russian question was a generic continuation invitation.",
+    "fix": "Explicit calculated sign names, new cache version, narrative/technical-fact separation and rejection of technical restatements and generic questions.",
+    "retest": "Requires separately approved provider calls"
+  },
+  "productionWrites": 0
+}

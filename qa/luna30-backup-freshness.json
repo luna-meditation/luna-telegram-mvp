@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "checkedAt": "2026-10-16T06:28:57.214Z",
+  "projectId": "vkcdtasbdoeilgfucoax",
+  "tables": 37,
+  "rows": 1397,
+  "allRowsExact": true,
+  "schemaSecurityExact": true,
+  "productionWrites": 0
+}
