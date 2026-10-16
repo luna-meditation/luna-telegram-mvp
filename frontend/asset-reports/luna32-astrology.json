@@ -1,0 +1,52 @@
+{
+  "generator": "built-in image_gen",
+  "purpose": "decorative menu images, not factual chart output",
+  "originalsPreserved": true,
+  "cropped": false,
+  "records": [
+    {
+      "id": "natal",
+      "src": "/images/astrology/luna32-natal.webp",
+      "bytes": 47560,
+      "sourceArtifact": "exec-32191d60-b908-4895-803e-d07c607216d9.png",
+      "sourceWidth": 1254,
+      "sourceHeight": 1254,
+      "sourceSha256": "e48c6b9dde606b7a36559494734642e7298ffd4b7f08d791f0c813c2c779dcc5",
+      "sha256": "edcdc625f976f639e8d4adb5ccf3c640c21e62da9229d59205bc826a67dd12f4",
+      "prompt": "Square premium Luna astrology menu illustration, midnight navy, soft violet, champagne gold, fine celestial detail, clear focal silhouette, no text, numbers, interface, logos or watermark; original decorative artwork, not a calculated chart. Subject: A golden natal instrument, concentric rings, zodiac pictograms, a warm central star; one chart only."
+    },
+    {
+      "id": "compatibility",
+      "src": "/images/astrology/luna32-compatibility.webp",
+      "bytes": 42202,
+      "sourceArtifact": "exec-51c23507-c727-45a1-bfd2-016706afd6c8.png",
+      "sourceWidth": 1254,
+      "sourceHeight": 1254,
+      "sourceSha256": "baa3a8cee6071403e69638925cf035ccadfa8c0f72ec80dc6039519b59957f3d",
+      "sha256": "94b2c61488c13b301990ab7d2cdcfc7624d3c97c234a1eed1ed93a10cba250d2",
+      "prompt": "Square premium Luna astrology menu illustration, midnight navy, soft violet, champagne gold, fine celestial detail, clear focal silhouette, no text, numbers, interface, logos or watermark; original decorative artwork, not a calculated chart. Subject: Two intertwined celestial chart instruments, silver-blue and champagne-gold, moon and sun, no people, anatomy or hearts. Edited the first generated variant to remove human portraits while preserving its paired-orbit composition."
+    },
+    {
+      "id": "calendar",
+      "src": "/images/astrology/luna32-calendar.webp",
+      "bytes": 23624,
+      "sourceArtifact": "exec-800d9170-f67c-4bdf-8eb7-85b395bb31d3.png",
+      "sourceWidth": 1254,
+      "sourceHeight": 1254,
+      "sourceSha256": "de6724904377fc1df5e94870734663145d51017f264e5ba7c15959a2229f6881",
+      "sha256": "20a96300edce5d3436bb8195d662cacbab02f64adbcd502848594ea6aae86775",
+      "prompt": "Square premium Luna astrology menu illustration, midnight navy, soft violet, champagne gold, fine celestial detail, clear focal silhouette, no text, numbers, interface, logos or watermark; original decorative artwork, not a calculated chart. Subject: Five illuminated moon phases over an abstract dotted calendar grid, violet starfield; no zodiac wheel."
+    },
+    {
+      "id": "path",
+      "src": "/images/astrology/luna32-path.webp",
+      "bytes": 32628,
+      "sourceArtifact": "exec-b5773ca9-a1bf-42d1-a3a8-ebeddc77a522.png",
+      "sourceWidth": 1254,
+      "sourceHeight": 1254,
+      "sourceSha256": "ebd182861d1639d8feb3fc3154c6f038238a5dbe2e2aab25d251f8a1f71d84c5",
+      "sha256": "5aeac383f0cd0eaf294939f11d01153f9e2151b88c5e94b70dd5b5b437623e72",
+      "prompt": "Square premium Luna astrology menu illustration, midnight navy, soft violet, champagne gold, fine celestial detail, clear focal silhouette, no text, numbers, interface, logos or watermark; original decorative artwork, not a calculated chart. Subject: A winding stardust path over an indigo nebula toward one champagne-gold guiding star; no zodiac wheel."
+    }
+  ]
+}

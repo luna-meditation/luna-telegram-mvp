@@ -1,31 +1,41 @@
-import {useEffect,useState} from 'react';
-import {CalendarDays,ChevronRight,Compass,Orbit,Stars} from 'lucide-react';
-import {getCelestialMonth,type AppLanguage,type CelestialMonth} from '../../api';
+import {useEffect,useRef,useState} from 'react';
+import {ArrowRight,Stars,UserRound,UsersRound} from 'lucide-react';
+import {getBirthProfiles,type AppLanguage,type BirthProfile} from '../../api';
 import {SectionBack} from '../../luna2/ExplorePage';
-import {OptimizedImage} from '../../design-system/components/OptimizedImage';
 import AstrologyPage from './AstrologyPage';
-type Section='home'|'natal'|'compatibility'|'calendar'|'path';
+import CelestialCalendar from './CelestialCalendar';
+
+type Section='home'|'natal'|'compatibility'|'calendar'|'path'|'profiles';
 export default function AstrologyHub(props:{language:AppLanguage;initData?:string;onBack:()=>void;registerBackHandler?:(handler:(()=>void)|null)=>void;initialSection?:'natal'|'compatibility'}){
- const {language,initData,onBack,registerBackHandler}=props,en=language==='en';
- const [section,setSection]=useState<Section>(props.initialSection??'home');
+ const {language,initData,onBack,registerBackHandler}=props,en=language==='en',root=useRef<HTMLDivElement>(null);
+ const [section,setSection]=useState<Section>(props.initialSection??'home'),[subject,setSubject]=useState<'self'|'other'|undefined>();
+ const [profiles,setProfiles]=useState<BirthProfile[]|null>(null),[profilesError,setProfilesError]=useState(false),[retry,setRetry]=useState(0);
  useEffect(()=>{if(props.initialSection)setSection(props.initialSection);},[props.initialSection]);
- const back=()=>section==='home'?onBack():setSection('home');
- useEffect(()=>{registerBackHandler?.(section==='calendar'?()=>setSection('home'):null);return()=>registerBackHandler?.(null);},[section,registerBackHandler]);
- if(section==='natal'||section==='compatibility'||section==='path')return <AstrologyPage {...props} onBack={()=>setSection('home')} experience={section}/>;
- return <div className="luna2-page luna32-astrology-hub"><SectionBack language={language} onBack={back}/><header className="luna2-page-heading"><p>{en?'A different perspective':'Новый взгляд'}</p><h1>{en?'Your celestial space':'Ваше звёздное пространство'}</h1><span>{en?'Calculated sky. Symbolic meaning. Your own decisions.':'Рассчитанное небо. Символический смысл. Ваши собственные решения.'}</span></header>
-  {section==='calendar'?<CelestialCalendar language={language} initData={initData}/>:<><div className="luna32-astro-categories">{[
-   {id:'natal' as const,Icon:Stars,title:en?'Natal chart':'Натальная карта',body:en?'Understand your calculated birth sky':'Познакомьтесь с небом вашего рождения'},
-   {id:'compatibility' as const,Icon:Orbit,title:en?'Compatibility':'Совместимость',body:en?'Explore two charts without a made-up score':'Две карты — без выдуманного процента'},
-   {id:'calendar' as const,Icon:CalendarDays,title:en?'Celestial calendar':'Небесный календарь',body:en?'Real lunar phases, one month at a time':'Реальные лунные фазы по месяцам'},
-   {id:'path' as const,Icon:Compass,title:en?'Path & potential':'Путь и потенциал',body:en?'Reflect on purpose, learning and growth':'Исследуйте ценности, обучение и развитие'}
-  ].map(({id,Icon,title,body})=><button type="button" key={id} onClick={()=>setSection(id)}><OptimizedImage src="/images/explore/astrology-zodiac-v1.png" sizes="180px" alt=""/><span className="luna32-astro-icon"><Icon size={23}/></span><strong>{title}</strong><small>{body}</small><ChevronRight size={17}/></button>)}</div><button type="button" className="luna32-my-charts" onClick={()=>setSection('natal')}><Stars size={20}/><span>{en?'My charts & birth profiles':'Мои карты и данные рождения'}</span><ChevronRight size={18}/></button><p className="luna32-symbolic-note">{en?'Astrology is a symbolic reflection practice, not a scientifically validated personality test or a prediction. Birth details are optional and private.':'Астрология — символическая практика для размышления, а не научный тест личности или предсказание. Данные рождения необязательны и доступны только вам.'}</p></>}
+ useEffect(()=>{if(section!=='home'&&section!=='calendar')return;registerBackHandler?.(section==='calendar'?()=>setSection('home'):null);return()=>registerBackHandler?.(null);},[section,registerBackHandler]);
+ useEffect(()=>{root.current?.scrollIntoView({block:'start',behavior:'auto'});},[section]);
+ useEffect(()=>{if(section!=='home')return;let active=true;setProfilesError(false);getBirthProfiles(initData).then(r=>{if(active)setProfiles(r.profiles);}).catch(()=>{if(active){setProfiles(null);setProfilesError(true);}});return()=>{active=false;};},[section,initData,retry]);
+ const manage=(kind?:'self'|'other')=>{setSubject(kind);setSection('profiles');};
+ if(section==='natal'||section==='compatibility'||section==='path'||section==='profiles')return <AstrologyPage key={section} {...props} onBack={()=>setSection('home')} experience={section} initialSubjectKind={subject}/>;
+ const categories=[
+  {id:'natal' as const,title:en?'My natal chart':'Моя натальная карта',body:en?'Character, relationships and life themes.':'Характер, отношения и жизненные темы.',cta:en?'Open my chart':'Открыть карту'},
+  {id:'compatibility' as const,title:en?'Compatibility':'Совместимость',body:en?'Two charts. A closer look at your connection.':'Две карты и новый взгляд на ваши отношения.',cta:en?'Compare two charts':'Сравнить две карты'},
+  {id:'calendar' as const,title:en?'Celestial calendar':'Небесный календарь',body:en?'Moon phases, planetary transits and daily reflection.':'Лунные фазы, транзиты и темы для размышления.',cta:en?'Choose a date':'Выбрать дату'},
+  {id:'path' as const,title:en?'Path & potential':'Мой путь и потенциал',body:en?'Motivation, strengths and room to grow.':'Мотивация, сильные стороны и развитие.',cta:en?'Explore my path':'Исследовать'}
+ ];
+ return <div ref={root} className="luna2-page luna32-astrology-hub" data-testid="astrology-hub">
+  <SectionBack language={language} onBack={()=>section==='home'?onBack():setSection('home')}/>
+  <header className="luna2-page-heading"><p><Stars size={16}/>{en?'Your celestial space':'Ваше звёздное пространство'}</p><h1>{section==='calendar'?(en?'Celestial calendar':'Небесный календарь'):(en?'Astrology':'Астрология')}</h1><span>{section==='calendar'?(en?'Choose a date. Explore the calculated sky.':'Выберите дату и исследуйте рассчитанное небо.'):(en?'Know yourself. Explore your connections.':'Узнайте себя и свои отношения через звёзды.')}</span></header>
+  {section==='calendar'?<CelestialCalendar language={language} initData={initData}/>:<>
+   <div className="luna32-astro-categories">{categories.map(({id,title,body,cta})=><button type="button" key={id} data-astrology-experience={id} onClick={()=>setSection(id)}>
+    <img src={'/images/astrology/luna32-'+id+'.webp'} width="384" height="384" alt="" loading="lazy" decoding="async"/>
+    <span className="luna32-astro-card-copy"><strong>{title}</strong><span>{body}</span><span className="luna32-astro-cta">{cta}<ArrowRight size={16}/></span></span>
+   </button>)}</div>
+   <section className="luna32-saved-profiles" aria-labelledby="luna32-saved-profiles-title"><header><div><h2 id="luna32-saved-profiles-title">{en?'Saved profiles':'Сохранённые профили'}</h2><p>{en?'Private birth data, in one place.':'Данные рождения — в одном месте.'}</p></div><span>{profiles===null?'—':profiles.length}</span></header>
+    {profilesError&&<p role="status">{en?'Profiles could not load.':'Не удалось загрузить профили.'} <button type="button" onClick={()=>setRetry(n=>n+1)}>{en?'Retry':'Повторить'}</button></p>}
+    <div><button type="button" onClick={()=>manage('self')}><UserRound size={22}/><strong>{en?'My chart':'Моя карта'}</strong><span>{en?'View or edit':'Открыть или изменить'}</span></button><button type="button" onClick={()=>manage('other')}><UsersRound size={22}/><strong>{en?'Another person':'Другой человек'}</strong><span>{en?'Add or manage':'Добавить или изменить'}</span></button></div>
+    <button type="button" className="luna32-manage-profiles" onClick={()=>manage()}>{en?'Manage all profiles':'Управлять всеми профилями'}<ArrowRight size={16}/></button>
+   </section>
+   <p className="luna32-symbolic-note">{en?'Calculated positions, symbolic meaning — not a scientific personality test or a prediction. Birth details are optional and private.':'Рассчитанные положения, символический смысл — не научный тест личности и не предсказание. Данные рождения необязательны и приватны.'}</p>
+  </>}
  </div>;
-}
-function CelestialCalendar({language,initData}:{language:AppLanguage;initData?:string}){
- const en=language==='en';const [month,setMonth]=useState(()=>new Date().toISOString().slice(0,7)),[result,setResult]=useState<CelestialMonth|null>(null),[error,setError]=useState('');
- useEffect(()=>{let alive=true;setResult(null);setError('');getCelestialMonth(month,initData).then(v=>{if(alive)setResult(v);}).catch(()=>{if(alive)setError(en?'The calculated calendar could not load. No AI request was made.':'Не удалось загрузить рассчитанный календарь. AI-запрос не выполнялся.');});return()=>{alive=false;};},[month,initData,en]);
- const names=en?['New Moon','First quarter','Full Moon','Last quarter']:['Новолуние','Первая четверть','Полнолуние','Последняя четверть'];
- const reflections=en?['What would you like to begin?','What small step can you take?','What deserves your attention?','What is no longer useful?']:['С чего вам хотелось бы начать?','Какой небольшой шаг вы можете сделать?','Что заслуживает вашего внимания?','Что больше не приносит пользы?'];
- return <section className="luna32-calendar"><label>{en?'Month':'Месяц'}<input type="month" min="1800-01" max="2100-12" value={month} onChange={e=>{if(e.target.value)setMonth(e.target.value);}}/></label>{error&&<p role="alert">{error}</p>}{!result&&!error&&<p role="status">{en?'Calculating lunar phases…':'Рассчитываем лунные фазы…'}</p>}{result&&<><div className="luna32-month-grid" aria-label={en?'Moon illumination at 12:00 UTC':'Освещённость Луны в 12:00 UTC'}>{result.days.map(day=><div key={day.date}><span>{Number(day.date.slice(-2))}</span><i aria-hidden="true" style={{background:`linear-gradient(90deg,#151c35 ${Math.round((1-day.illuminatedFraction)*100)}%,#d9ddf4 ${Math.round((1-day.illuminatedFraction)*100)}%)`}}/><small>{Math.round(day.illuminatedFraction*100)}%</small></div>)}</div><p className="luna32-symbolic-note">{en?'Times below are UTC. The lunar disc is a simplified illumination indicator, not a sky photograph.':'Время ниже — UTC. Диск Луны схематично показывает освещённость, а не вид неба.'}</p><div className="luna32-lunar-events">{result.events.map(event=><article key={event.at}><CalendarDays size={20}/><div><strong>{names[event.quarter]}</strong><time dateTime={event.at}>{new Intl.DateTimeFormat(en?'en-GB':'ru-RU',{day:'numeric',month:'long',hour:'2-digit',minute:'2-digit',timeZone:'UTC'}).format(new Date(event.at))} UTC</time><p>{reflections[event.quarter]}</p></div></article>)}</div><p className="luna32-symbolic-note">{en?'Phase times are astronomical calculations. Reflection prompts are symbolic, not claims about mood, health or future events. No AI generation or Moon Seeds are used.':'Время фаз рассчитано астрономически. Вопросы для размышления символические: это не утверждения о настроении, здоровье или будущем. AI-запросов и списаний Moon Seeds нет.'}</p></>}
- </section>;
 }

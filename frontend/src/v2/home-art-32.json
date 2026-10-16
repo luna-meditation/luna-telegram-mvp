@@ -1,0 +1,87 @@
+{
+  "hero": {
+    "width": 1536,
+    "height": 1024,
+    "variants": [
+      {
+        "width": 720,
+        "src": "/images/home/luna32-hero-720.webp",
+        "bytes": 41038
+      },
+      {
+        "width": 1080,
+        "src": "/images/home/luna32-hero-1080.webp",
+        "bytes": 86040
+      },
+      {
+        "width": 1440,
+        "src": "/images/home/luna32-hero-1440.webp",
+        "bytes": 135840
+      }
+    ]
+  },
+  "tarot": {
+    "width": 1254,
+    "height": 1254,
+    "variants": [
+      {
+        "width": 360,
+        "src": "/images/home/luna32-tarot-360.webp",
+        "bytes": 22796
+      },
+      {
+        "width": 540,
+        "src": "/images/home/luna32-tarot-540.webp",
+        "bytes": 45682
+      }
+    ]
+  },
+  "astrology": {
+    "width": 1254,
+    "height": 1254,
+    "variants": [
+      {
+        "width": 360,
+        "src": "/images/home/luna32-astrology-360.webp",
+        "bytes": 33428
+      },
+      {
+        "width": 540,
+        "src": "/images/home/luna32-astrology-540.webp",
+        "bytes": 69282
+      }
+    ]
+  },
+  "meditations": {
+    "width": 1254,
+    "height": 1254,
+    "variants": [
+      {
+        "width": 360,
+        "src": "/images/home/luna32-meditations-360.webp",
+        "bytes": 26354
+      },
+      {
+        "width": 540,
+        "src": "/images/home/luna32-meditations-540.webp",
+        "bytes": 54388
+      }
+    ]
+  },
+  "breathwork": {
+    "width": 1254,
+    "height": 1254,
+    "variants": [
+      {
+        "width": 360,
+        "src": "/images/home/luna32-breathwork-360.webp",
+        "bytes": 17928
+      },
+      {
+        "width": 540,
+        "src": "/images/home/luna32-breathwork-540.webp",
+        "bytes": 34956
+      }
+    ]
+  }
+}

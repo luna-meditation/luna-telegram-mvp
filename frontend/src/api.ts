@@ -75,7 +75,7 @@ export type BirthLocationResult={placeId:string;label:string;country:string;time
 export type SynastryResult={firstChartId:string;secondChartId:string;aspects:Array<{from:string;to:string;type:string;orb:number}>;unknownTime:boolean;excluded:{first:string[];second:string[]};percentage:null;disclaimer:string};
 export const findBirthLocations=(q:string,initData?:string)=>request<{locations:BirthLocationResult[]}>(`/api/astrology/locations?q=${encodeURIComponent(q)}`,undefined,initData);
 export const getBirthProfiles=(initData?:string)=>request<{profiles:BirthProfile[]}>('/api/astrology/profiles',undefined,initData);
-export type CelestialMonth={month:string;timezone:'UTC';events:Array<{quarter:number;at:string}>;days:Array<{date:string;moonPhaseDegrees:number;illuminatedFraction:number}>;personalPrediction:false};
+export type CelestialMonth={month:string;timezone:'UTC';events:Array<{quarter:number;at:string}>;days:Array<{date:string;at?:string;moonPhaseDegrees:number;illuminatedFraction:number;planets?:Array<{id:string;longitude:number}>;aspects?:Array<{from:string;to:string;type:string;orb:number}>}>;personalPrediction:false;transitScope?:'general_sky_at_12_utc'};
 export const getCelestialMonth=(month:string,initData?:string)=>request<CelestialMonth>(`/api/astrology/calendar?month=${encodeURIComponent(month)}`,undefined,initData);
 export type DreamEntry={id:string;client_id:string;title:string;description:string;language:AppLanguage;dream_date:string;created_at:string;updated_at:string};
 export const getDreams=(initData?:string)=>request<{dreams:DreamEntry[];nextOffset:number|null}>('/api/luna32/dreams',undefined,initData);

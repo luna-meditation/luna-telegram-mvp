@@ -65,11 +65,14 @@ const server=createServer(async(req,res)=>{
   try {
     if(url.pathname.startsWith('/api/')){
       let body={};if(req.method!=='GET'){let input='';for await(const part of req){input+=part;if(input.length>20000)return json({error:'Preview input too large'},413);}if(input)body=JSON.parse(input);}
-      if(luna32Preview&&url.pathname==='/api/luna32/local-reset'&&req.method==='POST'){checkin=null;return json({ok:true,localFixtureOnly:true});}
+      if(luna32Preview&&url.pathname==='/api/luna32/local-reset'&&req.method==='POST'){checkin=null;if(body.resetAstrology===true){birthProfiles.clear();birthCharts.clear();}return json({ok:true,localFixtureOnly:true});}
       if(astrology&&url.pathname.startsWith('/api/astrology/')){
        if(luna32Preview&&url.pathname==='/api/astrology/calendar')return json(astrology.calculateCelestialMonth(url.searchParams.get('month')));
        if(url.pathname==='/api/astrology/locations')return json({locations:astrology.searchBirthLocations(url.searchParams.get('q')??'')});
        if(url.pathname==='/api/astrology/profiles'&&req.method==='GET')return json({profiles:[...birthProfiles.values()]});
+       if(url.pathname.startsWith('/api/astrology/charts/')&&req.method==='GET'){const chart=birthCharts.get(url.pathname.split('/')[4]);return chart?json({chart}):json({code:'chart_not_found'},404);}
+       if(url.pathname==='/api/astrology/reports'&&req.method==='GET')return json({report:null,cached:true});
+       if(url.pathname==='/api/astrology/reports'&&req.method==='POST')return json({code:'offline_provider_disabled',error:'Offline UI preview never calls a real provider.'},503);
        const id=url.pathname.split('/')[4];
        if(url.pathname.startsWith('/api/astrology/profiles')&&(req.method==='PUT'||req.method==='POST')&&!url.pathname.endsWith('/chart')){
         let value,calculation;try{({value,calculation}=astrology.trustedBirthInput(body));astrology.calculateNatalChart(calculation);}catch{return json({code:'ambiguous_birth_time'},400);}

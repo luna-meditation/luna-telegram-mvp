@@ -41,8 +41,15 @@ export function calculateCelestialMonth(month:string){
  const start=new Date(month+'-01T00:00:00Z'),end=new Date(start);end.setUTCMonth(end.getUTCMonth()+1);
  const events:Array<{quarter:number;at:string}>=[];
  for(let phase=SearchMoonQuarter(start);phase.time.date<end;phase=NextMoonQuarter(phase)){if(events.length>6)throw new Error('Calendar search boundary exceeded.');events.push({quarter:phase.quarter,at:phase.time.date.toISOString()});}
- const days=[];for(let day=new Date(start);day<end;day=new Date(day.getTime()+86400000)){const noon=new Date(day.getTime()+43200000),phaseAngle=MoonPhase(noon);days.push({date:day.toISOString().slice(0,10),moonPhaseDegrees:phaseAngle,illuminatedFraction:(1-Math.cos(phaseAngle*Math.PI/180))/2});}
- return{month,timezone:'UTC' as const,engine:astrologyEngineMetadata,events,days,personalPrediction:false as const};
+ const days=[];for(let day=new Date(start);day<end;day=new Date(day.getTime()+86400000)){
+  const noon=new Date(day.getTime()+43200000),phaseAngle=MoonPhase(noon),planets=planetsAt(noon);
+  // General-sky transit snapshots at a declared UTC instant, not personalized
+  // predictions or exact aspect-peak/ingress times. Reuse the natal engine.
+  const aspects:Array<{from:string;to:string;type:string;orb:number}>=[];
+  for(let i=0;i<planets.length;i++)for(let j=i+1;j<planets.length;j++){const aspect=aspectBetween(planets[i].longitude,planets[j].longitude);if(aspect)aspects.push({from:planets[i].id,to:planets[j].id,...aspect});}
+  days.push({date:day.toISOString().slice(0,10),at:noon.toISOString(),moonPhaseDegrees:phaseAngle,illuminatedFraction:(1-Math.cos(phaseAngle*Math.PI/180))/2,planets,aspects});
+ }
+ return{month,timezone:'UTC' as const,engine:astrologyEngineMetadata,events,days,personalPrediction:false as const,transitScope:'general_sky_at_12_utc' as const};
 }
 export function natalCacheKey(userId:number,input:z.infer<typeof birthCalculationInput>){return chartCacheKey(userId,input,astrologyEngineMetadata);}
 export function calculateSynastry(first:NatalCalculation,second:NatalCalculation){

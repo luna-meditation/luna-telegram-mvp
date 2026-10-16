@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {OptimizedImage} from '../../design-system/components/OptimizedImage';
 import {useResolvedTheme} from '../../hooks/useResolvedTheme';
-import hero25 from '../home-hero-25.json';
+import homeArt from '../home-art-32.json';
 import {HomeLunaGuide} from '../../luna2/HomeDiscovery';
 
 type MoodChip = 'Sleep' | 'Calm' | 'Focus' | 'Anxiety' | 'Breath' | 'Energy';
@@ -134,14 +134,14 @@ export function V2Hero({
   const selectedMood = activeMood ? visualMoods.find((item) => item.active.includes(activeMood)) : null;
 
   return (
-    <section className={`home-v2-atmosphere ${premiumHome ? 'luna25-hero' : ''}`}>
+    <section className={`home-v2-atmosphere ${premiumHome ? 'luna25-hero' : ''} ${premiumHome && moodSaved ? 'is-checked-in' : ''}`} data-checkin-state={moodSaved ? 'saved' : 'pending'}>
       <div className="home-v2-atmosphere-art" aria-hidden="true">
         {(Object.entries(homeHeroAssets) as Array<[keyof typeof homeHeroAssets, string]>).filter(([theme])=>theme===resolvedTheme).map(([theme, path]) => failedImages[theme] ? null : (
           <OptimizedImage
             key={theme}
-            src={premiumHome ? hero25.variants[1].src : path}
-            asset={premiumHome ? hero25 : undefined}
-            sizes={premiumHome ? '(max-width: 600px) 640px, 800px' : undefined}
+            src={premiumHome ? homeArt.hero.variants[1].src : path}
+            asset={premiumHome ? homeArt.hero : undefined}
+            sizes={premiumHome ? '(max-width: 600px) calc(100vw - 32px), 800px' : undefined}
             className={`home-v2-hero-image home-v2-hero-${theme}`}
             alt=""
             loading="eager"

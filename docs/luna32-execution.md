@@ -152,3 +152,40 @@ verified baseline. The production build gate intentionally remains closed.
 
 Status: implementation in progress; production is still Luna 3.1. No new
 production migration, environment update, merge or deployment has occurred.
+
+## Final Astrology and Home release candidate
+
+- Four horizontal Astrology entries now open independent natal, two-person
+  compatibility, interactive calendar and path experiences. Profile management
+  is separate. Existing owner-scoped CRUD, real Astronomy Engine calculations,
+  cached reports, consent and contextual chat attachments are reused.
+- Calendar includes general-sky positions/aspects at12:00 UTC. It does not claim
+  personalized transits or exact aspect peaks. Path questions are explicitly
+  local symbolic reflections, not invented AI output or proven traits.
+- Four original decorative astrology images and five original Home images were
+  prepared with built-in imagegen. Source outputs are preserved. Home has
+  responsive WebP720/1080/1440 hero and360/540 category variants; no screenshot
+  crops, no new layouts/copy/navigation, and no server OpenAI calls for visuals.
+  Provenance/prompt summaries: frontend/asset-reports/luna32-{home,astrology}.json.
+- The same Home background stays mounted after check-in while the hero contracts
+  from278 to230px, preserving mood editing and Talk to Luna. Card of the Day
+  retains its previous artwork and behavior.
+- Local Node22: frontend192 tests; backend313 pass plus the optional RPC check
+  separately passes on isolated PG17. Types/lint/build pass. Native review:
+  15 new checks plus17 foundation checks. New UI checks:8 astrology flows,
+  4 report-cache/error cases,8 cold-load/missing-art cases; existing24 mobile
+  and24 Tarot cases also pass. This is Chromium/offline UI evidence, not new
+  physical-iPhone evidence or real production persistence proof.
+- New encrypted production snapshot2026-10-16T14:27:30Z:48 tables/1484 rows,
+  33 functions, two exact local restores. The unchanged reviewed migration also
+  passes apply/reapply/rollback on this freshly restored schema with12 direct
+  permission denials. Media versions/hashes are rechecked before production SQL.
+- Owner explicitly superseded the earlier $30 total-October rule: $100 from
+  this release through October, then $100 each calendar month. The release
+  budget gate requires that specific approval, an empty new production ledger,
+  generation-disabled cutover and legacy-worker drain. A prospective zero
+  baseline must never be described as zero historical provider spend.
+- All new monetization remains OFF. Existing daily quotas, balances, Stars
+  conditions and paid entitlements are unchanged. Production changes begin
+  only after fresh recovery/preflight checks pass; backend-first, then one
+  prebuilt frontend publication. No further paid QA calls are planned.

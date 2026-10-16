@@ -8,8 +8,9 @@ const cardImagePaths=new Set(Object.entries(tarotAssets).filter(([p])=>p.include
 const origin=process.env.LUNA30_PREVIEW_ORIGIN??'http://127.0.0.1:56060',out=process.env.LUNA30_QA_OUTPUT??'/tmp/luna30-mobile';assert.ok(['127.0.0.1','localhost'].includes(new URL(origin).hostname),'QA fixtures must never target production');await mkdir(out,{recursive:true});
 const browser=await chromium.launch({headless:true,executablePath:process.env.PHASE2_CHROME_BIN});
 const results=[];
+const themes=process.env.LUNA_QA_THEMES?.split(',')??['dark','light'];assert.ok(themes.length&&themes.every(theme=>['dark','light'].includes(theme)));
 try{
- for(const [width,height]of [[360,800],[375,812],[390,844],[393,852]])for(const language of ['en','ru'])for(const theme of ['dark','light'])for(const kind of ['single','three','five']){
+ for(const [width,height]of [[360,800],[375,812],[390,844],[393,852]])for(const language of ['en','ru'])for(const theme of themes)for(const kind of ['single','three','five']){
   if(process.env.LUNA30_CASE&&process.env.LUNA30_CASE!==`${width}-${language}-${theme}-${kind}`)continue;
   const context=await browser.newContext({viewport:{width,height},deviceScaleFactor:2,isMobile:true,hasTouch:true,colorScheme:theme,reducedMotion:width===320?'reduce':'no-preference'});
   await context.addInitScript(({language,theme,width,height})=>{localStorage.setItem('luna.language.v1',language);localStorage.setItem('luna.theme.preference.v1',theme);const handlers=new Set();window.__qaBack=()=>[...handlers].forEach(fn=>fn());window.Telegram={WebApp:{initData:'offline-local-qa',initDataUnsafe:{user:{id:880000002,first_name:'Alex',language_code:language}},platform:width===360?'android':'ios',viewportHeight:height,viewportStableHeight:height,ready(){},expand(){},onEvent(){},offEvent(){},setHeaderColor(){},setBackgroundColor(){},setBottomBarColor(){},BackButton:{isVisible:false,show(){this.isVisible=true;},hide(){this.isVisible=false;},onClick(fn){handlers.add(fn);},offClick(fn){handlers.delete(fn);}}}};},{language,theme,width,height});

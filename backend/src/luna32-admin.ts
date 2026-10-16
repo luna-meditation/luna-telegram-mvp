@@ -3,7 +3,7 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import {readLuna32Settings} from './luna32-runtime.js';
 import {FoundationError} from './foundation-error.js';
 // Owner-approved ceiling, not an editable provider account billing limit.
-export const approvedMonthlyAiCapUsd=30;
+export const approvedMonthlyAiCapUsd=100;
 const update=z.object({monthlyCapUsd:z.number().finite().min(0).max(approvedMonthlyAiCapUsd).optional(),freeDailyLimit:z.number().int().min(1).max(200).optional(),premiumDailyLimit:z.number().int().min(1).max(500).optional(),generationEnabled:z.boolean().optional(),publicBeta:z.boolean().optional(),betaStartsAt:z.string().datetime().optional(),betaExpiresAt:z.string().datetime().optional()}).strict().refine(v=>Object.keys(v).length>0);
 export function createLuna32Admin(db:SupabaseClient){return{
  async read(){const settings=await readLuna32Settings(db),month=new Date().toISOString().slice(0,7)+'-01';const totals=await db.from('luna32_ai_month_totals').select('held_cost_microusd,spent_cost_microusd').eq('month',month).maybeSingle();if(totals.error)throw new FoundationError(503,'ai_budget_unavailable','Budget status is unavailable.');return{settings,month,approvedCapUsd:approvedMonthlyAiCapUsd,heldUsd:Number(totals.data?.held_cost_microusd??0)/1e6,spentUsd:Number(totals.data?.spent_cost_microusd??0)/1e6,baselineUsd:settings.baseline_month===month?settings.legacy_monthly_cost_microusd/1e6:0};},

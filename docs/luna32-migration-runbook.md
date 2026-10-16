@@ -31,8 +31,11 @@ the owner; users and model tool arguments cannot supply it.
    retries and may contain NULL costs; its sum alone is not a verified baseline.
    Use provider billing evidence or a documented conservative bound. If this
    cannot be established, leave generation disabled: do not assume zero cost.
-   Owner selected a TOTAL $30 October ceiling and is supplying the already
-   spent amount. It is not a fresh additional $30 allowance at release time.
+   Superseding owner approval2026-10-16: $100 from this release through October,
+   then $100 each UTC calendar month. This explicitly prospective allowance
+   excludes pre-release costs; a zero release baseline is NOT a claim of zero
+   historical provider spend. Record the new empty ledger, fail-closed cutover
+   and effective start. The former total-October $30 approval is superseded.
 4. Verify exact new migration hash against the native-PG17 test evidence.
 5. Apply ONLY this migration in one transaction. Check default flags OFF,
    monthly cap $30, ACL/RLS, dependency grants and unchanged unrelated objects.
@@ -42,7 +45,9 @@ the owner; users and model tool arguments cannot supply it.
 Backend `LUNA32_ENABLED` stays false until migration and backend compatibility
 checks pass. New `public_beta` and `generation_enabled` are false by default.
 Activation needs an explicit finite promotion window, verified baseline month,
-approved cap $30 (30,000,000 micro-USD) and the existing daily quota policy.
+approved cap $100 (100,000,000 micro-USD) and the existing daily quota policy.
+The reviewed migration retains its conservative $30 default; apply the approved
+$100 runtime setting only after migration verification, without editing SQL.
 Do not activate new prices, Seed packages, paid readings or referral rewards.
 Staging's initial neutral AI test had a6-provider-call/$0.03 ceiling. After five
 calls ($0.00693655), the owner separately authorized at most two more calls

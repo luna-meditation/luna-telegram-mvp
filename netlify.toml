@@ -11,8 +11,8 @@
   command = "pnpm --filter @luna/frontend build:production"
 
 [context.production.environment]
-  LUNA_RELEASE_PROFILE = "luna31"
-  LUNA_RELEASE_DB_REVIEW = "../qa/luna31-release-review.json"
+  LUNA_RELEASE_PROFILE = "luna32"
+  LUNA_RELEASE_DB_REVIEW = "../qa/luna32-release-review.json"
   VITE_FEATURE_AI_CENTRAL_EXPERIENCE = "true"
   VITE_FEATURE_PERSONALIZATION = "true"
   VITE_FEATURE_PERSONAL_MEMORY = "true"

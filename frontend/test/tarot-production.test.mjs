@@ -7,7 +7,7 @@ test('only the approved frontend flags are enabled in the production context',()
  const config=text('../netlify.toml');
  assert.match(config,/\[context.production\][\s\S]*build:production/);
  const production=config.split('[context.production.environment]')[1].split('[[redirects]]')[0];
- assert.match(production,/LUNA_RELEASE_PROFILE = "luna31"/);
+ assert.match(production,/LUNA_RELEASE_PROFILE = "luna32"/);
  assert.match(text('scripts/build-production.mjs'),/review\.sourceDigest,releaseSourceDigest/);
  for(const key of ['NEW_NAVIGATION','TAROT_DAILY','TAROT_SPREADS','AI_CENTRAL_EXPERIENCE','ASTROLOGY','BREATHWORK_AUDIO'])assert.match(production,new RegExp(`VITE_FEATURE_${key} = "true"`));
  for(const key of ['MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','ECONOMY_REWARDS_V2','PREMIUM_V2','TAROT_PAID_READINGS'])assert.match(production,new RegExp(`VITE_FEATURE_${key} = "false"`));

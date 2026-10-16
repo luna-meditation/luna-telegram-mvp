@@ -1,5 +1,6 @@
 // A real release build, not the synthetic offline preview server.
 import assert from 'node:assert/strict';
+import {verifyLuna32ReleaseBudget} from './luna32-release-budget.mjs';
 import {spawnSync} from 'node:child_process';
 import {dirname,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
@@ -86,12 +87,7 @@ if(profile==='luna32'){
  assert.equal(createHash('sha256').update(readFileSync(resolve(frontend,'../supabase/migrations',name))).digest('hex'),review.migrationHashes?.[name],'Migration changed since native and staging review');
  assert.ok(review.nativeDatabaseChecks>=14);assert.equal(review.mobileStatus,'PASS');assert.ok(review.mobileCases>=24&&review.mobileScreenStates>=192);
  assert.equal(review.aiSmokeStatus,'PASS');assert.equal(review.aiQualityStatus,'PASS');assert.ok(review.aiSmokeCalls>0&&review.aiSmokeCalls<=7);assert.ok(review.aiSmokeCostUsd>0&&review.aiSmokeCostUsd<=0.03);assert.ok(review.aiAdditionalCalls>0&&review.aiAdditionalCalls<=2&&review.aiAdditionalCostUsd>0&&review.aiAdditionalCostUsd<=0.01);assert.equal(review.unknownAiSpendUsd,0);
- assert.equal(review.monthlyBudgetUsd,30);assert.equal(review.budgetMonth,new Date().toISOString().slice(0,7));
- assert.equal(review.budgetBaselineVerified,true);assert.equal(review.budgetBaselineEvidence,'owner_verified_provider_usage');
- assert.ok(Number.isFinite(review.legacySpendBaselineUsd)&&review.legacySpendBaselineUsd>=0,'Never assume a zero historical spend baseline');
- assert.ok(Number.isFinite(Date.parse(review.baselineCutoffAt)),'Historical spend needs an explicit cutoff');
- assert.ok(Date.parse(review.baselineCutoffAt)<=Date.now()&&Date.now()-Date.parse(review.baselineCutoffAt)<86400000,'Refresh the historical cost baseline before release');
- assert.equal(review.budgetHandoverVerified,true);assert.equal(review.legacyInFlightReconciled,true);assert.equal(review.baselineIncludesCutoverCost,true);
+ verifyLuna32ReleaseBudget(review);
  assert.equal(review.sharedExistingDailyQuotasPreserved,true);assert.equal(review.balancesAndPaidRightsPreserved,true);assert.equal(review.monetizationEnabled,false);
  assert.equal(review.sourceDigest,releaseSourceDigest(resolve(frontend,'..')),'Source changed after release verification');
 }
