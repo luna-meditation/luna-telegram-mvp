@@ -2,6 +2,7 @@ import { useEffect,useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, LockKeyhole, Sparkles, X, Sprout, Compass, Flame, Shield, Sun, BookOpen, Mountain, Orbit, Star, Crown } from 'lucide-react';
 import type { AppLanguage, ProfileStats } from '../../api';
+import {luna30StatusCatalog} from '../../../../backend/src/luna30-progression';
 import {
   journeyStatusDefinitions,
   type JourneyStatusId,
@@ -84,7 +85,8 @@ export function StatusProgressionSheet({
   onClose: () => void;
 }) {
   const status = resolveJourneyStatus(profile);
-  const currentRank = Math.max(0, status.rank);
+  const v3=profile?.journeyV3;
+  const currentRank = v3?v3.rank:Math.max(0, status.rank);
   const dialog=useRef<HTMLElement>(null);
 
   useEffect(() => {
@@ -121,13 +123,13 @@ export function StatusProgressionSheet({
           <div>
             <p className="progress-v3-eyebrow">{language === 'en' ? 'Your Luna path' : 'Твой путь Luna'}</p>
             <h2 id="status-progression-title">{language === 'en' ? 'Luna statuses' : 'Статусы Luna'}</h2>
-            <p>{language === 'en' ? 'A quiet record of your practice, rhythm and Moon Garden.' : 'Спокойная история твоей практики, ритма и Лунного сада.'}</p>
+            <p>{v3?(language==='en'?'Active days, meaningful moments and different directions. No purchases or required meditation count.':'Активные дни, осмысленные действия и разные направления. Без обязательных покупок и числа медитаций.'):(language === 'en' ? 'A quiet record of your practice, rhythm and Moon Garden.' : 'Спокойная история твоей практики, ритма и Лунного сада.')}</p>
           </div>
           <button type="button" onClick={onClose} aria-label={language === 'en' ? 'Close statuses' : 'Закрыть статусы'}><X size={20} /></button>
         </header>
 
         <ol className="status-progression-list">
-          {journeyStatusDefinitions.map((definition) => {
+          {v3?luna30StatusCatalog.map((definition,rank)=>{const state=rank<currentRank?'unlocked':rank===currentRank?'current':'locked';return<li key={definition.id} className={`status-progression-item is-${state}`} aria-current={state==='current'?'step':undefined}><JourneyStatusMark statusId={journeyStatusDefinitions[rank].id} compact/><div className="status-progression-copy"><span>{rank+1} / 10</span><h3>{definition.names[language]}</h3><p>{language==='en'?`${definition.days} active days · ${definition.moments} meaningful moments · ${definition.directions} directions`:`Активные дни: ${definition.days} · Осмысленные действия: ${definition.moments} · Направления: ${definition.directions}`}</p></div><span className="status-progression-state">{state==='unlocked'?<Check size={15}/>:state==='locked'?<LockKeyhole size={14}/>:<Sparkles size={14}/>}<span>{language==='en'?(state==='unlocked'?'Unlocked':state==='current'?'Current':'Locked'):(state==='unlocked'?'Открыт':state==='current'?'Текущий':'Закрыт')}</span></span></li>;}) :journeyStatusDefinitions.map((definition) => {
             const state = definition.rank < currentRank ? 'unlocked' : definition.rank === currentRank ? 'current' : 'locked';
             const name = journeyStatusNames[language][definition.id];
             return (

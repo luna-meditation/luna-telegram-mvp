@@ -15,6 +15,7 @@ import {runLuna21Qa} from './luna21-qa.js';
 import {luna21CommerceRouter} from './luna21-commerce-router.js';
 import {luna30ReferralRouter} from './luna30-referral-router.js';
 import {attributeValidatedReferral,qualifyVerifiedReferral} from './luna30-referrals.js';
+import {luna30AstrologyRouter} from './luna30-astrology-router.js';
 import { bot, configureTelegramBot, createStarsInvoiceLink, sendStarsInvoice } from './bot.js';
 import {
   createMeditation,
@@ -332,6 +333,7 @@ app.get('/health', async (req, res) => {
 
 app.use('/api/luna21',rateLimit({max:20,windowMs:60_000}),luna21CommerceRouter);
 app.use('/api/referrals',rateLimit({max:12,windowMs:60_000}),luna30ReferralRouter);
+app.use('/api/astrology',rateLimit({max:30,windowMs:60_000}),luna30AstrologyRouter);
 app.get('/api/debug/admin', requireTelegramWebApp, (req, res) => {
   if (!assertAdmin(req, res)) return;
 

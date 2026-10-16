@@ -145,6 +145,7 @@ import { frontendBuildMetadata, recordPaymentStage, useRuntimeDiagnostics, type 
 
 type Page = AppPage;
 const TarotPage = lazy(() => import('./features/tarot/TarotPage'));
+const AstrologyPage = lazy(() => import('./features/astrology/AstrologyPage'));
 const LunaChat=lazy(()=>import('./components/LunaChat').then(module=>({default:module.LunaChat})));
 const ActivityPage=lazy(()=>import('./luna2/JournalPage').then(module=>({default:module.JournalPage})));
 type Mood = 'Calm' | 'Stressed' | 'Tired' | 'Anxious' | 'Focused';
@@ -3099,10 +3100,10 @@ function App() {
 
         {featureFlags.new_navigation && page === 'explore' && <ExplorePage language={language} tarotEnabled={featureFlags.tarot_daily} onOpen={openExploreCategory} />}
         {featureFlags.new_navigation && page === 'tarot' && (featureFlags.tarot_daily ? <Suspense fallback={<PageSkeleton rows={2} />}><TarotPage language={language} onBack={goBack} session={tarotSession} dispatch={tarotDispatch} registerBackHandler={registerTarotBackHandler} initData={initData} onContinue={id=>{setAiReadingId(id);navigatePrimary('luna');}} /></Suspense> : <FeaturePreview kind="tarot" language={language} featureEnabled={false} onBack={goBack} onMeditate={() => openExploreCategory('meditations')} />)}
-        {featureFlags.new_navigation && page === 'astrology' && <FeaturePreview kind="astrology" language={language} featureEnabled={featureFlags.astrology} onBack={goBack} onMeditate={() => openExploreCategory('meditations')} />}
+        {featureFlags.new_navigation && page === 'astrology' && (featureFlags.astrology?<Suspense fallback={<PageSkeleton rows={3}/>}><AstrologyPage language={language} initData={initData} onBack={goBack} registerBackHandler={registerTarotBackHandler}/></Suspense>:<FeaturePreview kind="astrology" language={language} featureEnabled={false} onBack={goBack} onMeditate={() => openExploreCategory('meditations')} />)}
         {featureFlags.new_navigation && page === 'wallet' && <WalletPage language={language} profile={profile} onBack={goBack} onGarden={() => setPage('moonGarden')} />}
         {featureFlags.new_navigation && page === 'activity' && <Suspense fallback={<PageSkeleton rows={3}/>}><ActivityPage language={language} history={history} meditations={decoratedMeditations} wellness={wellness} onBack={goBack} onOpen={openMeditation} initData={initData} onReading={reading=>{tarotDispatch({type:'resume',reading});setPage('tarot');}} /></Suspense>}
-        {featureFlags.new_navigation && page === 'achievements' && <AchievementsStory items={buildAchievementViews(profile, language)} language={language} initiallyOpen onClose={goBack} />}
+        {featureFlags.new_navigation && page === 'achievements' && <AchievementsStory items={buildAchievementViews(profile, language)} language={language} initiallyOpen onClose={goBack} version3={Boolean(profile?.journeyV3)} />}
 
         {page === 'library' && (
           <>
@@ -5429,7 +5430,7 @@ function ProfilePage({
     : copy[language].premiumFree;
   const localizedPlanStatus = planStatus;
   const journeyStatus = resolveJourneyStatus(profile);
-  const journeyStatusName = journeyStatusNames[language][journeyStatus.id];
+  const journeyStatusName = profile?.journeyV3?(profile.journeyV3.current?.names[language]??(language==='en'?'Your first step':'Ваш первый шаг')):journeyStatusNames[language][journeyStatus.id];
   const journeyStatusRank = Math.max(1, journeyStatus.rank + 1);
   const goalsLabel = goalsCountLabel(goals.length, language);
   const notificationLabel = notificationStatusLabel(notificationPrefs, language);

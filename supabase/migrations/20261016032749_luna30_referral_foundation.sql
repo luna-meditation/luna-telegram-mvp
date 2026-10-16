@@ -50,7 +50,7 @@ end $$;
 
 create or replace function public.luna30_qualify_referral(p_owner bigint,p_verified_session_id uuid)
 returns jsonb language plpgsql security invoker set search_path='' as $$
-declare s public.luna30_release_settings%rowtype;r public.luna30_referrals%rowtype;v_valid boolean;v_count integer;v_month timestamptz;g public.moon_gardens%rowtype;
+declare s public.luna30_release_settings%rowtype;r public.luna30_referrals%rowtype;v_valid boolean;v_count integer;v_month timestamptz;v_month_end timestamptz;g public.moon_gardens%rowtype;
 begin
  select * into strict s from public.luna30_release_settings where id;
  if not s.referrals_enabled or not s.referral_rewards_enabled or s.catalog_version<>'luna-3.0-proposed' then return jsonb_build_object('status','disabled','awarded',0);end if;
@@ -67,7 +67,8 @@ begin
  -- Inviter lock serializes the monthly cap across different new users.
  perform pg_advisory_xact_lock(pg_catalog.hashtextextended('luna30_referrer:'||r.referrer_id::text,0));
  v_month:=date_trunc('month',now() at time zone 'UTC') at time zone 'UTC';
- select count(*) into v_count from public.luna30_referrals where referrer_id=r.referrer_id and state='rewarded' and rewarded_at>=v_month and rewarded_at<v_month+interval '1 month';
+ v_month_end:=(date_trunc('month',now() at time zone 'UTC')+interval '1 month') at time zone 'UTC';
+ select count(*) into v_count from public.luna30_referrals where referrer_id=r.referrer_id and state='rewarded' and rewarded_at>=v_month and rewarded_at<v_month_end;
  if v_count>=5 then update public.luna30_referrals set state='limited',qualified_at=now(),source_session_id=p_verified_session_id where referee_id=p_owner;return jsonb_build_object('status','monthly_limit','awarded',0);end if;
  -- Match existing v2 wallet lock; stable order avoids cross-invitation deadlocks.
  perform pg_advisory_xact_lock(pg_catalog.hashtextextended('luna21_wallet:'||least(p_owner,r.referrer_id)::text,0));

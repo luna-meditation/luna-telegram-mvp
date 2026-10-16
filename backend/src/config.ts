@@ -65,6 +65,7 @@ const envSchema = z.object({
   FEATURE_BREATHWORK_AUDIO: envBoolean.default(false),
   LUNA30_REFERRALS_ENABLED: envBoolean.default(false),
   LUNA30_REFERRAL_REWARDS_ENABLED: envBoolean.default(false),
+  LUNA30_PROGRESSION_ENABLED: envBoolean.default(false),
   OPENAI_API_KEY: z.string().min(1).optional(),
   AI_CHAT_MODEL: z.string().min(1).default('gpt-5-mini'),
   AI_CHAT_ENABLED: envBoolean.default(false),

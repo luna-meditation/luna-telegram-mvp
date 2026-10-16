@@ -1,4 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {calculateNatalChart,calculateSynastry,natalCacheKey,zodiacSign,aspectBetween} from './luna30-astrology-engine.js';
 const london={placeId:'fixture-london',label:'London',latitude:51.5074,longitude:-.1278,timezone:'Europe/London',provider:'synthetic-test-location',confirmed:true as const};
 const birth={date:'2000-01-01',time:'12:00',location:london};
@@ -7,3 +8,9 @@ test('historical DST: winter/summer, ambiguous folds and missing local times are
 test('unknown time has no exact UTC, ascendant, houses or precise natal aspects',()=>{const c=calculateNatalChart({...birth,time:null});assert.equal(c.utcInstant,null);assert.equal(c.ascendant,null);assert.deepEqual(c.houses,[]);assert.deepEqual(c.aspects,[]);assert.equal(c.approximatePlanets,true);assert.ok(c.warnings.includes('birth_time_unknown'));let boundary=false;for(let day=1;day<=10;day++){const chart=calculateNatalChart({...birth,date:`2000-01-${String(day).padStart(2,'0')}`,time:null});if(chart.uncertainPlanets.some(p=>p.id==='moon'))boundary=true;}assert.equal(boundary,true,'Moon boundary uncertainty must actually be calculated');});
 test('synastry comes from calculated angles, no fabricated percentages or unknown-time Moon precision',()=>{const a=calculateNatalChart(birth),b=calculateNatalChart({...birth,time:null});const result=calculateSynastry(a,b);assert.equal(result.percentage,null);assert.equal(result.unknownTime,true);assert.ok(result.aspects.every(a=>a.to!=='moon'));assert.equal(aspectBetween(359,1)?.type,'conjunction');assert.equal(aspectBetween(0,120)?.type,'trine');assert.equal(aspectBetween(0,25),null);});
 test('polar angles fail safely instead of inventing houses',()=>{const c=calculateNatalChart({...birth,location:{...london,latitude:78}});assert.equal(c.ascendant,null);assert.deepEqual(c.houses,[]);assert.ok(c.warnings.includes('polar_angles_not_validated'));});
+test('Sun, Moon and Mars match nine independent NASA/JPL DE441 reference positions within one arcminute',()=>{
+ const fixture=JSON.parse(readFileSync(new URL('../test/fixtures/jpl-horizons-reference.json',import.meta.url),'utf8')) as {references:Array<{body:string;positions:Array<{utc:string;longitude:number}>}>};
+ const differences=[];
+ for(const ref of fixture.references)for(const p of ref.positions){const chart=calculateNatalChart({date:p.utc.slice(0,10),time:'12:00',location:{...london,longitude:0,timezone:'Etc/UTC'}});const longitude=chart.planets.find(v=>v.id===ref.body)!.longitude;const arcseconds=Math.abs(((longitude-p.longitude+540)%360)-180)*3600;differences.push(arcseconds);assert.ok(arcseconds<60,`${ref.body} ${p.utc}: ${arcseconds.toFixed(3)} arcseconds`);}
+ assert.equal(differences.length,9);
+});

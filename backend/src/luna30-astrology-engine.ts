@@ -14,7 +14,7 @@ function planetsAt(date:Date){return bodies.map(body=>({id:body.toLowerCase(),lo
 /** Requires a location resolved/validated by a trusted server adapter, not arbitrary client coordinates. */
 export function calculateNatalChart(raw:z.infer<typeof birthCalculationInput>){
  const input=birthCalculationInput.parse(raw),birth=Temporal.PlainDate.from(input.date);
- if(birth.year<1800||birth.year>2100)throw new Error('Birth date outside the validated engine interval.');
+ if(birth.year<1800||birth.year>2100)throw new Error('Birth date outside the supported calculation interval.');
  if(astrologyEngineMetadata.tzdb==='unavailable')throw new Error('A versioned IANA timezone database is required.');
  const exact=input.time!==null,zone=input.location.timezone;
  // reject, not guess, a DST gap/fold; the user needs to clarify ambiguous exact times.

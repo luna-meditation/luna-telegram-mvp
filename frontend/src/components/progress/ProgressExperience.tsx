@@ -1,5 +1,7 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import {JourneyV3Hero} from './JourneyV3Hero';
+import {projectLuna30Achievements,luna30AchievementFamily,luna30AchievementCategories} from '../../../../backend/src/luna30-progression';
 import {
   Check,
   ChevronRight,
@@ -88,6 +90,7 @@ function journeyRequirementText(requirement: JourneyRequirement, nextName: strin
 }
 
 export function JourneyStatusHero({ profile, language, onOpen }: { profile: ProfileStats | null; language: AppLanguage; onOpen: () => void }) {
+  if(profile?.journeyV3)return <JourneyV3Hero status={profile.journeyV3} language={language} onOpen={onOpen}/>;
   const status = resolveJourneyStatus(profile);
   const next = status.next;
   const name = journeyStatusNames[language][status.id];
@@ -233,7 +236,8 @@ function AchievementCard({ item, language, compact = false }: { item: ProgressAc
   );
 }
 
-export function AchievementsStory({ items, language, initiallyOpen = false, onClose }: { items: ProgressAchievement[]; language: AppLanguage; initiallyOpen?: boolean; onClose?: () => void }) {
+export function AchievementsStory({ items:allItems, language, initiallyOpen = false, onClose,version3=false }: { items: ProgressAchievement[]; language: AppLanguage; initiallyOpen?: boolean; onClose?: () => void;version3?:boolean }) {
+  const projection=projectLuna30Achievements(allItems),items=version3?projection.featured:allItems,archive=version3?projection.legacyArchive:[];
   const t = progressCopy[language];
   const [open, setOpen] = useState(initiallyOpen);
   const [statusFilter, setStatusFilter] = useState<AchievementFilter>('all');
@@ -246,11 +250,11 @@ export function AchievementsStory({ items, language, initiallyOpen = false, onCl
       || String(right.unlockedAt ?? '').localeCompare(String(left.unlockedAt ?? ''))
       || (right.progress ?? 0) - (left.progress ?? 0))
     .slice(0, 3);
-  const filtered = items
+  const filtered = (categoryFilter==='legacy'?archive:items)
     .filter((item) => statusFilter === 'all' || achievementStatus(item) === statusFilter)
-    .filter((item) => categoryFilter === 'all' || achievementFamily(item) === categoryFilter)
+    .filter((item) => categoryFilter === 'all'||categoryFilter==='legacy' || (version3?luna30AchievementFamily(item):achievementFamily(item)) === categoryFilter)
     .sort((left, right) => Number(right.unlocked) - Number(left.unlocked) || (right.progress ?? 0) - (left.progress ?? 0));
-  const categories = [
+  const categories = version3?[['all',t.all],...Object.entries(luna30AchievementCategories).map(([key,names])=>[key,names[language]]),...(archive.length?[['legacy',language==='en'?'Earlier achievements':'Прежние достижения']]:[])]:[
     ['all', t.all], ['seeker',language==='en'?'The Seeker':'Искатель'],['oracle',language==='en'?'The Oracle':'Оракул'],['guardian',language==='en'?'The Guardian':'Хранитель'],['explorer',language==='en'?'The Explorer':'Исследователь'],['devoted',language==='en'?'The Devoted':'Преданный']
   ];
   return (

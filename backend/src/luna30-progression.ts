@@ -17,7 +17,7 @@ export function buildLuna30Progress(input:Luna30ProgressInput,legacyRank=-1){
  const activity={meditations:count(input.meditations),breathwork:count(input.breathwork),tarot:count(input.tarot),reflections:count(input.reflections),conversations:count(input.conversations)},metrics={days:count(input.meaningfulDays),moments:Object.values(activity).reduce((a,b)=>a+b,0),directions:Object.values(activity).filter(v=>v>0).length};
  let eligible=-1;for(let i=0;i<luna30StatusCatalog.length;i++){const r=luna30StatusCatalog[i];if(metrics.days>=r.days&&metrics.moments>=r.moments&&metrics.directions>=r.directions)eligible=i;else break;}
  const grandfathered=Math.max(-1,Math.min(9,Number.isSafeInteger(legacyRank)?legacyRank:-1)),rank=Math.max(eligible,grandfathered),next=luna30StatusCatalog[rank+1];
- return {version:3 as const,rank,current:rank>=0?luna30StatusCatalog[rank]:null,grandfathered:grandfathered>eligible,metrics,next:next?{...next,remaining:{days:Math.max(0,next.days-metrics.days),moments:Math.max(0,next.moments-metrics.moments),directions:Math.max(0,next.directions-metrics.directions)}}:null};
+ return {version:3 as const,rank,eligibleRank:eligible,current:rank>=0?luna30StatusCatalog[rank]:null,grandfathered:grandfathered>eligible,metrics,next:next?{...next,progressPercent:Math.round((Math.min(1,metrics.days/next.days)+Math.min(1,metrics.moments/next.moments)+Math.min(1,metrics.directions/next.directions))*100/3),remaining:{days:Math.max(0,next.days-metrics.days),moments:Math.max(0,next.moments-metrics.moments),directions:Math.max(0,next.directions-metrics.directions)}}:null};
 }
 export const luna30AchievementCategories={first_discoveries:{en:'First discoveries',ru:'Первые открытия'},self_discovery:{en:'Self-discovery',ru:'Самопознание'},celestial_journey:{en:'Celestial journey',ru:'Небесный путь'},inner_harmony:{en:'Inner harmony',ru:'Внутренняя гармония'},consistency:{en:'Consistency',ru:'Постоянство'}};
 // Stable existing IDs remain intact. Legacy entries not featured in v3 remain in the archive.
@@ -30,4 +30,11 @@ export const luna30FeaturedAchievements=[
 ] as const;
 export function projectLuna30Achievements<T extends {id:string;unlocked:boolean;unlockedAt?:string|null}>(items:T[]){
  const selected=new Set<string>(luna30FeaturedAchievements);return {featured:items.filter(i=>selected.has(i.id)).sort((a,b)=>Number(b.unlocked)-Number(a.unlocked)),legacyArchive:items.filter(i=>!selected.has(i.id)),preservedUnlockedIds:items.filter(i=>i.unlocked).map(i=>i.id)};
+}
+export function luna30AchievementFamily(item:{id:string;category?:string}){
+ if(item.category==='rhythm')return 'consistency';
+ if(['first_meditation','first_checkin','first_luna_conversation','tarot_first_reading'].includes(item.id))return 'first_discoveries';
+ if(item.category==='garden')return 'celestial_journey';
+ if(item.id.startsWith('tarot_')||item.id.includes('checkin'))return 'self_discovery';
+ return 'inner_harmony';
 }

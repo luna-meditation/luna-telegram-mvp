@@ -63,6 +63,20 @@ export type AccessState = {
 };
 
 export type AppLanguage = 'en' | 'ru';
+export type BirthLocation={placeId:string;label:string;latitude:number;longitude:number;timezone:string;provider:string;confirmed:true};
+export type BirthProfile={id:string;subject_kind:'self'|'other';display_label:string;birth_date:string;birth_time:string|null;location:BirthLocation;revision:number;created_at:string;updated_at:string};
+export type BirthProfileInput={subjectKind:'self'|'other';label:string;date:string;time:string|null;placeId:string;consent:true;revision?:number};
+export type NatalCalculation={engine:string;engineVersion:string;ephemeris:string;timezoneDatabaseVersion:string;timePrecision:'exact'|'unknown';utcInstant:string|null;ascendant:number|null;houses:number[];planets:Array<{id:string;longitude:number}>;aspects:Array<{from:string;to:string;type:string;orb:number}>;houseSystem:'whole-sign';uncertainPlanets:Array<{id:string;signs:number[]}>;warnings:string[];approximatePlanets:boolean};
+export type NatalChart={id:string;profile_id:string;profile_revision:number;calculation:NatalCalculation;created_at:string};
+export type BirthLocationResult={placeId:string;label:string;country:string;timezone:string;latitude:number;longitude:number};
+export type SynastryResult={firstChartId:string;secondChartId:string;aspects:Array<{from:string;to:string;type:string;orb:number}>;unknownTime:boolean;excluded:{first:string[];second:string[]};percentage:null;disclaimer:string};
+export const findBirthLocations=(q:string,initData?:string)=>request<{locations:BirthLocationResult[]}>(`/api/astrology/locations?q=${encodeURIComponent(q)}`,undefined,initData);
+export const getBirthProfiles=(initData?:string)=>request<{profiles:BirthProfile[]}>('/api/astrology/profiles',undefined,initData);
+export const saveBirthProfile=(input:BirthProfileInput,initData?:string,id?:string)=>request<{profile:BirthProfile}>(`/api/astrology/profiles${id?'/'+id:''}`,{method:id?'PUT':'POST',body:JSON.stringify(input)},initData);
+export const removeBirthProfile=(id:string,initData?:string)=>request<{ok:boolean}>(`/api/astrology/profiles/${id}`,{method:'DELETE'},initData);
+export const calculateBirthChart=(id:string,initData?:string)=>request<{chart:NatalChart;cached:boolean}>(`/api/astrology/profiles/${id}/chart`,{method:'POST',body:'{}'},initData);
+export const getBirthChart=(id:string,initData?:string)=>request<{chart:NatalChart}>(`/api/astrology/charts/${id}`,undefined,initData);
+export const compareBirthCharts=(firstChartId:string,secondChartId:string,initData?:string)=>request<SynastryResult>('/api/astrology/compatibility',{method:'POST',body:JSON.stringify({firstChartId,secondChartId})},initData);
 
 export type MeditationTranslation = {
   title?: string | null;
@@ -128,6 +142,7 @@ export type ProfileWeek = {
 };
 
 export type ProfileStats = {
+  journeyV3?:ReturnType<typeof import('../../backend/src/luna30-progression').buildLuna30Progress>;
   user?: {
     first_name?: string;
     username?: string;

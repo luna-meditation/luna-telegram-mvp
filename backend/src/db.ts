@@ -2,6 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 import WebSocket from 'ws';
 import { env } from './config.js';
 import {stagingUserRecord} from './staging-policy.js';
+import {buildLuna30Progress,type Luna30ProgressInput} from './luna30-progression.js';
+import {loadLuna30ActivityMetadata} from './luna30-progress-source.js';
 import {
   paymentPlanDetails,
   payloadPlanFromStoredPayment,
@@ -47,7 +49,7 @@ export const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE
   }
 });
 
-async function syncPermanentJourneyStatus(telegramId: number, metrics: JourneyStatusMetrics) {
+async function syncPermanentJourneyStatus(telegramId: number, metrics: JourneyStatusMetrics,diverse?:Luna30ProgressInput) {
   const { data: stored, error: readError } = await supabase
     .from('users')
     .select('journey_status_rank, journey_status_unlocked_at')
@@ -65,18 +67,19 @@ async function syncPermanentJourneyStatus(telegramId: number, metrics: JourneySt
     ? stored.journey_status_unlocked_at
     : null;
   const status = buildJourneyStatus(metrics, storedRank, unlockedAt);
+  const targetRank=Math.max(status.eligibleRank,diverse?buildLuna30Progress(diverse,storedRank).eligibleRank:-1);
 
-  if (status.eligibleRank <= storedRank) return status;
+  if (targetRank <= storedRank) return status;
 
   const nextUnlockedAt = new Date().toISOString();
   const { data: updated, error: updateError } = await supabase
     .from('users')
     .update({
-      journey_status_rank: status.eligibleRank,
+      journey_status_rank: targetRank,
       journey_status_unlocked_at: nextUnlockedAt
     })
     .eq('telegram_id', telegramId)
-    .lt('journey_status_rank', status.eligibleRank)
+    .lt('journey_status_rank', targetRank)
     .select('journey_status_rank, journey_status_unlocked_at')
     .maybeSingle();
 
@@ -88,7 +91,7 @@ async function syncPermanentJourneyStatus(telegramId: number, metrics: JourneySt
   if (!updated) return status;
   return buildJourneyStatus(
     metrics,
-    Number(updated.journey_status_rank ?? status.eligibleRank),
+    Number(updated.journey_status_rank ?? targetRank),
     typeof updated.journey_status_unlocked_at === 'string' ? updated.journey_status_unlocked_at : nextUnlockedAt
   );
 }
@@ -1719,12 +1722,24 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     perfectWeeks: lifetimeStats.completedWeeks,
     categoryCounts
   });
+  let diverse:Luna30ProgressInput|undefined;
+  if(env.LUNA30_PROGRESSION_ENABLED){
+    // Only timestamps/counts enter progress. Never expose questions or messages.
+    const cutoff=new Date().toISOString(),key=(iso:string)=>dateKeyInTimeZone(iso,notificationPreferences.timezone);
+    const [readings,conversations]=await Promise.all([
+      env.FEATURE_TAROT_HISTORY?loadLuna30ActivityMetadata((from,to)=>supabase.from('luna_tarot_readings').select('created_at',{count:'exact'}).eq('telegram_id',telegramId).in('status',['local','ready','fallback']).lte('created_at',cutoff).order('created_at').order('id').range(from,to),key):Promise.resolve({count:0,dates:[]}),
+      env.FEATURE_AI_MODES?loadLuna30ActivityMetadata((from,to)=>supabase.from('ai_messages').select('created_at',{count:'exact'}).eq('telegram_id',telegramId).eq('role','assistant').lte('created_at',cutoff).order('created_at').order('id').range(from,to),key):Promise.resolve({count:0,dates:[]})
+    ]);
+    if(readings&&conversations){const days=new Set([...activeLunaDaySet,...readings.dates,...conversations.dates]);
+      diverse={meaningfulDays:days.size,meditations:completedMeditations,breathwork:completedBreathSessions,tarot:readings.count,reflections:checkins?.length??0,conversations:conversations.count};
+    }
+  }
   const journeyStatus = await syncPermanentJourneyStatus(telegramId, {
     completedMeditations,
     longestStreak,
     unlockedAchievements: achievements.unlocked,
     gardenLevel: moonGarden.gardenLevel
-  });
+  },diverse);
 
   return {
     user: user ? {
@@ -1779,6 +1794,7 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     calmScore,
     achievements,
     journeyStatus,
+    ...(diverse?{journeyV3:buildLuna30Progress(diverse,journeyStatus.rank)}:{}),
     progressDiagnostics: telegramId === env.ADMIN_TELEGRAM_ID ? {
       localWeekStart: currentWeek.weekStart,
       localWeekEnd: shiftDateKey(currentWeek.weekStart, 6),

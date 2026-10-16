@@ -49,3 +49,6 @@ Thumbs.db
 .idea/
 .vscode/
 *.swp
+
+# Public server gazetteer is committed compressed with attribution/integrity hashes.
+backend/data/geonames-cities15000.json

@@ -72,3 +72,59 @@
 .luna30-share-preview img{max-height:45dvh;width:auto;max-width:100%;object-fit:contain}
 .luna30-share-sheet footer button{flex:1}
 .luna30-share-trigger{min-height:44px;display:inline-flex;align-items:center;gap:8px;font-size:14px;color:var(--accent-gold-text)}
+.luna30-astrology{--luna30-wheel-glow:#6953bd35;display:grid;gap:16px;padding-bottom:24px;min-width:0}
+.luna30-astro-heading>span{display:flex;align-items:center;gap:8px;color:var(--accent-gold-text);font-size:14px}
+.luna30-astro-heading h1{font-size:30px;line-height:1.2;margin:10px 0}
+.luna30-astro-heading p,.luna30-astrology p{font-size:15px;line-height:1.5;color:var(--text-secondary)}
+.luna30-astrology h2{font-size:20px;line-height:1.35;margin:0}
+.luna30-birth-profiles,.luna30-birth-form,.luna30-compatibility{background:var(--surface-primary);border:1px solid var(--border-subtle);border-radius:22px;padding:16px;display:grid;gap:13px;min-width:0}
+.luna30-section-title{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.luna30-astrology button{min-height:44px;min-width:44px;color:var(--text-primary);font-size:15px;border-radius:12px;touch-action:manipulation}
+.luna30-section-title>button{display:flex;align-items:center;gap:6px;color:var(--accent-gold-text)}
+.luna30-birth-row{display:flex;gap:5px;align-items:center;border-top:1px solid var(--border-subtle);padding-top:10px;min-width:0}
+.luna30-birth-row>button:first-child{flex:1;min-width:0;display:grid;gap:5px;text-align:left;padding:5px}
+.luna30-birth-row strong,.luna30-birth-row span{overflow-wrap:anywhere;line-height:1.4}
+.luna30-birth-row span{font-size:13px;color:var(--text-secondary)}
+.luna30-birth-row>button[aria-pressed=true]{color:var(--accent-gold-text)}
+.luna30-birth-form label,.luna30-compatibility label{display:grid;gap:8px;font-size:15px;line-height:1.45}
+.luna30-birth-form input:not([type=checkbox]),.luna30-astrology select{box-sizing:border-box;appearance:none;min-width:0;max-width:100%;width:100%;min-height:48px;border:1px solid var(--border-subtle);border-radius:13px;background:var(--bg-primary);color:var(--text-primary);padding:11px;font-size:16px}
+.luna30-birth-form .luna30-check{display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.luna30-check input{flex-shrink:0;width:22px;height:22px;margin-top:1px;accent-color:var(--accent-gold-text)}
+.luna30-astrology small{color:var(--text-secondary);font-size:13px;line-height:1.5}
+.luna30-form-actions{display:flex;gap:10px}
+.luna30-form-actions button{border:1px solid var(--border-subtle);padding:11px;flex:1}
+.luna30-form-actions button[type=submit],.luna30-compatibility>button{background:var(--surface-selected);border:1px solid var(--border-accent);color:var(--accent-gold-text);font-weight:600}
+.luna30-astrology button:disabled{opacity:.4}
+.luna30-astrology :focus-visible{outline:2px solid var(--accent-gold-text);outline-offset:3px}
+.luna30-city-results{list-style:none;padding:0;margin:0;display:grid;max-height:230px;overflow:auto;border:1px solid var(--border-subtle);border-radius:13px}
+.luna30-city-results button{display:grid;text-align:left;width:100%;padding:10px;border-radius:0;border-bottom:1px solid var(--border-subtle)}
+.luna30-city-results span{color:var(--text-secondary);font-size:13px}
+.luna30-place-confirmed{color:var(--accent-gold-text)!important;font-size:14px!important}
+.luna30-chart-results{display:grid;gap:16px;min-width:0}
+.luna30-chart-results header{text-align:center}
+.luna30-wheel-card{min-width:0;display:grid;gap:12px;background:var(--surface-primary);border:1px solid var(--border-subtle);border-radius:24px;padding:12px}
+.luna30-natal-wheel{width:100%;max-width:420px;height:auto;justify-self:center}
+.luna30-wheel-line{stroke:var(--accent-gold-text);stroke-width:.6;opacity:.5}
+.luna30-wheel-sign{fill:var(--accent-gold-text);font-size:18px}
+.luna30-wheel-aspect{stroke:#be8dab;stroke-width:.7;opacity:.4}
+.luna30-wheel-aspect.is-harmonious{stroke:#5bafd6}
+.luna30-wheel-planet-bg{fill:var(--bg-primary);stroke:var(--border-accent);stroke-width:.5}
+.luna30-wheel-planet{fill:var(--text-primary);font-size:16px}
+.luna30-wheel-centre{fill:var(--bg-primary);stroke:var(--border-accent);stroke-width:.6}
+.luna30-wheel-moon{fill:var(--accent-gold-text);font-size:32px}
+.luna30-planet-controls{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.luna30-planet-controls button{border:1px solid var(--border-subtle);background:var(--bg-primary);font-size:22px}
+.luna30-planet-controls button[aria-pressed=true]{border-color:var(--accent-gold-text);background:var(--surface-selected);color:var(--accent-gold-text)}
+.luna30-selected-planet{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:0!important;color:var(--text-primary)!important}
+.luna30-astro-note{padding:12px;border-radius:14px;background:var(--surface-primary);border:1px solid var(--border-subtle)}
+.luna30-chart-results details{padding:12px 16px;border-radius:16px;border:1px solid var(--border-subtle);background:var(--surface-primary)}
+.luna30-chart-results summary{min-height:32px;cursor:pointer;font-size:16px;line-height:1.5}
+.luna30-planet-list{margin:10px 0 0;display:grid;gap:8px}
+.luna30-planet-list>div{display:flex;gap:8px;justify-content:space-between;font-size:14px;line-height:1.5}
+.luna30-planet-list dd{margin:0;text-align:right;color:var(--accent-gold-text)}
+.luna30-aspect-list{padding:0;list-style:none;display:grid;gap:10px}
+.luna30-aspect-list li{display:grid;font-size:14px;line-height:1.5;overflow-wrap:anywhere}
+.luna30-aspect-list span{color:var(--text-secondary);font-size:13px}
+.luna30-engine-note{text-align:center;display:block}
+.luna30-astro-error{border:1px solid var(--border-accent);border-radius:14px;padding:12px}
+:root[data-theme=light] .luna30-astrology{--luna30-wheel-glow:#bba5e82a}

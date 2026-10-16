@@ -1,0 +1,8 @@
+import type {AppLanguage} from '../../api';
+// Text presentation selector prevents purple system emoji tiles on iPhone/Mac.
+export const signGlyphs=['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'].map(glyph=>glyph+'\uFE0E');
+export const planetGlyphs:Record<string,string>={sun:'☉',moon:'☽',mercury:'☿',venus:'♀',mars:'♂',jupiter:'♃',saturn:'♄',uranus:'♅',neptune:'♆',pluto:'♇'};
+export function zodiacNames(language:AppLanguage){return language==='en'?['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces']:['Овен','Телец','Близнецы','Рак','Лев','Дева','Весы','Скорпион','Стрелец','Козерог','Водолей','Рыбы'];}
+export function planetName(id:string,language:AppLanguage){const keys=['sun','moon','mercury','venus','mars','jupiter','saturn','uranus','neptune','pluto'];const names=language==='en'?['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto']:['Солнце','Луна','Меркурий','Венера','Марс','Юпитер','Сатурн','Уран','Нептун','Плутон'];return names[keys.indexOf(id)]??id;}
+export function aspectName(id:string,language:AppLanguage){const names:Record<string,[string,string]>={conjunction:['Conjunction','Соединение'],sextile:['Sextile','Секстиль'],square:['Square','Квадрат'],trine:['Trine','Трин'],opposition:['Opposition','Оппозиция']};return names[id]?.[language==='en'?0:1]??id;}
+export function zodiacPosition(longitude:number,language:AppLanguage){const value=((longitude%360)+360)%360;const degree=Math.floor(value%30),minutes=Math.floor((value%1)*60);return`${zodiacNames(language)[Math.floor(value/30)]} ${degree}°${String(minutes).padStart(2,'0')}′`;}
