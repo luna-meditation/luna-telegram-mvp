@@ -4,7 +4,7 @@ export const luna30GateNames=['premium','annual','seed_packages','paid_compatibi
 export type Luna30Gate=typeof luna30GateNames[number];
 /** Both reviewed server configuration and database approval must match this catalog version. */
 export function luna30FeatureEnabled(gate:Luna30Gate,environment:Record<string,unknown>,approval:{version:string;enabled:Partial<Record<Luna30Gate,boolean>>}|null){
- return environment[`LUNA30_${gate.toUpperCase()}_ENABLED`]==='true'&&approval?.version===luna30Catalog.version&&approval.enabled[gate]===true;
+ const value=environment[`LUNA30_${gate.toUpperCase()}_ENABLED`];return (value==='true'||value===true)&&approval?.version===luna30Catalog.version&&approval.enabled[gate]===true;
 }
 export function utcCalendarMonth(now:Date){if(!Number.isFinite(now.getTime()))throw new Error('Invalid time');const start=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),1)),end=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()+1,1));return {start:start.toISOString(),end:end.toISOString()};}
 // A successful retry of a failed attempt counts once; replaying an already settled request never does.

@@ -34,6 +34,7 @@ type LunaChatProps = {
   onTarot?:()=>void;
   redesigned?: boolean;
   readingContextId?:string;
+  chartContextId?:string;
   tarotSetupKey?:number;
   onClearReadingContext?:()=>void;
   registerBackHandler?:(handler:(()=>void)|null)=>void;
@@ -49,7 +50,8 @@ function requestId() {
 
 type FailedTurn = {
   readingId?:string;
-  mode?:'companion'|'tarot'|'wellbeing'|'meditation';
+  chartId?:string;
+  mode?:'companion'|'tarot'|'wellbeing'|'meditation'|'astrology';
   clientRequestId: string;
   text: string;
   optimisticMessageId: string;
@@ -122,9 +124,11 @@ function dateLabel(value: string, language: AppLanguage) {
   return new Intl.DateTimeFormat(language === 'ru' ? 'ru-RU' : 'en-US', { month: 'short', day: 'numeric' }).format(date);
 }
 
-export function LunaChat({ firstName, language, meditations, hasPremium, initData, onOpenMeditation, onTarot, redesigned = false,readingContextId,tarotSetupKey,onClearReadingContext,registerBackHandler }: LunaChatProps) {
+export function LunaChat({ firstName, language, meditations, hasPremium, initData, onOpenMeditation, onTarot, redesigned = false,readingContextId,chartContextId,tarotSetupKey,onClearReadingContext,registerBackHandler }: LunaChatProps) {
   const central=featureFlags.ai_central_experience,en=language==='en';
   const [mode,setMode]=useState<NonNullable<FailedTurn['mode']>|''>(featureFlags.ai_modes?(readingContextId?'tarot':'companion'):'');
+  const [attachedChartId,setAttachedChartId]=useState<string|undefined>(chartContextId);
+  useEffect(()=>{if(chartContextId){setAttachedChartId(chartContextId);setMode('astrology');setDraft(language==='en'?'Help me reflect on my calculated birth chart.':'Помоги осмыслить мою рассчитанную натальную карту.');}},[chartContextId]);
   const [conversations, setConversations] = useState<LunaConversationSummary[]>([]);
   const [activeId, setActiveId] = useState('');
   const [messages, setMessages] = useState<LunaMessage[]>([]);
@@ -185,6 +189,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
       onClearReadingContext?.();
       setActiveId(conversationId);
       setMessages(result.messages);
+      const savedChart=result.messages.slice().reverse().find(m=>m.metadata?.astrology)?.metadata?.astrology?.chartId;setAttachedChartId(savedChart);if(savedChart)setMode('astrology');
       const savedReading=result.messages.slice().reverse().find(m=>m.metadata?.tarot)?.metadata?.tarot?.readingId;setAttachedReadingId(savedReading);if(savedReading)setMode('tarot');
       setScreen('chat');
       window.localStorage.setItem(activeConversationKey, conversationId);
@@ -206,14 +211,14 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
       const next = await refreshConversations();
       if (!alive) return;
       const stored = window.localStorage.getItem(activeConversationKey);
-      if (!readingContextId&&stored && next.some((conversation) => conversation.id === stored)) await openConversation(stored);
+      if (!readingContextId&&!chartContextId&&stored && next.some((conversation) => conversation.id === stored)) await openConversation(stored);
       else {
         setScreen('chat');
         setLoading(false);
       }
     })();
     return () => { alive = false; };
-  }, [openConversation, refreshConversations,readingContextId]);
+  }, [openConversation, refreshConversations,readingContextId,chartContextId]);
 
   const scrollToLatest = useCallback((smooth = true) => {
     const list = listRef.current;
@@ -249,7 +254,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
   }, [screen]);
 
   const beginConversation = (seed = '') => {
-    onClearReadingContext?.();setMode('');
+    onClearReadingContext?.();setMode('');setAttachedChartId(undefined);
     setActiveId('');
     setMessages([]);
     setDraft(seed.replace(/^[^\p{L}\p{N}]+/u, '').trim());
@@ -285,7 +290,8 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
     try {
       const selectedMode=contextReadingId?'tarot':retry?retry.mode:mode||undefined;
       const readingId=contextReadingId??(retry?retry.readingId:selectedMode==='tarot'?readingContextId??attachedReadingId:undefined);
-      const result = await sendLunaMessage({ conversationId: activeId || undefined, message: clean, language, requestId: clientRequestId,...(selectedMode?{mode:selectedMode}:{}),...(readingId?{readingId}:{}) }, initData);
+      const chartId=retry?retry.chartId:selectedMode==='astrology'?attachedChartId:undefined;
+      const result = await sendLunaMessage({ conversationId: activeId || undefined, message: clean, language, requestId: clientRequestId,...(selectedMode?{mode:selectedMode}:{}),...(readingId?{readingId}:{}),...(chartId?{chartId}:{}) }, initData);
       const recommendationId = recommendationIdForMessage(result.message);
       const pendingState = result.message.metadata?.pending_state;
       recordLunaStage('model_result_received', { requestId: clientRequestId, hasAssistantMessage: Boolean(result.message.content) }, initData);
@@ -307,7 +313,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
     } catch (sendError) {
       const details = errorDetails(sendError, language);
       setQuotaExhausted(details.state === 'quota_exhausted');
-      setFailedTurn({ ...details, clientRequestId, text: clean, optimisticMessageId: optimistic.id,mode:contextReadingId?'tarot':retry?retry.mode:mode||undefined,readingId:contextReadingId??(retry?retry.readingId:mode==='tarot'?readingContextId??attachedReadingId:undefined) });
+      setFailedTurn({ ...details, clientRequestId, text: clean, optimisticMessageId: optimistic.id,mode:contextReadingId?'tarot':retry?retry.mode:mode||undefined,readingId:contextReadingId??(retry?retry.readingId:mode==='tarot'?readingContextId??attachedReadingId:undefined),chartId:retry?retry.chartId:mode==='astrology'?attachedChartId:undefined });
     } finally {
       turnPending.current=false;
       setThinking(false);
@@ -393,7 +399,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
       {central&&mode==='tarot'&&(readingContextId||attachedReadingId)&&<div className="luna251-chat-context">✧ {en?'Tarot · reading attached':'Таро · расклад прикреплён'}</div>}
 
       {featureFlags.ai_modes&&(!central||toolsOpen)&&<label className="luna-mode-select">{central?(en?'Mode':'Режим'):language==='en'?'Conversation mode':'Режим разговора'}<select disabled={thinking||Boolean(failedTurn)} value={mode} onChange={event=>{setMode(event.target.value as typeof mode);if(event.target.value!=='tarot')onClearReadingContext?.();}}>
-        <option value="">{central?(en?'General conversation':'Общий разговор'):language==='en'?'Current Luna':'Прежняя Luna'}</option><option value="companion">{language==='en'?'Self-discovery':'Самопознание'}</option><option value="tarot">{language==='en'?'Tarot reflection':'Размышление с Таро'}</option><option value="wellbeing">{language==='en'?'Emotional support':'Эмоциональная поддержка'}</option><option value="meditation">{language==='en'?'Meditation guide':'Гид по медитации'}</option><option value="astrology" disabled>{language==='en'?'Astrology · awaiting chart engine':'Астрология · нужен расчётный модуль'}</option>
+        <option value="">{central?(en?'General conversation':'Общий разговор'):language==='en'?'Current Luna':'Прежняя Luna'}</option><option value="companion">{language==='en'?'Self-discovery':'Самопознание'}</option><option value="tarot">{language==='en'?'Tarot reflection':'Размышление с Таро'}</option><option value="wellbeing">{language==='en'?'Emotional support':'Эмоциональная поддержка'}</option><option value="meditation">{language==='en'?'Meditation guide':'Гид по медитации'}</option><option value="astrology" disabled={!attachedChartId}>{attachedChartId?(en?'Your calculated chart':'Ваша рассчитанная карта'):(en?'Astrology · open your chart first':'Астрология · сначала откройте карту')}</option>
       </select></label>}
       {featureFlags.ai_modes&&(!central||toolsOpen)&&mode==='tarot'&&(readingContextId||attachedReadingId)&&<div className="luna-reading-context"><span>{language==='en'?'Your selected reading is attached':'Выбранный расклад добавлен в контекст'}</span><button type="button" disabled={thinking||Boolean(failedTurn)} onClick={()=>{onClearReadingContext?.();setAttachedReadingId(undefined);}}>{language==='en'?'Remove':'Убрать'}</button></div>}
 

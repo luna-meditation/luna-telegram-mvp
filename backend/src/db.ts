@@ -198,7 +198,14 @@ export async function getUserAccess(telegramId: number) {
   if (error) throw error;
 
   const now = Date.now();
-  const activeUntil = data?.active_until ? new Date(data.active_until).getTime() : 0;
+  let activeUntil = data?.active_until ? new Date(data.active_until).getTime() : 0;
+  // Separate read switch: pausing new sales must not revoke accepted v3 periods.
+  // OFF in this release, so the existing access path performs no new queries.
+  if(env.LUNA30_PREMIUM_ENTITLEMENTS_ENABLED&&!data?.lifetime_access){
+    const period=await supabase.from('luna30_entitlement_periods').select('period_end').eq('telegram_id',telegramId).is('revoked_at',null).lte('period_start',new Date(now).toISOString()).gt('period_end',new Date(now).toISOString()).order('period_end',{ascending:false}).limit(1).maybeSingle();
+    if(period.error)throw period.error;
+    if(period.data)activeUntil=Math.max(activeUntil,Date.parse(period.data.period_end));
+  }
   const hasPremium = Boolean(data?.lifetime_access || activeUntil > now);
 
   return {

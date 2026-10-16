@@ -13,6 +13,7 @@ import {runAuthorizedReleaseQa} from './release-qa.js';
 import {luna24Router} from './luna24-chat.js';
 import {runLuna21Qa} from './luna21-qa.js';
 import {luna21CommerceRouter} from './luna21-commerce-router.js';
+import {luna30CommerceRouter} from './luna30-commerce-router.js';
 import {luna30ReferralRouter} from './luna30-referral-router.js';
 import {attributeValidatedReferral,qualifyVerifiedReferral} from './luna30-referrals.js';
 import {luna30AstrologyRouter} from './luna30-astrology-router.js';
@@ -332,6 +333,7 @@ app.get('/health', async (req, res) => {
 });
 
 app.use('/api/luna21',rateLimit({max:20,windowMs:60_000}),luna21CommerceRouter);
+app.use('/api/luna30/commerce',rateLimit({max:20,windowMs:60_000}),luna30CommerceRouter);
 app.use('/api/referrals',rateLimit({max:12,windowMs:60_000}),luna30ReferralRouter);
 app.use('/api/astrology',rateLimit({max:30,windowMs:60_000}),luna30AstrologyRouter);
 app.get('/api/debug/admin', requireTelegramWebApp, (req, res) => {

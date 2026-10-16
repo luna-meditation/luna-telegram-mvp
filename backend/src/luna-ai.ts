@@ -6,6 +6,7 @@ import { logBackendError } from './error-logging.js';
 import { buildLunaSystemPrompt, detectedIntents, recommendationGoals } from './luna/prompts/index.js';
 import {requestLunaResponse} from './luna/ai-provider.js';
 import {lunaModeSchema,buildModeInstructions,boundedModeContext} from './luna/modes.js';
+import {verifiedAstrologyChatContext} from './luna30-astrology-chat-context.js';
 import {FoundationError} from './personalization.js';
 import {getAiPersonalProfile,getMemoryContextBoundary,advanceMemoryContextBoundary} from './personal-memory.js';
 import {messagesAfterMemoryBoundary,conversationStateAfterMemoryBoundary} from './personal-memory-policy.js';
@@ -102,10 +103,11 @@ const tolerantModelResultSchema = z.object({
 export const lunaChatInputSchema = z.object({
   mode:lunaModeSchema.optional(),
   readingId:z.string().uuid().optional(),
+  chartId:z.string().uuid().optional(),
   conversationId: z.string().uuid().optional(),
   message: z.string().trim().min(1).max(env.AI_MAX_MESSAGE_LENGTH),
   language: languageSchema,
-  requestId: z.string().min(8).max(100).regex(/^[a-zA-Z0-9_-]+$/)
+  requestId: z.string().min(8).max(100).regex(/^[a-zA-Z0-9_-]+$/).refine(value=>!value.startsWith('astro_'),'Reserved server request namespace')
 });
 
 export type LunaRequestState = 'pending' | 'processing' | 'completed' | 'failed_retryable' | 'failed_non_retryable' | 'quota_exhausted';
@@ -921,7 +923,8 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
   let responseLanguage = resolveResponseLanguage(input.message, input.language, [], env.FEATURE_AI_CENTRAL_EXPERIENCE);
   const telegramId = user.telegram_id;
   if(input.mode&&!env.FEATURE_AI_MODES)throw new FoundationError(503,'mode_disabled','This Luna mode is not enabled.');
-  if(input.mode==='astrology')throw new FoundationError(503,'astrology_unavailable','Calculated astrology is not available yet.');
+  if((input.mode==='astrology'||input.chartId)&&(!env.FEATURE_ASTROLOGY||!env.LUNA30_ASTROLOGY_AI_ENABLED||input.mode!=='astrology'||!input.chartId))throw new FoundationError(503,'astrology_unavailable','Open a calculated chart before discussing astrology.');
+  const chartContext=input.chartId?await verifiedAstrologyChatContext(supabase,telegramId,input.chartId):null;
   const personal=(input.mode||env.FEATURE_PERSONAL_MEMORY)&&env.FEATURE_PERSONALIZATION?permittedPersonalContext(await getAiPersonalProfile(telegramId,input.message)):null;
   let readingContext:unknown=null;
   if(input.readingId){
@@ -1143,7 +1146,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
     const modelContext = {
       ...context,
       ...(env.FEATURE_PERSONAL_MEMORY?{profile:null,latestCheckin:null,personalContext:personal}:{}),
-      ...(input.mode?{modeContext:{mode:input.mode,personalContext:personal,readingContext}}:{}),
+      ...(input.mode?{modeContext:{mode:input.mode,personalContext:personal,readingContext,chartContext}}:{}),
       userGoals: !env.FEATURE_PERSONAL_MEMORY&&Array.isArray(context.profile?.goals) ? context.profile.goals : [],
       runtimeDecision: intentResolution,
       runtimeRecommendation: runtimeRecommendation ? {
@@ -1532,6 +1535,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       request_id: input.requestId,
       metadata: {
         recommendedMeditationId: attachedMeditationId,
+        ...(input.chartId?{astrology:{chartId:input.chartId}}:{}),
         ...(env.FEATURE_AI_CENTRAL_EXPERIENCE?{contextualActions:contextualActionIds(input.message,null)}:{}),
         meditationAction,
         recommendedMeditation,

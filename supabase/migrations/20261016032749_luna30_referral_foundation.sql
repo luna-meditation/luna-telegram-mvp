@@ -29,7 +29,7 @@ do $$declare t text;begin foreach t in array array['luna30_release_settings','lu
 end loop;end $$;
 -- Narrowly extend the existing authoritative ledger; do not introduce a second balance system.
 alter table public.luna_seed_ledger drop constraint if exists luna_seed_ledger_kind_check;
-alter table public.luna_seed_ledger add constraint luna_seed_ledger_kind_check check(kind in ('meditation','breath','checkin','seven_days','reading_purchase','stars_package','referral'));
+alter table public.luna_seed_ledger add constraint luna_seed_ledger_kind_check check(kind in ('meditation','breath','checkin','seven_days','reading_purchase','stars_package','referral','premium_renewal','refund'));
 
 create or replace function public.luna30_attribute_referral(p_owner bigint,p_signed_code text)
 returns jsonb language plpgsql security invoker set search_path='' as $$

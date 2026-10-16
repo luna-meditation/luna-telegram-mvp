@@ -6,7 +6,7 @@
 [functions]
   directory = "backend/staging/functions"
   node_bundler = "esbuild"
-  included_files = ["backend/dist/tarot-catalog.json"]
+  included_files = ["backend/dist/tarot-catalog.json","backend/dist/data/geonames-cities15000.json.gz","backend/dist/data/geonames-attribution.json"]
 
 [[headers]]
   for = "/*"

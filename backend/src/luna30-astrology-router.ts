@@ -1,14 +1,19 @@
 import {Router} from 'express';
 import {z} from 'zod';
 import {requireTelegramWebApp,type AuthenticatedRequest} from './auth.js';
-import {supabase} from './db.js';
+import {supabase,getUserAccess} from './db.js';
 import {env} from './config.js';
 import {createAstrologyService} from './luna30-astrology-service.js';
+import {createAstrologyReportService} from './luna30-astrology-reports.js';
+import {getAiPersonalProfile} from './personal-memory.js';
 export const luna30AstrologyRouter=Router();
 const service=createAstrologyService(supabase,()=>env.FEATURE_ASTROLOGY);
+const reports=createAstrologyReportService(supabase,{enabled:()=>env.FEATURE_ASTROLOGY&&env.LUNA30_ASTROLOGY_AI_ENABLED&&env.AI_CHAT_ENABLED&&Boolean(env.OPENAI_API_KEY),personalProfile:owner=>env.FEATURE_PERSONALIZATION?getAiPersonalProfile(owner,'astrology personal growth relationships'):Promise.resolve(null),dailyLimit:async owner=>(await getUserAccess(owner)).hasPremium?env.AI_PREMIUM_MAX_MESSAGES_PER_DAY:env.AI_MAX_MESSAGES_PER_DAY});
 luna30AstrologyRouter.use(requireTelegramWebApp,(_req,res,next)=>{res.setHeader('Cache-Control','private, no-store');next();});
 // Every route below is behind the signature-verifying middleware above.
 const owner=(req:unknown)=>(req as AuthenticatedRequest).telegramUser.telegram_id;
+luna30AstrologyRouter.get('/reports',async(req,res,next)=>{try{const input=z.object({firstChartId:z.string().uuid(),secondChartId:z.string().uuid().optional(),language:z.enum(['en','ru'])}).strict().parse(req.query);res.json(await reports.open(owner(req),input.firstChartId,input.secondChartId??null,input.language));}catch(e){next(e);}});
+luna30AstrologyRouter.post('/reports',async(req,res,next)=>{try{const input=z.object({firstChartId:z.string().uuid(),secondChartId:z.string().uuid().optional(),language:z.enum(['en','ru']),consent:z.literal(true)}).strict().parse(req.body);res.json(await reports.generate(owner(req),input));}catch(e){next(e);}});
 luna30AstrologyRouter.get('/locations',async(req,res,next)=>{try{const q=z.string().max(80).parse(req.query.q??'');res.json(await service.locations(q));}catch(e){next(e);}});
 luna30AstrologyRouter.get('/profiles',async(req,res,next)=>{try{res.json(await service.list(owner(req as AuthenticatedRequest)));}catch(e){next(e);}});
 luna30AstrologyRouter.post('/profiles',async(req,res,next)=>{try{res.status(201).json(await service.save(owner(req as AuthenticatedRequest),req.body));}catch(e){next(e);}});

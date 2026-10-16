@@ -1,0 +1,42 @@
+import {z} from 'zod';
+import type {SupabaseClient} from '@supabase/supabase-js';
+import {FoundationError} from './foundation-error.js';
+import {luna30FeatureEnabled,type Luna30Gate} from './luna30-commercial-policy.js';
+import {isValidTelegramInvoiceUrl} from './plans.js';
+export const commercialProduct=z.enum(['premium_month','premium_year','seeds_100','seeds_300','seeds_700','seeds_1500','support']);
+const gates:Record<z.infer<typeof commercialProduct>,Luna30Gate>={premium_month:'premium',premium_year:'annual',seeds_100:'seed_packages',seeds_300:'seed_packages',seeds_700:'seed_packages',seeds_1500:'seed_packages',support:'support'};
+export const commercialPayload=z.object({v:z.literal(3),kind:z.literal('commerce'),orderId:z.string().uuid(),telegramId:z.number().int().positive()}).strict();
+export const commercialPurchase=z.object({requestId:z.string().uuid(),product:commercialProduct,expectedStars:z.number().int().min(1).max(10000),confirmed:z.literal(true),termsAccepted:z.literal(true)}).strict();
+type Invoice={title:string;description:string;payload:string;currency:'XTR';provider_token:'';prices:Array<{label:string;amount:number}>;subscription_period?:number};
+export function createLuna30Commerce(db:SupabaseClient,environment:Record<string,unknown>,invoice:(value:Invoice)=>Promise<string>){
+ const unavailable=()=>new FoundationError(503,'commerce_unavailable','Reopen your saved order.');
+ async function enabled(product:z.infer<typeof commercialProduct>){
+  if(['premium_month','premium_year'].includes(product)&&environment.LUNA30_PREMIUM_ENTITLEMENTS_ENABLED!==true&&environment.LUNA30_PREMIUM_ENTITLEMENTS_ENABLED!=='true')return false;
+  const gate=gates[product],value=environment[`LUNA30_${gate.toUpperCase()}_ENABLED`];if(value!==true&&value!=='true')return false;
+  const {data,error}=await db.from('luna30_release_settings').select('*').eq('id',true).single();if(error)throw unavailable();
+  return luna30FeatureEnabled(gate,environment,{version:data.catalog_version,enabled:{[gate]:data[`${gate}_enabled`]}});
+ }
+ return {
+  async purchase(owner:number,body:unknown){const input=commercialPurchase.parse(body);if(!await enabled(input.product))throw new FoundationError(404,'feature_disabled','This product is not on sale.');
+   const {data,error}=await db.rpc('luna30_prepare_order',{p_owner:owner,p_request:input.requestId,p_product:input.product,p_expected:input.expectedStars});if(error||!data)throw unavailable();
+   if(!data.order)throw new FoundationError(409,data.status,'This order is not available.');
+   const order=data.order;if(order.state==='paid')return{order,invoiceUrl:null};if(!['pending','accepted'].includes(order.state))throw unavailable();
+   const payload=commercialPayload.parse({v:3,kind:'commerce',orderId:order.id,telegramId:owner});
+   const url=await invoice({title:input.product==='support'?'Support Luna':'Luna · '+input.product,description:input.product==='support'?'Optional support for Luna development. No subscription, paid content or special benefits. Not a charitable donation.':input.product==='premium_month'?'30-day Luna Premium. Renews every 30 days until cancelled.':input.product==='premium_year'?'365 days of Luna Premium. Prepaid access; no automatic annual renewal.':'Moon Seeds for optional Luna content. No cash value.',payload:JSON.stringify(payload),currency:'XTR',provider_token:'',prices:[{label:'Luna',amount:order.stars}],...(input.product==='premium_month'?{subscription_period:2592000}:{})});
+   if(!isValidTelegramInvoiceUrl(url))throw unavailable();return{order,invoiceUrl:url};
+  },
+  async precheckout(owner:number,body:unknown,currency:string,stars:number,query:string){const p=commercialPayload.safeParse(body);if(!p.success||p.data.telegramId!==owner||currency!=='XTR'||!Number.isSafeInteger(stars))return false;
+   const order=await db.from('luna30_commercial_orders').select('product').eq('telegram_id',owner).eq('id',p.data.orderId).maybeSingle();if(order.error||!order.data||!await enabled(order.data.product))return false;
+   const result=await db.rpc('luna30_accept_order',{p_owner:owner,p_order:p.data.orderId,p_stars:stars,p_query:query});return !result.error&&result.data===true;
+  },
+  async fulfill(owner:number,body:unknown,payment:{currency:string;total_amount:number;telegram_payment_charge_id:string;subscription_expiration_date?:number;is_recurring?:boolean}){
+   const p=commercialPayload.parse(body);if(p.telegramId!==owner||payment.currency!=='XTR'||!Number.isSafeInteger(payment.total_amount)||!payment.telegram_payment_charge_id)throw new FoundationError(400,'invalid_receipt','Invalid receipt.');
+   // Legitimate accepted receipts are settled even after sales are disabled.
+   const result=await db.rpc('luna30_fulfill_order',{p_owner:owner,p_order:p.orderId,p_charge:payment.telegram_payment_charge_id,p_stars:payment.total_amount,p_expires:payment.subscription_expiration_date?new Date(payment.subscription_expiration_date*1000).toISOString():null,p_recurring:payment.is_recurring===true});if(result.error||!result.data)throw unavailable();return result.data;
+  },
+  async recordRefund(owner:number,payment:{currency:string;total_amount:number;telegram_payment_charge_id:string}){
+   if(payment.currency!=='XTR'||!Number.isSafeInteger(payment.total_amount))throw new FoundationError(400,'invalid_receipt','Invalid refund.');
+   const result=await db.rpc('luna30_record_refund',{p_owner:owner,p_charge:payment.telegram_payment_charge_id,p_stars:payment.total_amount});if(result.error||!result.data)throw unavailable();return result.data;
+  }
+ };
+}

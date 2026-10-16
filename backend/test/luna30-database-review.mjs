@@ -5,13 +5,18 @@ const nativeUrl=process.env.LUNA30_NATIVE_DATABASE_URL;let db,pool;
 if(nativeUrl){const url=new URL(nativeUrl);assert.equal(url.hostname,'127.0.0.1');assert.equal(url.pathname,'/luna30_isolated_review');assert.ok(Number(url.port)>55000);const client=new Client({connectionString:nativeUrl});await client.connect();pool=new Pool({connectionString:nativeUrl,max:20});db={exec:sql=>client.query(sql),query:(sql,params)=>client.query(sql,params),close:async()=>{await pool.end();await client.end();}};}else{const {PGlite}=await import(pathToFileURL('/tmp/luna23-tools/node_modules/@electric-sql/pglite/dist/index.js').href);db=new PGlite();}
 const schema=readFileSync('../database/schema.sql','utf8'),economy=readFileSync('../supabase/migrations/20261014141847_luna21_economy_foundation.sql','utf8');
 const table=(source,name)=>{const match=source.match(new RegExp('create table if not exists public\\.'+name+' \\([\\s\\S]*?\\n\\);'));assert.ok(match,name);return match[0];};
-const files=['20261016032749_luna30_referral_foundation.sql','20261016032750_luna30_astrology_cache.sql','20261016032751_luna30_usage_reservations.sql'];const migrations=files.map(f=>readFileSync('../supabase/migrations/'+f,'utf8'));
+const files=['20261016032749_luna30_referral_foundation.sql','20261016032750_luna30_astrology_cache.sql','20261016032751_luna30_usage_reservations.sql','20261016050656_luna30_astrology_reports.sql','20261016051056_luna30_commercial_lifecycle.sql'];const migrations=files.map(f=>readFileSync('../supabase/migrations/'+f,'utf8'));
 const checks=[];async function check(name,fn){await fn();checks.push({name,status:'PASS'});console.log('PASS '+name);}const q=(sql,params=[])=>db.query(sql,params);const scalar=async(sql,params=[])=>(await q(sql,params)).rows[0];
 async function rpc(name,params){const args=Object.keys(params),sql=`select ${name}(${args.map((k,i)=>k+'=> $'+(i+1)).join(',')}) result`;if(pool){const client=await pool.connect();try{await client.query('set role service_role');return (await client.query(sql,Object.values(params))).rows[0].result;}finally{client.release();}}return (await scalar(sql,Object.values(params))).result;}
 try{
  await db.exec('create role anon;create role authenticated;create role service_role bypassrls;grant usage on schema public to service_role,anon,authenticated;'+['users','categories','meditations','playback_sessions','moon_gardens','ai_conversations','ai_usage'].map(n=>table(schema,n)).join('\n')+table(economy,'luna21_settings')+table(economy,'luna_seed_ledger')+table(readFileSync('../supabase/migrations/20261014035512_luna_personalization_foundation.sql','utf8'),'luna_personal_profiles'));
  await db.exec("create table unrelated_app_sentinel(id integer primary key,value text);insert into unrelated_app_sentinel values(1,'preserved');insert into users(telegram_id,first_name,lifetime_access) values(30001,'Synthetic inviter',true),(30002,'Synthetic new user',false),(30003,'Synthetic old user',false);update users set created_at=now()-interval '30 days' where telegram_id=30003;insert into moon_gardens(telegram_id,moon_seeds_available,moon_seeds_earned_total) values(30001,117,117),(30002,9,9);insert into luna21_settings(id) values(true);grant select,insert,update on all tables in schema public to service_role;");
  await db.exec(readFileSync('../supabase/migrations/20261014035512_luna_personalization_foundation.sql','utf8'));
+ await db.exec(table(schema,'ai_messages')+table(schema,'ai_chat_requests'));
+ await db.exec(readFileSync('../database/migrations/006_luna_ai_rpc_sync.sql','utf8'));
+ await db.exec(readFileSync('../database/migrations/008_fix_luna_rpc_ambiguous_quota.sql','utf8'));
+ await db.exec('grant select,insert,update on public.ai_chat_requests,public.ai_messages to service_role');
+ await db.exec(table(schema,'payments'));
  const before=JSON.stringify((await q('select to_jsonb(g) row from moon_gardens g order by telegram_id')).rows),sentinel=JSON.stringify((await q("select * from unrelated_app_sentinel")).rows);
  await check('apply and reapply all three migrations, preserving balances, legacy rights and unrelated app',async()=>{for(const migration of migrations)await db.exec(migration);for(const migration of migrations)await db.exec(migration);assert.equal(JSON.stringify((await q('select to_jsonb(g) row from moon_gardens g order by telegram_id')).rows),before);assert.equal(JSON.stringify((await q('select * from unrelated_app_sentinel')).rows),sentinel);assert.equal((await scalar('select lifetime_access from users where telegram_id=30001')).lifetime_access,true);});
  await check('all gates are false; referral and quota RPCs cannot mutate when disabled',async()=>{const flags=await scalar('select * from luna30_release_settings');for(const [key,value]of Object.entries(flags))if(key.endsWith('_enabled'))assert.equal(value,false,key);assert.equal((await rpc('luna30_reserve_usage',{p_owner:30002,p_request_id:randomUUID(),p_bucket:'ai',p_request_hash:'a'.repeat(64)})).status,'disabled');assert.equal((await rpc('luna30_attribute_referral',{p_owner:30002,p_signed_code:'a'.repeat(24)})).status,'disabled');});
@@ -52,6 +57,53 @@ try{
   for(let i=1;i<20;i++)await q("insert into luna30_birth_profiles(telegram_id,subject_kind,display_label,birth_date,location,consent_version) values(30002,'other','Synthetic','2000-01-01','{}','test')");
   await assert.rejects(q("insert into luna30_birth_profiles(telegram_id,subject_kind,display_label,birth_date,location,consent_version) values(30002,'other','Over limit','2000-01-01','{}','test')"),e=>e.code==='23514');
   await rpc('luna30_clear_personal_profile',{p_owner:30002,p_tombstone:true});
+ });
+ await check('AI reports serialize duplicate claims, share legacy allowance, cache once and reject foreign charts',async()=>{
+  await q("update luna30_release_settings set astrology_enabled=true,astrology_ai_enabled=true");
+  const birth=(await q("insert into luna30_birth_profiles(telegram_id,subject_kind,display_label,birth_date,location,consent_version) values(30002,'other','Synthetic report','1990-01-01','{}','test') returning id")).rows[0].id;
+  const chart=(await q("insert into luna30_chart_cache(telegram_id,profile_id,profile_revision,cache_key,engine,engine_version,ephemeris,tzdb_version,calculation) values(30002,$1,1,repeat('d',64),'fixture','1','fixture','fixture','{}') returning id",[birth])).rows[0].id;
+  const args={p_owner:30002,p_first:chart,p_second:null,p_kind:'portrait',p_language:'en',p_key:'1'.repeat(64),p_daily_chat_limit:40};
+  const claims=await Promise.all(Array.from({length:8},()=>rpc('luna30_claim_astrology_report',args)));assert.equal(claims.filter(r=>r.acquired).length,1);
+  await assert.rejects(rpc('luna30_finish_astrology_report',{p_owner:30002,p_key:args.p_key,p_report:{summary:'mock'},p_model:'mock',p_input:10,p_output:20}));
+  await q("insert into ai_usage(telegram_id,request_id,model,input_tokens,output_tokens,total_tokens,request_status) values(30002,$1,'mock',10,20,30,'success')",['astro:'+args.p_key]);
+  const done=await rpc('luna30_finish_astrology_report',{p_owner:30002,p_key:args.p_key,p_report:{summary:'mock'},p_model:'mock',p_input:10,p_output:20});assert.ok(done.id);assert.equal((await rpc('luna30_finish_astrology_report',{p_owner:30002,p_key:args.p_key,p_report:{summary:'changed'},p_model:'mock',p_input:10,p_output:20})).id,done.id);
+  assert.equal((await rpc('luna30_claim_astrology_report',args)).acquired,false);
+  await assert.rejects(rpc('luna30_claim_astrology_report',{...args,p_owner:30001,p_key:'2'.repeat(64)}),e=>e.code==='23503');
+  assert.equal((await rpc('luna30_claim_astrology_report',{...args,p_key:'3'.repeat(64)})).acquired,true);
+  assert.equal((await rpc('luna30_claim_astrology_report',{...args,p_key:'4'.repeat(64)})).status,'limit');
+  await rpc('luna30_clear_personal_profile',{p_owner:30002,p_tombstone:true});assert.equal((await scalar('select count(*)::int n from luna30_astrology_jobs where telegram_id=30002')).n,0);
+ });
+ await check('commercial sales OFF, server prices, accepted receipt and exact-once Seeds/refunds',async()=>{
+  await q('insert into users(telegram_id) values(30400)');const owner=30400;
+  const make=(product,stars,request=randomUUID())=>rpc('luna30_prepare_order',{p_owner:owner,p_request:request,p_product:product,p_expected:stars});
+  assert.equal((await make('seeds_100',100)).status,'disabled');await q('update luna30_release_settings set seed_packages_enabled=true');
+  assert.equal((await make('seeds_100',1)).status,'price_changed');const id=randomUUID();const orders=await Promise.all(Array.from({length:8},()=>make('seeds_100',100,id)));assert.equal(new Set(orders.map(r=>r.order.id)).size,1);const order=orders[0].order.id;
+  const receipt={p_owner:owner,p_order:order,p_charge:'synthetic-charge',p_stars:100,p_expires:null,p_recurring:false};
+  await assert.rejects(rpc('luna30_fulfill_order',receipt));
+  assert.equal(await rpc('luna30_accept_order',{p_owner:owner,p_order:order,p_stars:99,p_query:'wrong'}),false);assert.equal(await rpc('luna30_accept_order',{p_owner:owner,p_order:order,p_stars:100,p_query:'synthetic-checkout'}),true);
+  assert.equal(await rpc('luna30_accept_order',{p_owner:owner,p_order:order,p_stars:100,p_query:'second-checkout'}),false);
+  await q('update luna30_release_settings set seed_packages_enabled=false');
+  const paid=await Promise.all(Array.from({length:8},()=>rpc('luna30_fulfill_order',receipt)));assert.equal(paid.filter(p=>p.status==='paid').length,1);assert.equal((await scalar('select moon_seeds_available from moon_gardens where telegram_id=30400')).moon_seeds_available,100);
+  await assert.rejects(rpc('luna30_fulfill_order',{...receipt,p_stars:99}));
+  const refunded=await Promise.all(Array.from({length:8},()=>rpc('luna30_record_refund',{p_owner:owner,p_charge:receipt.p_charge,p_stars:100})));assert.equal(refunded.filter(r=>!r.duplicate).length,1);assert.equal((await scalar('select moon_seeds_available from moon_gardens where telegram_id=30400')).moon_seeds_available,0);
+ });
+ await check('subscription renewal/cancel/expire/refund keeps existing Lifetime and fixed-term rights',async()=>{
+  await q('update luna30_release_settings set premium_enabled=true,annual_enabled=true');
+  assert.equal((await rpc('luna30_prepare_order',{p_owner:30001,p_request:randomUUID(),p_product:'premium_month',p_expected:500})).status,'already_premium');
+  await q('insert into users(telegram_id) values(30401)');
+  const order=(await rpc('luna30_prepare_order',{p_owner:30401,p_request:randomUUID(),p_product:'premium_month',p_expected:500})).order.id;
+  await rpc('luna30_accept_order',{p_owner:30401,p_order:order,p_stars:500,p_query:'subscription-checkout'});
+  const expires=new Date(Date.now()+29*86400000).toISOString();
+  await rpc('luna30_fulfill_order',{p_owner:30401,p_order:order,p_charge:'subscription-initial',p_stars:500,p_expires:expires,p_recurring:true});
+  assert.equal((await scalar('select count(*)::int n from luna30_entitlement_periods where telegram_id=30401')).n,1);
+  await assert.rejects(rpc('luna30_fulfill_order',{p_owner:30401,p_order:order,p_charge:'overlap-renewal',p_stars:500,p_expires:expires,p_recurring:true}));
+  await q("update luna30_entitlement_periods set period_start=period_start-interval '30 days',period_end=period_end-interval '30 days' where telegram_id=30401");
+  await rpc('luna30_fulfill_order',{p_owner:30401,p_order:order,p_charge:'subscription-renewal',p_stars:500,p_expires:expires,p_recurring:true});
+  assert.equal((await scalar('select moon_seeds_available from moon_gardens where telegram_id=30401')).moon_seeds_available,200);
+  await q("update luna30_commercial_receipts set cancelled_at=now() where telegram_id=30401");assert.equal((await scalar('select count(*)::int n from luna30_entitlement_periods where telegram_id=30401 and revoked_at is null and period_end>now()')).n,1);
+  await q('update moon_gardens set moon_seeds_available=0 where telegram_id=30401');assert.equal((await rpc('luna30_record_refund',{p_owner:30401,p_charge:'subscription-renewal',p_stars:500})).status,'refund_review');
+  assert.equal((await scalar('select moon_seeds_available from moon_gardens where telegram_id=30401')).moon_seeds_available,0);assert.equal((await scalar('select lifetime_access from users where telegram_id=30001')).lifetime_access,true);
+  await q('update luna30_release_settings set premium_enabled=false,annual_enabled=false');
  });
  await db.exec('reset role');
  await check('safe feature-off rollback preserves audit records, earned balances and the other application',async()=>{await db.exec('update luna30_release_settings set quotas_enabled=false,referrals_enabled=false,referral_rewards_enabled=false,astrology_enabled=false');const balances=JSON.stringify((await q('select telegram_id,moon_seeds_available from moon_gardens order by telegram_id')).rows);for(const migration of migrations)await db.exec(migration);assert.equal(JSON.stringify((await q('select telegram_id,moon_seeds_available from moon_gardens order by telegram_id')).rows),balances);assert.equal(JSON.stringify((await q('select * from unrelated_app_sentinel')).rows),sentinel);assert.equal((await scalar("select count(*)::int n from luna_seed_ledger where kind='referral'")).n,10);});

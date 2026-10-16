@@ -17,8 +17,11 @@ import { paymentEligibility,validExistingPlanPayment } from './payment-policy.js
 import { logBackendError } from './error-logging.js';
 import {validateLuna21Precheckout,fulfillLuna21Payment} from './luna21-commerce.js';
 import {attributeValidatedReferral} from './luna30-referrals.js';
+import {createLuna30Commerce} from './luna30-commerce.js';
+import {supabase} from './db.js';
 
 export const bot = new Telegraf(env.BOT_TOKEN);
+const luna30Commerce=createLuna30Commerce(supabase,env,input=>bot.telegram.callApi('createInvoiceLink',input));
 
 type BotLanguage = 'en' | 'ru';
 
@@ -301,6 +304,10 @@ bot.on('pre_checkout_query', async (ctx) => {
   const payload = ctx.preCheckoutQuery.invoice_payload;
   try {
     const parsed = JSON.parse(payload) as { plan?: unknown; telegramId?: unknown; requestId?: unknown;kind?:unknown };
+    if(parsed.kind==='commerce'){
+      const valid=Boolean(ctx.from)&&await luna30Commerce.precheckout(ctx.from!.id,parsed,ctx.preCheckoutQuery.currency,ctx.preCheckoutQuery.total_amount,ctx.preCheckoutQuery.id);
+      await ctx.answerPreCheckoutQuery(valid,valid?undefined:'This Luna product is not on sale.');return;
+    }
     if(parsed.kind==='tarot'){
       const valid=Boolean(ctx.from)&&await validateLuna21Precheckout(ctx.from!.id,parsed,ctx.preCheckoutQuery.currency,ctx.preCheckoutQuery.total_amount,ctx.preCheckoutQuery.id);
       await ctx.answerPreCheckoutQuery(valid,valid?undefined:'This Luna reading is unavailable.');return;
@@ -336,6 +343,10 @@ bot.on('successful_payment', async (ctx) => {
 
   try {
     payload = JSON.parse(payment.invoice_payload) as { plan?: unknown; telegramId?: unknown; requestId?: unknown };
+    if(payload?.kind==='commerce'){
+      await luna30Commerce.fulfill(ctx.from.id,payload,payment);
+      await ctx.reply(botLanguage(ctx.from.language_code)==='ru'?'Платёж подтверждён. Статус покупки доступен в Luna.':'Payment confirmed. Your purchase status is available in Luna.',Markup.inlineKeyboard([[miniAppButton(botLanguage(ctx.from.language_code))]]));return;
+    }
     if(payload?.kind==='tarot'){
       await fulfillLuna21Payment(ctx.from.id,payload,payment.currency,payment.total_amount,payment.telegram_payment_charge_id);
       const language=botLanguage(ctx.from.language_code);
@@ -392,4 +403,14 @@ bot.on('successful_payment', async (ctx) => {
       level: 'error'
     });
   }
+});
+
+// Older SDKs do not yet expose RefundedPayment in their message union. Accept
+// only Telegram-authenticated updates and match an existing owned v3 receipt.
+bot.on('message',async ctx=>{
+ const message=ctx.message as unknown as {refunded_payment?:{currency:string;total_amount:number;telegram_payment_charge_id:string;invoice_payload:string}};
+ const refund=message.refunded_payment;if(!refund||!ctx.from)return;
+ let payload:unknown;try{payload=JSON.parse(refund.invoice_payload);}catch{return;}
+ if(!payload||typeof payload!=='object'||!('kind'in payload)||payload.kind!=='commerce')return;
+ try{await luna30Commerce.recordRefund(ctx.from.id,refund);}catch(error){logBackendError(error,{endpoint:'Telegram v3 refund reconciliation',telegramId:ctx.from.id,stage:'verified_refund_callback',level:'error'});}
 });

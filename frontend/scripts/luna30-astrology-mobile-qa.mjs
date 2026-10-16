@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';import {mkdir,writeFile} from 'node:fs/promises';import {pathToFileURL} from 'node:url';
 const {chromium}=await import(pathToFileURL(process.env.PHASE2_PLAYWRIGHT_MODULE).href),origin=process.env.LUNA30_PREVIEW_ORIGIN??'http://127.0.0.1:56061',out='/tmp/luna30-astrology-mobile';assert.equal(new URL(origin).hostname,'127.0.0.1');await mkdir(out,{recursive:true});
-const browser=await chromium.launch({headless:true,executablePath:process.env.PHASE2_CHROME_BIN}),results=[];
+const browser=await chromium.launch({headless:true,executablePath:process.env.PHASE2_CHROME_BIN}),results=[],run=Date.now().toString(36);
 try{for(const[width,height]of[[360,800],[375,812],[390,844],[393,852]])for(const language of['en','ru'])for(const theme of['dark','light']){
  const en=language==='en',context=await browser.newContext({viewport:{width,height},isMobile:true,hasTouch:true,deviceScaleFactor:2,colorScheme:theme,reducedMotion:'reduce'});
  await context.addInitScript(({language,theme})=>{localStorage.setItem('luna.language.v1',language);localStorage.setItem('luna.theme.preference.v1',theme);},{language,theme});await context.request.post(origin+'/api/profile/language',{data:{language}});
  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));page.on('dialog',dialog=>dialog.accept());await page.route('**/*',r=>new URL(r.request().url()).origin===origin?r.continue():r.abort());
  await page.goto(origin,{waitUntil:'networkidle'});await page.locator('[data-category=astrology]').tap();await page.getByTestId('luna30-astrology').waitFor();
- await page.getByRole('button',{name:en?'Add':'Добавить',exact:true}).tap();const label=`Synthetic QA ${width} ${language} ${theme}`;
+ await page.getByRole('button',{name:en?'Add':'Добавить',exact:true}).tap();const label=`Synthetic QA ${run} ${width} ${language} ${theme}`;
  await page.getByLabel(en?'Private label':'Название для себя',{exact:true}).fill(label);await page.getByLabel(en?'Birth date':'Дата рождения',{exact:true}).fill('2000-01-01');await page.getByLabel(en?'Birth city':'Город рождения',{exact:true}).fill('London');
  await page.locator('.luna30-city-results button').filter({hasText:'London, GB'}).first().tap();await page.locator('.luna30-check input').last().check();
  await page.getByRole('button',{name:en?'Save & calculate':'Сохранить и рассчитать',exact:true}).tap();await page.locator('.luna30-wheel-card').waitFor();assert.equal(await page.locator('.luna30-natal-wheel').count(),1);assert.equal(await page.locator('.luna30-planet-controls button').count(),10);

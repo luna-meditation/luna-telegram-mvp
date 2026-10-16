@@ -1,4 +1,5 @@
 import {OptimizedImage,imageSource} from './design-system/components/OptimizedImage';
+import {Luna30FinancePanel} from './components/Luna30FinancePanel';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -1884,6 +1885,8 @@ function App() {
   useEffect(()=>{document.documentElement.lang=language;},[language]);
   const [tarotSession, tarotDispatch] = useReducer(reduceTarotSession, undefined, createTarotSession);
   const [aiReadingId,setAiReadingId]=useState<string|undefined>();
+  const [aiChartId,setAiChartId]=useState<string|undefined>();
+  useEffect(()=>{const discuss=(event:Event)=>{const id=(event as CustomEvent).detail?.chartId;if(!featureFlags.astrology||typeof id!=='string'||!/^[-a-f0-9]{36}$/.test(id))return;setAiReadingId(undefined);setAiChartId(id);};window.addEventListener('luna-discuss-chart',discuss);return()=>window.removeEventListener('luna-discuss-chart',discuss);},[]);
   const [tarotSetupKey,setTarotSetupKey]=useState(0);
   const tarotBackHandlerRef = useRef<(() => void) | null>(null);
   const [nestedBack,setNestedBack]=useState(false);
@@ -1911,6 +1914,7 @@ function App() {
     resetPrimaryScroll();
     window.requestAnimationFrame(resetPrimaryScroll);
   }, [navigatePrimary, resetPrimaryScroll]);
+  useEffect(()=>{const open=()=>{if(featureFlags.astrology)navigatePrimaryPage('luna');};window.addEventListener('luna-discuss-chart',open);return()=>window.removeEventListener('luna-discuss-chart',open);},[navigatePrimaryPage]);
 
   useLayoutEffect(() => {
     if (!featureFlags.new_navigation && !primaryNavigation(false).some((item) => item.page === page)) return;
@@ -3092,6 +3096,7 @@ function App() {
             onOpenMeditation={openMeditation}
             onTarot={featureFlags.new_navigation&&featureFlags.tarot_daily?()=>setPage('tarot'):undefined}
             readingContextId={aiReadingId}
+            chartContextId={aiChartId}
             tarotSetupKey={tarotSetupKey}
             registerBackHandler={registerTarotBackHandler}
             onClearReadingContext={()=>setAiReadingId(undefined)}
@@ -3495,6 +3500,7 @@ function LunaPage({
   onOpenMeditation,
   onTarot,
   readingContextId,
+  chartContextId,
   tarotSetupKey,
   onClearReadingContext,
   registerBackHandler
@@ -3507,6 +3513,7 @@ function LunaPage({
   onOpenMeditation: (meditation: Meditation) => void;
   onTarot?:()=>void;
   readingContextId?:string;
+  chartContextId?:string;
   tarotSetupKey?:number;
   onClearReadingContext?:()=>void;
   registerBackHandler?:(handler:(()=>void)|null)=>void;
@@ -3522,6 +3529,7 @@ function LunaPage({
       onTarot={onTarot}
       redesigned={featureFlags.new_navigation}
       readingContextId={readingContextId}
+      chartContextId={chartContextId}
       tarotSetupKey={tarotSetupKey}
       onClearReadingContext={onClearReadingContext}
       registerBackHandler={registerBackHandler}
@@ -6642,7 +6650,7 @@ function AdminPage({
 
       {dashboard && activeTab === 'users' && <UsersPanel users={filteredUsers} search={userSearch} selectedUser={selectedUser} onSearch={setUserSearch} onSelect={setSelectedUser} onAction={updateUserAccess} />}
       {dashboard && activeTab === 'subscriptions' && <SubscriptionsPanel dashboard={dashboard} onAction={updateUserAccess} />}
-      {dashboard && activeTab === 'revenue' && <RevenuePanel dashboard={dashboard} />}
+      {dashboard && activeTab === 'revenue' && <><RevenuePanel dashboard={dashboard} /><Luna30FinancePanel initData={initData}/></>}
       {dashboard && activeTab === 'analytics' && <AnalyticsPanel dashboard={dashboard} />}
       {activeTab === 'support' && <SupportInbox requests={supportRequests} onStatus={updateSupportStatus} />}
       {dashboard && activeTab === 'settings' && <SettingsPanel plans={plans} />}

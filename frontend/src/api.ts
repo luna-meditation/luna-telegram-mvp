@@ -77,6 +77,11 @@ export const removeBirthProfile=(id:string,initData?:string)=>request<{ok:boolea
 export const calculateBirthChart=(id:string,initData?:string)=>request<{chart:NatalChart;cached:boolean}>(`/api/astrology/profiles/${id}/chart`,{method:'POST',body:'{}'},initData);
 export const getBirthChart=(id:string,initData?:string)=>request<{chart:NatalChart}>(`/api/astrology/charts/${id}`,undefined,initData);
 export const compareBirthCharts=(firstChartId:string,secondChartId:string,initData?:string)=>request<SynastryResult>('/api/astrology/compatibility',{method:'POST',body:JSON.stringify({firstChartId,secondChartId})},initData);
+export type AstrologyReportRecord={id:string;first_chart_id:string;second_chart_id:string|null;report_kind:'portrait'|'compatibility';language:AppLanguage;report:{summary:string;sections:Array<{id:string;title:string;text:string}>;question:string;disclaimer:string};created_at:string};
+export type Luna30Finance={ai:Array<{category:string;requests:number;input_tokens:number;output_tokens:number;known_cost_usd:number;unknown_cost_requests:number}>;legacy_paid_stars:number;new_paid_stars:number;refund_stars:number;refunds_needing_review:number;active_new_periods:number;seed_delta:number;net_usd:null;sales_flags:Record<string,unknown>};
+export const getLuna30Finance=(initData?:string)=>request<Luna30Finance>('/api/luna30/commerce/admin/metrics',undefined,initData);
+export const openAstrologyReport=(firstChartId:string,secondChartId:string|null,language:AppLanguage,initData?:string)=>request<{report:AstrologyReportRecord|null;cached:true}>(`/api/astrology/reports?${new URLSearchParams({firstChartId,...(secondChartId?{secondChartId}:{}),language})}`,undefined,initData);
+export const generateAstrologyReport=(firstChartId:string,secondChartId:string|null,language:AppLanguage,initData?:string)=>request<{report:AstrologyReportRecord;cached:boolean}>('/api/astrology/reports',{method:'POST',body:JSON.stringify({firstChartId,...(secondChartId?{secondChartId}:{}),language,consent:true})},initData);
 
 export type MeditationTranslation = {
   title?: string | null;
@@ -382,6 +387,7 @@ export type LunaMessage = {
   role: 'user' | 'assistant';
   content: string;
   metadata?: {
+    astrology?:{chartId:string};
     contextualActions?:Array<'tarot'|'birth_profile'|'journal'|'meditation'>;
     tarot?:{readingId:string;clientReadingId:string;kind:'single'|'three'|'five';revealed:number;requestHash:string;reading:TarotReading|null};
     recommendedMeditationId?: string | null;
@@ -745,7 +751,8 @@ export async function getLunaConversation(conversationId: string, initData?: str
 }
 
 export async function sendLunaMessage(input: {
-  mode?:'companion'|'tarot'|'wellbeing'|'meditation';
+  mode?:'companion'|'tarot'|'wellbeing'|'meditation'|'astrology';
+  chartId?:string;
   readingId?:string;
   conversationId?: string;
   message: string;

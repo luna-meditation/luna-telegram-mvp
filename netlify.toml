@@ -6,13 +6,13 @@
   NODE_VERSION = "22"
   PNPM_VERSION = "9.15.0"
 
-# Approved Luna 2.4 release. Monetization and unfinished-product defaults stay disabled.
+# Approved non-commercial Luna 3.0 release; its build requires backup/restore and AI proof.
 [context.production]
   command = "pnpm --filter @luna/frontend build:production"
 
 [context.production.environment]
-  LUNA_RELEASE_PROFILE = "luna251"
-  LUNA_RELEASE_DB_REVIEW = "../qa/luna251-release-review.json"
+  LUNA_RELEASE_PROFILE = "luna30"
+  LUNA_RELEASE_DB_REVIEW = "../qa/luna30-release-review.json"
   VITE_FEATURE_AI_CENTRAL_EXPERIENCE = "true"
   VITE_FEATURE_PERSONALIZATION = "true"
   VITE_FEATURE_PERSONAL_MEMORY = "true"
@@ -22,10 +22,10 @@
   VITE_FEATURE_NEW_NAVIGATION = "true"
   VITE_FEATURE_TAROT_DAILY = "true"
   VITE_FEATURE_TAROT_SPREADS = "true"
-  VITE_FEATURE_ASTROLOGY = "false"
+  VITE_FEATURE_ASTROLOGY = "true"
   VITE_FEATURE_MOON_SEEDS_WALLET_V2 = "false"
   VITE_FEATURE_MOON_SEEDS_PURCHASES = "false"
-  VITE_FEATURE_BREATHWORK_AUDIO = "false"
+  VITE_FEATURE_BREATHWORK_AUDIO = "true"
   VITE_FEATURE_DAILY_CARD_V2 = "true"
   VITE_FEATURE_ECONOMY_REWARDS_V2 = "false"
   VITE_FEATURE_TAROT_PAID_READINGS = "false"
