@@ -141,7 +141,8 @@ test('breath visual respects reduced motion and keeps reward accounting untouche
   assert.doesNotMatch(src('luna2/BreathingVisual.tsx'),/setInterval|requestAnimationFrame|onComplete|fetch\(/);
   assert.match(app,/Date\.now\(\) - startedAt/);
   assert.match(app,/onComplete\(mode, durationSeconds, completedBreaths\)/);
-  assert.match(src('luna2/BreathingVisual.tsx'),/<button type="button" disabled><AudioLines/);
+  assert.match(src('luna2/BreathingVisual.tsx'),/disabled=\{!featureEnabled\}/);
+  assert.match(src('luna2/BreathingVisual.tsx'),/<AudioLines size=\{18\}/);
   assert.match(src('luna2/BreathingVisual.tsx'),/<button type="button" disabled><Mic/);
 });
 

@@ -17,6 +17,7 @@ website/.env
 # Build output
 dist/
 dist-phase2/
+dist-luna30-preview/
 dist-tarot-preview/
 dist-refinement/
 dist-refinement-preview/

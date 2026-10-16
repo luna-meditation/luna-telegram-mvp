@@ -7,6 +7,7 @@ import {TarotCard,TarotCardBack} from './TarotCard';
 import {TarotDetails} from './TarotDetails';
 import {TarotAiInterpretation} from './TarotAiInterpretation';
 import type {TarotSession,TarotAction} from './session';
+import {LunaShareButton} from '../sharing/LunaShareButton';
 
 export function DailyTarot({language,initData,session,dispatch,onContinue,registerBackHandler}:{language:AppLanguage;initData?:string;session:TarotSession;dispatch:Dispatch<TarotAction>;onContinue?:(id:string)=>void;registerBackHandler:(handler:(()=>void)|null)=>void}){
  const en=language==='en',daily=session.daily,reading=daily?.reading;
@@ -33,6 +34,7 @@ export function DailyTarot({language,initData,session,dispatch,onContinue,regist
    </>}
   </>}
   {error&&<div className="tarot-error" role="alert"><p>{error}</p>{!gone&&<button type="button" className="tarot-text-button" disabled={busy} onClick={()=>void open(false)}>{en?'Reopen card':'Открыть карту'}</button>}</div>}
+  {revealed&&card&&reading&&<LunaShareButton language={language} registerBackHandler={registerBackHandler} content={{kind:'tarot',title:card.name[language],subtitle:en?'My card of the day · a moment of perspective':'Моя карта дня · момент нового взгляда',image:card.image,badge:reading.orientation==='reversed'?(en?'Reversed':'Перевёрнутая'):(en?'Upright':'Прямая')}}/>}
   <p className="tarot-hub-note">{en?'Your daily card resets at 00:00 UTC. The same saved reflection stays available today.':'Новая карта — в 00:00 UTC. Сегодня повторно откроется тот же сохранённый расклад.'}</p>
   <details className="tarot-privacy"><summary>{en?'Privacy & guidance':'Приватность и рекомендации'}</summary><p>{en?'Luna uses OpenAI to interpret this card. Only preferences you consented to share are included. Your result is private in reading history. Tarot is a reflection tool, not a prediction or professional advice.':'Luna использует OpenAI для интерпретации карты. Предпочтения учитываются только с твоего согласия. Результат хранится в приватной истории. Таро — инструмент рефлексии, не предсказание и не профессиональная консультация.'}</p></details>
   {zoom&&card&&reading&&<TarotDetails card={card} orientation={reading.orientation} language={language} onClose={()=>setZoom(false)} registerBackHandler={registerBackHandler}/>}

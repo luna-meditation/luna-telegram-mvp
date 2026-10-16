@@ -13,6 +13,8 @@ import {runAuthorizedReleaseQa} from './release-qa.js';
 import {luna24Router} from './luna24-chat.js';
 import {runLuna21Qa} from './luna21-qa.js';
 import {luna21CommerceRouter} from './luna21-commerce-router.js';
+import {luna30ReferralRouter} from './luna30-referral-router.js';
+import {attributeValidatedReferral,qualifyVerifiedReferral} from './luna30-referrals.js';
 import { bot, configureTelegramBot, createStarsInvoiceLink, sendStarsInvoice } from './bot.js';
 import {
   createMeditation,
@@ -329,6 +331,7 @@ app.get('/health', async (req, res) => {
 });
 
 app.use('/api/luna21',rateLimit({max:20,windowMs:60_000}),luna21CommerceRouter);
+app.use('/api/referrals',rateLimit({max:12,windowMs:60_000}),luna30ReferralRouter);
 app.get('/api/debug/admin', requireTelegramWebApp, (req, res) => {
   if (!assertAdmin(req, res)) return;
 
@@ -414,6 +417,7 @@ app.post('/api/users/sync', requireTelegramWebApp, async (req, res, next) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const user = await upsertUser(authReq.telegramUser);
+    if(env.LUNA30_REFERRALS_ENABLED&&authReq.telegramStartParam){try{await attributeValidatedReferral(authReq.telegramUser.telegram_id,authReq.telegramStartParam);}catch(error){logBackendError(error,{endpoint:'Luna referral attribution'});}}
     res.json({ user });
   } catch (error) {
     next(error);
@@ -512,11 +516,13 @@ app.post('/api/history/session', requireTelegramWebApp, async (req, res, next) =
 app.post('/api/history/session/heartbeat', requireTelegramWebApp, async (req, res, next) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    res.json(await heartbeatPlaybackSession(
+    const result=await heartbeatPlaybackSession(
       authReq.telegramUser.telegram_id,
       String(req.body.session_id ?? ''),
       req.body?.last_position
-    ));
+    );
+    if(env.LUNA30_REFERRAL_REWARDS_ENABLED&&'newlyCompleted' in result&&result.newlyCompleted){try{await qualifyVerifiedReferral(authReq.telegramUser.telegram_id,String(req.body.session_id??''));}catch(error){logBackendError(error,{endpoint:'Luna referral qualification'});}}
+    res.json(result);
   } catch (error) {
     next(error);
   }

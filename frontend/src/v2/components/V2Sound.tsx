@@ -42,7 +42,7 @@ export function V2Sound({
           <small>{playing ? activeLabel : scene.subtitle[language]}</small>
         </span>
       </button>
-      <button type="button" onClick={onToggle} className="home-v2-sound-round">
+      <button type="button" onClick={onToggle} className="home-v2-sound-round" aria-label={playing?(language==='ru'?'Приостановить звук':'Pause ambient sound'):(language==='ru'?'Включить звук':'Play ambient sound')}>
         {playing ? <Pause size={16} /> : <Play size={16} fill="currentColor" />}
       </button>
       <button type="button" onClick={onExpand} className="home-v2-sound-text">

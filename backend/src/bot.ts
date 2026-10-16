@@ -16,6 +16,7 @@ import {
 import { paymentEligibility,validExistingPlanPayment } from './payment-policy.js';
 import { logBackendError } from './error-logging.js';
 import {validateLuna21Precheckout,fulfillLuna21Payment} from './luna21-commerce.js';
+import {attributeValidatedReferral} from './luna30-referrals.js';
 
 export const bot = new Telegraf(env.BOT_TOKEN);
 
@@ -201,6 +202,7 @@ export async function configureTelegramBot() {
 
 bot.start(async (ctx) => {
   await ensureUser(ctx);
+  if(env.LUNA30_REFERRALS_ENABLED&&ctx.from?.id&&ctx.startPayload){try{await attributeValidatedReferral(ctx.from.id,ctx.startPayload);}catch(error){logBackendError(error,{endpoint:'Luna bot referral attribution'});}}
   const language = botLanguage(ctx.from?.language_code);
   await ctx.reply(botCopy[language].welcome, mainKeyboard(language));
 });
