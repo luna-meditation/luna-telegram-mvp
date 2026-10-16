@@ -46,13 +46,24 @@ No private birth data, user messages, API response text or secrets belong here.
   category `schema`, code `invalid_string`). Raw private/provider text was not
   logged. Fix: discard invalid optional memory suggestions, never repair them
   into facts, while keeping strict visible-answer validation and consent gates.
-  EN/RU regression tests pass; real staging verification is still pending.
+  EN/RU regression tests pass. The subsequent real staging continuation passes
+  all34 checks, including the tool answer, durable replay and no regeneration.
 - Owner then explicitly approved one more staging publication and at most two
   additional calls/$0.01: seven cumulative calls, still below the original
   $0.03 total. The next one-shot worker reuses all three saved readings and both
   synthetic charts; unpaid persistence tests run before AI. Its short QA-only
   answer cap1100 keeps conservative reservations within the additional budget;
   the normal backend cap2600 is unchanged. Generation/beta restore OFF on exit.
+- Final approved staging deployment `6ad2266ce945a04bc95b9fe7` is Ready, source
+  `4b2ac9119346d0f8b34a9f0958d01732e1674996` (GitHub equivalent-tree commit
+  `c1080b9eb1dd791fa3426fcdb4c69747d0da6500`). Its two completed provider calls
+  cost $0.00202010 including cached-input pricing; seven cumulative calls cost
+  $0.00895665 from actual provider usage. No unknown outcomes or cost holds.
+  Moon Seeds/garden/paid-rights fingerprints match. Beta/generation restored OFF.
+  The short RU answer cites the correct two calculated Mercury positions and
+  available natal aspects; it still uses an English sign label alongside Russian
+  prose and could distinguish natal/synastry wording more clearly. Do not claim
+  that one synthetic conversation proves every AI answer's quality.
 - No existing monthly global budget setting found in exposed Railway variable
   names or audited release tables. Owner approved $30/month inside Luna on
   2026-10-16. This does not change the OpenAI account's billing configuration.
@@ -98,13 +109,14 @@ No private birth data, user messages, API response text or secrets belong here.
   The worker permits at most seven cumulative actual provider calls/$0.03 and
   two new calls/$0.01 under the latest explicit owner approval, respects the
   existing tool-route limiter, and restores beta/generation OFF after testing.
-- Three staging publications so far: `6ad21861c936e638a960d11c`, configuration
+- Four explicitly bounded staging publications so far: `6ad21861c936e638a960d11c`, configuration
   fix `6ad21d042da3472f7614b604`, and `6ad22185dc733b2b581122af` (Ready, source
-  `f561800d152170aa99672a34677ed71221a45e22`). Connector upsert reported success
+  `f561800d152170aa99672a34677ed71221a45e22`), and the final memory-validation
+  retest `6ad2266ce945a04bc95b9fe7`. Connector upsert reported success
   for a missing flag; the flag was verified absent. Personal rejects explicit
   scope customization; creating the nonsecret flag with default scopes worked.
-  Owner authorized one additional corrected staging publication after the
-  optional-memory failure was diagnosed. No production publication is allowed
+  The owner's additional publication authorization has now been used. Do not
+  create another cloud publication without permission. No production publication is allowed
   while the critical verification/budget gates fail.
 - Fresh encrypted backup captured2026-10-16T12:46:10Z:48 tables/1484 rows/33
   functions, restored twice with exact checksums, RLS, definitions and ACLs.
@@ -115,8 +127,24 @@ No private birth data, user messages, API response text or secrets belong here.
   rollback of the new migration,12 anon/authenticated permission denials and
   service-role positives; all48 old tables/1484 rows and ACLs stay unchanged.
 
+## Final staging evidence / remaining gates
+
+The real staging API checks now cover owner/unsigned/non-QA denial, all three
+saved Tarot spreads while generation is OFF, explicit dream consent, real
+save/reopen/edit RU/EN/delete, context reset, both existing synthetic chart caches,
+a real `calculate_compatibility` call and completed Russian assistant answer,
+idempotent replay/history reopening with zero provider calls, independently
+settled attempts and unchanged protected financial state. Authentication used a
+server-signed QA fixture, not a physical Telegram launch. A physical iPhone
+history/reveal/zoom/navigation check has been requested separately.
+
 Production release remains blocked on verified TOTAL October provider spend,
-cutover/in-flight accounting and completion of staging AI/physical-device gates.
+cutover/in-flight accounting and completion of the physical-device gate. A
+read-only attempt to obtain provider Usage reached the saved account's Apple
+sign-in form; no credentials were entered or requested in chat. The owner can
+use OpenAI Usage, select the actual Luna project and October1 to now, then give
+only the total and its cutoff time. An uncertain estimate cannot become the
+verified baseline. The production build gate intentionally remains closed.
 
 Status: implementation in progress; production is still Luna 3.1. No new
 production migration, environment update, merge or deployment has occurred.
