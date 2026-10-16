@@ -1423,7 +1423,7 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
       meditationId: meditationAction?.meditationId ?? null,
       generated: Boolean(meditationAction)
     });
-    const resolvedIntent = pendingResolution && 'resolvedIntent' in pendingResolution
+    const resolvedIntent = pendingResolution && 'resolvedIntent' in pendingResolution && typeof pendingResolution.resolvedIntent==='string'
       ? pendingResolution.resolvedIntent
       : intentResolution.intent;
     const explicitTopicChange = ['journal', 'premium', 'relationship', 'science'].includes(intentResolution.intent);
