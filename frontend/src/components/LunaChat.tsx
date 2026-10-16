@@ -233,7 +233,14 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
         if (list) list.scrollTop = list.scrollHeight;
       });
     } catch (loadError) {
+      if(epoch!==uiEpoch.current)return;
       console.info('[Luna conversation load failed]', loadError instanceof Error ? loadError.name : 'unknown');
+      // Only an explicit ownership/deletion denial invalidates cached content.
+      // A paginated list or a transient network failure is not such evidence.
+      if(loadError instanceof ApiRequestError&&[401,403,404].includes(loadError.status??0)){
+        setActiveId('');setMessages([]);setAttachedReadingId(undefined);setAttachedChartId(undefined);setAttachedAstrology(undefined);setContextDetached(true);
+        if(window.localStorage.getItem(activeConversationKey)===conversationId)window.localStorage.removeItem(activeConversationKey);
+      }
       setError(language === 'ru' ? 'Не удалось открыть этот разговор. Обнови историю и попробуй снова.' : 'This conversation could not open. Reload the history and try again.');
     } finally {
       if(epoch===uiEpoch.current)setLoading(false);
@@ -247,10 +254,9 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
       const next = await refreshConversations();
       if (!alive||epoch!==uiEpoch.current) return;
       if(!next){setLoading(false);return;}
-      if(activeId&&!next.some(c=>c.id===activeId)){setActiveId('');setMessages([]);setAttachedReadingId(undefined);setAttachedChartId(undefined);setAttachedAstrology(undefined);setContextDetached(true);window.localStorage.removeItem(activeConversationKey);}
       const stored = window.localStorage.getItem(activeConversationKey);
-      if(activeId&&next.some(c=>c.id===activeId)){await openConversation(activeId,true);return;}
-      if (!turnPending.current&&!activeId&&!messages.length&&!readingContextId&&!chartContextId&&stored && next.some((conversation) => conversation.id === stored)) await openConversation(stored);
+      if(!turnPending.current&&activeId&&!readingContextId&&!chartContextId){await openConversation(activeId,true);return;}
+      if (!turnPending.current&&!activeId&&!messages.length&&!readingContextId&&!chartContextId&&stored&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(stored)) await openConversation(stored);
       else {
         setScreen('chat');
         setLoading(false);

@@ -38,7 +38,13 @@ No private birth data, user messages, API response text or secrets belong here.
 ## Approvals and gates
 
 - Owner approved up to six new neutral staging provider calls / $0.03.
-  Zero provider calls used for Luna 3.2 so far.
+  One real single-card RU call completed and was saved: input1225/output347,
+  model `gpt-5-mini-2025-08-07`, actual usage cost $0.00100025. Its immutable
+  ledger entry is settled at1001 micro-USD (conservative upward rounding).
+  The smoke worker stopped on its own incorrect single-card array assertion,
+  not a provider/application failure. Generation/beta were restored OFF and
+  balance/paid-rights fingerprints match. The corrected continuation reopens
+  this reading without regeneration and retains the original six/$0.03 ceiling.
 - No existing monthly global budget setting found in exposed Railway variable
   names or audited release tables. Owner approved $30/month inside Luna on
   2026-10-16. This does not change the OpenAI account's billing configuration.
@@ -62,16 +68,34 @@ No private birth data, user messages, API response text or secrets belong here.
 - Isolated native PostgreSQL17: 14 new checks plus 17 existing foundation checks
   pass, including rollback, permission denials, concurrency, unknown spend,
   account erasure, duplicate leases, attempt cap and crash recovery.
-- Full Node22 tests: backend307 passed / 1 integration fixture skipped;
-  frontend181 passed, including the staging-command authorization guard.
+- Full Node22 tests: backend308 passed / 1 integration fixture skipped by
+  default; frontend183 passed, including the staging-command guard and strict
+  production baseline/recovery release gate. The optional exact-production-RPC
+  integration check runs separately on synthetic local PostgreSQL.
 - Browser mobile checks: 24 viewport/language/stale-theme cases, 192 screen
   states. This uses offline UI fixtures and does NOT prove real Telegram login,
   Supabase persistence, Safari or physical-device behavior.
+- Three additional local browser regressions pass: opening an older conversation
+  beyond history page one, preserving cache on503 and clearing it on404.
 - Staging package uses the existing site only. Its temporary QA command needs
   a high-entropy bearer credential, exact site/database, short expiry and a
   one-shot private database claim. Credentials never enter Git or public files.
   The worker permits at most six actual provider calls/$0.03, respects the
   existing tool-route limiter, and restores beta/generation OFF after testing.
+- Two necessary staging publications so far: `6ad21861c936e638a960d11c` and
+  configuration fix `6ad21d042da3472f7614b604`. Connector upsert reported success
+  for a missing flag; the flag was verified absent. Personal rejects explicit
+  scope customization; creating the nonsecret flag with default scopes worked.
+  Owner authorized one final corrected staging publication. No more than five
+  provider calls remain within the original $0.03 cumulative test allowance.
+- Fresh encrypted backup captured2026-10-16T12:46:10Z:48 tables/1484 rows/33
+  functions, restored twice with exact checksums, RLS, definitions and ACLs.
+  Media28 objects/239528218 bytes, current immutable versions matched and every
+  encrypted archive decrypted/content hash verified locally. Other application
+  rows/buckets excluded; no plaintext backup or recovery keys in Git/chat.
+
+Production release remains blocked on verified TOTAL October provider spend,
+cutover/in-flight accounting and completion of staging AI/physical-device gates.
 
 Status: implementation in progress; production is still Luna 3.1. No new
 production migration, environment update, merge or deployment has occurred.

@@ -46,6 +46,14 @@ approved cap $30 (30,000,000 micro-USD) and the existing daily quota policy.
 Do not activate new prices, Seed packages, paid readings or referral rewards.
 Staging's neutral AI test additionally has a 6-provider-call/$0.03 ceiling.
 
+The old backend can still incur provider cost after the owner's billing cutoff.
+During the approved backend-first cutover, the new backend must initially be
+fail-closed, old requests must drain, and the gap/in-flight cost must be included
+in the verified baseline (fresh provider evidence or a documented conservative
+hold). Record the cutoff and handover evidence; never count the same cost twice
+or open an unmetered gap. A billing number from an earlier hour is not by itself
+proof that all pre-ledger spend has been accounted for.
+
 The global lock is held only during short SQL reservations/settlements, never
 during provider calls. Unknown billed outcomes keep their full cost hold.
 An unexpected cost overrun turns generation off. Removing a user's private

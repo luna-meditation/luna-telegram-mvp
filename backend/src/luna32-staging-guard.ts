@@ -8,3 +8,10 @@ export function authorizeLuna32Smoke(request:Request,siteId:string|undefined,opt
  const digest=createHash('sha256').update(auth.slice(7)).digest();
  return timingSafeEqual(digest,Buffer.from(options.authSha256,'hex'));
 }
+/** The canonical database intentionally keeps single-card fields separate. */
+export function qaReadingCards(kind:'single'|'three'|'five',reading:{card_id?:unknown;orientation?:unknown;cards?:unknown}){
+ const cards=kind==='single'?[{cardId:reading.card_id,orientation:reading.orientation}]:reading.cards;
+ const expected=kind==='single'?1:kind==='three'?3:5;
+ if(!Array.isArray(cards)||cards.length!==expected||cards.some(card=>!card||typeof card.cardId!=='string'||!card.cardId||!['upright','reversed'].includes(card.orientation))||new Set(cards.map(card=>card.cardId)).size!==expected)throw new Error('Invalid canonical saved reading');
+ return cards as Array<{cardId:string;orientation:'upright'|'reversed'}>;
+}
