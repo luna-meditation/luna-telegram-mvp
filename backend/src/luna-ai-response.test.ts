@@ -124,19 +124,16 @@ test('extracts output_text and input_text content fields', () => {
   });
 });
 
-test('recursively extracts any nested string inside output', () => {
-  assert.deepEqual(extractOpenAiText({
+test('does not extract arbitrary nested payloads or private reasoning as assistant text', () => {
+  assert.throws(()=>extractOpenAiText({
     output: [
       {
         type: 'message',
         content: [{ type: 'custom', deeply: { nested: { assistant: 'Found deep assistant text.' } } } as never]
       }
     ]
-  }), {
-    text: 'Found deep assistant text.',
-    refusal: null,
-    path: 'output[0].content[0].deeply.nested.assistant'
-  });
+  }),/no assistant text/);
+  assert.throws(()=>extractOpenAiText({output:[{type:'reasoning',content:[{type:'output_text',text:'PRIVATE REASONING'}]}]}),/no assistant text/);
 });
 
 test('does not extract instructions, catalog, schema, ids, or metadata as assistant text', () => {
@@ -278,4 +275,7 @@ test('normalizes a structured meditation action and validates it against publish
   assert.equal(resolveMeditationAction({ type: 'meditation_card', meditationId: 'draft-focus' }, [
     { id: 'draft-focus', catalogKey: 'focused-calm', title: 'Focused Calm', published: false }
   ]), null);
+});
+test('invalid provider schema is a retryable upstream failure, never a user input error',()=>{
+ assert.throws(()=>normalizeOpenAiModelResult({text:JSON.stringify({message:'x'.repeat(5001)}),refusal:null},'en'),(error:unknown)=>error instanceof LunaAiError&&error.code==='malformed_response'&&error.status===502&&error.retryable);
 });

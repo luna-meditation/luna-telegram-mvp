@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {protectedStateFingerprint as hash} from './luna31-financial-guard.mjs';
+const user={lifetime_access:false,active_until:null,free_used:false},garden={id:'synthetic',telegram_id:880003199,moon_seeds_available:101,moon_seeds_earned_total:101,garden_level:0,planted_garden_elements:[],updated_at:'old',created_at:'retained',premium_bonus_granted_at:null};
+test('ordinary profile synchronization cannot fail the financial guard solely for updated_at',()=>assert.equal(hash(user,[garden]),hash(user,[{...garden,updated_at:'new'}])));
+for(const [name,changed]of Object.entries({available:{moon_seeds_available:100},earned:{moon_seeds_earned_total:102},level:{garden_level:1},planted:{planted_garden_elements:['first_bloom']},owner:{telegram_id:880003200},identity:{id:'another'}}))test('financial guard detects '+name,()=>assert.notEqual(hash(user,[garden]),hash(user,[{...garden,...changed}])));
+test('entitlement changes remain protected',()=>assert.notEqual(hash(user,[garden]),hash({...user,lifetime_access:true},[garden])));

@@ -15,7 +15,7 @@ export function BreathingVisual({ practice, phase, active, done, minutes, langua
   const action=running?(language==='ru'?'Пауза':'Pause'):active?(language==='ru'?'Продолжить':'Resume'):done?(language==='ru'?'Начать снова':'Start again'):(language==='ru'?'Нажми, чтобы начать':'Tap to begin');
   return <button type="button" onClick={onToggle} className="luna2-breath-visual luna30-breath-control" data-testid="luminous-breath-ring" data-phase={active ? phase.kind : done ? 'complete' : 'ready'} aria-label={action} aria-pressed={running}>
     <span className="luna2-breath-halo" aria-hidden="true" /><span className="luna2-breath-ring" aria-hidden="true" style={{ transform: `scale(${scale})` }}><span /></span>
-    <span className="luna2-breath-readout"><span className="luna30-phase" aria-live="polite">{active ? running?breathPhaseLabel(phase.kind, language):(language==='ru'?'Пауза':'Paused') : done ? t.finished : t.ready}</span><strong aria-live="off">{active ? phase.remaining : `${minutes}`}</strong><span>{active ? t.seconds : language === 'ru' ? 'мин' : 'min'}</span><span className="luna30-tap-hint">{action}</span></span>
+    <span className="luna2-breath-readout"><span className="luna30-phase" aria-live="polite">{active ? running?breathPhaseLabel(phase.kind, language):(language==='ru'?'Пауза':'Paused') : done ? t.finished : t.ready}</span><strong aria-live="off">{active ? phase.remaining : done?'✓':'▷'}</strong><span>{active ? t.seconds : `${minutes} ${language === 'ru' ? 'мин' : 'min'}`}</span></span><span className="luna30-tap-hint">{action}</span>
   </button>;
 }
 

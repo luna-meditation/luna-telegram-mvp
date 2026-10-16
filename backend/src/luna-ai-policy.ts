@@ -31,7 +31,7 @@ export function validMemoryCandidates(candidates: unknown[], sourceMessage?: str
 }
 
 export function isCrisisMessage(message: string) {
-  return /\b(kill myself|suicide|end my life|hurt myself|cannot stay safe|can't stay safe)\b/i.test(message) ||
+  return /\b(kill myself|suicide|end my life|hurt myself|harm myself|harming myself|hurting myself|cannot stay safe|can't stay safe)\b/i.test(message) ||
     /(покончи(ть)? с собой|самоубий|убить себя|навредить себе|не могу оставаться в безопасности)/i.test(message);
 }
 

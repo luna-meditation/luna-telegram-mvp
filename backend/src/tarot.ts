@@ -15,6 +15,15 @@ import {neutralRussianInterpretation} from './luna/russian-address.js';
 import {permittedPersonalContext} from './personalization-policy.js';
 export const readingFields='id,client_reading_id,card_id,orientation,intention,question,language,interpretation,status,fallback_reason,created_at,updated_at'+(env.FEATURE_DAILY_CARD_V2||env.FEATURE_TAROT_SPREADS?',reading_kind,cards':'');
 export type StoredReading={id:string;client_reading_id:string;card_id:string;orientation:'upright'|'reversed';intention:'general'|'love'|'career'|'growth';question:string;language:'en'|'ru';interpretation:TarotInterpretation|null;status:'local'|'processing'|'ready'|'fallback'|'safety';fallback_reason:string|null;created_at:string;updated_at:string};
+/** Home may inspect availability, never reserve a draw or invoke the provider. */
+export async function dailyTarotStatus(owner:number){
+ if(!env.FEATURE_DAILY_CARD_V2)throw new FoundationError(404,'feature_disabled','Daily card is unavailable.');
+ const day=new Date().toISOString().slice(0,10),resetAt=new Date(Date.parse(day+'T00:00:00Z')+86400000).toISOString();
+ const daily=await supabase.from('luna_daily_cards').select('client_reading_id').eq('telegram_id',owner).eq('reading_day',day).maybeSingle();if(daily.error)throw new FoundationError(503,'daily_unavailable','Could not check the saved daily card.');
+ if(!daily.data)return {state:'new' as const,day,resetAt};
+ const saved=await supabase.from('luna_tarot_readings').select('id').eq('telegram_id',owner).eq('client_reading_id',daily.data.client_reading_id).maybeSingle();if(saved.error)throw new FoundationError(503,'daily_unavailable','Could not check the saved daily card.');
+ return {state:saved.data?'saved' as const:'removed' as const,day,resetAt};
+}
 export async function generateTarot(input:TarotInput,profile:Parameters<typeof buildTarotAiRequest>[1],transport=requestLunaResponse,onMeter?:(meter:StagingAiMeterRecord)=>Promise<void>,style:'single'|'daily'='single'){
  const request=buildTarotAiRequest(input,profile,env.AI_CHAT_MODEL,env.TAROT_AI_MAX_OUTPUT_TOKENS);
  if(style==='daily')request.instructions+='\nThis is a DAILY CARD, not a requested prediction. Write 100–180 words TOTAL across all six fields in the requested language. Summary: an expressive short heading and one personal reflection. Give a grounded practical thought and exactly one meaningful question. No repeated points, no need to fill every section with multiple sentences.';

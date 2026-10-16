@@ -19,7 +19,7 @@ test('Luna 2.0 production profile checks exact SQL review hashes; the old profil
 });
 test('Luna 2.3 memory release is explicit, backup-gated and cannot enable unfinished paid features',()=>{
  const script=readFileSync('scripts/build-production.mjs','utf8');
- assert.match(script,/\['luna23','luna24','luna25','luna251','luna30'\]\.includes\(profile\)\?\['PERSONAL_MEMORY'\]/);
+ assert.match(script,/\['luna23','luna24','luna25','luna251','luna30','luna31'\]\.includes\(profile\)\?\['PERSONAL_MEMORY'\]/);
  assert.match(script,/review\.backupRestorePasses,2/);
  assert.match(script,/20261015032917_luna23_personal_memory\.sql/);
  for(const flag of ['TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_PURCHASES','TAROT_PAID_READINGS','PREMIUM_V2'])assert.ok(script.includes("'"+flag+"'"));

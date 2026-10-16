@@ -1706,13 +1706,17 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     timeZone: notificationPreferences.timezone
   });
   // Owner-filtered counts only, never copy private questions/messages into progress.
-  const [tarotCount,dailyCount,conversationCount]=await Promise.all([
+  const [tarotCount,dailyCount,conversationCount,chartCount,comparisonCount,memoryCount]=await Promise.all([
     env.FEATURE_TAROT_HISTORY?supabase.from('luna_tarot_readings').select('id',{count:'exact',head:true}).eq('telegram_id',telegramId).eq('status','ready'):Promise.resolve({count:0}),
     env.FEATURE_DAILY_CARD_V2?supabase.from('luna_tarot_readings').select('id',{count:'exact',head:true}).eq('telegram_id',telegramId).eq('status','ready').eq('reading_kind','daily'):Promise.resolve({count:0}),
-    env.FEATURE_AI_MODES?supabase.from('ai_messages').select('id',{count:'exact',head:true}).eq('telegram_id',telegramId).eq('role','user'):Promise.resolve({count:0})
+    env.FEATURE_AI_MODES?supabase.from('ai_messages').select('id',{count:'exact',head:true}).eq('telegram_id',telegramId).eq('role','user'):Promise.resolve({count:0}),
+    env.FEATURE_ASTROLOGY?supabase.from('luna30_chart_cache').select('id',{count:'exact',head:true}).eq('telegram_id',telegramId):Promise.resolve({count:0}),
+    env.FEATURE_ASTROLOGY?supabase.from('luna30_astrology_reports').select('id',{count:'exact',head:true}).eq('telegram_id',telegramId).eq('report_kind','compatibility'):Promise.resolve({count:0}),
+    env.FEATURE_PERSONAL_MEMORY?supabase.from('user_memories').select('id',{count:'exact',head:true}).eq('telegram_id',telegramId).eq('confirmation_status','confirmed').eq('is_active',true).eq('memory_kind','fact'):Promise.resolve({count:0})
   ]);
   const achievements = await syncAchievements(telegramId, {
     tarotReadings:tarotCount.count??0,dailyCards:dailyCount.count??0,aiConversations:conversationCount.count??0,
+    calculatedCharts:chartCount.count??0,compatibilityReports:comparisonCount.count??0,confirmedMemories:memoryCount.count??0,
     completedMeditations,
     completedBreathSessions,
     completed,

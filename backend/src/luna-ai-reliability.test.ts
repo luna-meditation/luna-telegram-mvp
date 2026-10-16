@@ -39,8 +39,9 @@ test('failed requests are refunded and remain retryable with the same turn', () 
   assert.match(frontend, /retry\?\.clientRequestId/);
 });
 
-test('OpenAI max-output retry remains internal to one request', () => {
-  assert.match(backend, /attempt: 2/);
+test('each logical chat turn has one provider attempt, never hidden paid regeneration', () => {
+  assert.doesNotMatch(backend, /attempt: [23]/);
+  assert.equal((backend.match(/await callOpenAiResponses\(/g)??[]).length,1);
   const usageWrites = backend.match(/await saveUsage\(/g) ?? [];
   assert.equal(usageWrites.length >= 2, true);
   assert.doesNotMatch(backend.slice(backend.indexOf("if (shouldRetryOpenAiResponse"), backend.indexOf("if (!extracted)")), /saveUsage/);

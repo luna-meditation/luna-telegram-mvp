@@ -17,6 +17,9 @@ export type AchievementStats = {
   tarotReadings?: number;
   dailyCards?: number;
   aiConversations?: number;
+  calculatedCharts?:number;
+  compatibilityReports?:number;
+  confirmedMemories?:number;
 };
 
 export type AchievementCategory = 'practice' | 'rhythm' | 'wellness' | 'garden' | 'premium';
@@ -54,6 +57,10 @@ const strongestStreak = (stats: AchievementStats) => Math.max(stats.currentStrea
 
 // These definitions are the single backend source for unlock state and in-progress percentages.
 export const achievementDefinitions: AchievementDefinition[] = [
+  {id:'astrology_first_chart',title:'Your Sky',description:'Calculate a natal chart from saved birth details.',category:'wellness',current:s=>s.calculatedCharts??0,target:1},
+  {id:'astrology_two_perspectives',title:'Two Perspectives',description:'Save a symbolic reflection on two calculated charts.',category:'wellness',current:s=>s.compatibilityReports??0,target:1},
+  {id:'first_confirmed_memory',title:'A Little More You',description:'Choose and confirm one fact in Luna memory.',category:'wellness',current:s=>s.confirmedMemories??0,target:1},
+  {id:'first_breathwork',title:'Your Own Rhythm',description:'Complete one verified breathing practice.',category:'practice',current:s=>s.completedBreathSessions,target:1},
   { id: 'tarot_first_reading', title: 'First Symbol', description: 'Saved your first completed Tarot reflection.', category: 'wellness', current: (stats) => stats.tarotReadings ?? 0, target: 1 },
   { id: 'tarot_seven_daily_cards', title: 'Seven Daily Reflections', description: 'Explored seven different daily cards.', category: 'wellness', current: (stats) => stats.dailyCards ?? 0, target: 7 },
   { id: 'tarot_ten_readings', title: 'The Oracle', description: 'Explored ten completed Tarot reflections.', category: 'wellness', current: (stats) => stats.tarotReadings ?? 0, target: 10 },

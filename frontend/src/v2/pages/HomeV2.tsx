@@ -65,6 +65,7 @@ type HomeV2Labels = {
 };
 
 type HomeV2Props = {
+  initData?:string;
   newNavigation?: boolean;
   tarotEnabled?: boolean;
   gardenLevel?: number;
@@ -178,7 +179,7 @@ export function HomeV2(props: HomeV2Props) {
         <V2HeroFallback title={props.labels.firstPracticeTitle} body={props.labels.firstPracticeBody} />
       )}
 
-      {props.newNavigation && <HomeDiscovery language={props.language} tarotEnabled={Boolean(props.tarotEnabled)} onTarot={props.onTarot} onDaily={props.onDaily} onAstrology={props.onAstrology} onMeditate={props.onLibrary} onBreathe={props.onBreath} />}
+      {props.newNavigation && <HomeDiscovery initData={props.initData} language={props.language} tarotEnabled={Boolean(props.tarotEnabled)} onTarot={props.onTarot} onDaily={props.onDaily} onAstrology={props.onAstrology} onMeditate={props.onLibrary} onBreathe={props.onBreath} />}
 
       {props.daily ? (
         <V2Recommendation

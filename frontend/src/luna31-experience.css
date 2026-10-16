@@ -1,0 +1,40 @@
+/* Refinement of existing Luna tokens; no replacement design system. */
+.luna2-home .luna25-hero{height:auto;min-height:278px;overflow:hidden;flex:none}
+.luna2-home .luna25-hero .home-v2-atmosphere-copy{position:relative;padding-right:54px;padding-bottom:12px;flex:none}
+.luna2-home .luna25-hero .home-v2-atmosphere-copy h1{font-size:clamp(24px,6.6vw,27px);line-height:1.18}
+.luna2-home .luna25-hero .home-v2-greeting{padding-right:6px}
+.luna25-hero .luna25-hero-subtitle{font-size:14px;margin-top:7px}
+.luna31-mood-edit{position:absolute;right:9px;top:6px;width:44px;height:44px;font-size:28px;color:#fff4fb;line-height:1;background:#211b3a60;border-radius:50%}
+.luna2-home .luna25-hero .home-v2-mood-row{margin-top:auto;padding-top:4px}
+.luna2-home .luna25-hero-action{flex-shrink:0;padding:10px 12px 12px}
+.luna2-home .luna25-daily-card{min-height:82px}
+.luna2-home .luna25-daily-card .luna2-celestial-art{height:58px;flex-basis:48px;width:48px}
+.luna-message-bubble{font-size:16px;line-height:1.65;overflow-wrap:anywhere}
+.luna-message-bubble p{white-space:pre-line}
+.luna-message-bubble p+p,.luna-message-bubble p+ul,.luna-message-bubble p+ol{margin-top:.8em}
+.luna-message-bubble ul,.luna-message-bubble ol{padding-left:1.3em;margin:.65em 0;display:grid;gap:.4em}
+.luna-message-bubble ul{list-style:disc}.luna-message-bubble ol{list-style:decimal}
+.luna-message-bubble h4{font-size:17px;line-height:1.4;font-weight:650;margin:.9em 0 .4em}
+.luna-message-bubble h4:first-child{margin-top:0}
+.luna-message-bubble hr{border:0;border-top:1px solid var(--border-subtle);margin:.8em 0}
+.luna-message-bubble code{font-size:.9em;white-space:pre-wrap}
+.luna24-context-actions{gap:8px}.luna24-context-actions button{min-height:44px;font-size:14px;line-height:1.4}
+.luna31-quota{margin:0 0 5px;text-align:center;font-size:13px;line-height:1.4;color:var(--text-secondary);flex-shrink:0}
+.luna31-milestone{position:fixed;top:calc(var(--app-safe-top,env(safe-area-inset-top,0px)) + 12px);left:16px;right:16px;z-index:220;max-width:500px;margin:auto;display:flex;gap:12px;align-items:center;padding:12px 10px 12px 16px;border:1px solid var(--border-accent);border-radius:20px;background:var(--surface-floating,var(--bg-primary));color:var(--text-primary);box-shadow:0 6px 30px #06091b33;animation:lunaConversationIn 220ms ease-out}.luna31-milestone>svg{color:var(--accent-gold-text);flex-shrink:0}.luna31-milestone p{flex:1;font-size:15px;line-height:1.4}.luna31-milestone button{width:44px;height:44px;display:grid;place-items:center;flex-shrink:0}
+.luna31-practice-trigger{width:100%;display:flex;align-items:center;gap:10px;text-align:left;padding:11px 13px;border:1px solid var(--border-subtle);border-radius:16px;background:var(--surface-primary);color:var(--text-primary);min-height:64px}
+.luna31-practice-trigger>span:first-child{display:grid;gap:3px;flex:1;min-width:0}.luna31-practice-trigger small{font-size:13px;color:var(--text-secondary)}.luna31-practice-trigger strong{font-size:16px;line-height:1.3}.luna31-practice-trigger>span:nth-child(2){font-size:14px;color:var(--accent-gold-text)}
+.luna31-practice-sheet{position:fixed;inset:auto 0 0;margin:0 auto;width:min(100%,540px);max-width:100%;max-height:85dvh;overflow:auto;overscroll-behavior:contain;border:1px solid var(--border-subtle);border-radius:25px 25px 0 0;padding:18px 16px max(20px,env(safe-area-inset-bottom));background:var(--bg-primary);color:var(--text-primary);box-shadow:0 -10px 60px #05091f55}
+.luna31-practice-sheet::backdrop{background:#05081db3;backdrop-filter:blur(5px)}
+.luna31-practice-sheet header{display:flex;justify-content:space-between;align-items:center;gap:12px}.luna31-practice-sheet h2{font-size:22px;font-weight:600}.luna31-practice-sheet header button{width:44px;height:44px;display:grid;place-items:center;flex-shrink:0}.luna31-practice-sheet>p{font-size:14px;line-height:1.5;color:var(--text-secondary);margin:8px 0 16px}.luna31-practice-sheet [role=group]{display:grid;gap:9px}
+.luna31-practice-option{width:100%;padding:13px;display:flex;align-items:center;gap:12px;text-align:left;border:1px solid var(--border-subtle);border-radius:16px;background:var(--surface-primary)}.luna31-practice-option>span{flex:1}.luna31-practice-option strong{font-size:16px;display:block}.luna31-practice-option small{color:var(--accent-gold-text);font-size:14px}.luna31-practice-option p{font-size:14px;line-height:1.45;margin-top:5px;color:var(--text-secondary)}.luna31-practice-option[aria-pressed=true]{border-color:var(--accent-gold-text);background:var(--surface-selected)}
+.luna2-breath-visual{height:300px}.luna2-breath-visual .luna2-breath-readout{gap:3px;max-width:150px;pointer-events:none}.luna2-breath-visual .luna2-breath-readout .luna30-phase{font-size:20px;line-height:1.25;white-space:normal}.luna2-breath-visual .luna30-tap-hint{position:absolute;top:calc(50% + 126px);bottom:auto;left:0;right:0;display:block;text-align:center;font-size:14px;line-height:1.3;color:#e6edfa;pointer-events:none}
+:root[data-theme=light] .luna2-breath-visual .luna30-tap-hint{color:#334e73}
+.luna2-breath .breath-circle-session-meta{margin-top:10px}.luna2-breath .breath-circle-session-meta small{font-size:14px;line-height:1.45;max-width:290px;margin:auto}.luna2-breath .breath-circle-visual{padding-bottom:14px}.luna2-breath .breath-circle-controls{gap:10px}
+.luna2-breath:not(.is-practicing) .breath-circle-session-meta,.luna2-breath .breath-circle-session-meta>strong,.luna2-breath .breath-circle-session-meta>span{display:none}
+.luna31-planet-detail{padding-top:12px;display:grid;gap:10px}.luna31-planet-detail p,.luna31-planet-detail li{font-size:14px;line-height:1.5;color:var(--text-secondary)}.luna31-planet-detail ul{display:flex;gap:8px;flex-wrap:wrap}.luna31-planet-detail li{padding:6px 9px;border:1px solid var(--border-subtle);border-radius:11px}.luna31-planet-detail button{min-height:46px;border-radius:14px;padding:10px;background:var(--surface-selected);color:var(--accent-gold-text);font-size:15px}
+.luna31-planet-leader{stroke:var(--accent-gold-text);stroke-width:.8;opacity:.55}
+.luna31-status-criteria{display:grid;gap:9px;margin-top:14px}.luna31-status-criterion{display:grid;gap:5px}.luna31-status-criterion>span{display:flex;justify-content:space-between;gap:10px;font-size:14px;line-height:1.4;color:var(--text-secondary)}.luna31-status-criterion strong{color:var(--text-primary);font-variant-numeric:tabular-nums}.luna31-status-criterion progress{width:100%;height:5px;accent-color:var(--accent-gold-text);border:0;border-radius:5px;overflow:hidden}.luna31-status-help{font-size:13px;line-height:1.5;color:var(--text-secondary);margin-top:10px}
+.progress-v4-achievement details{margin-top:8px;font-size:14px;line-height:1.5;color:var(--text-secondary)}.progress-v4-achievement summary{min-height:44px;display:flex;align-items:center;color:var(--accent-gold-text);cursor:pointer}.progress-v4-achievement details p{margin-top:4px}
+.progress-v4-achievements-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.progress-v4-achievements-list .progress-v4-achievement{padding:13px;min-width:0}.progress-v4-achievements-list h4{font-size:15px;line-height:1.4;-webkit-line-clamp:unset;overflow:visible}.progress-v4-achievements-list .progress-v4-achievement-copy>span,.progress-v4-achievements-list small{font-size:13px;line-height:1.4}
+@media(max-height:780px){.luna2-breath-visual{height:270px}.luna2-breath-visual .luna30-tap-hint{top:calc(50% + 113px)}.luna2-breath-halo{width:224px}.luna2-breath-ring{width:204px;height:204px}.luna2-breath .luna2-audio-modes{padding:9px}.luna2-breath .breath-circle-visual{padding-top:4px}}
+@media(prefers-reduced-motion:reduce){.luna31-practice-sheet,.luna2-breath-ring,.luna31-milestone{transition:none!important;animation:none!important}}

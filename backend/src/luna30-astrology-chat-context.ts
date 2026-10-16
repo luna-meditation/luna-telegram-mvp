@@ -1,14 +1,21 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
 import {FoundationError} from './foundation-error.js';
-import {symbolicChartFacts} from './luna30-astrology-report-policy.js';
-import type {NatalCalculation} from './luna30-astrology-engine.js';
-export async function verifiedAstrologyChatContext(db:SupabaseClient,owner:number,id:string){
+import {symbolicChartFacts,astrologyReportSchema} from './luna30-astrology-report-policy.js';
+import {calculateSynastry,type NatalCalculation} from './luna30-astrology-engine.js';
+import {astrologyAttachmentSchema,type AstrologyAttachment} from './luna31-consultation.js';
+export async function verifiedAstrologyChatContext(db:SupabaseClient,owner:number,input:string|AstrologyAttachment){
+ const attachment=astrologyAttachmentSchema.parse(typeof input==='string'?{chartId:input}:input);
  const gate=await db.from('luna30_release_settings').select('astrology_enabled,astrology_ai_enabled').eq('id',true).single();
  if(gate.error||!gate.data?.astrology_enabled||!gate.data?.astrology_ai_enabled)throw new FoundationError(503,'astrology_unavailable','Calculated astrology is unavailable.');
- const {data,error}=await db.from('luna30_chart_cache').select('id,calculation').eq('telegram_id',owner).eq('id',id).maybeSingle();
- if(error||!data)throw new FoundationError(404,'chart_not_found','Reopen your calculated chart.');
- const facts=symbolicChartFacts(data.calculation as NatalCalculation);
- // Object rather than array: the existing bounded chat context keeps all ten
- // planets without weakening its limits for other modes or private memories.
- return {precision:facts.precision,placements:Object.fromEntries(facts.planets.map(p=>[p.planet,p.signs.join('/') ])),ascendant:facts.ascendant,houseSigns:facts.houseSigns.join(','),aspects:facts.aspects.map(a=>`${a.from}:${a.type}:${a.to}`).join(';').slice(0,500),warnings:facts.warnings.join(',')};
+ async function chart(id:string){const {data,error}=await db.from('luna30_chart_cache').select('id,profile_id,calculation').eq('telegram_id',owner).eq('id',id).maybeSingle();if(error||!data)throw new FoundationError(404,'chart_not_found','Reopen your calculated chart.');return data;}
+ const first=await chart(attachment.chartId),second=attachment.secondChartId?await chart(attachment.secondChartId):null;
+ if(second?.profile_id===first.profile_id)throw new FoundationError(400,'different_charts_required','Two different profiles are required.');
+ const compact=(calculation:NatalCalculation)=>{
+  const facts=symbolicChartFacts(calculation);
+  const relevant=calculation.aspects.filter(a=>!attachment.planet||a.from===attachment.planet||a.to===attachment.planet).sort((a,b)=>a.orb-b.orb).slice(0,10);
+  return {precision:facts.precision,placements:Object.fromEntries(facts.planets.map(p=>[p.planet,p.signs.join('/')+(facts.precision==='exact'?' '+((calculation.planets.find(v=>v.id===p.planet)!.longitude%30+30)%30).toFixed(2)+'°':'')])),ascendant:facts.ascendant,houseSigns:facts.houseSigns.join(','),aspects:relevant,warnings:facts.warnings.join(',')};
+ };
+ let report:unknown=null;
+ if(attachment.reportId){const result=await db.from('luna30_astrology_reports').select('id,first_chart_id,second_chart_id,report').eq('telegram_id',owner).eq('id',attachment.reportId).maybeSingle();if(result.error||!result.data||result.data.first_chart_id!==first.id||(result.data.second_chart_id??null)!==(second?.id??null))throw new FoundationError(404,'report_not_found','Reopen the saved report.');const saved=astrologyReportSchema.parse(result.data.report);report={summary:saved.summary.slice(0,400),sections:saved.sections.map(s=>({id:s.id,title:s.title,text:s.text.slice(0,200)})),question:saved.question};}
+ return {first:compact(first.calculation),...(second?{second:compact(second.calculation),synastry:{...calculateSynastry(first.calculation,second.calculation),aspects:calculateSynastry(first.calculation,second.calculation).aspects.sort((a,b)=>a.orb-b.orb).slice(0,12)}}:{}),selectedPlanet:attachment.planet??null,savedReport:report};
 }

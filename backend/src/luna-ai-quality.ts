@@ -2,6 +2,11 @@ import { assistantQuestionHash, type LunaConversationState } from './luna-ai-sta
 
 export type LunaResponseReview = { accepted: boolean; issues: string[] };
 
+/** A completed provider envelope can still contain only an introduction. */
+export function hasDanglingConsultationPromise(message:string){
+ return /(?:наблюдения\s+ниже|(?:ниже|дальше)\s*[—:-]\s*по\s+пунктам[^.!?\n]*[.!?]?|(?:observations|details|explanation|points)\s+(?:follow|below))\s*[:.!]?\s*$/iu.test(message.trim());
+}
+
 function normalizedSentences(message: string) {
   return message
     .split(/(?<=[.!?])\s+|\n+/u)
@@ -21,7 +26,9 @@ export function reviewLunaResponse(input: {
   const message = input.message.trim();
   const sentences = normalizedSentences(message);
   const unique = new Set(sentences);
-  const questionCount = (message.match(/\?/g) ?? []).length;
+  // Repeating the user's quoted question is context, not a second question
+  // directed at them. Do not mutilate an otherwise valid reading for it.
+  const questionCount = (message.replace(/«[^»]*»|“[^”]*”|"[^"\n]*"/gu, '').match(/\?/g) ?? []).length;
 
   if (!message) issues.push('empty_response');
   if (!input.userRequestedDepth && !input.completionRequired && (sentences.length > 5 || message.length > 700)) issues.push('too_long_for_mobile_conversation');
@@ -68,7 +75,16 @@ export function constrainLunaResponse(input: {
   language: 'en' | 'ru';
   clarificationAllowed: boolean;
   completionRequired?: boolean;
+  preserveStructure?: boolean;
 }) {
+  if (input.preserveStructure) {
+    const seenLines=new Set<string>();
+    return input.message.split('\n').filter(line=>{
+      if(!line.trim())return true;
+      const key=line.trim().toLowerCase();if(seenLines.has(key))return false;
+      seenLines.add(key);return true;
+    }).join('\n').replace(/\n{3,}/g,'\n\n').trim();
+  }
   const seen = new Set<string>();
   const sentences = input.message
     .split(/(?<=[.!?])\s+|\n+/u)

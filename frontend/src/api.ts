@@ -45,6 +45,7 @@ export const listTarotReadings=(offset=0,initData?:string)=>request<{readings:Ta
 export const deleteTarotReading=(id:string,initData?:string)=>request<{ok:boolean}>(`/api/tarot/readings/${id}`,{method:'DELETE'},initData);
 export type DailyTarotResult={reading:TarotReading;day:string;timezone:'UTC';resetsAt:string;reason:string|null};
 export const openDailyTarot=(language:AppLanguage,generate=false,initData?:string,expectedDay?:string)=>request<DailyTarotResult>('/api/tarot/daily',{method:'POST',body:JSON.stringify({language,generate,...(expectedDay?{expectedDay}:{})})},initData);
+export const getDailyTarotStatus=(initData?:string)=>request<{state:'new'|'saved'|'removed';day:string;resetAt:string}>('/api/tarot/daily',undefined,initData);
 export const saveTarotSpread=(reading:{clientReadingId:string;kind:'three'|'five';cards:TarotSelection[];intention:TarotReading['intention'];question:string;language:AppLanguage;generate:boolean},initData?:string,orderId?:string)=>request<{reading:TarotReading;reason:string|null}>('/api/tarot/spreads',{method:'POST',body:JSON.stringify({reading,...(orderId?{orderId}:{})})},initData);
 export type ReadingOffer={kind:'single'|'three'|'five';cards:number;seeds:number|null;stars:number};
 export type ReadingOrder={id:string;kind:ReadingOffer['kind'];currency:'SEEDS'|'XTR';amount:number;status:'pending'|'entitled'|'consumed'|'refunded';client_reading_id:string|null};
@@ -381,13 +382,16 @@ export type LunaConversationSummary = {
   latestMessage: string;
 };
 
+export type AstrologyChatAttachment={chartId:string;secondChartId?:string;reportId?:string;planet?:'sun'|'moon'|'mercury'|'venus'|'mars'|'jupiter'|'saturn'|'uranus'|'neptune'|'pluto'};
 export type LunaMessage = {
   id: string;
   request_id?: string | null;
   role: 'user' | 'assistant';
   content: string;
   metadata?: {
-    astrology?:{chartId:string};
+    astrology?:AstrologyChatAttachment;
+    readingId?:string;
+    consultation?:{version:1;phase:string;actions:Array<'continue'|'alternative'|'tarot'|'natal_chart'|'compatibility'|'meditation'|'breathing'|'journal'|'history'>};
     contextualActions?:Array<'tarot'|'birth_profile'|'journal'|'meditation'>;
     tarot?:{readingId:string;clientReadingId:string;kind:'single'|'three'|'five';revealed:number;requestHash:string;reading:TarotReading|null};
     recommendedMeditationId?: string | null;
@@ -750,16 +754,19 @@ export async function getLunaConversation(conversationId: string, initData?: str
   return request<{ conversation: LunaConversationSummary; messages: LunaMessage[] }>(`/api/luna/conversations/${conversationId}`, undefined, initData);
 }
 
+export const getLunaUsage=(initData?:string)=>request<{remaining:number;limit:number;resetAt:string}>('/api/luna/usage',undefined,initData);
+
 export async function sendLunaMessage(input: {
   mode?:'companion'|'tarot'|'wellbeing'|'meditation'|'astrology';
   chartId?:string;
+  astrology?:AstrologyChatAttachment;
   readingId?:string;
   conversationId?: string;
   message: string;
   language: AppLanguage;
   requestId: string;
 }, initData?: string) {
-  return request<{ conversationId: string; message: LunaMessage; duplicate: boolean; remaining: number; requestState: 'completed' }>('/api/luna/chat', {
+  return request<{ conversationId: string; message: LunaMessage; duplicate: boolean; remaining: number; resetAt?:string; requestState: 'completed' }>('/api/luna/chat', {
     method: 'POST',
     body: JSON.stringify(input)
   }, initData);

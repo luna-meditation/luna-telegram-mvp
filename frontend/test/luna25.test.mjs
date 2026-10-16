@@ -12,7 +12,7 @@ test('new Home has four illustrated directions and one separate free daily card'
  const home=read('luna2/HomeDiscovery.tsx'),hero=read('v2/components/V2Hero.tsx');
  for(const id of ['tarot','astrology','meditations','breathwork'])assert.equal(home.split(`id:'${id}'`).length,2);
  assert.match(home,/Бесплатно · одна сохранённая карта в день/);assert.match(home,/Карта дня/);assert.match(home,/luna21Flags.daily_card_v2\?onDaily\?\?onTarot/);
- assert.match(hero,/onMood=|onSelect=\{onMood\}/);assert.match(hero,/moodSaved && activeMood/);assert.match(hero,/Луна рядом, чтобы помочь разобраться/);
+ assert.match(hero,/onMood=|onSelect=\{onMood\}/);assert.match(hero,/moodSaved && activeMood/);assert.match(hero,/Поговорим о самом важном/);
  const manifest=JSON.parse(read('v2/home-hero-25.json'));for(const image of manifest.variants){assert.equal(readFileSync('public'+image.src).length,image.bytes);assert.ok(image.bytes<50000);}
  assert.equal(manifest.width/manifest.height,16/9);
 });

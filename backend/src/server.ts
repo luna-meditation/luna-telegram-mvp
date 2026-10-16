@@ -72,6 +72,7 @@ import {
   deleteLunaConversation,
   deleteLunaMemory,
   getLunaConversation,
+  getLunaUsage,
   getLunaMemory,
   listLunaConversations,
   LunaAiError,
@@ -722,6 +723,8 @@ app.get('/api/luna/conversations', requireTelegramWebApp, async (req, res, next)
     next(error);
   }
 });
+
+app.get('/api/luna/usage',requireTelegramWebApp,async(req,res,next)=>{try{res.setHeader('Cache-Control','private, no-store');res.json(await getLunaUsage((req as AuthenticatedRequest).telegramUser.telegram_id));}catch(error){next(error);}});
 
 app.get('/api/luna/health', requireTelegramWebApp, async (req, res, next) => {
   try {
