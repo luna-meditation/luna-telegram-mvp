@@ -9,7 +9,7 @@ export async function run(event){
  await netlifyStagingHandler(new Request(host+'/health'),context);
  const {env}=await import('../dist/config.js'),{supabase}=await import('../dist/db.js');
  assert.ok(env.STAGING_MODE&&env.STAGING_TELEGRAM_IDS==='158467796'&&env.STAGING_SUPABASE_PROJECT_REF==='funvzpmpbgazsisehiru');
- const owner=158467796,runName='luna31-consultation-20261016-v1';
+ const owner=158467796,runName='luna31-consultation-20261016-v2';
  const claim=await supabase.from('luna30_qa_report_runs').insert({run_name:runName,state:'running',result:{maxProviderCalls:6,maxUsd:0.03}}).select('run_name');if(claim.error?.code==='23505')return;assert.ifError(claim.error);
  const result={status:'running',checks:[],calls:[],answers:[],productionWrites:0,syntheticDataOnly:true,physicalDevice:false,actualTelegramLogin:false,signedQaFixture:true};
  const check=(name,value)=>{assert.ok(value,name);result.checks.push({name,status:'PASS'});};
@@ -46,13 +46,17 @@ export async function run(event){
   const five=await saveTarotSpread(owner,{reading:{clientReadingId:randomUUID(),kind:'five',cards,intention:'general',question:'How can I approach a small creative project thoughtfully?',language:'en',generate:false}});
   const {createAstrologyService}=await import('../dist/luna30-astrology-service.js'),service=createAstrologyService(supabase,()=>true),births=['35769e29-7986-48af-afab-77e89d273f01','35769e29-7986-48af-afab-77e89d273f02'];
   const first=(await service.calculate(owner,births[0])).chart,second=(await service.calculate(owner,births[1])).chart;
-  const savedReport=await supabase.from('luna30_astrology_reports').select('id').eq('telegram_id',owner).eq('first_chart_id',first.id).eq('second_chart_id',second.id).eq('language','ru').maybeSingle();assert.ifError(savedReport.error);assert.ok(savedReport.data?.id);
+  // Use the application cache key, including the current prompt version. Older
+  // synthetic QA reports deliberately remain preserved, not deleted to fit QA.
+  const {createAstrologyReportService}=await import('../dist/luna30-astrology-reports.js');
+  const reports=createAstrologyReportService(supabase,{enabled:()=>true,personalProfile:async()=>null,dailyLimit:async()=>100,transport:async()=>{throw new Error('Saved-report lookup must never generate');}});
+  const savedReport=await reports.open(owner,first.id,second.id,'ru');assert.ok(savedReport.report?.id);
   const cases=[
    {name:'single EN',mode:'tarot',readingId:reading.reading.id,language:'en',message:'Explore this exact card and its orientation in relation to my question. Ask one useful reflection question.'},
    {name:'three RU',mode:'tarot',readingId:three.reading.id,language:'ru',message:'Как связаны три карты именно этого расклада? Учитывай перевёрнутое положение и мой вопрос.'},
    {name:'five EN',mode:'tarot',readingId:five.reading.id,language:'en',message:'What single practical reflection links these five cards and their positions? Do not predict an outcome.'},
    {name:'natal EN',mode:'astrology',astrology:{chartId:first.id,planet:'moon'},language:'en',message:'Explain this calculated Moon placement as a symbolic reflection, without claiming it proves my personality.'},
-   {name:'compatibility RU',mode:'astrology',astrology:{chartId:first.id,secondChartId:second.id,reportId:savedReport.data.id},language:'ru',message:'Объясни тему общения по этим двум конкретным картам и сохранённому отчёту. Можно ли по ним знать, что другой человек чувствует?'}
+   {name:'compatibility RU',mode:'astrology',astrology:{chartId:first.id,secondChartId:second.id,reportId:savedReport.report.id},language:'ru',message:'Объясни тему общения по этим двум конкретным картам и сохранённому отчёту. Можно ли по ним знать, что другой человек чувствует?'}
   ];
   const replayChecks=[];
   async function turn(test){const requestId='qa31_'+randomUUID(),{name,...input}=test,response=await call('/api/luna/chat',{...input,requestId});check(name+' full authenticated chat request completes',response.status===200&&Boolean(response.data.message?.content));
