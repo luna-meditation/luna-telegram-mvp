@@ -67,7 +67,7 @@ import {createLunaTools,runLunaToolTurn,lunaToolInstructions} from './luna32-too
 import {consultationTitle} from './luna33-titles.js';
 import {recordedAstrologyConsent} from './luna33-consent.js';
 import {independentPracticeTopic,astrologyWorkflowIntent} from './luna33-topic.js';
-import {independentReflectionTopic,meaningfulQuickReplies,luna34ConversationInstructions,requestedBreathOptions} from './luna34-conversation.js';
+import {independentReflectionTopic,meaningfulQuickReplies,lastAssistantQuickReplies,luna34ConversationInstructions,requestedBreathOptions} from './luna34-conversation.js';
 import {readCommercialAllowance} from './luna34-allowances.js';
 import {currentAiSafetyLimit} from './luna32-ai-accounting.js';
 import {createAstrologyWorkflowService} from './luna33-workflows.js';
@@ -1200,6 +1200,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
     });
     const modelContext = {
       ...context,
+      previousQuickReplies:lastAssistantQuickReplies(recent),
       ...(env.FEATURE_PERSONAL_MEMORY?{profile:null,latestCheckin:null,personalContext:personal}:{}),
       ...(input.mode?{modeContext:{mode:input.mode,personalContext:personal,readingContext,chartContext}}:{}),
       userGoals: !env.FEATURE_PERSONAL_MEMORY&&Array.isArray(context.profile?.goals) ? context.profile.goals : [],
@@ -1514,7 +1515,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
         ...(input.chartId?{astrology:input.astrology??{chartId:input.chartId}}:{}),
         ...(input.chartId?{astrologyConsent:{version:1,chartId:input.chartId,...(input.astrology?.secondChartId?{secondChartId:input.astrology.secondChartId}:{})}}:{}),
         ...(input.readingId?{readingId:input.readingId}:{}),
-        consultation:{version:1,phase,actions,quickReplies:meaningfulQuickReplies(parsed.quickReplies,recent.filter(m=>m.role==='user').map(m=>m.content))},
+        consultation:{version:1,phase,actions,quickReplies:meaningfulQuickReplies(parsed.quickReplies,[...recent.filter(m=>m.role==='user').map(m=>m.content),...lastAssistantQuickReplies(recent)])},
         ...(env.FEATURE_AI_CENTRAL_EXPERIENCE?{contextualActions:contextualActionIds(input.message,null)}:{}),
         meditationAction,
         recommendedMeditation,

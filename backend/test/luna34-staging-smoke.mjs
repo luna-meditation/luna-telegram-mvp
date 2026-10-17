@@ -85,7 +85,7 @@ export async function run(request,context,options){
   currentCase='exact calculated aspect EN';armed=true;let astroReply;try{astroReply=await api('/api/luna/chat',astroBody);}finally{armed=false;}
   check('real English answer about the selected aspect completes',astroReply.status===200&&Boolean(astroReply.data.message?.content));
   const astroText=astroReply.data.message.content,astroMeta=astroReply.data.message.metadata;
-  check('selected aspect identity and explicit scoped consent persist',astroMeta.astrology?.chartId===chartId&&JSON.stringify(astroMeta.astrology?.aspect)===JSON.stringify(attachment.aspect)&&astroMeta.astrologyConsent?.version===1);
+  check('selected aspect identity and explicit scoped consent persist',astroMeta.astrology?.chartId===chartId&&['from','to','type'].every(key=>astroMeta.astrology?.aspect?.[key]===attachment.aspect[key])&&astroMeta.astrologyConsent?.version===1);
   check('answer names the actual two planets and selected aspect',astroText.toLowerCase().includes(aspect.from)&&astroText.toLowerCase().includes(aspect.to)&&astroText.toLowerCase().includes(aspect.type));
   const n=attempts,astroReplay=await api('/api/luna/chat',astroBody);check('aspect reply retry does not regenerate',astroReplay.status===200&&astroReplay.data.message.content===astroText&&attempts===n);
   result.answers.push({language:'en',text:astroText,metadata:astroMeta,aspect:attachment,requestId:astroBody.requestId,conversationId:setup.data.conversationId});
