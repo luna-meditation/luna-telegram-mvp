@@ -197,6 +197,8 @@ incomplete and must not be represented as production-release ready.
   every input is required and extra arguments, including a forged owner, are denied.
 - A successful server selection binds the existing message/card metadata even if
   the final model prose omits or contradicts its legacy `meditationAction` field.
+  An earlier ambiguous rank with no selected ID cannot override the tool's exact
+  verified selection; this priority is covered by the integration contract test.
   One turn cannot choose conflicting tracks; duplicates share the same operation.
   Unknown/unpublished/malformed items cannot become UI actions. Existing effective
   Premium, paid and Lifetime access is reused, not recalculated or changed.

@@ -1375,7 +1375,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
     ));
     const verifiedActionMeditationId=directActionMeditationId??(selectedToolMeditationId&&validatedAction?validatedAction.meditationId:null);
     const finalRecommendationDecision = verifiedActionMeditationId
-      ? runtimeRecommendation ?? {
+      ? runtimeRecommendation&&runtimeRecommendation.meditationId===verifiedActionMeditationId?runtimeRecommendation:{
         meditationId: verifiedActionMeditationId,
         intent: intentResolution.goal,
         score: validatedIntentMeditation ? 100 : 90,
