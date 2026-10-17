@@ -37,6 +37,7 @@ const envSchema = z.object({
   FEATURE_GARDEN_ATOMIC: envBoolean.default(false),
   FEATURE_PERSONALIZATION: envBoolean.default(false),
   FEATURE_PERSONAL_MEMORY: envBoolean.default(false),
+  FEATURE_COSMOS_V2: envBoolean.default(false),
   FEATURE_AI_CENTRAL_EXPERIENCE: envBoolean.default(false),
   FEATURE_TAROT_SPREAD_AI_QA: envBoolean.default(false),
   FEATURE_TAROT_RELEASE_AI_QA: envBoolean.default(false),

@@ -4,7 +4,7 @@ import {createSpreadSession,reduceSpreadSession,type SpreadSession,type SpreadAc
 export const tarotIntentions=['general','love','career','growth'] as const;
 export type TarotIntention=typeof tarotIntentions[number];
 export type TarotSession={
- screen?:'hub'|'single'|'daily'|'three'|'five';
+ screen?:'hub'|'single'|'daily'|'three'|'five'|'history';
  daily?:DailyTarotResult;
  spreads?:Partial<Record<SpreadKind,SpreadSession>>;
  stage:'intention'|'shuffling'|'choose'|'reveal'|'interpretation';

@@ -1,0 +1,26 @@
+// Behavioral localhost fixtures are intentionally not database/device proof.
+import assert from 'node:assert/strict';import {pathToFileURL} from 'node:url';import {mkdir,writeFile} from 'node:fs/promises';
+const origin='http://127.0.0.1:56042',out='/tmp/luna41-product-qa';await mkdir(out,{recursive:true});
+const {chromium}=await import(pathToFileURL(process.env.PHASE2_PLAYWRIGHT_MODULE).href),browser=await chromium.launch({headless:true,executablePath:process.env.PHASE2_CHROME_BIN}),results=[];
+try{for(const language of ['en','ru'])for(const [width,height]of[[360,800],[375,812],[390,844],[393,852],[430,932]]){
+ const context=await browser.newContext({viewport:{width,height},isMobile:true,hasTouch:true,reducedMotion:'reduce'}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await context.addInitScript(language=>localStorage.setItem('luna.language.v2.880000002',JSON.stringify({mode:language,revision:1,updatedAt:null})),language);
+ await page.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
+ await page.goto(origin,{waitUntil:'networkidle'});await page.locator('.home-v2-atmosphere').waitFor();
+ const navigate=async destination=>{await page.evaluate(destination=>window.dispatchEvent(new CustomEvent('luna-open-destination',{detail:{destination}})),destination);await page.waitForTimeout(150);};
+ await navigate('cosmos');await page.getByTestId('universe-overview').waitFor();assert.equal(await page.locator('.cosmos41-area-grid>button').count(),8);
+ await page.getByRole('button',{name:language==='en'?'Career & business':'Карьера и дело',exact:false}).click();const wizard=page.getByTestId('cosmos-onboarding');await wizard.locator('textarea').waitFor();const value=language==='en'?`Synthetic goal ${width}: learn a craft`:`Тестовая цель ${width}: освоить ремесло`;
+ await wizard.locator('textarea').fill(value);await wizard.getByRole('button',{name:language==='en'?'Save & continue':'Сохранить и продолжить',exact:true}).click();await page.getByTestId('universe-overview').waitFor();assert.ok((await page.locator('.cosmos41-area-grid').innerText()).includes(value));
+ await navigate('home');await navigate('cosmos');await page.getByTestId('universe-overview').waitFor();assert.ok((await page.locator('.cosmos41-area-grid').innerText()).includes(value));
+ await page.reload({waitUntil:'networkidle'});await navigate('cosmos');await page.getByTestId('universe-overview').waitFor();assert.ok((await page.locator('.cosmos41-area-grid').innerText()).includes(value),'Confirmed value survives frontend reopening');
+ await page.screenshot({path:`${out}/${width}-${language}-cosmos.png`,fullPage:true});
+ await page.getByRole('button',{name:language==='en'?'Money & goals':'Деньги и цели',exact:false}).click();await wizard.locator('textarea').waitFor();await wizard.getByRole('button',{name:language==='en'?'Skip this question':'Пропустить вопрос',exact:true}).click();await page.getByTestId('universe-overview').waitFor();
+ const state=await page.evaluate(async()=>fetch('/api/universe/onboarding').then(r=>r.json()));assert.ok(state.skipped.includes('money'));
+ for(const destination of ['garden','achievements','breathwork','meditations','astrology','membership','seeds','language','support','home']){await navigate(destination);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`No overflow: ${destination}`);assert.equal(await page.locator('.app-shell').count(),1);}
+ // A slow backend must not make the mood controls vanish optimistically.
+ await page.evaluate(()=>fetch('/api/luna32/local-reset',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}));await page.reload({waitUntil:'networkidle'});
+ await page.route('**/api/checkins',async route=>{await new Promise(r=>setTimeout(r,500));await route.fulfill({status:503,json:{code:'qa_save_failure'}});});
+ const moods=page.locator('.home-v2-mood-row button');await moods.first().waitFor();await moods.first().click();await page.waitForTimeout(120);assert.ok(await moods.count()>0);assert.ok(await moods.first().isDisabled());await page.waitForTimeout(600);assert.ok(await moods.count()>0,'Failed check-in keeps mood controls');assert.equal(await page.locator('.home-v2-atmosphere.is-checked-in').count(),0);
+ await page.unroute('**/api/checkins');await moods.first().click();await page.waitForTimeout(300);assert.equal(await page.locator('.home-v2-mood-row').count(),0);assert.equal(await page.locator('.home-v2-atmosphere.is-checked-in').count(),1);
+ await page.screenshot({path:`${out}/${width}-${language}-home-saved.png`,fullPage:true});assert.deepEqual(errors,[]);results.push({width,height,language,status:'PASS',persistence:'local in-process fixture, not Supabase',physicalDevice:false});await context.close();console.log(`PASS product ${width} ${language}`);
+}await writeFile(out+'/results.json',JSON.stringify({status:'PASS',results},null,2));}finally{await browser.close();}

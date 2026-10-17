@@ -10,7 +10,7 @@ test('the personal Luna entry uses the existing chat and optional profile, witho
 test('optional setup retains Skip, does not ask birth details before astrology, and preserves edits across language switches',()=>{
  const setup=readFileSync('src/luna2/PersonalizationSettings.tsx','utf8');
  assert.match(setup,/What should Luna call you/);assert.match(setup,/Preferred language/);assert.match(setup,/What matters to you right now/);
- assert.match(setup,/Skip \/ return to Profile/);assert.match(setup,/featureFlags.astrology\|\|featureFlags.personal_memory/);assert.match(setup,/\},\[initData\]\)/);
+ assert.match(setup,/Skip \/ return to Profile/);assert.match(setup,/!featureFlags.astrology&&featureFlags.personal_memory/);assert.match(setup,/Birth profiles are managed once in Astrology/);assert.match(setup,/\},\[initData\]\)/);
  assert.match(setup,/Birth details are excluded/);assert.doesNotMatch(setup,/telegram_id:/);
 });
 test('Luna 2.0 production profile checks exact SQL review hashes; the old profile stays default',()=>{

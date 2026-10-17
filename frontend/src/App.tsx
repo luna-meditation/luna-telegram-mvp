@@ -2,6 +2,7 @@ import {OptimizedImage,imageSource} from './design-system/components/OptimizedIm
 import './luna34.css';
 import {useLanguagePreference} from './localization/useLanguagePreference';
 import type {LanguageMode} from './localization/languagePreference';
+import {resolveLunaDestination} from '../../backend/src/luna41-navigation';
 import {admin40Enabled} from './admin/admin40';
 import {ReferralWelcome,ReferralPanel} from './features/membership/ReferralPanel';
 import {parseLaunchDestination} from './navigation/launchDestination';
@@ -1823,7 +1824,7 @@ function App() {
   const [tarotSession, tarotDispatch] = useReducer(reduceTarotSession, undefined, ()=>({...createTarotSession(),...(launchDestination==='daily'?{screen:'daily' as const}:{})}));
   const [aiReadingId,setAiReadingId]=useState<string|undefined>();
   const [aiChartId,setAiChartId]=useState<string|import('./api').AstrologyChatAttachment|undefined>();
-  const [astrologyEntry,setAstrologyEntry]=useState<'natal'|'compatibility'|undefined>(launchDestination==='natal'||launchDestination==='compatibility'?launchDestination:undefined);
+  const [astrologyEntry,setAstrologyEntry]=useState<'natal'|'compatibility'|'profiles'|undefined>(launchDestination==='natal'||launchDestination==='compatibility'?launchDestination:undefined);
   useEffect(()=>{const discuss=(event:Event)=>{const detail=(event as CustomEvent).detail,id=detail?.chartId;if(!featureFlags.astrology||typeof id!=='string'||!/^[-a-f0-9]{36}$/.test(id))return;setAiReadingId(undefined);setAiChartId(detail);};window.addEventListener('luna-discuss-chart',discuss);return()=>window.removeEventListener('luna-discuss-chart',discuss);},[]);
   const [tarotSetupKey,setTarotSetupKey]=useState(0);
   const tarotBackHandlerRef = useRef<(() => void) | null>(null);
@@ -1882,8 +1883,8 @@ function App() {
   const [access, setAccess] = useState<AccessState>(() => initialAccountCache?.access ?? { hasPremium: false, plan: 'Free' });
   const [profile, setProfile] = useState<ProfileStats | null>(() => initialAccountCache?.profile ?? null);
   const [profileNestedActive, setProfileNestedActive] = useState(false);
-  const [profileEntry, setProfileEntry] = useState<'main'|'personalization'|'universe'|'terms'|'invite'>(launchDestination==='invite'?'invite':'main');
-  useEffect(()=>{const open=(event:Event)=>{const destination=(event as CustomEvent).detail?.destination;if(typeof destination!=='string')return;if(destination==='terms'){setProfileEntry('terms');navigatePrimary('profile');return;}const launch=parseLaunchDestination(destination).destination;if(launch==='invite'){setProfileEntry('invite');navigatePrimary('profile');}else if(launch==='natal'||launch==='compatibility'){setAstrologyEntry(launch);setPage('astrology');}else if(launch==='daily'){tarotDispatch({type:'screen',value:'daily'});setPage('tarot');}else{const pages={home:'home',luna:'luna',tarot:'tarot',astrology:'astrology',meditations:'library',breathwork:'breathCircle',membership:'pricing',seeds:'wallet'} as const;setPage(pages[launch as keyof typeof pages]??'home');}};window.addEventListener('luna-open-destination',open);return()=>window.removeEventListener('luna-open-destination',open);},[setPage,navigatePrimary]);
+  const [profileEntry, setProfileEntry] = useState<ProfileSettingsView>(launchDestination==='invite'?'invite':'main');
+  useEffect(()=>{const open=(event:Event)=>{const destination=resolveLunaDestination((event as CustomEvent).detail?.destination,featureFlags);if(!destination)return;if(destination.page==='profile'){setProfileEntry('profileView' in destination?destination.profileView:'main');navigatePrimary('profile');return;}if(destination.page==='astrology')setAstrologyEntry('astrologySection' in destination?destination.astrologySection:undefined);if('tarotScreen' in destination)tarotDispatch({type:'screen',value:destination.tarotScreen});if(destination.id==='daily')tarotDispatch({type:'screen',value:'daily'});setPage(destination.page);};window.addEventListener('luna-open-destination',open);return()=>window.removeEventListener('luna-open-destination',open);},[setPage,navigatePrimary]);
   useEffect(()=>{if(!featureFlags.ai_central_experience)return;const activity=()=>setPage('activity'),astrology=(event:Event)=>{const value=(event as CustomEvent).detail?.section;setAstrologyEntry(value==='natal'||value==='compatibility'?value:undefined);setPage('astrology');};window.addEventListener('luna-open-activity',activity);window.addEventListener('luna-open-astrology',astrology);return()=>{window.removeEventListener('luna-open-activity',activity);window.removeEventListener('luna-open-astrology',astrology);};},[setPage]);
   useEffect(()=>{const open=()=>{if(!featureFlags.personal_memory)return;setProfileEntry('universe');navigatePrimary('profile');};window.addEventListener('luna-open-universe',open);return()=>window.removeEventListener('luna-open-universe',open);},[navigatePrimary]);
   const [personalDisplayName, setPersonalDisplayName] = useState<string|null>(null);
@@ -2622,15 +2623,8 @@ function App() {
 
     try {
       const existing = wellness?.todayCheckin;
-      const optimisticCheckin: DailyCheckin = {
-        local_date: todayLocalDate(),
-        mood: moodChipToCheckinMood(nextMood),
-        sleep_range: existing?.sleep_range ?? null,
-        available_minutes: existing?.available_minutes ?? null
-      };
-      setWellness((current) => current
-        ? { ...current, todayCheckin: optimisticCheckin }
-        : optimisticWellnessSummary(optimisticCheckin));
+      // The selected icon may react immediately, but the persisted check-in
+      // state must remain unchanged until the backend confirms the save.
       const checkin = await saveDailyCheckin(withCheckinAuthFallback({
         ...(existing?.sleep_range ? { sleep_range: existing.sleep_range } : {}),
         ...(existing?.available_minutes ? { available_minutes: existing.available_minutes } : {}),
@@ -2638,7 +2632,7 @@ function App() {
         local_date: todayLocalDate()
       }), initData);
       const nextSummary = await getWellnessSummary(initData, todayLocalDate()).catch(() => null);
-      setWellness((current) => nextSummary ? { ...nextSummary, todayCheckin: checkin } : current ? { ...current, todayCheckin: checkin } : current);
+      setWellness((current) => nextSummary ? { ...nextSummary, todayCheckin: checkin } : current ? { ...current, todayCheckin: checkin } : optimisticWellnessSummary(checkin));
       showCheckinConfirmation();
       void Promise.all([refreshAccount(), refreshLibrary()]);
     } catch (error) {
@@ -3139,6 +3133,8 @@ function App() {
         {page === 'profile' && (
           <ProfilePage
             initialView={profileEntry}
+            onAstrology={() => {setAstrologyEntry(undefined);setPage('astrology');}}
+            onReading={id => {setAiReadingId(id);navigatePrimary('luna');}}
             profile={profile}
             access={access}
             loading={accountLoading}
@@ -5181,6 +5177,8 @@ function notificationStatusLabel(preferences: NotificationPreferences, language:
 
 function ProfilePage({
   initialView='main',
+  onAstrology,
+  onReading,
   profile,
   access,
   loading,
@@ -5214,7 +5212,9 @@ function ProfilePage({
   telegramUserId,
   onRefreshDiagnostics
 }: {
-  initialView?: 'main'|'personalization'|'universe'|'terms'|'invite';
+  initialView?: ProfileSettingsView;
+  onAstrology?: () => void;
+  onReading?: (id:string) => void;
   profile: ProfileStats | null;
   access: AccessState;
   loading: boolean;
@@ -5477,7 +5477,7 @@ function ProfilePage({
       <ProfileSettingsRow icon={CreditCard} title={language==='en'?'Manage subscription':'Управление подпиской'} value={localizedPlanStatus} onClick={()=>setView('subscription')}/>
     </section>
   </ProfileChildScreen>;
-  if (view === 'universe'&&featureFlags.personal_memory) return <ProfileChildScreen title={language==='en'?'My Universe':'Мой космос'} onBack={()=>{if(!universeBackRef.current?.())setView('main');}} language={language}><MyUniverse language={language} initData={initData} firstName={firstName} goalOptions={profileGoalOptions} onBackChange={handler=>{universeBackRef.current=handler;}}/></ProfileChildScreen>;
+  if (view === 'universe'&&featureFlags.personal_memory) return <ProfileChildScreen title={language==='en'?'My Universe':'Мой космос'} onBack={()=>{if(!universeBackRef.current?.())setView('main');}} language={language}><MyUniverse language={language} initData={initData} firstName={firstName} onAstrology={onAstrology} onReading={onReading} goalOptions={profileGoalOptions} onBackChange={handler=>{universeBackRef.current=handler;}}/></ProfileChildScreen>;
   if (view === 'personalization') return <ProfileChildScreen title={language==='en'?'Personal Luna profile':'Личный профиль Luna'} onBack={()=>setView(initialView==='personalization'?'main':'settings')} language={language}><PersonalizationSettings language={language} firstName={firstName} initData={initData} onLanguageChange={onLanguageChange} onClose={()=>setView(initialView==='personalization'?'main':'settings')}/></ProfileChildScreen>;
 
 

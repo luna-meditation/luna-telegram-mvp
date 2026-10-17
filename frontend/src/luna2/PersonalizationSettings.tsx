@@ -11,12 +11,12 @@ export function PersonalizationSettings({language,firstName,initData,onClose,onL
  // Switching language must not discard an unfinished optional setup.
  useEffect(()=>{let active=true;getPersonalProfile(initData).then(value=>{if(active){setData({...empty,...value});setReady(true);}}).catch(()=>{if(active)setFeedback('loaded-error');}).finally(()=>{if(active)setBusy(false);});return()=>{active=false;};},[initData]);
  async function save(){setBusy(true);setFeedback(null);try{setData(await savePersonalProfile(data,initData));setFeedback('saved');}catch{setFeedback('save-error');}finally{setBusy(false);}}
- async function remove(){if(!window.confirm(en?'Delete your optional profile and withdraw AI context consent?':'Удалить необязательный профиль и отозвать согласие на AI-контекст?'))return;setBusy(true);try{await deletePersonalProfile(initData);setData(empty);setFeedback('deleted');}catch{setFeedback('delete-error');}finally{setBusy(false);}}
+ async function remove(){if(!window.confirm(en?'Delete your optional profile, birth profiles and the charts and astrology reports derived from them? AI context consent will be withdrawn. Tarot and conversation history are managed separately. This cannot be undone.':'Удалить необязательный профиль, данные рождения и рассчитанные по ним карты и астрологические отчёты? Согласие на AI-контекст будет отозвано. История Таро и разговоров удаляется отдельно. Это действие нельзя отменить.'))return;setBusy(true);try{await deletePersonalProfile(initData);setData(empty);setFeedback('deleted');}catch{setFeedback('delete-error');}finally{setBusy(false);}}
  const messages:Record<Exclude<Feedback,null>,string>={
   'loaded-error':en?'Could not load your profile. Please return and try again.':'Не удалось загрузить профиль. Вернись и попробуй снова.',
   saved:en?'Saved. You can change or delete this anytime.':'Сохранено. Данные можно изменить или удалить в любой момент.',
   'save-error':en?'Could not save. Your existing data is unchanged.':'Не удалось сохранить. Прежние данные не изменены.',
-  deleted:en?'Optional profile deleted. Reading history is managed separately.':'Необязательный профиль удалён. История раскладов удаляется отдельно.',
+  deleted:en?'Optional profile and derived astrology data deleted. Tarot and conversation history are managed separately.':'Необязательный профиль и связанные астрологические данные удалены. История Таро и разговоров удаляется отдельно.',
   'delete-error':en?'Could not delete. Please try again.':'Не удалось удалить. Попробуй снова.'
  };
  const interests=en?['Tarot','Astrology','Self-discovery','Meditation']:['Таро','Астрология','Самопознание','Медитация'];
@@ -29,12 +29,13 @@ export function PersonalizationSettings({language,firstName,initData,onClose,onL
    <h3>{en?'Your interests':'Твои интересы'}</h3>
    <div className="personalization-interests">{(['tarot','astrology','wellbeing','meditation'] as const).map((interest,index)=><button key={interest} type="button" aria-pressed={data.interests.includes(interest)} onClick={()=>setData({...data,interests:data.interests.includes(interest)?data.interests.filter(i=>i!==interest):[...data.interests,interest]})}>{interests[index]}</button>)}</div>
    <label>{en?'What matters to you right now?':'Какая тема сейчас для тебя важна?'}<textarea maxLength={500} placeholder={en?'A question, a life theme, or how you prefer to talk. You can leave this blank.':'Вопрос, жизненная тема или твои пожелания к общению. Можно оставить пустым.'} value={data.preferences} onChange={event=>setData({...data,preferences:event.target.value})}/></label>
-   {(featureFlags.astrology||featureFlags.personal_memory)&&<>
+   {!featureFlags.astrology&&featureFlags.personal_memory&&<>
     <h3>{en?'Birth details — optional':'Данные рождения — необязательно'}</h3><p>{en?'No chart is calculated here. Birth details are excluded from AI personalization.':'Здесь карта не рассчитывается. Данные рождения не используются для персонализации AI.'}</p>
     <label>{en?'Birth date':'Дата рождения'}<input type="date" value={data.birth_date??''} onChange={event=>setData({...data,birth_date:event.target.value||null})}/></label>
     <label>{en?'Birth time, if known':'Время рождения, если известно'}<input type="time" value={data.birth_time??''} onChange={event=>setData({...data,birth_time:event.target.value||null})}/></label>
     <label>{en?'Birth place (city, country)':'Место рождения (город, страна)'}<input maxLength={120} value={data.birth_place??''} onChange={event=>setData({...data,birth_place:event.target.value||null})}/></label>
    </>}
+   {featureFlags.astrology&&<p>{en?'Birth profiles are managed once in Astrology → Saved profiles. Existing optional legacy details remain stored until you explicitly remove them; this form does not copy or overwrite your calculated profiles.':'Данные рождения управляются в «Астрологии» → «Сохранённые профили». Ранее указанные необязательные данные сохраняются до явного удаления; эта форма не копирует и не перезаписывает рассчитанные профили.'}</p>}
    <label className="personalization-consent"><input type="checkbox" checked={data.ai_context_consent} onChange={event=>setData({...data,ai_context_consent:event.target.checked})}/><span>{en?'I allow Luna to send my chosen name, interests, preferences and (when enabled) relevant confirmed memories to its AI provider (OpenAI) for personalized responses. Birth details are excluded.':'Разрешаю Luna отправлять выбранное имя, интересы, предпочтения и (при включении памяти) релевантные подтверждённые записи AI-провайдеру OpenAI для персональных ответов. Данные рождения исключены.'}</span></label>
    <button type="button" className="tarot-draw-button" onClick={()=>void save()}>{en?'Save preferences':'Сохранить предпочтения'}</button><button type="button" className="tarot-text-button" onClick={()=>void remove()}>{en?'Delete optional profile':'Удалить необязательный профиль'}</button>
   </fieldset>

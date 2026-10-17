@@ -205,7 +205,7 @@ test('builds Responses request with larger output budget and minimal reasoning',
   assert.match(request.instructions, /VERIFIED_PRODUCT_CAPABILITIES/);
   assert.match(request.instructions, /Use intent-sensitive length/);
   assert.match(request.instructions, /never stop halfway through the cycle/i);
-  assert.match(request.instructions, /latest meaningful user messages dominate/i);
+  assert.match(request.instructions, /manually selected interface language is authoritative/i);
   assert.match(request.instructions, /team behind Luna Meditation created her/);
   assert.match(request.instructions, /Never invent navigation/);
   assert.match(request.instructions, /Never claim that a card was rendered or playback started/);

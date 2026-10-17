@@ -1,0 +1,38 @@
+// Actual staging persistence through the existing backend services. These two
+// synthetic accounts are never exposed by the public QA Telegram allowlist.
+import assert from 'node:assert/strict';import {createHmac,randomUUID} from 'node:crypto';
+import {protectedStateFingerprint} from './luna31-financial-guard.mjs';
+export async function runFoundation(db,env,sourceCommit){
+ const runName='luna41-foundation-20261017-v1',owner=410041001,other=410041002,result={status:'RUNNING',sourceCommit,checks:[],providerCalls:0,syntheticOwners:[owner,other],productionTouched:false,physicalTelegramLogin:false};
+ const must=async q=>{const r=await q;assert.ifError(r.error);return r.data;},check=name=>result.checks.push({name,status:'PASS'});
+ const claim=await db.from('luna30_qa_report_runs').insert({run_name:runName,state:'running',result});if(claim.error?.code==='23505')return;assert.ifError(claim.error);
+ const protectedQa=async()=>protectedStateFingerprint(await must(db.from('users').select('lifetime_access,active_until,free_used').eq('telegram_id',158467796).single()),await must(db.from('moon_gardens').select('*').eq('telegram_id',158467796)));
+ const created=[];let fingerprint;
+ try{
+  assert.ok(env.STAGING_MODE&&env.FEATURE_COSMOS_V2&&env.SUPABASE_URL==='https://funvzpmpbgazsisehiru.supabase.co');fingerprint=await protectedQa();
+  assert.equal((await must(db.from('users').select('telegram_id').in('telegram_id',[owner,other]))).length,0,'Synthetic IDs must not replace existing accounts');
+  for(const telegram_id of [owner,other]){await must(db.from('users').insert({telegram_id,first_name:'Luna synthetic QA',language_code:'en',ai_memory_enabled:true}));created.push(telegram_id);}
+  const {writePersonalMemory,removePersonalMemory,listPersonalMemories,getAiPersonalProfile}=await import('../dist/personal-memory.js'),{savePersonalProfile}=await import('../dist/personalization.js'),{permittedPersonalContext}=await import('../dist/personalization-policy.js'),{createCosmosStateService}=await import('../dist/luna41-cosmos.js');
+  const profile={display_name:'Synthetic QA',interests:['meditation'],preferences:'',birth_date:null,birth_time:null,birth_place:null,ai_context_consent:true};await savePersonalProfile(owner,profile);
+  const input={category:'goals',key:'cosmos_career',value:'I want to learn woodworking',confirmed:false,kind:'fact',sensitiveConsent:false};
+  const pending=await writePersonalMemory(owner,input);assert.equal(pending.confirmation_status,'pending');assert.ok(!JSON.stringify(permittedPersonalContext(await getAiPersonalProfile(owner,'My career goal'))).includes('woodworking'));check('Unconfirmed saved facts are excluded from the actual server context');
+  const confirmed=await writePersonalMemory(owner,{...input,confirmed:true,revision:pending.revision},pending.id);assert.equal(confirmed.confirmation_status,'confirmed');
+  for(const query of ['My career goal','Моя карьерная цель'])assert.ok(JSON.stringify(permittedPersonalContext(await getAiPersonalProfile(owner,query))).includes('woodworking'));check('Confirmed relevant memory is retrieved in RU and EN');
+  assert.ok(!JSON.stringify(permittedPersonalContext(await getAiPersonalProfile(owner,'My relationship with my partner'))).includes('woodworking'));check('Unrelated career facts do not contaminate relationship context');
+  const reopened=await listPersonalMemories(owner);assert.equal(reopened.find(m=>m.id===confirmed.id)?.revision,confirmed.revision);check('A new service read reopens the persisted value');
+  assert.equal((await listPersonalMemories(other)).length,0);await assert.rejects(writePersonalMemory(other,{...input,confirmed:true,revision:confirmed.revision},confirmed.id));assert.equal((await listPersonalMemories(owner))[0].memory_value,input.value);check('A second owner cannot read or edit the first owner’s memory');
+  const edited=await writePersonalMemory(owner,{...input,value:'I want to learn ceramics',confirmed:true,revision:confirmed.revision},confirmed.id);assert.ok(!JSON.stringify(permittedPersonalContext(await getAiPersonalProfile(owner,'My career'))).includes('woodworking'));assert.ok(JSON.stringify(permittedPersonalContext(await getAiPersonalProfile(owner,'My career'))).includes('ceramics'));check('Edits replace old context without duplicate memories');
+  await savePersonalProfile(owner,{...profile,ai_context_consent:false});assert.equal(permittedPersonalContext(await getAiPersonalProfile(owner,'My career')),null);await savePersonalProfile(owner,profile);check('Withdrawing context consent prevents retrieval');
+  await removePersonalMemory(owner,edited.id);assert.equal((await listPersonalMemories(owner)).length,0);assert.ok(!JSON.stringify(permittedPersonalContext(await getAiPersonalProfile(owner,'My career'))).includes('ceramics'));check('Deleted memory does not reappear in subsequent server context');
+  const cosmos=createCosmosStateService(db),id=randomUUID(),state=await cosmos.save(owner,{skipped:['money','relationships'],expectedRevision:0,requestId:id});assert.deepEqual(await cosmos.get(owner),state);assert.deepEqual(await cosmos.save(owner,{skipped:['money','relationships'],expectedRevision:0,requestId:id}),state);assert.equal((await cosmos.get(other)).revision,0);await assert.rejects(cosmos.save(owner,{skipped:[],expectedRevision:0,requestId:randomUUID()}));check('Onboarding skips persist, replay once, isolate owners and reject stale writes');
+  const {netlifyStagingHandler}=await import('../dist/netlify-staging-handler.js'),host='https://luna-staging-itfl.netlify.app',ctx={site:{id:'a634a7fc-1ecb-47fa-8b43-edd81a7e3694'},ip:'127.0.0.1'};
+  function signed(id){const d=new URLSearchParams({auth_date:String(Math.floor(Date.now()/1000)),user:JSON.stringify({id,first_name:'Luna QA',language_code:'en'})}),text=[...d].sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>k+'='+v).join('\n'),key=createHmac('sha256','WebAppData').update(env.BOT_TOKEN).digest();d.set('hash',createHmac('sha256',key).update(text).digest('hex'));return d.toString();}
+  for(const [data,expected] of [['',401],['hash=invalid',401],[signed(other),403],[signed(158467796),200]]){const r=await netlifyStagingHandler(new Request(host+'/api/universe/onboarding',{headers:{'x-telegram-init-data':data}}),ctx);assert.equal(r.status,expected);}
+  check('The real API checks missing/forged signatures, QA allowlist and a valid staging-signed session');result.status='PASS';
+ }catch(error){result.status='FAIL';result.failure=String(error.message).slice(0,220);}
+ finally{
+  for(const id of created){try{await must(db.from('users').delete().eq('telegram_id',id));}catch{result.status='FAIL';result.cleanupFailure=true;}}
+  try{assert.equal(await protectedQa(),fingerprint);check('Existing QA balance, paid rights and garden remain exact');assert.equal((await must(db.from('users').select('telegram_id').in('telegram_id',[owner,other]))).length,0);check('Synthetic accounts and their dependent test records were cleaned up');}catch{result.status='FAIL';result.protectionFailure=true;}
+  await must(db.from('luna30_qa_report_runs').update({state:result.status==='PASS'?'completed':'failed',result}).eq('run_name',runName));
+ }
+}

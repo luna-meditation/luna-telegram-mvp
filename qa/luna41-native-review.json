@@ -1,0 +1,45 @@
+{
+  "status": "PASS",
+  "node": "22.23.3",
+  "postgres": "PostgreSQL 17.6 on x86_64-apple-darwin23.6.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.6), 64-bit",
+  "migrations": {
+    "20261017103831_luna41_cosmos_onboarding_state.sql": "01b6937882dc381c11454e0848aa27b3e60e6dc36d5808af80c4c28eb23124cb",
+    "20261017104405_luna41_preserve_chart_history_on_edit.sql": "0f5974bdb8f72aaae358f9acadaa58a9b165652f6c787d46afdce3e2a4501119"
+  },
+  "checks": [
+    {
+      "name": "both additive migrations apply and reapply without altering paid users or another application",
+      "status": "PASS"
+    },
+    {
+      "name": "service role saves actual onboarding metadata and rejects invalid question IDs",
+      "status": "PASS"
+    },
+    {
+      "name": "anon/authenticated cannot select/insert/update/delete even with forged Telegram claims",
+      "status": "PASS"
+    },
+    {
+      "name": "RLS is forced, owner key indexed and no privileged SECURITY DEFINER function is introduced",
+      "status": "PASS"
+    },
+    {
+      "name": "editing birth details increments revision without deleting historical charts/reports",
+      "status": "PASS"
+    },
+    {
+      "name": "stale insert is rejected while new revision has a separate deterministic cache record",
+      "status": "PASS"
+    },
+    {
+      "name": "scoped access rollback/reapply preserves onboarding rows and does not invoke destructive legacy rollback",
+      "status": "PASS"
+    },
+    {
+      "name": "explicit privacy removal still erases only the chosen owner’s derived birth data",
+      "status": "PASS"
+    }
+  ],
+  "productionTouched": false,
+  "personalDataCopied": false
+}

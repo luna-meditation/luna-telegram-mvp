@@ -30,6 +30,7 @@ import {DreamExplorer} from '../features/dreams/DreamExplorer';
 import {ChatAstrology} from './ChatAstrology';
 import {ChatBreathing} from './ChatBreathing';
 import {availableConsultationAttachments} from '../../../backend/src/luna34-conversation';
+import {resolveLunaDestination} from '../../../backend/src/luna41-navigation';
 import './luna34-chat.css';
 import {ChatCommerce} from '../features/membership/ChatCommerce';
 import {commerceIntent} from '../../../backend/src/luna35-commerce-policy';
@@ -346,7 +347,8 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
     const astrologyConsent=grantAstrologyConsent??retry?.astrologyConsent;
     const selectorCommand=/compatibility|совместим/i.test(clean)&&/check|calculate|compare|explore|show|проверь|рассчита|сравни|посмотр|совместимость с/i.test(clean);
     const practiceCommand=/meditat|медитац|breathing practice|дыхательн|не могу уснуть|can.t sleep/i.test(clean)&&!/tarot|chart|card|таро|карт|расклад/i.test(clean);
-    if(targetContext&&!permission&&!astrologyConsent&&!selectorCommand&&!practiceCommand&&!commercial){setPermissionChecked(false);setPendingAstrology({text:clean,retry,readingId:contextReadingId,mode:modeOverride,context:targetContext});return;}
+    const requestsChartFacts=Boolean(contextAstrology)||/chart|planet|aspect|ascendant|mercury|venus|mars|натальн|планет|аспект|асцендент|меркур|венер|марс|мо[яейю]+ карт/i.test(clean);
+    if(targetContext&&!permission&&!astrologyConsent&&!selectorCommand&&!practiceCommand&&!commercial&&requestsChartFacts){setPermissionChecked(false);setPendingAstrology({text:clean,retry,readingId:contextReadingId,mode:modeOverride,context:targetContext});return;}
     setPendingAstrology(null);
     uiEpoch.current++;
     turnPending.current=true;
@@ -497,11 +499,8 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
       </header>
       {central&&(attachedChartId||readingContextId||attachedReadingId)&&<div className="luna32-context"><span>{attachedChartId?(attachedAstrology?.secondChartId?(en?'Compatibility · two charts attached':'Совместимость · две карты прикреплены'):(en?'Natal chart attached':'Натальная карта прикреплена')):(en?'Tarot reading attached':'Расклад Таро прикреплён')}</span><button type="button" disabled={thinking||contextBusy} onClick={()=>void detachContext()}>{contextBusy?(en?'Removing…':'Убираем…'):(en?'Remove':'Убрать')}</button></div>}
 
-      {featureFlags.ai_modes&&(!central||toolsOpen)&&<label className="luna-mode-select">{central?(en?'Mode':'Режим'):language==='en'?'Conversation mode':'Режим разговора'}<select disabled={thinking||Boolean(failedTurn)} value={mode} onChange={event=>{setMode(event.target.value as typeof mode);if(event.target.value!=='tarot')onClearReadingContext?.();}}>
-        <option value="">{central?(en?'General conversation':'Общий разговор'):language==='en'?'Current Luna':'Прежняя Luna'}</option><option value="companion">{language==='en'?'Self-discovery':'Самопознание'}</option><option value="tarot">{language==='en'?'Tarot reflection':'Размышление с Таро'}</option><option value="wellbeing">{language==='en'?'Emotional support':'Эмоциональная поддержка'}</option><option value="meditation">{language==='en'?'Meditation guide':'Гид по медитации'}</option><option value="astrology" disabled={!attachedChartId}>{attachedChartId?(en?'Your calculated chart':'Ваша рассчитанная карта'):(en?'Astrology · open your chart first':'Астрология · сначала откройте карту')}</option>
-        <option value="dream">{en?'Dream Explorer':'Исследование снов'}</option>
-      </select></label>}
-      {featureFlags.ai_modes&&(!central||toolsOpen)&&mode==='tarot'&&(readingContextId||attachedReadingId)&&<div className="luna-reading-context"><span>{language==='en'?'Your selected reading is attached':'Выбранный расклад добавлен в контекст'}</span><button type="button" disabled={thinking||Boolean(failedTurn)} onClick={()=>{onClearReadingContext?.();setAttachedReadingId(undefined);}}>{language==='en'?'Remove':'Убрать'}</button></div>}
+      {/* The attachment banner above manages context. Legacy mode state is
+          retained for saved-session compatibility, never shown as a selector. */}
 
       {redesigned && (!central||toolsOpen) && visibleMessages.length > 0 && <button type="button" className="luna2-ideas-toggle" aria-expanded={ideasOpen} onClick={() => setIdeasOpen(value => !value)}>{luna2Copy[language].ideas}</button>}
       {redesigned && ideasOpen && visibleMessages.length > 0 && <LunaQuickActions language={language} onAstrology={kind=>void beginAstrology(kind)} onDream={()=>{setSuggestedPrompt('');setDreamOpen(true);setIdeasOpen(false);}} onTarot={central?beginTarotSetup:onTarot} disabled={thinking} onPrompt={prompt=>{setIdeasOpen(false);if(prompt===luna2Copy[language].recommendPrompt)handleAction('meditation');else void submit(prompt);}} />}
@@ -536,7 +535,8 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
           </div>
         ) : visibleMessages.map((message) => {
           const recommendationId = recommendationIdForMessage(message);
-          const executableWorkflow=Boolean(message.metadata?.tarot||message.metadata?.astrologyWorkflow||message.metadata?.workflowActions?.length||message.metadata?.resolvedIntent==='breathing'||recommendationId);
+          const navigation=resolveLunaDestination(message.metadata?.navigation?.destination,featureFlags);
+          const executableWorkflow=Boolean(navigation||message.metadata?.tarot||message.metadata?.astrologyWorkflow||message.metadata?.workflowActions?.length||message.metadata?.resolvedIntent==='breathing'||recommendationId);
           const recommendation = recommendationId
             ? meditations.find((item) => item.id === recommendationId) ?? message.metadata?.recommendedMeditation ?? undefined
             : undefined;
@@ -549,6 +549,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
                 {central&&!executableWorkflow&&message.id===visibleMessages[visibleMessages.length-1]?.id&&message.metadata?.consultation&&(message.metadata.consultation.quickReplies?.length||message.metadata.consultation.actions.length)? <div className="luna24-context-actions" aria-label={en?'Continue your consultation':'Продолжить консультацию'}>{message.metadata.consultation.quickReplies?.length?message.metadata.consultation.quickReplies.slice(0,3).map(prompt=><button type="button" key={prompt} disabled={thinking||quotaExhausted||Boolean(failedTurn)} onClick={()=>void submit(prompt)}>{prompt}</button>):message.metadata.consultation.actions.slice(0,3).map(action=><button type="button" key={action} disabled={thinking||quotaExhausted||Boolean(failedTurn)} onClick={()=>handleAction(action)}>{({continue:en?'Explore further':'Разобраться глубже',alternative:en?'Another perspective':'Другой взгляд',tarot:en?'Start a Tarot reading':'Начать расклад',natal_chart:en?'Open astrology':'Открыть астрологию',compatibility:en?'Open compatibility':'Открыть совместимость',meditation:en?'Find a meditation':'Подобрать медитацию',breathing:en?'Start breathing':'Начать дыхание',journal:en?'Open journal':'Открыть дневник',history:en?'Conversation history':'История разговоров'})[action]}</button>)}</div>:null}
                 {central&&!executableWorkflow&&message.id===visibleMessages[visibleMessages.length-1]?.id&&!message.metadata?.consultation&&message.role==='assistant'&&message.metadata?.contextualActions?.length? <div className="luna24-context-actions">{message.metadata.contextualActions.slice(0,3).map(action=><button type="button" key={action} disabled={thinking} onClick={()=>{if(action==='tarot'){setTarotQuestion(messages.filter(m=>m.role==='user').slice(-1)[0]?.content.slice(0,240)??'');beginTarotSetup();}else if(action==='journal')window.dispatchEvent(new Event('luna-open-activity'));else if(action==='birth_profile')window.dispatchEvent(new Event(featureFlags.astrology?'luna-open-astrology':featureFlags.personal_memory?'luna-open-universe':'luna-open-astrology'));else{setMode('meditation');practiceMode();void submit(luna2Copy[language].recommendPrompt,undefined,undefined,'meditation');}}}>{({tarot:en?'Explore with Tarot':'Посмотреть через Таро',journal:en?'Open journal':'Открыть дневник',birth_profile:en?'My birth profile':'Мои данные рождения',meditation:en?'Find a meditation':'Подобрать медитацию'})[action]}</button>)}</div>:null}
                 {central&&message.metadata?.tarot&&<ChatTarotReading message={message} language={language} initData={initData} registerBackHandler={registerBackHandler} onUpdate={updateTarotMessage}/>}
+                {navigation&&<button type="button" className="luna-button-primary" disabled={thinking} onClick={()=>window.dispatchEvent(new CustomEvent('luna-open-destination',{detail:{destination:navigation.id}}))}>{en?'Open':'Открыть'} · {navigation[language]} →</button>}
                 {central&&message.metadata?.astrologyWorkflow&&<ChatAstrology message={message} language={language} initData={initData} disabled={thinking} onUpdate={updateAstrologyMessage} onDiscuss={discussAstrology}/>}
                 {central&&message.role==='assistant'&&(message.metadata?.workflowActions?.includes('breathing')||message.metadata?.resolvedIntent==='breathing')&&<ChatBreathing language={language} initial={message.metadata?.breathing} registerBackHandler={registerBackHandler}/>}
                 {central&&message.metadata?.workflowActions?.some(a=>a!=='breathing')&&<div className="luna24-context-actions">{message.metadata.workflowActions.filter(a=>a!=='breathing').map(action=><button type="button" key={action} disabled={thinking} onClick={()=>handleAction(action)}>{action==='compatibility'?(en?'Choose two profiles':'Выбрать два профиля'):(en?'Choose a birth profile':'Выбрать данные рождения')}</button>)}</div>}

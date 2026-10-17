@@ -32,6 +32,9 @@ export type PersonalMemory={id:string;category:string;memory_key:string;memory_v
 export type UniverseData={memories:PersonalMemory[];profile:PersonalProfile;identity:{firstName:string;language:string;goals:string[]}|null;memoryEnabled:boolean;contextConsent:boolean};
 export type PersonalMemoryInput={category:PersonalMemoryCategory;key:string;value:string;confirmed:boolean;kind:'fact'|'symbolic';sourceMessageId?:string;revision?:number;sensitiveConsent:boolean};
 export const getUniverse=(initData?:string)=>request<UniverseData>('/api/universe',undefined,initData);
+export type CosmosOnboardingState={skipped:string[];revision:number;updatedAt:string|null};
+export const getCosmosOnboarding=(initData?:string)=>request<CosmosOnboardingState>('/api/universe/onboarding',undefined,initData);
+export const saveCosmosOnboarding=(input:{skipped:string[];expectedRevision:number;requestId:string},initData?:string)=>request<CosmosOnboardingState>('/api/universe/onboarding',{method:'PUT',body:JSON.stringify(input)},initData);
 export const writePersonalMemory=(input:PersonalMemoryInput,initData?:string,id?:string)=>request<PersonalMemory>(`/api/universe/memories${id?'/'+id:''}`,{method:id?'PATCH':'POST',body:JSON.stringify(input)},initData);
 export const removePersonalMemory=(initData?:string,id?:string)=>request<{ok:boolean}>(`/api/universe/memories${id?'/'+id:''}`,{method:'DELETE'},initData);
 export const getPersonalProfile=(initData?:string)=>request<PersonalProfile>('/api/personalization',undefined,initData);
@@ -403,6 +406,7 @@ export type LunaMessage = {
   role: 'user' | 'assistant';
   content: string;
   metadata?: {
+    navigation?:{destination:import('../../backend/src/luna41-navigation').LunaDestinationId};
     commerce?:{version:1;view:import('../../backend/src/luna35-commerce-policy').CommerceView;language:AppLanguage;checkedAt:string};
     contextReset?:boolean;
     astrology?:AstrologyChatAttachment;
