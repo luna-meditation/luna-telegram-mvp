@@ -27,16 +27,16 @@ Development branch: `feature/luna-3-4-premium-foundation`.
 - Existing recorded soundscapes and cinematic Home assets are reused.
 - Browser/synthetic tests are not described as physical-iPhone or live-payment proof.
 
-## Release gates (not yet passed)
+## Release gates (predeployment checks passed; publication still pending)
 
-- [ ] Existing and new frontend/backend unit tests; lint; type checks; builds.
-- [ ] 50 IDs, rules, EN/RU and all artwork verified.
-- [ ] Owner isolation, anon/authenticated denial, RPC idempotency and concurrency.
-- [ ] No financial changes while gates are off; Lifetime preserved.
-- [ ] Mobile 360/375/390/393px, Telegram navigation, keyboard and safe areas.
-- [ ] Fresh encrypted Luna-only backup, Storage hashes, two isolated restores.
-- [ ] Migrations reviewed and tested only against isolated/staging environments.
-- [ ] Necessary real AI validation within a newly authorized budget.
+- [x] Existing and new frontend/backend unit tests; lint; type checks; local builds.
+- [x] 50 IDs, rules, EN/RU and all artwork verified.
+- [x] Owner isolation, anon/authenticated denial, RPC idempotency and concurrency.
+- [x] No financial changes while gates are off; Lifetime preserved.
+- [x] Mobile 360/375/390/393px, Telegram navigation, keyboard and safe areas.
+- [x] Fresh encrypted Luna-only backup, Storage hashes, two isolated restores.
+- [x] Four reviewed migrations isolated/staging-tested and verified in production.
+- [x] Necessary real AI validation within separately authorized finite budgets.
 - [ ] Reviewed production changes, single frontend/backend release and postflight.
 
 Official references checked: OpenAI function calling (strict schemas and reasoning
@@ -111,3 +111,37 @@ and new reading-price activation still require a separately reviewed activation
 configuration. Existing reward/pricing behavior is retained. Share cards currently
 cover app/Tarot/garden/achievement; specialized natal and compatibility highlights
 are not implemented. Export is not represented as proof of posting externally.
+
+## Resolved final gate — 17 October 2026
+
+The owner separately authorized two additional provider calls up to $0.01 and
+one staging publication. Deploy `6ad2d681129ce740af5b4c3c` is Ready. The first
+preflight stopped without a provider call because the earlier test boundary had
+left a conservative $0.010007 hold. Source blob
+`d998f90e75f01ac87a1c74774a1a1ba9a32a7b84` proves that exact fifth dispatch was
+blocked before the underlying fetch. Only that specific staging QA attempt was
+audited/reconciled to zero; its failed audit record was retained under a distinct
+name. The same publication was reused, with no second deployment.
+
+The final tool run passed 19 checks: `check_ai_quota` returned actual allowance,
+the second provider turn produced a complete dream reflection with detached old
+astrology, the answer persisted and reopening/retry generated zero new requests.
+Additional actual usage cost: $0.0009719. Combined: six calls, $0.0060318, no
+unknown spend. Staging generation/beta were restored OFF; money/rights unchanged.
+
+Fresh tests: frontend 204 PASS; backend 397 PASS/one optional skip; isolated
+PostgreSQL 43 PASS; mobile 8+24 cases PASS. Both type checks/lint pass.
+
+Four immutable reviewed migrations were applied in production under the master
+release authorization, versions 20261017020536 / 20261017020541 / 20261017020547 /
+20261017020552. All 78 prior unaffected relations and 39 prior functions retain
+their exact schema/ACL hashes. Existing user rows, paid rights, gardens, ledger,
+payment records and the original $100 baseline are unchanged. All seven new
+tables force RLS, all new functions are invoker-only/service-only, actual
+anon/authenticated calls are denied and service-role reads succeed. New money
+gates remain OFF. Existing 3.3 backend remains healthy before code rollout.
+
+The source-bound predeployment PASS is `qa/luna34-release-review.json`.
+Publication is not yet complete: build the gated artifact, merge the reviewed PR,
+verify Railway, enable only non-financial verified progress, publish frontend once
+and verify the public app. Do not describe predeployment PASS as live proof.

@@ -17,6 +17,7 @@ select jsonb_build_object('capturedAt',now(),'projectId','vkcdtasbdoeilgfucoax',
  'budget',(select to_jsonb(s) from public.luna32_runtime_settings s where id),
  'financial',jsonb_build_object(
   'users',(select jsonb_build_object('count',count(*),'digest',md5(string_agg(to_jsonb(x)::text,'' order by telegram_id))) from public.users x),
+  'paidRights',(select jsonb_build_object('count',count(*),'digest',md5(string_agg(jsonb_build_array(telegram_id,lifetime_access,active_until)::text,'' order by telegram_id))) from public.users),
   'gardens',(select jsonb_build_object('count',count(*),'digest',md5(string_agg(to_jsonb(x)::text,'' order by telegram_id))) from public.moon_gardens x),
   'payments',(select jsonb_build_object('count',count(*),'digest',md5(string_agg(to_jsonb(x)::text,'' order by id))) from public.payments x),
   'ledger',(select jsonb_build_object('count',count(*),'digest',md5(string_agg(to_jsonb(x)::text,'' order by id))) from public.luna_seed_ledger x),
