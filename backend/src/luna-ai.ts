@@ -1473,7 +1473,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
       ? repeatedClarificationFallback(responseLanguage)
       : visibleMessage;
     const attachedMeditationId = recommendedMeditationId;
-    const assistantContent = neutralRussianAddress(enforcePracticeActionClaims(enforceCardClaimConsistency(safeVisibleMessage, responseLanguage, Boolean(attachedMeditationId)),responseLanguage,Boolean(attachedMeditationId)),responseLanguage,personal,input.message);
+    const assistantContent = neutralRussianAddress(enforcePracticeActionClaims(enforceCardClaimConsistency(safeVisibleMessage, responseLanguage, Boolean(attachedMeditationId),selectedAstrologyAction?'astrology':undefined),responseLanguage,Boolean(attachedMeditationId)),responseLanguage,personal,input.message);
     if(hasDanglingConsultationPromise(assistantContent))throw new LunaAiError('incomplete_response','Luna returned an introduction without its promised explanation.',502,true);
     if (!assistantContent) throw new LunaAiError('malformed_response', 'Luna returned no safe visible message.', 502);
     if (hasInternalDataLeak(assistantContent)) {
@@ -1500,10 +1500,10 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
       meditationId: meditationAction?.meditationId ?? null,
       generated: Boolean(meditationAction)
     });
-    const resolvedIntent = pendingResolution && 'resolvedIntent' in pendingResolution && typeof pendingResolution.resolvedIntent==='string'
+    const resolvedIntent = selectedAstrologyAction ? 'general_chat' : pendingResolution && 'resolvedIntent' in pendingResolution && typeof pendingResolution.resolvedIntent==='string'
       ? pendingResolution.resolvedIntent
       : intentResolution.intent;
-    const explicitTopicChange = ['journal', 'premium', 'relationship', 'science'].includes(intentResolution.intent);
+    const explicitTopicChange = Boolean(selectedAstrologyAction) || ['journal', 'premium', 'relationship', 'science'].includes(intentResolution.intent);
     const nextPendingState: PendingLunaState | null = recommendedMeditationId || explicitTopicChange || artifactMode
       ? null
       : recommendationRequested
@@ -1514,23 +1514,24 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
     const nextConversationState = updateConversationState({
       previous: conversationState,
       intent: resolvedIntent,
-      goal: intentResolution.goal,
-      topic: intentResolution.topic,
+      goal: selectedAstrologyAction ? null : intentResolution.goal,
+      topic: selectedAstrologyAction ? selectedAstrologyAction.workflow.kind : intentResolution.topic,
       meditationId: attachedMeditationId,
       assistantMessage: assistantContent,
       userDecision: input.message,
       language: responseLanguage,
+      resetActivityContext: Boolean(selectedAstrologyAction),
       clearMeditationContext: artifactMode||Boolean(selectedAstrologyAction)||['journal', 'premium', 'relationship', 'science'].includes(intentResolution.intent)
     });
     const phase=consultationPhase({hasContext:Boolean(readingContext||chartContext),message:assistantContent,firstTurn:recent.filter(m=>m.role==='assistant').length===0});
-    const actions=validatedConsultationActions(parsed.actions??(attachedMeditationId?['breathing','journal']:undefined),{reading:Boolean(readingContext),chart:Boolean(chartContext),comparison:Boolean(input.astrology?.secondChartId),safety:false,astrologyAvailable:env.FEATURE_ASTROLOGY});
+    const actions=validatedConsultationActions(selectedAstrologyAction?[selectedAstrologyAction.workflow.kind==='natal'?'natal_chart':'compatibility']:parsed.actions??(attachedMeditationId?['breathing','journal']:undefined),{reading:Boolean(readingContext),chart:Boolean(chartContext),comparison:Boolean(input.astrology?.secondChartId),safety:false,astrologyAvailable:env.FEATURE_ASTROLOGY});
     const { data: assistant, error: assistantError } = await supabase.from('ai_messages').insert({
       conversation_id: resolvedConversationId, telegram_id: telegramId, role: 'assistant', content: assistantContent,
       request_id: input.requestId,
       metadata: {
         recommendedMeditationId: attachedMeditationId,
-        ...(resolvedIntent==='breathing'||workflowActions.includes('breathing')?{breathing:requestedBreathOptions(input.message)}:{}),
-        ...(workflowActions.length?{workflowActions}:{}),
+        ...(!selectedAstrologyAction&&(resolvedIntent==='breathing'||workflowActions.includes('breathing'))?{breathing:requestedBreathOptions(input.message)}:{}),
+        ...(!selectedAstrologyAction&&workflowActions.length?{workflowActions}:{}),
         ...(commerceView?{commerce:{version:1,view:commerceView,language:responseLanguage,checkedAt:new Date().toISOString()}}:{}),
         ...(input.contextReset?{contextReset:true}:{}),
         ...(input.chartId?{astrology:input.astrology??{chartId:input.chartId}}:{}),

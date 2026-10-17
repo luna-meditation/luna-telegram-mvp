@@ -70,7 +70,15 @@ export function messageClaimsMeditationCard(message: string) {
   return cardClaimPatterns.some((pattern) => pattern.test(message));
 }
 
-export function enforceCardClaimConsistency(message: string, language: LunaLanguage, hasRecommendation: boolean) {
+export function enforceCardClaimConsistency(message: string, language: LunaLanguage, hasRecommendation: boolean, availableArtifact?: 'astrology') {
+  // This scope comes only from an executed, authorized tool, never model prose.
+  // A real chart/profile card must not be mistaken for an absent meditation card.
+  if (availableArtifact === 'astrology') {
+    if (!/meditat|медитац|breath|дыхан|\bplayer\b|плеер/i.test(message)) return message;
+    return language === 'ru'
+      ? 'Карточка астрологии готова. Продолжи с помощью её действий — данные рождения остаются в защищённой форме.'
+      : 'Your astrology card is ready. Use its actions to continue; birth details stay in the secure form.';
+  }
   if (hasRecommendation || !messageClaimsMeditationCard(message)) return message;
   return language === 'ru'
     ? 'Я могу помочь подобрать медитацию, когда пойму, что тебе сейчас нужнее всего.'

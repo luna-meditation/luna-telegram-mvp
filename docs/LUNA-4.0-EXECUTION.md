@@ -146,6 +146,52 @@ grants, transaction-safe RPCs, audit and server RBAC before UI activation.
 
 ## Evidence status
 
+### Final release validation in progress (2026-10-17)
+
+- Fresh encrypted recovery proof is complete: 63 Luna tables, 1,876 rows,
+  60 functions and 28 media files (239,528,218 bytes), two isolated restores.
+- First live staging smoke passed 22 technical checks with two real provider
+  calls costing USD0.00253325. Replays/history made no additional provider calls;
+  balance, paid rights and garden fingerprints stayed exact. Generation was
+  closed again in the finally block.
+- Independent response review found stale breathing metadata after a successful
+  chart tool. This is a release blocker despite the original smoke's PASS. The
+  executed astrology action now authoritatively resets the active topic, pending
+  practice state and unrelated model actions. Four regression tests were added.
+- Follow-up uses only the remaining two calls of the original four-call/USD0.03
+  approval, in the same existing staging conversation; no new budget is inferred.
+- Latest backend suite: 483 passed, one optional skip. Production remains
+  unchanged until the follow-up and final evidence gates pass.
+
+### Independent quality gate after the follow-up
+
+- Four authorized provider calls are now used. Actual aggregate cost is
+  USD0.00340510; unknown spend is zero. Saved-result retries/reopening used zero
+  additional calls. Staging generation was restored to closed afterward.
+- The second run passed the technical state/persistence checks but independent
+  review rejected its visible answer: the old generic card guard mistook an
+  actual astrology card for a nonexistent meditation card and replaced the text.
+- Corrected the guard to accept an artifact scope only from the authorized,
+  executed astrology tool. Unrelated meditation/player claims are still rejected.
+  Added RU/EN regression tests; latest backend is 487 passed / one optional skip.
+- Frontend 227 passed; both lint/type checks and optimized builds passed. Current
+  mobile checks: 131 Admin cases, 120 existing-commerce/astrology cases, and
+  24 general mobile scenarios covering 192 screen states. Theme preferences
+  correctly resolve to the current deliberately dark Luna presentation.
+- Real staging SQL: all 12 new tables have FORCE RLS, no anon/authenticated
+  table/RPC privileges; four actual denied calls including forged service claims,
+  service-role reads and aggregate reports passed inside a rollback transaction.
+- Production preflight at 07:57 UTC: all 60 old function definitions/ACLs match
+  the fresh backup; 63 baseline Luna tables present, zero Luna40 tables. A hash
+  snapshot of 162 unrelated public relations plus their policies/constraints/
+  triggers/functions was saved for the eventual postflight. The existing USD100
+  runtime budget and its baseline are unchanged.
+- **Release remains blocked** until the final text guard is checked against the
+  real staging provider. Requested two more calls within the SAME USD0.03 total,
+  not an additional monetary budget. No further provider calls are authorized
+  until the owner answers. Production migration, configuration, main, Railway
+  and Netlify production have not been changed.
+
 ### First implementation checkpoint (not the complete release)
 
 - Auto/RU/EN: owner-scoped cache, optional safe legacy-cache adoption, shared
