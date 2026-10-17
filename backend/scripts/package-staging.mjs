@@ -24,7 +24,7 @@ await build({...options,entryPoints:[source+'/backend/staging/functions/luna-sta
 let authFile=null,expiresAt=null;
 if(process.env.LUNA40_SMOKE_APPROVED==='owner-4-calls-usd0.03'){
  const nonce=randomBytes(32).toString('hex'),authSha256=createHash('sha256').update(nonce).digest('hex');expiresAt=new Date(Date.now()+90*60000).toISOString();
- await build({...options,stdin:{contents:`import {run} from '${source}/backend/test/luna40-staging-smoke.mjs';export default async function(request,context){return run(request,context,${JSON.stringify({authSha256,expiresAt,sourceCommit:commit,followup:process.env.LUNA40_SMOKE_FOLLOWUP==='true'})});}export const config={background:true};`,resolveDir:source,sourcefile:'luna40-qa-background.mjs'},outfile:functions+'/luna40-qa-background.mjs'});
+ await build({...options,stdin:{contents:`import {run} from '${source}/backend/test/luna40-staging-smoke.mjs';export default async function(request,context){return run(request,context,${JSON.stringify({authSha256,expiresAt,sourceCommit:commit,followup:process.env.LUNA40_SMOKE_FOLLOWUP==='true',finalCheck:process.env.LUNA40_SMOKE_FINAL_APPROVED==='owner-2-additional-calls-total-usd0.03'})});}export const config={background:true};`,resolveDir:source,sourcefile:'luna40-qa-background.mjs'},outfile:functions+'/luna40-qa-background.mjs'});
  authFile=directory+'/qa-command-private.json';await writeFile(authFile,JSON.stringify({nonce,expiresAt}),{mode:0o600,flag:'wx'});
 }
 const staging=await readFile(source+'/staging/netlify.toml','utf8');await writeFile(directory+'/netlify.toml','[build]\n publish="public"\n[functions]\n directory="functions"\n node_bundler="esbuild"\n'+staging.slice(staging.indexOf('[[headers]]')));

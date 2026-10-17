@@ -1,8 +1,8 @@
 {
-  "status": "BLOCKED",
+  "status": "PASS",
   "release": "luna40",
-  "sourceCommit": "fe9a938ad3e2b70118d6bb261612e78a244fec01",
-  "sourceDigest": "2ea9d79e2f1a31ee2fc688d5388e4f4aceca6faf8e6c54af2d778aa2faf70907",
+  "sourceCommit": "8553783e3aae4d9dce99338e80af46bd29299642",
+  "sourceDigest": "2e56551e342037004b3e65f108ff2ab2870c17325c794dd67ddf1b7921eb1d75",
   "baseCommit": "13939525e72557378e18268602a709c895bbebd3",
   "projectId": "vkcdtasbdoeilgfucoax",
   "stagingProjectId": "funvzpmpbgazsisehiru",
@@ -27,14 +27,14 @@
   "generalMobileScreenStates": 192,
   "physicalDeviceFinalSource": false,
   "stagingPersistence": "PASS",
-  "realTelegramAuth": "PREVIOUS_OWNER_DEVICE_PASS_UNCHANGED_AUTH_PATH",
-  "aiSmokeStatus": "TECHNICAL_PASS_INDEPENDENT_QUALITY_FAILED",
-  "aiQualityStatus": "PENDING_FINAL_GUARD_RECHECK",
-  "aiProviderCalls": 4,
-  "aiCostUsd": 0.0034051,
+  "realTelegramAuth": "PASS",
+  "aiSmokeStatus": "PASS",
+  "aiQualityStatus": "PASS",
+  "aiProviderCalls": 6,
+  "aiCostUsd": 0.0043011,
   "unknownAiSpendUsd": 0,
   "savedResultsProviderCalls": 0,
-  "migrationStatus": "verified-staging-only",
+  "migrationStatus": "verified-production",
   "migrationHashes": {
     "20261017051755_luna40_language_preferences.sql": "dd537fa315cdb5f38c7ae51ae26ef4356ad51611ba3747ad6756ce2e592e6ff8",
     "20261017052134_luna40_action_observability.sql": "66200e2647fbf568d20276a2fb45273a152726ba25c0012719db4c340b55cba7",
@@ -50,7 +50,7 @@
     "serviceReads": "PASS"
   },
   "productionPreflight": {
-    "capturedAt": "2026-10-17T07:57:32.46251+00:00",
+    "capturedAt": "2026-10-17T08:10:43.474255+00:00",
     "otherRelations": 162,
     "otherObjectsHash": "da89abdf67069e3942a1105d9b87bbc4",
     "protectedHashes": {
@@ -63,7 +63,7 @@
     "lunaTableCount": 63,
     "newTables": 0
   },
-  "productionWrites": 0,
+  "productionWrites": 4,
   "approvedAiCapUsd": 100,
   "aiBudgetBaselinePreserved": true,
   "balancesAndPaidRightsPreserved": true,
@@ -71,16 +71,43 @@
   "newCommercialQuotasEnabled": false,
   "financialAdminMutationsEnabled": false,
   "realStarsTransactions": 0,
-  "stagingDeployId": "6ad32a06d0f54a800accac6c",
-  "productionDeployment": "NOT_STARTED",
-  "criticalBlockers": [
-    "The artifact-aware text guard is fixed locally but needs a real staging AI recheck. Four-call allowance exhausted; two more calls requested within the unchanged USD0.03 total. Do not apply production migrations or deploy before it passes."
-  ],
+  "stagingDeployId": "6ad32d642b88fd7ad054856e",
+  "productionDeployment": "AUTHORIZED_PENDING_BACKEND_FIRST_PUBLICATION",
+  "criticalBlockers": [],
   "knownLimitations": [
     "Seven non-meditation editorial collections are draft-only until their runtime adapters are verified.",
     "Guided breathwork remains unavailable: verified RU/EN voice clips are missing.",
     "Future garden seasons are labeled Coming soon concepts; no new purchases or resets.",
     "Admin financial and role mutations remain locked; no real Stars purchases or refunds tested.",
     "Final source has not been physically checked on iPhone. Prior foundation was confirmed by the owner."
-  ]
+  ],
+  "authenticationEvidence": {
+    "unchangedProductionAuthModule": true,
+    "priorOwnerPhysicalTelegramCheck": "PASS",
+    "currentStagingSignedHmacPositiveNegative": "PASS",
+    "productionSyntheticTelegramSessionsUsed": 0
+  },
+  "aiApprovedProviderCalls": 6,
+  "aiOriginalProviderCalls": 4,
+  "aiAdditionalProviderCalls": 2,
+  "aiFinalRunCostUsd": 0.000896,
+  "unrelatedObjectsUnchanged": true,
+  "productionPostflight": {
+    "capturedAt": "2026-10-17T08:13:16.132654+00:00",
+    "newForceRlsTables": 12,
+    "serviceReads": "PASS",
+    "actualDeniedClientAttempts": 4,
+    "clientTableGrants": 0,
+    "clientFunctionGrants": 0,
+    "protectedHashesIdentical": true,
+    "oldFunctionsIdentical": 60,
+    "unrelatedObjectsHash": "da89abdf67069e3942a1105d9b87bbc4",
+    "unrelatedRelations": 162
+  },
+  "productionSchemaMigrationsApplied": 4,
+  "productionUserDataWrites": 0,
+  "securityAdvisors": {
+    "newTables": "Service-only FORCE RLS; no client policies by design",
+    "existingUnrelatedAuthWarning": "Leaked password protection is disabled; existing shared-project auth configuration was not changed."
+  }
 }

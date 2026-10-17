@@ -146,6 +146,35 @@ grants, transaction-safe RPCs, audit and server RBAC before UI activation.
 
 ## Evidence status
 
+### Release gates passed / publication authorized (2026-10-17, 08:14 UTC)
+
+The owner explicitly resumed publication and the two requested final calls within
+the existing USD0.03 total. Final staging deploy `6ad32d642b88fd7ad054856e`
+contains source `8553783e3aae4d9dce99338e80af46bd29299642`. The actual
+`open_saved_natal_chart` tool and its saved answer passed independent review:
+correct chart/profile text, no unrelated practice state, retry/history zero calls.
+Six total provider calls cost USD0.00430110; the final two cost USD0.000896.
+No unknown spend or held cost remains; staging generation was closed afterward.
+
+Four reviewed Luna40 migrations were applied to production after fresh preflight
+and verified backup/recovery. Postflight: 12 FORCE-RLS tables, zero client grants,
+four actual denied anon/authenticated calls including forged service claims,
+service read RPCs pass. All protected user-rights/wallet/payment/runtime hashes,
+all 60 existing functions and all 162 unrelated relations/object fingerprints
+are identical. No user-data DML, purchase, refund or new monetization activation.
+
+Railway has only the two approved next-deploy settings added: Admin4 ON, financial
+Admin mutations OFF, with automatic deployment skipped until the verified PR merge.
+The USD100 cap/baseline and all existing commercial flags are preserved. Existing
+Supabase leaked-password Auth advisory is unrelated to Telegram auth and was not
+changed in this shared project. RLS-without-client-policy INFO notices are expected
+for the new private service-only tables, not public-data grants.
+
+Latest automated gates: 487 backend, 227 frontend, 29 native PostgreSQL checks,
+both lint/type checks and optimized builds. User-facing frontend/auth source has
+not changed since the latest mobile suite. Final physical-device verification is
+still distinguished from browser emulation; no new physical iPhone check is claimed.
+
 ### Final release validation in progress (2026-10-17)
 
 - Fresh encrypted recovery proof is complete: 63 Luna tables, 1,876 rows,
