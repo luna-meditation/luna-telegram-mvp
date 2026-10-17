@@ -18,7 +18,7 @@ export function createAstrologyWorkflowService(db:SupabaseClient,enabled:()=>boo
   const prior=await db.from('ai_messages').select(fields).eq('telegram_id',owner).eq('id',input.requestId).maybeSingle();if(prior.error)throw fail();
   const id=prior.data?.conversation_id??input.conversationId??input.requestId;
   if(input.conversationId&&id!==input.conversationId)throw new FoundationError(409,'context_conflict','Open the original conversation.');
-  if(prior.data){await conversation(owner,id);const w=prior.data.metadata?.astrologyWorkflow;if(!w||w.kind!==input.kind)throw new FoundationError(409,'context_conflict','This action already exists.');if(w.state==='ready'){if(input.firstProfileId&&(w.firstProfileId!==input.firstProfileId||w.secondProfileId!==input.secondProfileId))throw new FoundationError(409,'context_conflict','Start a new comparison to select different profiles.');return{conversationId:id,message:prior.data};}}
+  if(prior.data){await conversation(owner,id);const w=prior.data.metadata?.astrologyWorkflow;if(!w||w.kind!==input.kind)throw new FoundationError(409,'context_conflict','This action already exists.');if(w.state==='ready'){if(input.firstProfileId&&(w.firstProfileId!==input.firstProfileId||w.secondProfileId!==input.secondProfileId)||input.relationship&&w.relationship!==input.relationship)throw new FoundationError(409,'context_conflict','Start a new comparison to select different profiles or relationship context.');return{conversationId:id,message:prior.data};}}
   else if(input.conversationId)await conversation(owner,id);
   else{const title=input.kind==='compatibility'?(input.language==='ru'?'Совместимость':'Compatibility'):(input.language==='ru'?'Моя натальная карта':'My natal chart');const r=await db.from('ai_conversations').upsert({id,telegram_id:owner,title,language:input.language},{onConflict:'id',ignoreDuplicates:true});if(r.error)throw fail();await conversation(owner,id);}
   // An explicit request for "my chart" authorizes the one unambiguous self
@@ -28,9 +28,10 @@ export function createAstrologyWorkflowService(db:SupabaseClient,enabled:()=>boo
   if(input.firstProfileId){
    if(!profiles.some(p=>p.id===input.firstProfileId)||input.secondProfileId&&!profiles.some(p=>p.id===input.secondProfileId))throw new FoundationError(404,'birth_profile_not_found','Select one of your saved profiles.');
    const first=await astrology.calculate(owner,input.firstProfileId),second=input.secondProfileId?await astrology.calculate(owner,input.secondProfileId):null;
-   if(second)await astrology.compatibility(owner,first.chart.id,second.chart.id);
+   const comparison=second?await astrology.compatibility(owner,first.chart.id,second.chart.id,input.relationship):null;
    Object.assign(workflow,{state:'ready',firstProfileId:input.firstProfileId,...(input.secondProfileId?{secondProfileId:input.secondProfileId}:{}),firstChartId:first.chart.id,...(second?{secondChartId:second.chart.id}:{})});
-   attachment={chartId:first.chart.id,...(second?{secondChartId:second.chart.id}:{}),...(input.relationship?{relationship:input.relationship}:{})};
+   if(comparison)Object.assign(workflow,{compatibilitySnapshot:{reportId:input.requestId,firstProfileId:input.firstProfileId,secondProfileId:input.secondProfileId,firstChartId:first.chart.id,secondChartId:second!.chart.id,calculatedAt:new Date().toISOString(),reflection:comparison.reflection}});
+   attachment={chartId:first.chart.id,...(second?{secondChartId:second.chart.id,comparisonId:input.requestId}:{}),...(input.relationship?{relationship:input.relationship}:{})};
   }
   const metadata={astrologyWorkflow:workflow,...(attachment?{astrology:attachment}:{contextReset:true})};
   const content=input.language==='ru'?(attachment?'Рассчитанный контекст сохранён в этом разговоре.':'Выберите профили для расчёта. Личные данные остаются в вашем аккаунте.'):(attachment?'The calculated context is saved in this conversation.':'Choose profiles to calculate. Private details stay in your account.');

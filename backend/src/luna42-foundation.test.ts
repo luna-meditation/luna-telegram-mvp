@@ -1,0 +1,21 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {compatibilityReflection,relationshipKinds} from './luna40-compatibility.js';
+import {calculateNatalChart,calculateSynastry} from './luna30-astrology-engine.js';
+import {meetStepPatch} from './luna42-meet.js';
+import {meetSteps,domainSuggestions,relevantMeetPriorities} from './luna42-meet-config.js';
+const birth={date:'1990-05-10',time:'12:00',location:{placeId:'geonames:2643743',provider:'GeoNames',confirmed:true as const,label:'Synthetic',latitude:51.5,longitude:-.12,timezone:'Europe/London'}};
+for(let i=0;i<40;i++)test(`Luna 4.2 compatibility calculation ${i+1}/40`,()=>{
+ const first=calculateNatalChart({...birth,date:`${1980+i%20}-05-10`,time:i%5===0?null:birth.time}),second=calculateNatalChart({...birth,date:`${1985+i%15}-08-20`}),comparison=calculateSynastry(first,second),relationship=relationshipKinds[i%4],r=compatibilityReflection(comparison,relationship);
+ assert.equal(r.version,'luna42-symbolic-index-v2');assert.deepEqual(r,compatibilityReflection({...comparison,aspects:[...comparison.aspects].reverse()},relationship),'Input array order never affects scores');assert.equal(r.dimensions.length,5);assert.ok(r.dimensions.some(d=>d.id==='everyday'));assert.equal(r.relationship,relationship);
+ if(i%5===0){assert.equal(r.index,null);assert.ok(r.dimensions.every(d=>d.score===null));assert.equal(r.reason,'unknown_birth_time');}else assert.ok(r.index===null||Number.isInteger(r.index)&&r.index>=0&&r.index<=100);
+ for(const d of r.dimensions){assert.ok(d.score===null||Number.isInteger(d.score)&&d.score>=0&&d.score<=100);for(const a of d.evidence)assert.ok(comparison.aspects.some(v=>JSON.stringify(v)===JSON.stringify(a)));}
+ if(relationship==='business')assert.ok(!r.dimensions.some(d=>d.id==='romantic_dynamics'));
+});
+const base={requestId:randomUUID(),expectedRevision:0,language:'ru'};
+test('Meet Luna has seven optional bilingual configuration steps and eight distinct domain suggestions',()=>{assert.equal(meetSteps.length,7);assert.equal(Object.keys(domainSuggestions).length,8);assert.ok(new Set(Object.values(domainSuggestions).map(v=>JSON.stringify(v))).size===8);});
+test('priority suggestions follow explicitly selected interests without losing choices or assuming an answer',()=>{assert.equal(relevantMeetPriorities(['relationships'])[0][0],'connection');assert.equal(relevantMeetPriorities(['career'])[0][0],'clarity');assert.equal(relevantMeetPriorities(['money'])[0][0],'decision');assert.equal(new Set(relevantMeetPriorities(['unknown','career','career']).map(v=>v[0])).size,6);});
+test('onboarding consent is explicit and skip never grants it',()=>{assert.throws(()=>meetStepPatch({...base,step:'consent'}));assert.deepEqual(meetStepPatch({...base,step:'consent',skip:true}).profile,{});assert.deepEqual(meetStepPatch({...base,step:'consent',answer:false}).profile,{ai_context_consent:false});assert.throws(()=>meetStepPatch({...base,step:'consent',skip:true,answer:true}));});
+test('onboarding uses canonical profile fields and preserves unknown birth details',()=>{assert.deepEqual(meetStepPatch({...base,step:'name',answer:'Alex'}).profile,{display_name:'Alex'});const p=meetStepPatch({...base,step:'interests',answer:['tarot','career','tarot']});assert.deepEqual(p.profile,{interests:['tarot']});assert.equal(p.memory.value,'["tarot","career"]');assert.deepEqual(meetStepPatch({...base,step:'birth',answer:'later'}).profile,{});assert.throws(()=>meetStepPatch({...base,step:'birth',answer:'12:00'}));});
+test('owner injection, credentials, arbitrary interests and automatic sensitive storage fail closed',()=>{for(const v of [{...base,step:'name',answer:'Alex',telegram_id:3},{...base,step:'interests',answer:['arbitrary']},{...base,step:'name',answer:'a'.repeat(61)}])assert.throws(()=>meetStepPatch(v));});
+test('relationship and style choices are explicitly entered facts, not AI inferences',()=>{assert.equal(meetStepPatch({...base,step:'relationships',answer:'partnered'}).memory.value,'В отношениях');assert.equal(meetStepPatch({...base,step:'style',answer:'short',language:'en'}).memory.value,'Short & simple');assert.equal(meetStepPatch({...base,step:'priority',answer:'Learn a craft'}).memory.category,'goals');});

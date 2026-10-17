@@ -3,10 +3,10 @@
 import assert from 'node:assert/strict';import {randomUUID} from 'node:crypto';
 import {authorizeLuna32Smoke,luna32StagingSite} from '../dist/luna32-staging-guard.js';
 import {luna41EvalCases} from './luna41-eval-cases.mjs';
-import {luna41EvaluationModels as models,evaluationCanReserve,evaluationCeiling,evaluationUsage} from '../dist/luna41-evaluation-policy.js';
-const runName='luna41-model-evaluation-20261017-v1';
+import {luna41EvaluationModels as allModels,evaluationCanReserve,evaluationCeiling,evaluationUsage,boundedQaReservation} from '../dist/luna41-evaluation-policy.js';
 const check=async q=>{const r=await q;assert.ifError(r.error);return r.data;};
 export async function run(request,context,options){
+ const luna42=options.release==='luna42',runName=luna42?'luna42-model-evaluation-20261017-v1':'luna41-model-evaluation-20261017-v1',models=luna42?allModels.filter(m=>['gpt-5-mini','gpt-4o-mini','gpt-6.1-sol'].includes(m.id)):allModels,limits={calls:luna42?300:400,microusd:2_000_000},dataset=luna42?'luna42-100-paired-provider-decisions':'luna41-paired-v1';
  if(!authorizeLuna32Smoke(request,context.site?.id,options)||Netlify.env.get('SUPABASE_URL')!=='https://funvzpmpbgazsisehiru.supabase.co')return new Response(null,{status:403});
  const {netlifyStagingHandler}=await import('../dist/netlify-staging-handler.js');await netlifyStagingHandler(new Request('https://luna-staging-itfl.netlify.app/health'),{site:{id:luna32StagingSite},ip:'127.0.0.1'});
  const {supabase:db}=await import('../dist/db.js'),{env}=await import('../dist/config.js');assert.ok(env.STAGING_MODE&&env.STAGING_SUPABASE_PROJECT_REF==='funvzpmpbgazsisehiru');
@@ -15,13 +15,13 @@ export async function run(request,context,options){
  const command=await request.json();assert.ok(['inventory','batch','foundation'].includes(command.action));assert.match(command.batchId,/^[a-f0-9-]{36}$/);
  if(command.action==='foundation'){const {runFoundation}=await import('./luna41-staging-foundation.mjs');await runFoundation(db,env,options.sourceCommit);return new Response(null,{status:204});}
  if(stored?.result?.sourceCommit&&stored.result.sourceCommit!==options.sourceCommit)return Response.json({code:'source_changed_requires_review'},{status:409,headers});
- if(!stored){const result={dataset:'luna41-paired-v1',sourceCommit:options.sourceCommit,datasetCases:100,approvedCalls:400,approvedMicrousd:2_000_000,providerCalls:0,spentMicrousd:0,heldMicrousd:0,status:'IN_PROGRESS',results:[],completedBatches:[],humanQualityScores:null,productionTouched:false,toolExecutionVerified:false};const created=await db.from('luna30_qa_report_runs').insert({run_name:runName,state:'paused',result});if(created.error?.code==='23505')return new Response(null,{status:204});assert.ifError(created.error);}
+ if(!stored){const result={dataset,sourceCommit:options.sourceCommit,datasetCases:100,approvedCalls:limits.calls,approvedMicrousd:limits.microusd,providerCalls:0,spentMicrousd:0,heldMicrousd:0,status:'IN_PROGRESS',results:[],completedBatches:[],humanQualityScores:null,productionTouched:false,toolExecutionVerified:false};const created=await db.from('luna30_qa_report_runs').insert({run_name:runName,state:'paused',result});if(created.error?.code==='23505')return new Response(null,{status:204});assert.ifError(created.error);}
  const claim='running:'+randomUUID(),claimed=await check(db.from('luna30_qa_report_runs').update({state:claim}).eq('run_name',runName).eq('state','paused').select('result').maybeSingle());
  if(!claimed)return new Response(null,{status:204});
  const result=claimed.result;let finalState='paused';
  const persist=()=>check(db.from('luna30_qa_report_runs').update({result}).eq('run_name',runName).eq('state',claim).select('run_name').single());
  try{
-  assert.equal(result.dataset,'luna41-paired-v1');assert.equal(result.sourceCommit,options.sourceCommit,'source_changed_requires_review');assert.ok(!result.activeCall,'unknown_call_requires_reconciliation');
+  assert.equal(result.dataset,dataset);assert.equal(result.sourceCommit,options.sourceCommit,'source_changed_requires_review');assert.ok(!result.activeCall,'unknown_call_requires_reconciliation');
   if(result.completedBatches.includes(command.batchId))return new Response(null,{status:204});
   const key=Netlify.env.get('OPENAI_API_KEY');assert.ok(key,'server_key_unavailable');const providerHeaders={Authorization:`Bearer ${key}`,'Content-Type':'application/json'};
   if(!result.availability){const r=await fetch('https://api.openai.com/v1/models',{headers:providerHeaders,signal:AbortSignal.timeout(20000)});assert.equal(r.status,200,'inventory_unavailable');const p=await r.json();result.availability=models.map(m=>({model:m.id,available:p.data?.some(v=>v.id===m.id)===true}));await persist();}
@@ -37,16 +37,17 @@ export async function run(request,context,options){
   for(const {item,model} of tasks.slice(0,10)){
    const context={profile:null,memories:[],personalContext:null,...(item.category==='tarot'?{modeContext:{mode:'tarot',personalContext:null,readingContext}}:{})};
    const base=buildLunaOpenAiRequest({language:item.language,catalog,context,recent:[{role:'user',content:item.message}],maxOutputTokens:1200}),body={...base,model:model.id,instructions:base.instructions+'\n'+lunaToolInstructions,tools:registry.definitions,tool_choice:'auto',parallel_tool_calls:false};if(model.reasoning)body.reasoning={effort:model.reasoning};else delete body.reasoning;
-   const ceiling=evaluationCeiling(body,model);if(!evaluationCanReserve(result,ceiling)){result.status='BUDGET_LIMITED';finalState='completed';break;}
+   const ceiling=evaluationCeiling(body,model);if(!(luna42?boundedQaReservation(result,ceiling,limits):evaluationCanReserve(result,ceiling))){result.status='BUDGET_LIMITED';finalState='completed';break;}
    result.providerCalls++;result.heldMicrousd+=ceiling;result.activeCall={model:model.id,caseId:item.id,ceiling};await persist();const start=Date.now();
    let response,payload;try{response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:providerHeaders,body:JSON.stringify(body),signal:AbortSignal.timeout(45000)});payload=await response.json();}catch{result.status='UNKNOWN_COST';finalState='blocked';break;}
+   if(luna42&&!response.ok&&payload.error?.code==='cyber_policy'){result.results.push({caseId:item.id,model:model.id,language:item.language,category:item.category,status:'terminal_policy_decline',costKnown:false,heldMicrousd:ceiling,latencyMs:Date.now()-start,proseQualityScore:null});delete result.activeCall;await persist();continue;}
    const meter=evaluationUsage(payload,model);if(!response.ok||!meter){result.status='PROVIDER_ERROR';result.error={status:response.status,code:typeof payload.error?.code==='string'?payload.error.code:null};finalState='blocked';break;}
    result.heldMicrousd-=ceiling;result.spentMicrousd+=meter.costMicrousd;delete result.activeCall;
    const called=(payload.output??[]).filter(v=>v.type==='function_call').map(v=>({name:v.name,arguments:v.arguments})),answer=(payload.output??[]).filter(v=>v.type==='message').flatMap(v=>v.content??[]).filter(v=>v.type==='output_text').map(v=>v.text).join('\n');
    result.results.push({caseId:item.id,model:model.id,language:item.language,category:item.category,latencyMs:Date.now()-start,status:payload.status,...meter,calledTools:called,expectedTools:item.expectedTools,toolSelectionMatch:item.expectedTools.length?called.some(v=>item.expectedTools.includes(v.name)):called.length===0,answer:answer||null,proseQualityScore:null});await persist();
    if(meter.costMicrousd>ceiling){result.status='COST_OVERRUN';finalState='blocked';break;}
   }
-  if(!result.activeCall&&result.results.length===400){result.status='PROVIDER_DATA_COLLECTED_AWAITING_REVIEW';finalState='completed';}
+  if(!result.activeCall&&result.results.length===limits.calls){result.status='PROVIDER_DATA_COLLECTED_AWAITING_REVIEW';finalState='completed';}
   else if(!result.activeCall&&tasks.length<=10&&result.status==='IN_PROGRESS'){result.status='INCOMPLETE_AVAILABILITY';finalState='completed';}
   result.completedBatches.push(command.batchId);
  }catch(error){result.status='STOPPED_SAFELY';result.failureCode=/^[a-z_]{3,80}$/.test(error.message)?error.message:'qa_assertion_failed';finalState='blocked';}

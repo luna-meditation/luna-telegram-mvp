@@ -1,6 +1,6 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
 import {FoundationError} from './foundation-error.js';
-import {astrologyReportKey,buildAstrologyReportRequest,validateAstrologyReport,type AstrologyReportKind} from './luna30-astrology-report-policy.js';
+import {astrologyReportKey,buildAstrologyReportRequest,validateFreshAstrologyReport,type AstrologyReportKind} from './luna30-astrology-report-policy.js';
 import type {NatalCalculation} from './luna30-astrology-engine.js';
 import type {PersonalProfile} from './personalization-policy.js';
 import {requestLunaResponse,responseOutputText} from './luna/ai-provider.js';
@@ -39,7 +39,7 @@ export function createAstrologyReportService(db:SupabaseClient,options:{enabled:
     const payload=await response.json(),meter=stagingAiMeterRecord(payload);
     if(!meter||meter.estimated_cost===null)throw unavailable();
     const usage=await db.from('ai_usage').upsert({...meter,telegram_id:owner,request_id:`astro:${key}`},{onConflict:'telegram_id,request_id'});if(usage.error)throw unavailable();
-    const text=responseOutputText(payload);if(!text)throw unavailable();const report=validateAstrologyReport(JSON.parse(text),kind);
+    const text=responseOutputText(payload);if(!text)throw unavailable();const report=validateFreshAstrologyReport(JSON.parse(text),kind);
     if(personal){const after=await db.from('luna_personal_profiles').select('updated_at,ai_context_consent').eq('telegram_id',owner).maybeSingle();if(after.error||JSON.stringify(after.data)!==JSON.stringify(before?.data))throw unavailable();}
     const settled=await db.rpc('luna30_finish_astrology_report',{p_owner:owner,p_key:key,p_report:report,p_model:meter.model,p_input:meter.input_tokens,p_output:meter.output_tokens});
     if(settled.error||!settled.data)throw unavailable();return {report:settled.data,cached:false};

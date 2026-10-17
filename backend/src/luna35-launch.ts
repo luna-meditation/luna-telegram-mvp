@@ -1,6 +1,6 @@
 /** A route hint, never authentication or permission to read/charge an account.
  * Referral attribution is accepted only from server-verified Telegram initData. */
-export const launchDestinations=['home','luna','tarot','daily','astrology','natal','compatibility','meditations','breathwork','membership','seeds','invite'] as const;
+export const launchDestinations=['home','luna','tarot','daily','astrology','natal','compatibility','meditations','breathwork','membership','seeds','invite','meet','cosmos'] as const;
 export type LaunchDestination=typeof launchDestinations[number];
 const aliases:Record<string,LaunchDestination>={'luna-ai':'luna',ai:'luna',library:'meditations',saved:'meditations',breathing:'breathwork',premium:'membership',wallet:'seeds','card-of-the-day':'daily',card_of_day:'daily','natal-chart':'natal'};
 export function parseLaunchDestination(raw:string){

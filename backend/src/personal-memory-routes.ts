@@ -5,9 +5,14 @@ import {getUniverse,writePersonalMemory,removePersonalMemory} from './personal-m
 import {env} from './config.js';
 import {supabase} from './db.js';
 import {createCosmosStateService} from './luna41-cosmos.js';
+import {createMeetLunaService} from './luna42-meet.js';
 const uuid=z.string().uuid();
 export const personalMemoryRouter=Router();
 const cosmos=createCosmosStateService(supabase);
+const meet=createMeetLunaService(supabase);
+personalMemoryRouter.use('/meet',(_req,res,next)=>env.FEATURE_COSMOS_V2?next():res.status(404).json({code:'feature_unavailable'}));
+personalMemoryRouter.get('/meet',async(req,res,next)=>{try{res.set('Cache-Control','no-store');res.json(await meet.get((req as unknown as AuthenticatedRequest).telegramUser.telegram_id));}catch(error){next(error);}});
+personalMemoryRouter.put('/meet',async(req,res,next)=>{try{res.set('Cache-Control','no-store');res.json(await meet.save((req as unknown as AuthenticatedRequest).telegramUser.telegram_id,req.body));}catch(error){next(error);}});
 personalMemoryRouter.use('/onboarding',(_req,res,next)=>env.FEATURE_COSMOS_V2?next():res.status(404).json({code:'feature_unavailable'}));
 personalMemoryRouter.get('/onboarding',async(req,res,next)=>{try{res.set('Cache-Control','no-store');res.json(await cosmos.get((req as unknown as AuthenticatedRequest).telegramUser.telegram_id));}catch(error){next(error);}});
 personalMemoryRouter.put('/onboarding',async(req,res,next)=>{try{res.set('Cache-Control','no-store');res.json(await cosmos.save((req as unknown as AuthenticatedRequest).telegramUser.telegram_id,req.body));}catch(error){next(error);}});

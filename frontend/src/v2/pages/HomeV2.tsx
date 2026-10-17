@@ -10,6 +10,8 @@ import {SoundscapeSheet} from '../components/SoundscapeSheet';
 import { V2Stats, type V2Stat } from '../components/V2Stats';
 import { HomeDiscovery, HomeProgress } from '../../luna2/HomeDiscovery';
 import '../design-system/homeV2.css';
+import {MeetLunaEntry} from '../../luna2/MeetLunaEntry';
+import '../../luna2/meet42.css';
 
 type MoodChip = 'Sleep' | 'Calm' | 'Focus' | 'Anxiety' | 'Breath' | 'Energy';
 
@@ -160,6 +162,7 @@ export function HomeV2(props: HomeV2Props) {
       )}
 
       {props.newNavigation && <HomeDiscovery initData={props.initData} language={props.language} tarotEnabled={Boolean(props.tarotEnabled)} onTarot={props.onTarot} onDaily={props.onDaily} onAstrology={props.onAstrology} onMeditate={props.onLibrary} onBreathe={props.onBreath} />}
+      {props.newNavigation&&<MeetLunaEntry initData={props.initData} language={props.language}/>}
 
       {props.daily ? (
         <V2Recommendation

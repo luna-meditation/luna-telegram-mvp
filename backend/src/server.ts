@@ -25,6 +25,7 @@ import {createLuna32Admin} from './luna32-admin.js';
 import {createLanguagePreferences} from './luna40-language.js';
 import {acknowledgeUi} from './luna40-actions.js';
 import {createAdmin40Router} from './luna40-admin.js';
+import {createVoiceService} from './luna42-voice.js';
 import { bot, configureTelegramBot, createStarsInvoiceLink, sendStarsInvoice } from './bot.js';
 import {
   createMeditation,
@@ -234,6 +235,8 @@ app.use('/api/admin',(req,res,next)=>{if(env.FEATURE_ADMIN_V4&&!req.path.startsW
 app.use('/api/admin/v4',requireTelegramWebApp,createAdmin40Router(supabase,{ownerId:env.ADMIN_TELEGRAM_ID,enabled:env.FEATURE_ADMIN_V4,mutationsEnabled:env.FEATURE_ADMIN_V4_MUTATIONS,storageOrigin:env.SUPABASE_URL,environment:env.STAGING_MODE?'staging':'production',commit:process.env.COMMIT_SHA??process.env.RAILWAY_GIT_COMMIT_SHA,model:env.AI_CHAT_MODEL,flags:Object.fromEntries(Object.entries(env).filter(([key,value])=>typeof value==='boolean'&&(key.startsWith('FEATURE_')||key.startsWith('LUNA')))) as Record<string,boolean>}));
 app.use('/api/payments', rateLimit({ windowMs: 60_000, max: 30 }));
 app.use('/api/luna', rateLimit({ windowMs: 60_000, max: 30 }));
+const voiceService=createVoiceService(supabase,{key:()=>env.OPENAI_API_KEY,enabled:()=>env.FEATURE_AI_VOICE_INPUT});
+app.post('/api/luna/voice/:requestId',requireTelegramWebApp,express.raw({type:'audio/wav',limit:'1450kb'}),async(req,res,next)=>{try{res.set('Cache-Control','no-store');if(!Buffer.isBuffer(req.body))throw new FoundationError(422,'invalid_voice_audio','Use a supported recording.');const result=await voiceService.transcribe((req as AuthenticatedRequest).telegramUser.telegram_id,{requestId:req.params.requestId,language:req.query.language},req.body);res.json(result);}catch(error){next(error);}finally{req.body=undefined;}});
 app.use('/api/client-events', rateLimit({ windowMs: 60_000, max: 120 }));
 app.use('/api/support', rateLimit({ windowMs: 60_000, max: 8 }));
 app.use('/api/personalization',rateLimit({windowMs:60_000,max:20}));
