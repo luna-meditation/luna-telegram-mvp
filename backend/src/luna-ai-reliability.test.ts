@@ -39,6 +39,12 @@ test('failed requests are refunded and remain retryable with the same turn', () 
   assert.match(frontend, /retry\?\.clientRequestId/);
 });
 
+test('a deterministic catalog card without a provider request releases the legacy quota hold and reports the authoritative remainder',()=>{
+ assert.match(backend,/directItem\?\{quota_charged:false\}:\{\}/);
+ assert.match(backend,/remaining: directItem\?\(await getLunaUsage\(telegramId\)\)\.remaining:reservation.remaining/);
+ assert.match(backend,/completed_runtime_action/);
+});
+
 test('each chat turn has no hidden paid regeneration; 3.2 permits one bounded tool continuation', () => {
   assert.doesNotMatch(backend, /attempt: [23]/);
   assert.equal((backend.match(/await callOpenAiResponses\(/g)??[]).length,1);

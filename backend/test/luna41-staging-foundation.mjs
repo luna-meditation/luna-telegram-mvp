@@ -49,6 +49,15 @@ export async function runFoundation(db,env,sourceCommit){
   function signed(id){const d=new URLSearchParams({auth_date:String(Math.floor(Date.now()/1000)),user:JSON.stringify({id,first_name:'Luna QA',language_code:'en'})}),text=[...d].sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>k+'='+v).join('\n'),key=createHmac('sha256','WebAppData').update(env.BOT_TOKEN).digest();d.set('hash',createHmac('sha256',key).update(text).digest('hex'));return d.toString();}
   for(const [data,expected] of [['',401],['hash=invalid',401],[signed(other),403],[signed(158467796),200]]){const r=await netlifyStagingHandler(new Request(host+'/api/universe/onboarding',{headers:{'x-telegram-init-data':data}}),ctx);assert.equal(r.status,expected);}
   check('The real API checks missing/forged signatures, QA allowlist and a valid staging-signed session');result.status='PASS';
+  // Exercise the normal chat orchestration against real staging data. Global
+  // generation MUST remain off: an unexpected fallback cannot spend money.
+  const settings=await must(db.from('luna32_runtime_settings').select('generation_enabled').eq('id',true).single());assert.equal(settings.generation_enabled,false,'Provider-free action verification requires the closed global guard');
+  const {sendLunaMessage,getLunaUsage}=await import('../dist/luna-ai.js'),usageBefore=await getLunaUsage(owner),attemptsBefore=(await must(db.from('luna32_ai_attempts').select('id').eq('telegram_id',owner))).length;
+  for(const [language,message] of [['en','Recommend an existing meditation for focus.'],['ru','Подбери медитацыю для фокуса из настоящей библиотеки.']]){
+   const input={message,language,requestId:randomUUID()},user={telegram_id:owner,first_name:'Luna synthetic QA',language_code:language},answer=await sendLunaMessage(user,input);assert.ok(answer.message.metadata.recommendedMeditationId);assert.equal(answer.message.role,'assistant');
+   const replay=await sendLunaMessage(user,input);assert.equal(replay.message.id,answer.message.id);const request=await must(db.from('ai_chat_requests').select('status,quota_charged').eq('telegram_id',owner).eq('client_request_id',input.requestId).single());assert.equal(request.status,'completed');assert.equal(request.quota_charged,false);
+  }
+  assert.equal((await getLunaUsage(owner)).remaining,usageBefore.remaining);assert.equal((await must(db.from('luna32_ai_attempts').select('id').eq('telegram_id',owner))).length,attemptsBefore);check('Normal RU/EN chat attaches real focus cards, reopens exactly once and consumes no provider or answer quota for runtime actions');
  }catch(error){result.status='FAIL';result.failure=String(error.message).slice(0,220);}
  finally{
   for(const id of created){try{await must(db.from('users').delete().eq('telegram_id',id));}catch{result.status='FAIL';result.cleanupFailure=true;}}

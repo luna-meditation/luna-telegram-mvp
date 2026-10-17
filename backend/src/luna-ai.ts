@@ -1580,6 +1580,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
     await recordToolOutcomes(supabase,telegramId,assistant.id,toolOutcomes);
     await updateChatRequest(telegramId, input.requestId, {
       status: 'completed', assistant_message_id: assistant.id, recommendation_id: attachedMeditationId,
+      ...(directItem?{quota_charged:false}:{}),
       completed_at: new Date().toISOString(), error_code: null
     });
 
@@ -1603,7 +1604,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
       latencyMs: Date.now() - startedAt,
       usage: consumedUsage??openAiResponse.usage
     });
-    const responsePayload = { conversationId: resolvedConversationId, message: assistant, duplicate: false, remaining: reservation.remaining, resetAt:nextUtcReset(), requestState: 'completed' as const };
+    const responsePayload = { conversationId: resolvedConversationId, message: assistant, duplicate: false, remaining: directItem?(await getLunaUsage(telegramId)).remaining:reservation.remaining, resetAt:nextUtcReset(), requestState: 'completed' as const };
     if(openAiResponse.usage?.output_tokens)await recordFunnel(supabase,telegramId,'first_ai_response','first','verified');
     console.info('[Luna AI final response]', {
       user: userHash(telegramId),

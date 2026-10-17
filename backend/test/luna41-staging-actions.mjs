@@ -18,7 +18,10 @@ export async function run(request,context,options){
   if(luna42){const otherRuns=await must(db.from('luna30_qa_report_runs').select('run_name,state,result').in('run_name',['luna42-model-evaluation-20261017-v1','luna42-synthetic-transcription-20261017-v1']));assert.equal(otherRuns.length,2);assert.ok(otherRuns.every(row=>row.state==='completed'));result.priorApprovedSpendMicrousd=otherRuns.reduce((sum,row)=>sum+row.result.spentMicrousd+row.result.heldMicrousd,0);assert.ok(Number.isSafeInteger(result.priorApprovedSpendMicrousd)&&result.priorApprovedSpendMicrousd+result.approvedMicrousd<=2030000,'combined_approval_budget_exhausted');}
   assert.equal((await must(db.from('users').select('telegram_id').eq('telegram_id',owner))).length,0);await must(db.from('users').insert({telegram_id:owner,first_name:'Synthetic action QA',language_code:'en'}));created=true;
   const {buildLunaOpenAiRequest,normalizeOpenAiModelResult,resolveMeditationAction}=await import('../dist/luna-ai.js'),{getMeditations}=await import('../dist/db.js'),{createLunaTools,runLunaToolTurn,lunaToolInstructions}=await import('../dist/luna32-tools.js'),{safeAssistantProse}=await import('../dist/luna31-consultation.js'),{readyMeditationCopy}=await import('../dist/luna41-conversation.js');
-  const items=(await getMeditations(owner,false)).filter(m=>m.published!==false).slice(0,3);assert.ok(items.length);
+  // Match the application's complete bounded catalog. The former first-three
+  // subset could omit every focus practice and turn a valid clarification into
+  // a false no-card failure. Never invent a track to satisfy the check.
+  const items=(await getMeditations(owner,false)).filter(m=>m.published!==false).slice(0,60);assert.ok(items.length);
   const key=Netlify.env.get('OPENAI_API_KEY');assert.ok(key);const model=luna41EvaluationModels.find(m=>m.id==='gpt-5-mini');
   for(const language of ['en','ru']){
    const catalog=items.map(m=>({id:m.id,catalogKey:m.title.toLowerCase().replace(/[^a-zа-я0-9]+/gi,'_').slice(0,80),title:m.translations?.[language]?.title??m.title,category:m.category,mood:m.mood,duration:m.duration,durationSeconds:m.duration,summary:(m.translations?.[language]?.description??m.description).slice(0,200),premium:m.premium,published:true,audioLanguage:language}));
@@ -31,9 +34,13 @@ export async function run(request,context,options){
    };
    const response=await runLunaToolTurn({...body,instructions:body.instructions+'\n'+lunaToolInstructions},tools,invoke);assert.equal(response.status,'completed');
    const raw=(response.output??[]).filter(o=>o.type==='message').flatMap(o=>o.content??[]).filter(o=>o.type==='output_text').map(o=>o.text).join('\n');assert.ok(raw);
-   const parsed=normalizeOpenAiModelResult({text:raw,refusal:null,path:'qa.synthetic'},language),selected=tools.meditationSelection(),action=resolveMeditationAction(selected?{type:'meditation_card',meditationId:selected.id}:parsed.meditationAction,catalog);assert.ok(action,'no_verified_meditation_card');
-   const message=readyMeditationCopy(safeAssistantProse(parsed.message,language),language,true);assert.ok(message);assert.ok(items.some(m=>m.id===action.meditationId));
-   result.cases.push({language,status:'PASS',validatedMeditationId:action.meditationId,toolOutcomes:tools.outcomes().map(o=>({tool:o.toolName,status:o.status})),message,cardAvailable:true,playbackStarted:false});await persist();
+   const parsed=normalizeOpenAiModelResult({text:raw,refusal:null,path:'qa.synthetic'},language),selected=tools.meditationSelection(),action=resolveMeditationAction(selected?{type:'meditation_card',meditationId:selected.id}:parsed.meditationAction,catalog);
+   const {rankMeditationRecommendation}=await import('../dist/luna-ai-policy.js'),ranked=rankMeditationRecommendation({message:text,catalog,language,modelRecommendationId:action?.meditationId??null,modelRecommendationGoal:parsed.recommendationIntent.goal}),resolvedId=action?.meditationId??ranked.meditationId;
+   // Persist evidence before acceptance assertions; no raw prompt/user data.
+   result.lastDecision={language,catalogSize:catalog.length,selectedByTool:Boolean(selected),modelActionValid:Boolean(action),runtimePolicyReason:ranked.reason,resolvedMeditationId:resolvedId,toolOutcomes:tools.outcomes().map(o=>({tool:o.toolName,status:o.status})),syntheticMessage:parsed.message};await persist();assert.ok(resolvedId,'no_verified_meditation_card');
+   const {selectToolMeditation}=await import('../dist/luna40-meditation-selection.js'),verified=selectToolMeditation(resolvedId,catalog,false);assert.ok(verified);
+   const message=readyMeditationCopy(safeAssistantProse(parsed.message,language),language,true);assert.ok(message);assert.ok(items.some(m=>m.id===verified.id));
+   result.cases.push({language,status:'PASS',validatedMeditationId:verified.id,selectionSource:selected?'verified_tool':action?'validated_model_metadata':'existing_runtime_policy',access:verified.access,toolOutcomes:tools.outcomes().map(o=>({tool:o.toolName,status:o.status})),message,cardAvailable:true,playbackStarted:false});await persist();
   }
   if(luna42){
    const {createAstrologyService}=await import('../dist/luna30-astrology-service.js'),{createAstrologyWorkflowService}=await import('../dist/luna33-workflows.js'),{verifiedAstrologyChatContext}=await import('../dist/luna30-astrology-chat-context.js');
