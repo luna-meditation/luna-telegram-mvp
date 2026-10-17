@@ -23,11 +23,12 @@ test('retry keeps one user turn and reuses its client request id', () => {
   assert.doesNotMatch(source, /current\.filter\(\(message\) => message\.id !== optimistic\.id\)/);
 });
 
-test('quota exhaustion has no Retry and disables the composer', () => {
+test('quota exhaustion blocks paid replies but keeps deterministic commerce available', () => {
   const source = readFileSync(componentPath, 'utf8');
   assert.match(source, /failedTurn\.state !== 'quota_exhausted'/);
-  assert.match(source, /disabled=\{thinking \|\| contextBusy \|\| quotaExhausted\}/);
-  assert.match(source, /Сообщения Luna на сегодня закончились/);
+  assert.match(source, /quotaExhausted&&!commerceIntent\(draft\)/);
+  assert.match(source, /quotaExhausted&&<ChatCommerce view="quota"/);
+  assert.match(source, /Квота AI исчерпана/);
 });
 
 test('explicit suggestion taps perform actions without polluting the manual draft', () => {

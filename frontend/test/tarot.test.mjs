@@ -87,7 +87,8 @@ test('Tarot is opt-in and does not mutate seeds, history, payments, subscription
  assert.match(app,/featureFlags\.new_navigation && page === 'tarot' && \(featureFlags\.tarot_daily \?/);
  assert.doesNotMatch(page,/fetch\(|localStorage|saveHistory|createInvoice|sendLunaMessage|plantMoonGarden|setProfile/);
  assert.match(page,/prepareCardChoices\(tarotDeck\)/);assert.match(page,/selectionLocked\.current/);
- assert.match(app,/useReducer\(reduceTarotSession, undefined, createTarotSession\)/);
+ assert.match(app,/useReducer\(reduceTarotSession, undefined, \(\)=>\(\{\.\.\.createTarotSession\(\)/);
+ assert.match(app,/launchDestination==='daily'\?\{screen:'daily'/);
  const flags=src('config/featureFlagDefinitions.ts');assert.match(flags,/source\[featureFlagEnvironment\[key\]\] \?\? ''/);
 });
 test('the supplied card back is a verified full-resolution WebP, not CSS artwork',()=>{

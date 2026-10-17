@@ -69,6 +69,9 @@ import {recordedAstrologyConsent} from './luna33-consent.js';
 import {independentPracticeTopic,astrologyWorkflowIntent} from './luna33-topic.js';
 import {independentReflectionTopic,meaningfulQuickReplies,lastAssistantQuickReplies,luna34ConversationInstructions,requestedBreathOptions} from './luna34-conversation.js';
 import {readCommercialAllowance} from './luna34-allowances.js';
+import {commerceIntent} from './luna35-commerce-policy.js';
+import {luna35Commerce} from './luna35-runtime.js';
+import {recordFunnel} from './luna35-funnel.js';
 import {currentAiSafetyLimit} from './luna32-ai-accounting.js';
 import {createAstrologyWorkflowService} from './luna33-workflows.js';
 
@@ -595,7 +598,7 @@ export function buildLunaOpenAiRequest(input: {
     store: false,
     service_tier:'default',
     reasoning: { effort: env.AI_REASONING_EFFORT },
-    instructions: (mode?[buildModeInstructions(mode,input.language,modeContext),safetyPolicyPrompt,responseContractPrompt,`VERIFIED_CATALOG: ${JSON.stringify(input.catalog.slice(0,8))}`,'Recommend only these published catalog entries. Do not invent their duration or availability. Payment terms are unchanged; refer to the verified plans in Profile instead of inventing prices. Offer a real app action rather than promising to execute it in prose.'].join('\n\n'):systemPrompt(input.language, JSON.stringify(input.catalog), JSON.stringify(input.context)))+(env.FEATURE_PERSONAL_MEMORY?'\n'+confirmedMemoryPrompt:'')+'\n'+russianAddressInstructions(input.language,addressContext?.personalContext??addressContext?.modeContext?.personalContext,input.recent.at(-1)?.content)+'\n'+consultationRuntimeInstructions+'\n'+luna34ConversationInstructions,
+    instructions: (mode?[buildModeInstructions(mode,input.language,modeContext),safetyPolicyPrompt,responseContractPrompt,`VERIFIED_CATALOG: ${JSON.stringify(input.catalog.slice(0,8))}`,'Recommend only these published catalog entries. Do not invent their duration or availability. Payment terms are unchanged; use the read-only verified commerce tools for current availability and allow the native account card to show options. Never invent prices or require a duplicate purchase. Profile remains available for account management. Offer a real app action rather than promising to execute it in prose.'].join('\n\n'):systemPrompt(input.language, JSON.stringify(input.catalog), JSON.stringify(input.context)))+(env.FEATURE_PERSONAL_MEMORY?'\n'+confirmedMemoryPrompt:'')+'\n'+russianAddressInstructions(input.language,addressContext?.personalContext??addressContext?.modeContext?.personalContext,input.recent.at(-1)?.content)+'\n'+consultationRuntimeInstructions+'\n'+luna34ConversationInstructions,
     input: (mode||env.FEATURE_PERSONAL_MEMORY?input.recent.slice(-8):input.recent).map((message,index,array) => ({ role: message.role, content: mode||env.FEATURE_PERSONAL_MEMORY?message.content.slice(0,index===array.length-1?2000:1000):message.content })),
     max_output_tokens: input.maxOutputTokens ?? env.AI_MAX_OUTPUT_TOKENS,
     text: lunaStructuredTextFormat()
@@ -933,6 +936,8 @@ export async function sendLunaMessage(user: TelegramUserInput, rawInput: unknown
   if(!env.LUNA32_ENABLED)return sendLunaMessageInternal(user,rawInput);
   const input=lunaChatInputSchema.parse(rawInput);
   await upsertUser(user);
+  const commercialIntent=commerceIntent(input.message);
+  if(commercialIntent&&env.FEATURE_AI_CENTRAL_EXPERIENCE){return luna35Commerce(getLunaUsage).message(user.telegram_id,input,commercialIntent);}
   const workflow=env.FEATURE_AI_CENTRAL_EXPERIENCE&&env.FEATURE_ASTROLOGY?astrologyWorkflowIntent(input.message,Boolean(input.chartId||input.astrology)):null;
   if(workflow){
     const startedAt=new Date().toISOString(),hex=crypto.createHash('sha256').update('luna33:workflow:'+user.telegram_id+':'+input.requestId).digest('hex'),id=`${hex.slice(0,8)}-${hex.slice(8,12)}-4${hex.slice(13,16)}-8${hex.slice(17,20)}-${hex.slice(20,32)}`;
@@ -1218,6 +1223,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
     let openAiResponse: OpenAiResponse = { model: 'luna-runtime-decision-engine', status: 'completed' };
     let extracted: ExtractedOpenAiText | null = null;
     let workflowActions:Array<'natal_chart'|'compatibility'|'breathing'>=[];
+    let commerceView:import('./luna35-commerce-policy.js').CommerceView|null=null;
     let parsed: z.infer<typeof modelResultSchema>;
     const directItem = directActionMeditationId
       ? catalogForPolicy.find((item) => item.id === directActionMeditationId) ?? null
@@ -1270,9 +1276,11 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
           conversationId: resolvedConversationId,
           attempt: 1
         });
-        const tools=createLunaTools({db:supabase,owner:telegramId,language:responseLanguage,readingId:input.readingId,astrology:input.astrology??input.chartId,readingContext,catalog:catalogForModel,personalContext:personal,access:{hasPaidPremium:access.hasPaidPremium,beta:access.beta,plan:access.plan},quota:()=>getLunaUsage(telegramId),astrologyEnabled:env.FEATURE_ASTROLOGY&&env.LUNA30_ASTROLOGY_AI_ENABLED});
+        const commerce=luna35Commerce(getLunaUsage);
+        const tools=createLunaTools({db:supabase,owner:telegramId,language:responseLanguage,readingId:input.readingId,astrology:input.astrology??input.chartId,readingContext,catalog:catalogForModel,personalContext:personal,access:{hasPaidPremium:access.hasPaidPremium,beta:access.beta,plan:access.plan},quota:()=>getLunaUsage(telegramId),astrologyEnabled:env.FEATURE_ASTROLOGY&&env.LUNA30_ASTROLOGY_AI_ENABLED,commerce:{read:async view=>{const card=await commerce.card(telegramId,view,responseLanguage,resolvedConversationId);return {balance:card.balance,plan:card.membership.kind,usage:card.usage,beta:card.beta,products:card.products,...(view==='shop'?{catalog:card.catalog}:{}),...(view==='earn'?{earning:card.earning}:{}),...(view==='history'?{transactions:card.transactions?.slice(0,5),pendingPayments:card.pendingOrders.map(o=>({id:o.id,product:o.product,state:o.state,stars:o.stars}))}:{}),...(view==='resume'?{pending:card.pending.map(a=>({id:a.id,type:a.action_type,expiresAt:a.expires_at}))}:{})};},eligibility:kind=>commerce.eligibility(telegramId,kind)}});
         openAiResponse=env.LUNA32_ENABLED?await runLunaToolTurn({...request,instructions:request.instructions+'\n'+lunaToolInstructions},tools,invoke):await invoke(request);
         workflowActions=tools.workflowActions();
+        commerceView=tools.commerceView();
         consumedUsage=openAiResponse.usage;
         console.info('[Luna AI model result received]', {
           user: userHash(telegramId),
@@ -1511,6 +1519,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
         recommendedMeditationId: attachedMeditationId,
         ...(resolvedIntent==='breathing'||workflowActions.includes('breathing')?{breathing:requestedBreathOptions(input.message)}:{}),
         ...(workflowActions.length?{workflowActions}:{}),
+        ...(commerceView?{commerce:{version:1,view:commerceView,language:responseLanguage,checkedAt:new Date().toISOString()}}:{}),
         ...(input.contextReset?{contextReset:true}:{}),
         ...(input.chartId?{astrology:input.astrology??{chartId:input.chartId}}:{}),
         ...(input.chartId?{astrologyConsent:{version:1,chartId:input.chartId,...(input.astrology?.secondChartId?{secondChartId:input.astrology.secondChartId}:{})}}:{}),
@@ -1562,6 +1571,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
       usage: openAiResponse.usage
     });
     const responsePayload = { conversationId: resolvedConversationId, message: assistant, duplicate: false, remaining: reservation.remaining, resetAt:nextUtcReset(), requestState: 'completed' as const };
+    if(openAiResponse.usage?.output_tokens)await recordFunnel(supabase,telegramId,'first_ai_response','first','verified');
     console.info('[Luna AI final response]', {
       user: userHash(telegramId),
       conversationId: resolvedConversationId,

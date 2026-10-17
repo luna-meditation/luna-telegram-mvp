@@ -402,6 +402,7 @@ export type LunaMessage = {
   role: 'user' | 'assistant';
   content: string;
   metadata?: {
+    commerce?:{version:1;view:import('../../backend/src/luna35-commerce-policy').CommerceView;language:AppLanguage;checkedAt:string};
     contextReset?:boolean;
     astrology?:AstrologyChatAttachment;
     astrologyWorkflow?:AstrologyWorkflow;
@@ -440,6 +441,15 @@ export type LunaMemory = {
   created_at: string;
   updated_at: string;
 };
+
+export type PendingCommerceAction={id:string;conversation_id:string;action_type:string;parameters:unknown;state:string;expires_at:string;eligibility?:{allowed:boolean;source:string;required:number;shortfall:number}|null};
+export type CommerceCard={version:1;view:import('../../backend/src/luna35-commerce-policy').CommerceView;content:string;balance:number;membership:MembershipOverview['membership'];catalog:MembershipOverview['catalog'];products:Record<string,boolean>;usage:MembershipOverview['usage'];beta:MembershipOverview['beta'];earning:Array<{id:string;destination:string;seeds?:number;rewardPerMinute?:number;completionBonus?:number}>;transactions:MembershipOverview['transactions'];pendingOrders:Array<{id:string;request_id:string;product:string;stars:number;state:string;created_at:string}>;pending:PendingCommerceAction[]};
+export function getCommerceCard(view:import('../../backend/src/luna35-commerce-policy').CommerceView,language:AppLanguage,initData?:string,conversationId?:string){return request<CommerceCard>('/api/luna35/commerce?'+new URLSearchParams({view,language,...(conversationId?{conversationId}:{})}),undefined,initData);}
+export function savePendingCommerceAction(input:import('../../backend/src/luna35-commerce-policy').PendingActionInput,initData?:string){return request<{action:{id:string}}>('/api/luna35/pending-actions',{method:'POST',body:JSON.stringify(input)},initData);}
+export function resumePendingCommerceAction(id:string,initData?:string,expectedSeeds?:number){return request<{conversationId:string;message:LunaMessage}>(`/api/luna35/pending-actions/${encodeURIComponent(id)}/resume`,{method:'POST',body:JSON.stringify({confirmed:true,...(expectedSeeds===undefined?{}:{expectedSeeds})})},initData);}
+export function getPendingCommerceActions(conversationId:string,initData?:string){return request<{actions:PendingCommerceAction[]}>('/api/luna35/pending-actions?'+new URLSearchParams({conversationId}),undefined,initData);}
+export const recordLuna35Launch=(initData?:string)=>request('/api/luna35/launch',{method:'POST',body:'{}'},initData);
+export const getLuna35Funnel=(initData?:string)=>request<{since:string;groups:Array<{event:string;source:string;events:number;accounts:number}>;note:string}>('/api/luna35/admin/funnel',undefined,initData);
 
 function telegramHeaders(initData?: string) {
   const headers: Record<string, string> = {};
@@ -604,7 +614,7 @@ export const startVerifiedBreath=(clientId:string,mode:string,duration:number,in
 export const heartbeatVerifiedBreath=(id:string,active:boolean,initData?:string)=>request<{verifiedSeconds:number;completed:boolean}>(`/api/luna34/breath/${id}/heartbeat`,{method:'POST',body:JSON.stringify({active})},initData);
 export const recordProgressEvidence=(input:{kind:string;entityId:string;detail?:string;secondChartId?:string},initData?:string)=>request<{recorded:boolean}>('/api/luna34/progress/events',{method:'POST',body:JSON.stringify(input)},initData);
 export const acknowledgeMilestones=(ids:string[],initData?:string)=>request('/api/luna34/progress/acknowledge',{method:'POST',body:JSON.stringify({ids})},initData);
-export const prepareShareExport=(input:{kind:string;asset?:string;format:string},initData?:string)=>request<{ticket:string}>('/api/luna34/share/prepare',{method:'POST',body:JSON.stringify(input)},initData);
+export const prepareShareExport=(input:{kind:string;asset?:string;format:string;reference?:string;secondReference?:string},initData?:string)=>request<{ticket:string}>('/api/luna34/share/prepare',{method:'POST',body:JSON.stringify(input)},initData);
 export const completeShareExport=(input:{ticket:string;outcome:'download_invoked'|'native_share_completed';sha256:string;bytes:number},initData?:string)=>request('/api/luna34/share/complete',{method:'POST',body:JSON.stringify(input)},initData);
 export type MembershipOverview={catalog:{version:string;premium:{monthlyStars:number;ordinaryAiRepliesPerBillingMonth:number;threeCardReadings:number;fiveCardReadings:number;compatibilityReports:number;renewalSeeds:number;meditations:number};annual:{stars:number;days:number;recurring:false};free:{aiSuccessfulRepliesPerUtcDay:number;meditations:number};packages:Array<{id:string;seeds:number;stars:number}>;supportStars:number[]};membership:{kind:'free'|'monthly'|'annual'|'lifetime'|'legacy_fixed_term';paid:boolean;until:string|null;preserveLegacy:boolean;ordinaryLimit:number|null;resetAt:string|null};commercialEnabled:boolean;quotasEnabled:boolean;balance:number;earned:number;transactions:Array<{id:string;kind:string;delta:number;balance_after:number;created_at:string}>|null;purchases:Array<{id:string;plan:string;amount_stars:number;currency:string;status:string;created_at:string}>;newPurchases:Array<{charge_id:string;order_id:string;stars:number;state:string;subscription_expires_at:string|null;cancelled_at:string|null;created_at:string}>|null;usage:{limit:number;remaining:number;resetAt:string;scope?:'utc_day'|'billing_month'};beta:{active:boolean;expiresAt:string|null}};
 export type ReferralOverview={enabled:boolean;link:string|null;total:number;pending:number;qualified:number;rewarded:number;seedsEarned:number;monthlyCap:number;rewardsEnabled:boolean;onboardingRequired:boolean};

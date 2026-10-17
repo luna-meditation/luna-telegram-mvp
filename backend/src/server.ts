@@ -19,6 +19,7 @@ import {attributeValidatedReferral,qualifyVerifiedReferral} from './luna30-refer
 import {luna30AstrologyRouter} from './luna30-astrology-router.js';
 import {luna32Router} from './luna32-routes.js';
 import {luna34Router} from './luna34-router.js';
+import {luna35Router} from './luna35-router.js';
 import {createLuna34Referrals} from './luna34-referrals.js';
 import {createLuna32Admin} from './luna32-admin.js';
 import { bot, configureTelegramBot, createStarsInvoiceLink, sendStarsInvoice } from './bot.js';
@@ -340,6 +341,7 @@ app.get('/health', async (req, res) => {
 app.use('/api/luna21',rateLimit({max:20,windowMs:60_000}),luna21CommerceRouter);
 app.use('/api/luna30/commerce',rateLimit({max:20,windowMs:60_000}),luna30CommerceRouter);
 app.use('/api/luna34',rateLimit({max:30,windowMs:60_000}),luna34Router);
+app.use('/api/luna35',rateLimit({max:30,windowMs:60_000}),luna35Router);
 app.use('/api/referrals',rateLimit({max:12,windowMs:60_000}),luna30ReferralRouter);
 app.use('/api/astrology',rateLimit({max:30,windowMs:60_000}),luna30AstrologyRouter);
 app.use('/api/luna32',rateLimit({max:30,windowMs:60_000}),luna32Router);

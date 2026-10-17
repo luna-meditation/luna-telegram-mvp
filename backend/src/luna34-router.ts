@@ -11,6 +11,9 @@ import {issueShareExportTicket,verifyShareExportTicket,shareExportSchema} from '
 import {tarotCatalog} from './tarot-policy.js';
 import {luna34AchievementIds} from './luna34-achievements.js';
 import {createLuna34Referrals} from './luna34-referrals.js';
+import {createLuna30Commerce} from './luna30-commerce.js';
+import {bot} from './bot.js';
+import {recordFunnel} from './luna35-funnel.js';
 export const luna34Router=Router();
 const referrals=createLuna34Referrals(supabase,{enabled:env.LUNA34_REFERRALS_ENABLED,botUsername:env.BOT_USERNAME});
 const progress=createLuna34Progress(supabase,(owner,id)=>referrals.qualify(owner,'tarot',id)),owner=(req:unknown)=>(req as AuthenticatedRequest).telegramUser.telegram_id;
@@ -19,7 +22,7 @@ luna34Router.get('/progress',async(req,res,next)=>{try{res.json(await progress.s
 luna34Router.get('/referrals',async(req,res,next)=>{try{res.json(await referrals.dashboard(owner(req)));}catch(e){next(e);}});
 luna34Router.post('/referrals/link',async(req,res,next)=>{try{z.object({}).strict().parse(req.body);res.json(await referrals.dashboard(owner(req),true));}catch(e){next(e);}});
 luna34Router.post('/referrals/onboarding',async(req,res,next)=>{try{z.object({completed:z.literal(true)}).strict().parse(req.body);res.json(await referrals.finishOnboarding(owner(req)));}catch(e){next(e);}});
-luna34Router.get('/membership',async(req,res,next)=>{try{const [membership,usage,settings]=await Promise.all([readLuna34Membership(supabase,owner(req),env.LUNA34_COMMERCIAL_ENABLED),getLunaUsage(owner(req)),readLuna32Settings(supabase)]);res.json({...membership,usage,beta:betaEntitlement(settings)});}catch(e){next(e);}});
+luna34Router.get('/membership',async(req,res,next)=>{try{const [membership,usage,settings,products]=await Promise.all([readLuna34Membership(supabase,owner(req),env.LUNA34_COMMERCIAL_ENABLED),getLunaUsage(owner(req)),readLuna32Settings(supabase),createLuna30Commerce(supabase,env,input=>bot.telegram.callApi('createInvoiceLink',input)).availability()]);if(membership.membership.paid){products.premium_month=false;products.premium_year=false;}await recordFunnel(supabase,owner(req),'membership_viewed',new Date().toISOString().slice(0,10),'app');res.json({...membership,products,usage,beta:betaEntitlement(settings)});}catch(e){next(e);}});
 luna34Router.get('/admin/metrics',async(req,res,next)=>{try{if(!env.ADMIN_TELEGRAM_ID||owner(req)!==env.ADMIN_TELEGRAM_ID){res.status(403).json({code:'admin_only'});return;}const result=await supabase.rpc('luna34_operating_metrics');if(result.error)throw result.error;res.json(result.data);}catch(e){next(e);}});
 luna34Router.post('/progress/events',async(req,res,next)=>{try{res.json(await progress.record(owner(req),req.body));}catch(e){next(e);}});
 luna34Router.post('/progress/acknowledge',async(req,res,next)=>{try{res.json(await progress.acknowledge(owner(req),req.body));}catch(e){next(e);}});
@@ -28,6 +31,7 @@ luna34Router.post('/progress/acknowledge',async(req,res,next)=>{try{res.json(awa
 luna34Router.post('/share/prepare',async(req,res,next)=>{try{const input=shareExportSchema.parse(req.body);let valid=input.kind==='app'&&!input.asset;
  if(input.kind==='tarot')valid=tarotCatalog.some(card=>input.asset===`/assets/tarot/cards/${card.id}.webp`);
  if(input.kind==='garden')valid=Boolean(input.asset&&/^\/assets\/moon-garden\/level-[0-7]-[a-z-]+\.png$/.test(input.asset));
+ if(input.kind==='natal'||input.kind==='compatibility'){const ids=[input.reference,...(input.kind==='compatibility'?[input.secondReference]:[])];if(!input.asset&&ids.every(Boolean)&&new Set(ids).size===ids.length){const r=await supabase.from('luna30_chart_cache').select('id,profile_id').eq('telegram_id',owner(req)).in('id',ids as string[]);valid=!r.error&&r.data?.length===ids.length&&new Set(r.data.map(c=>c.profile_id)).size===ids.length;}}
  if(input.kind==='achievement'){const id=input.asset?.match(/^\/images\/achievements\/luna34\/([atsrmgc][0-9]{2})\.webp$/)?.[1]?.toUpperCase();if(id&&luna34AchievementIds.has(id)){const r=await supabase.from('achievements').select('unlocked_at').eq('telegram_id',owner(req)).eq('achievement_id',id).maybeSingle();valid=!r.error&&Boolean(r.data?.unlocked_at);}}
  if(!valid){res.status(422).json({code:'unsupported_export'});return;}res.json({ticket:issueShareExportTicket(env.BOT_TOKEN,owner(req),input)});
  }catch(e){next(e);}});

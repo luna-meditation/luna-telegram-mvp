@@ -1,6 +1,7 @@
 import type {SupabaseClient} from '@supabase/supabase-js';
 import {FoundationError} from './foundation-error.js';
 import {createReferralCode,referralLink,signedReferralCode} from './luna30-referral-policy.js';
+import {recordFunnel} from './luna35-funnel.js';
 export function createLuna34Referrals(db:SupabaseClient,config:{enabled:boolean;botUsername:string}){
  const unavailable=()=>new FoundationError(503,'referrals_unavailable','Invitations are unavailable. Your balance is unchanged.');
  async function settings(){if(!config.enabled)return null;const r=await db.from('luna34_commercial_settings').select('referrals_enabled,rewards_enabled,checkout_enabled,owner_approved,live_payment_verified').eq('id',true).single();if(r.error)throw unavailable();return r.data?.referrals_enabled&&r.data.owner_approved?r.data:null;}
@@ -13,6 +14,6 @@ export function createLuna34Referrals(db:SupabaseClient,config:{enabled:boolean;
    if(code.error||rows.error||incoming.error||onboarding.error)throw unavailable();const rewarded=rows.data?.filter(r=>r.state==='rewarded').length??0;
    return {enabled:true,link:code.data&&!code.data.disabled_at?referralLink(config.botUsername,code.data.code):null,total:rows.data?.length??0,pending:rows.data?.filter(r=>r.state==='pending').length??0,qualified:rows.data?.filter(r=>r.qualified_at!==null).length??0,rewarded,seedsEarned:rewarded*30,monthlyCap:5,rewardsEnabled:cfg.rewards_enabled&&cfg.checkout_enabled&&cfg.live_payment_verified,onboardingRequired:incoming.data?.state==='pending'&&!onboarding.data};
   },
-  async finishOnboarding(owner:number){if(!await settings())return {completed:false};const r=await db.from('luna34_referral_onboarding').upsert({telegram_id:owner},{onConflict:'telegram_id',ignoreDuplicates:true});if(r.error)throw unavailable();return {completed:true};}
+  async finishOnboarding(owner:number){if(!await settings())return {completed:false};const r=await db.from('luna34_referral_onboarding').upsert({telegram_id:owner},{onConflict:'telegram_id',ignoreDuplicates:true});if(r.error)throw unavailable();await recordFunnel(db,owner,'onboarding_completed','first','verified');return {completed:true};}
  };
 }

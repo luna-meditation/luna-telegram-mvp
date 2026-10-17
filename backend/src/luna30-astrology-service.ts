@@ -4,6 +4,7 @@ import {FoundationError} from './foundation-error.js';
 import {trustedBirthInput} from './luna30-astrology-policy.js';
 import {astrologyEngineMetadata,calculateNatalChart,calculateSynastry,natalCacheKey,type NatalCalculation} from './luna30-astrology-engine.js';
 import {searchBirthLocations} from './luna30-locations.js';
+import {recordFunnel} from './luna35-funnel.js';
 
 const fields='id,subject_kind,display_label,birth_date,birth_time,location,revision,created_at,updated_at';
 const unavailable=()=>new FoundationError(503,'astrology_unavailable','Astrology is temporarily unavailable.');
@@ -21,7 +22,7 @@ export function createAstrologyService(db:SupabaseClient,configured:()=>boolean)
    if(id){const current=await profile(owner,id);if(current.subject_kind!==value.subjectKind)throw new FoundationError(400,'invalid_birth_details','Subject kind cannot change.');if(value.revision!==current.revision)throw new FoundationError(409,'birth_profile_changed','Reload the updated birth details.');}
    const row={subject_kind:value.subjectKind,display_label:value.label,birth_date:value.date,birth_time:value.time,location:calculation.location,consent_version:'luna30-birth-v1',consented_at:new Date().toISOString()};
    const query=id?db.from('luna30_birth_profiles').update(row).eq('telegram_id',owner).eq('id',id).eq('revision',value.revision!):db.from('luna30_birth_profiles').insert({...row,telegram_id:owner});
-   const {data,error}=await query.select(fields).maybeSingle();if(error){if(error.code==='23505')throw new FoundationError(409,'self_profile_exists','Your own birth profile already exists.');if(error.code==='23514')throw new FoundationError(400,'birth_profile_limit','Birth profile limit reached.');throw unavailable();}if(!data)throw new FoundationError(409,'birth_profile_changed','Reload the updated birth details.');return{profile:data};
+   const {data,error}=await query.select(fields).maybeSingle();if(error){if(error.code==='23505')throw new FoundationError(409,'self_profile_exists','Your own birth profile already exists.');if(error.code==='23514')throw new FoundationError(400,'birth_profile_limit','Birth profile limit reached.');throw unavailable();}if(!data)throw new FoundationError(409,'birth_profile_changed','Reload the updated birth details.');if(!id)await recordFunnel(db,owner,'first_astrology_profile','first','verified');return{profile:data};
   },
   async remove(owner:number,id:string){await enabled();const {data,error}=await db.from('luna30_birth_profiles').delete().eq('telegram_id',owner).eq('id',id).select('id');if(error)throw unavailable();if(!data?.length)throw new FoundationError(404,'birth_profile_not_found','Birth profile not found.');return{ok:true};},
   async calculate(owner:number,id:string){await enabled();const p=await profile(owner,id);const input={date:p.birth_date,time:p.birth_time?.slice(0,5)??null,location:p.location};

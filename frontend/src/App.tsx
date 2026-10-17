@@ -1,6 +1,8 @@
 import {OptimizedImage,imageSource} from './design-system/components/OptimizedImage';
 import './luna34.css';
-import {ReferralWelcome} from './features/membership/ReferralPanel';
+import {ReferralWelcome,ReferralPanel} from './features/membership/ReferralPanel';
+import {parseLaunchDestination} from './navigation/launchDestination';
+import {recordLuna35Launch} from './api';
 import {Luna30FinancePanel} from './components/Luna30FinancePanel';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 const Luna34OperationsPanel=lazy(()=>import('./components/Luna34OperationsPanel').then(module=>({default:module.Luna34OperationsPanel})));
@@ -14,6 +16,7 @@ import {
   ChevronDown,
   CreditCard,
   Crown,
+  Gift,
   Edit3,
   Globe2,
   Heart,
@@ -1821,7 +1824,9 @@ function App() {
   const runtimeDiagnostics = useRuntimeDiagnostics();
   const user = telegram?.initDataUnsafe.user ?? fallbackUser;
   const initData = telegram?.initData;
+  useEffect(()=>{if(initData)void recordLuna35Launch(initData).catch(()=>undefined);},[initData]);
   const launchStartParam = miniAppStartParam();
+  const launchDestination=parseLaunchDestination(launchStartParam).destination;
   const sceneAudioRef = useRef<HTMLAudioElement | null>(null);
   const moonGardenAudioRef = useRef<HTMLAudioElement | null>(null);
   const appShellRef = useRef<HTMLElement | null>(null);
@@ -1833,10 +1838,10 @@ function App() {
   const paymentOperationRef = useRef(false);
   const [language, setLanguage] = useState<AppLanguage>(() => initialLanguage(user));
   useEffect(()=>{document.documentElement.lang=language;},[language]);
-  const [tarotSession, tarotDispatch] = useReducer(reduceTarotSession, undefined, createTarotSession);
+  const [tarotSession, tarotDispatch] = useReducer(reduceTarotSession, undefined, ()=>({...createTarotSession(),...(launchDestination==='daily'?{screen:'daily' as const}:{})}));
   const [aiReadingId,setAiReadingId]=useState<string|undefined>();
   const [aiChartId,setAiChartId]=useState<string|import('./api').AstrologyChatAttachment|undefined>();
-  const [astrologyEntry,setAstrologyEntry]=useState<'natal'|'compatibility'|undefined>();
+  const [astrologyEntry,setAstrologyEntry]=useState<'natal'|'compatibility'|undefined>(launchDestination==='natal'||launchDestination==='compatibility'?launchDestination:undefined);
   useEffect(()=>{const discuss=(event:Event)=>{const detail=(event as CustomEvent).detail,id=detail?.chartId;if(!featureFlags.astrology||typeof id!=='string'||!/^[-a-f0-9]{36}$/.test(id))return;setAiReadingId(undefined);setAiChartId(detail);};window.addEventListener('luna-discuss-chart',discuss);return()=>window.removeEventListener('luna-discuss-chart',discuss);},[]);
   const [tarotSetupKey,setTarotSetupKey]=useState(0);
   const tarotBackHandlerRef = useRef<(() => void) | null>(null);
@@ -1895,7 +1900,8 @@ function App() {
   const [access, setAccess] = useState<AccessState>(() => initialAccountCache?.access ?? { hasPremium: false, plan: 'Free' });
   const [profile, setProfile] = useState<ProfileStats | null>(() => initialAccountCache?.profile ?? null);
   const [profileNestedActive, setProfileNestedActive] = useState(false);
-  const [profileEntry, setProfileEntry] = useState<'main'|'personalization'|'universe'|'terms'>('main');
+  const [profileEntry, setProfileEntry] = useState<'main'|'personalization'|'universe'|'terms'|'invite'>(launchDestination==='invite'?'invite':'main');
+  useEffect(()=>{const open=(event:Event)=>{const destination=(event as CustomEvent).detail?.destination;if(typeof destination!=='string')return;if(destination==='terms'){setProfileEntry('terms');navigatePrimary('profile');return;}const launch=parseLaunchDestination(destination).destination;if(launch==='invite'){setProfileEntry('invite');navigatePrimary('profile');}else if(launch==='natal'||launch==='compatibility'){setAstrologyEntry(launch);setPage('astrology');}else if(launch==='daily'){tarotDispatch({type:'screen',value:'daily'});setPage('tarot');}else{const pages={home:'home',luna:'luna',tarot:'tarot',astrology:'astrology',meditations:'library',breathwork:'breathCircle',membership:'pricing',seeds:'wallet'} as const;setPage(pages[launch as keyof typeof pages]??'home');}};window.addEventListener('luna-open-destination',open);return()=>window.removeEventListener('luna-open-destination',open);},[setPage,navigatePrimary]);
   useEffect(()=>{if(!featureFlags.ai_central_experience)return;const activity=()=>setPage('activity'),astrology=(event:Event)=>{const value=(event as CustomEvent).detail?.section;setAstrologyEntry(value==='natal'||value==='compatibility'?value:undefined);setPage('astrology');};window.addEventListener('luna-open-activity',activity);window.addEventListener('luna-open-astrology',astrology);return()=>{window.removeEventListener('luna-open-activity',activity);window.removeEventListener('luna-open-astrology',astrology);};},[setPage]);
   useEffect(()=>{const open=()=>{if(!featureFlags.personal_memory)return;setProfileEntry('universe');navigatePrimary('profile');};window.addEventListener('luna-open-universe',open);return()=>window.removeEventListener('luna-open-universe',open);},[navigatePrimary]);
   const [personalDisplayName, setPersonalDisplayName] = useState<string|null>(null);
@@ -5142,7 +5148,7 @@ function resizeAvatarImage(file: File) {
   });
 }
 
-type ProfileSettingsView = 'main' | 'settings' | 'appearance' | 'goals' | 'notifications' | 'language' | 'subscription' | 'privacy' | 'privacy-policy' | 'support' | 'terms' | 'disclaimer' | 'personalization' | 'universe';
+type ProfileSettingsView = 'main' | 'settings' | 'appearance' | 'goals' | 'notifications' | 'language' | 'subscription' | 'privacy' | 'privacy-policy' | 'support' | 'terms' | 'disclaimer' | 'personalization' | 'universe' | 'invite';
 type RestoreState = 'idle' | 'loading' | 'success' | 'empty' | 'error';
 
 const APP_VERSION = import.meta.env.VITE_APP_VERSION ?? '0.1.0';
@@ -5220,7 +5226,7 @@ function ProfilePage({
   telegramUserId,
   onRefreshDiagnostics
 }: {
-  initialView?: 'main'|'personalization'|'universe'|'terms';
+  initialView?: 'main'|'personalization'|'universe'|'terms'|'invite';
   profile: ProfileStats | null;
   access: AccessState;
   loading: boolean;
@@ -5252,6 +5258,7 @@ function ProfilePage({
   onRefreshDiagnostics: () => void | Promise<void>;
 }) {
   const [view, setView] = useState<ProfileSettingsView>(initialView);
+  useEffect(()=>{setView(initialView);},[initialView]);
   const universeBackRef = useRef<(()=>boolean)|null>(null);
   const [statusProgressionOpen, setStatusProgressionOpen] = useState(false);
   const [avatarActionsOpen, setAvatarActionsOpen] = useState(false);
@@ -5291,7 +5298,7 @@ function ProfilePage({
       else if (statusProgressionOpen) setStatusProgressionOpen(false);
       else if(['privacy-policy','terms','disclaimer'].includes(view))setView('privacy');
       else if(view==='universe'&&universeBackRef.current?.())return;
-      else setView(view==='settings'||view==='subscription'||view==='universe'||(view==='personalization'&&initialView==='personalization')?'main':'settings');
+      else setView(view==='settings'||view==='subscription'||view==='universe'||view==='invite'||(view==='personalization'&&initialView==='personalization')?'main':'settings');
     };
 
     backButton.onClick(closeNestedSurface);
@@ -5483,6 +5490,7 @@ function ProfilePage({
   if (view === 'personalization') return <ProfileChildScreen title={language==='en'?'Personal Luna profile':'Личный профиль Luna'} onBack={()=>setView(initialView==='personalization'?'main':'settings')} language={language}><PersonalizationSettings language={language} firstName={firstName} initData={initData} onLanguageChange={onLanguageChange} onClose={()=>setView(initialView==='personalization'?'main':'settings')}/></ProfileChildScreen>;
 
 
+  if(view==='invite')return <ProfileChildScreen title={language==='en'?'Invite a friend':'Пригласить друга'} onBack={()=>setView('main')} language={language}><ReferralPanel language={language} initData={initData}/></ProfileChildScreen>;
   if (view === 'goals') {
     return (
       <ProfileChildScreen title={language === 'en' ? 'Goals' : 'Цели'} onBack={() => setView('settings')} language={language}>
@@ -5515,7 +5523,7 @@ function ProfilePage({
       { id: 'daily', en: 'Daily gentle reminder', ru: 'Ежедневное мягкое напоминание' },
       { id: 'morning', en: 'Morning practice', ru: 'Утренняя практика' },
       { id: 'evening', en: 'Evening wind-down', ru: 'Вечернее расслабление' },
-      { id: 'streak_risk', en: 'Streak at risk', ru: 'Серия под угрозой' },
+      { id: 'streak_risk', en: 'A gentle practice check-in', ru: 'Мягкое приглашение к практике' },
       { id: 'inactivity', en: 'A quiet return after a pause', ru: 'Мягкое возвращение после паузы' },
       { id: 'weekly_summary', en: 'Weekly reflection', ru: 'Недельная рефлексия' }
     ];
@@ -5844,6 +5852,7 @@ function ProfilePage({
 
       <section className="luna-surface rounded-[26px] p-2">
         <ProfileSettingsRow icon={CreditCard} title={language === 'en' ? 'Membership & Moon Seeds' : 'Подписка и Moon Seeds'} value={localizedPlanStatus} onClick={() => setView('subscription')} />
+        <ProfileSettingsRow icon={Gift} title={language==='en'?'Invite a friend':'Пригласить друга'} value="" onClick={()=>setView('invite')}/>
         <ProfileSettingsRow icon={Settings} title={language==='en'?'Settings':'Настройки'} value={languageLabel} onClick={()=>setView('settings')}/>
       </section>
 

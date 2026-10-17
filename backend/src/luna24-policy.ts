@@ -1,7 +1,7 @@
 import {createHash,randomInt} from 'node:crypto';
 import {z} from 'zod';
 import {tarotCatalog} from './tarot-policy.js';
-export const chatTarotInput=z.object({clientReadingId:z.string().uuid(),conversationId:z.string().uuid().optional(),kind:z.enum(['single','three','five']),intention:z.enum(['general','love','career','growth']),question:z.string().trim().max(240),language:z.enum(['en','ru'])}).strict();
+export const chatTarotInput=z.object({clientReadingId:z.string().uuid(),conversationId:z.string().uuid().optional(),kind:z.enum(['single','three','five']),intention:z.enum(['general','love','career','growth']),question:z.string().trim().max(240),language:z.enum(['en','ru']),orderId:z.string().uuid().optional()}).strict();
 export type ChatTarotInput=z.infer<typeof chatTarotInput>;
 export type ChatTarotState={readingId:string;clientReadingId:string;kind:ChatTarotInput['kind'];revealed:number;requestHash:string};
 export const chatTarotState=z.object({readingId:z.string().uuid(),clientReadingId:z.string().uuid(),kind:z.enum(['single','three','five']),revealed:z.number().int().min(0).max(5),requestHash:z.string().length(64)}).strict();
