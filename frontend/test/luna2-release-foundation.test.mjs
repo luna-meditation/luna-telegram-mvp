@@ -20,7 +20,7 @@ test('Luna 2.0 production profile checks exact SQL review hashes; the old profil
 test('Luna 2.3 memory release is explicit, backup-gated and cannot enable unfinished paid features',()=>{
  const script=readFileSync('scripts/build-production.mjs','utf8');
  assert.match(script,/\['luna23','luna24','luna25','luna251','luna30','luna31','luna32','luna33','luna34'\]\.includes\(capabilityProfile\)\?\['PERSONAL_MEMORY'\]/);
- assert.match(script,/capabilityProfile=\['luna35','luna40'\]\.includes\(profile\)\?'luna34':profile/);
+ assert.match(script,/capabilityProfile=\['luna35','luna40','luna41'\]\.includes\(profile\)\?'luna34':profile/);
  assert.match(script,/if\(profile==='luna40'\)verifyLuna40ReleaseEvidence/);
  assert.match(script,/if\(profile==='luna35'\)verifyLuna35ReleaseEvidence/);
  assert.match(script,/review\.backupRestorePasses,2/);

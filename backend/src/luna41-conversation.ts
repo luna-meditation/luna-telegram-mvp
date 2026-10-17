@@ -10,7 +10,8 @@ export function attachmentMode(input:{mode?:unknown;readingId?:string;chartId?:s
 export function readyMeditationCopy(message:string,language:'en'|'ru',hasCard:boolean){
  if(!hasCard)return message;
  const sentences=message.split(/(?<=[.!?])(?=\s)/),question=/^(?:would you like (?:me|us) to (?:prepare|open|play|start)|shall i (?:prepare|open|play|start)|do you want me to (?:prepare|open|play|start)|if you (?:want|would like) to (?:try|start)|хочешь[\s,]*(?:чтобы я|я) (?:подготов|откр|включ|запуст)|если хочешь (?:попробовать|начать).{0,60}(?:дай знать|скажи|напиши))/i;
- const kept=sentences.filter(s=>!question.test(s.trim())).join('').trim();
+ const duplicateCardOffer=/^(?:would you like (?:me|us) to (?:attach|show) (?:the |this |a |its |your )?(?:meditation |practice )?card|хочешь[,\s]+(?:(?:чтобы я|я)[,\s]+)?(?:прикрепить|показать)[,\s]+карточк)/i;
+ const kept=sentences.filter(s=>!question.test(s.trim())&&!duplicateCardOffer.test(s.trim())).join('').trim();
  return kept||(language==='ru'?'Подобрала практику под твой запрос. Доступные действия — в её карточке.':'I selected a practice for your request. Use its card for the available actions.');
 }
 export const automaticConversationInstructions=`LUNA_CONVERSATION_V4_1

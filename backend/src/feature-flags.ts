@@ -9,6 +9,7 @@ export const backendFeatureFlags: BackendFeatureFlags = Object.freeze({
   moon_seeds_wallet_v2: env.FEATURE_MOON_SEEDS_WALLET_V2,
   moon_seeds_purchases: env.FEATURE_MOON_SEEDS_PURCHASES,
   breathwork_audio: env.FEATURE_BREATHWORK_AUDIO,
+  breathwork_guided: env.FEATURE_BREATHWORK_GUIDED,
   garden_atomic: env.FEATURE_GARDEN_ATOMIC,
   personalization: env.FEATURE_PERSONALIZATION,
   personal_memory: env.FEATURE_PERSONAL_MEMORY,

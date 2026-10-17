@@ -32,6 +32,7 @@ test('all Luna 2.0 feature flags are disabled unless explicitly enabled', () => 
     moon_seeds_wallet_v2: false,
     moon_seeds_purchases: false,
     breathwork_audio: false,
+    breathwork_guided: false,
     personalization: false,
     personal_memory: false,
     cosmos_v2: false,

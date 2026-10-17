@@ -26,6 +26,11 @@ let authFile=null,expiresAt=null;
 let evaluationAuthFile=null;
 let voiceAuthFile=null;
 let actionAuthFile=null;
+if(process.env.LUNA41_FOUNDATION_REVIEW==='true'){
+ assert.ok(luna41);const nonce=randomBytes(32).toString('hex'),authSha256=createHash('sha256').update(nonce).digest('hex');expiresAt=new Date(Date.now()+8*60*60000).toISOString();
+ for(const readOnly of [false,true]){const name=readOnly?'luna41-qa-status':'luna41-qa-background';await build({...options,stdin:{contents:`import {run} from '${source}/backend/test/luna41-staging-foundation-worker.mjs';export default async function(request,context){return run(request,context,${JSON.stringify({authSha256,expiresAt,sourceCommit:commit,readOnly})});}${readOnly?'':'export const config={background:true};'}`,resolveDir:source,sourcefile:name+'.mjs'},outfile:functions+'/'+name+'.mjs'});}
+ evaluationAuthFile=directory+'/luna41-qa-command-private.json';await writeFile(evaluationAuthFile,JSON.stringify({nonce,expiresAt}),{mode:0o600,flag:'wx'});
+}
 if(process.env.LUNA41_ACTION_APPROVED==='four_calls_usd0.02'){
  assert.ok(luna41);const nonce=randomBytes(32).toString('hex'),authSha256=createHash('sha256').update(nonce).digest('hex'),actionExpiresAt=new Date(Date.now()+8*60*60000).toISOString();
  for(const readOnly of [false,true]){const name=readOnly?'luna41-action-status':'luna41-action-background';await build({...options,stdin:{contents:`import {run} from '${source}/backend/test/luna41-staging-actions.mjs';export default async function(request,context){return run(request,context,${JSON.stringify({authSha256,expiresAt:actionExpiresAt,sourceCommit:commit,readOnly})});}${readOnly?'':'export const config={background:true};'}`,resolveDir:source,sourcefile:name+'.mjs'},outfile:functions+'/'+name+'.mjs'});}
@@ -37,6 +42,7 @@ if(process.env.LUNA41_VOICE_APPROVED==='synthetic_audio_usd0.05'){
  voiceAuthFile=directory+'/luna41-voice-command-private.json';await writeFile(voiceAuthFile,JSON.stringify({nonce,expiresAt:voiceExpiresAt}),{mode:0o600,flag:'wx'});
 }
 if(process.env.LUNA41_EVALUATION_APPROVED==='400_calls_2_usd'){
+ assert.notEqual(process.env.LUNA41_FOUNDATION_REVIEW,'true','Use the provider-free foundation worker after paid evaluation is finished');
  assert.ok(luna41,'Evaluation belongs only to the Luna 4.1 staging artifact');
  const nonce=randomBytes(32).toString('hex'),authSha256=createHash('sha256').update(nonce).digest('hex');expiresAt=new Date(Date.now()+8*60*60000).toISOString();
  for(const readOnly of [false,true]){const name=readOnly?'luna41-qa-status':'luna41-qa-background';await build({...options,stdin:{contents:`import {run} from '${source}/backend/test/luna41-staging-evaluation.mjs';export default async function(request,context){return run(request,context,${JSON.stringify({authSha256,expiresAt,sourceCommit:commit,readOnly})});}${readOnly?'':'export const config={background:true};'}`,resolveDir:source,sourcefile:name+'.mjs'},outfile:functions+'/'+name+'.mjs'});}

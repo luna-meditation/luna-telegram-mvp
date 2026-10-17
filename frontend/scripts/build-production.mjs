@@ -9,6 +9,7 @@ import {createHash} from 'node:crypto';
 import {verifyLuna34ReleaseEvidence} from './luna34-release-gates.mjs';
 import {verifyLuna35ReleaseEvidence} from './luna35-release-gates.mjs';
 import {verifyLuna40ReleaseEvidence} from './luna40-release-gates.mjs';
+import {verifyLuna41ReleaseEvidence} from './luna41-release-gates.mjs';
 import {releaseSourceDigest} from './release-source-digest.mjs';
 assert.equal(process.versions.node.split('.')[0],'22','Production requires Node.js 22');
 const frontend=resolve(dirname(fileURLToPath(import.meta.url)),'..');
@@ -16,7 +17,7 @@ const api=new URL(process.env.VITE_API_URL?.trim()||'https://invalid.invalid');
 assert.ok(api.protocol==='https:'&&!['invalid.invalid','localhost','127.0.0.1','::1'].includes(api.hostname),'Provide the verified production VITE_API_URL');
 assert.ok(!api.username&&!api.password&&!api.search&&!api.hash,'The public API URL must not carry credentials or tokens');
 const profile=process.env.LUNA_RELEASE_PROFILE??'tarot-phase2';
-const capabilityProfile=['luna35','luna40'].includes(profile)?'luna34':profile;
+const capabilityProfile=['luna35','luna40','luna41'].includes(profile)?'luna34':profile;
 assert.ok(['luna24','luna25','luna251','luna30','luna31','luna32','luna33','luna34'].includes(capabilityProfile)||!process.env.VITE_FEATURE_AI_CENTRAL_EXPERIENCE||process.env.VITE_FEATURE_AI_CENTRAL_EXPERIENCE==='false','Luna development is not approved for production');
 assert.ok(['tarot-phase2','luna2','luna21','luna23','luna24','luna25','luna251','luna30','luna31','luna32','luna33','luna34'].includes(capabilityProfile),'Unknown approved release profile');
 const foundation=['PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI'];
@@ -91,6 +92,11 @@ if(profile==='luna33'){
 if(profile==='luna34')verifyLuna34ReleaseEvidence(JSON.parse(readFileSync(process.env.LUNA_RELEASE_DB_REVIEW,'utf8')),resolve(frontend,'..'));
 if(profile==='luna35')verifyLuna35ReleaseEvidence(JSON.parse(readFileSync(process.env.LUNA_RELEASE_DB_REVIEW,'utf8')),resolve(frontend,'..'));
 if(profile==='luna40')verifyLuna40ReleaseEvidence(JSON.parse(readFileSync(process.env.LUNA_RELEASE_DB_REVIEW,'utf8')),resolve(frontend,'..'));
+if(profile==='luna41'){
+ assert.equal(process.env.VITE_FEATURE_ADMIN_V4,'true');assert.equal(process.env.VITE_FEATURE_COSMOS_V2,'true');
+ assert.ok(!process.env.VITE_FEATURE_BREATHWORK_GUIDED||process.env.VITE_FEATURE_BREATHWORK_GUIDED==='false');
+ verifyLuna41ReleaseEvidence(JSON.parse(readFileSync(process.env.LUNA_RELEASE_DB_REVIEW,'utf8')),resolve(frontend,'..'));
+}
 if(profile==='luna32'){
  const reviewPath=process.env.LUNA_RELEASE_DB_REVIEW;
  assert.ok(reviewPath,'Luna 3.2 requires verified production recovery and staging evidence');

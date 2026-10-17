@@ -18,6 +18,7 @@ const env={PATH:process.env.PATH,HOME:process.env.HOME,TMPDIR:process.env.TMPDIR
  NODE_ENV:'production',VITE_API_URL:'',VITE_BOT_USERNAME:process.env.VITE_BOT_USERNAME??'',
  VITE_FEATURE_ADMIN_V4:['luna40','luna41'].includes(requestedProfile)?'true':'false',
  VITE_FEATURE_COSMOS_V2:requestedProfile==='luna41'?'true':'false',
+ VITE_FEATURE_BREATHWORK_GUIDED:'false', // Device audition pending; local QA may opt in.
  VITE_COMMIT_SHA:commit,VITE_DEPLOY_ENV:'staging',
  ...Object.fromEntries(enabled.map(key=>[`VITE_FEATURE_${key}`,'true'])),
  ...Object.fromEntries(disabled.map(key=>[`VITE_FEATURE_${key}`,'false']))};

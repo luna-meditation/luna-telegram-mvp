@@ -4547,12 +4547,13 @@ function BreathCirclePage({
   const [savingError, setSavingError] = useState('');
   const startedAtRef = useRef<number | null>(launch?Date.now():null);
   const [sessionStarted, setSessionStarted] = useState(Boolean(launch));
-  const breathAudio=useBreathAudio(redesigned&&featureFlags.breathwork_audio);
+  const breathAudio=useBreathAudio(redesigned&&featureFlags.breathwork_audio,language,featureFlags.breathwork_guided);
   useEffect(()=>{if(launch)breathAudio.start();},[]);
   useEffect(()=>{if(!running)breathAudio.pause();},[running]);
   const durationSeconds = minutes * 60;
   const practice = breathPractices.find((item) => item.id === mode) ?? breathPractices[0];
   const phase = breathPhaseAt(practice, elapsed);
+  useEffect(()=>{breathAudio.cue(mode,elapsed,running);},[mode,elapsed,running,language,breathAudio.mode]);
   const hasStarted = (redesigned ? sessionStarted : elapsed > 0) && !done;
   const proof=useRef<{clientId:string;promise?:Promise<{id:string}>;previous?:Promise<unknown>}>({clientId:crypto.randomUUID()});
   const ensureProof=()=>{const current=proof.current;return current.promise??(current.promise=Promise.resolve(current.previous).then(()=>startVerifiedBreath(current.clientId,mode,durationSeconds,initData)));};
@@ -4642,7 +4643,7 @@ function BreathCirclePage({
         </div>
       </section>
 
-      {redesigned && <BreathAudioModes language={language} featureEnabled={featureFlags.breathwork_audio} mode={breathAudio.mode} onMode={mode=>breathAudio.setMode(mode,running)} volume={breathAudio.volume} onVolume={breathAudio.setVolume} muted={breathAudio.muted} onMute={()=>breathAudio.setMuted(value=>!value)} error={breathAudio.error}/>}
+      {redesigned && <BreathAudioModes language={language} featureEnabled={featureFlags.breathwork_audio} guidedAvailable={featureFlags.breathwork_guided} mode={breathAudio.mode} onMode={mode=>breathAudio.setMode(mode,running)} volume={breathAudio.volume} onVolume={breathAudio.setVolume} muted={breathAudio.muted} onMute={()=>breathAudio.setMuted(value=>!value)} error={breathAudio.error}/>}
 
       <section className="breath-circle-controls">
         {redesigned?<PracticePicker value={mode} onChange={setMode} disabled={running||hasStarted} language={language} registerBackHandler={registerBackHandler}/>:<label className="breath-practice-select">

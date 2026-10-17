@@ -28,6 +28,7 @@ const outputDirectory = luna41Preview?'dist-luna41-preview':luna40Preview?'dist-
 const output = resolve(frontend, outputDirectory);
 process.env.VITE_FEATURE_COSMOS_V2=luna41Preview?'true':'false';
 process.env.VITE_FEATURE_ADMIN_V4=luna40Preview?'true':'false';
+process.env.VITE_FEATURE_BREATHWORK_GUIDED=luna41Preview?'true':'false';
 const flagNames = ['AI_CENTRAL_EXPERIENCE','PERSONAL_MEMORY','NEW_NAVIGATION','TAROT_DAILY','TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI','DAILY_CARD_V2','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2'];
 if(!process.argv.includes('--serve-only')){
 const build = spawn(process.execPath,[resolve(frontend,'node_modules/vite/bin/vite.js'),'build','--outDir',outputDirectory],{

@@ -70,6 +70,7 @@ const envSchema = z.object({
   FEATURE_MOON_SEEDS_WALLET_V2: envBoolean.default(false),
   FEATURE_MOON_SEEDS_PURCHASES: envBoolean.default(false),
   FEATURE_BREATHWORK_AUDIO: envBoolean.default(false),
+  FEATURE_BREATHWORK_GUIDED: envBoolean.default(false),
   LUNA30_REFERRALS_ENABLED: envBoolean.default(false),
   LUNA30_REFERRAL_REWARDS_ENABLED: envBoolean.default(false),
   LUNA30_PROGRESSION_ENABLED: envBoolean.default(false),
