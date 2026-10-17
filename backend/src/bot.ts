@@ -47,16 +47,6 @@ function miniAppButton(language: BotLanguage) {
   return Markup.button.webApp(botCopy[language].openApp, env.MINI_APP_URL);
 }
 
-function mainKeyboard(language: BotLanguage) {
-  return Markup.inlineKeyboard([
-    [miniAppButton(language)],
-    [
-      Markup.button.callback(botCopy[language].tryFreePractice, 'open_free'),
-      Markup.button.callback(botCopy[language].explorePremium, 'plans')
-    ]
-  ]);
-}
-
 function plansKeyboard(language: BotLanguage, plan: string) {
   if (plan === 'Lifetime') return Markup.inlineKeyboard([[miniAppButton(language)]]);
   if (plan === 'Monthly') {

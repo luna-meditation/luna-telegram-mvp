@@ -22,6 +22,9 @@ import {luna34Router} from './luna34-router.js';
 import {luna35Router} from './luna35-router.js';
 import {createLuna34Referrals} from './luna34-referrals.js';
 import {createLuna32Admin} from './luna32-admin.js';
+import {createLanguagePreferences} from './luna40-language.js';
+import {acknowledgeUi} from './luna40-actions.js';
+import {createAdmin40Router} from './luna40-admin.js';
 import { bot, configureTelegramBot, createStarsInvoiceLink, sendStarsInvoice } from './bot.js';
 import {
   createMeditation,
@@ -107,7 +110,10 @@ if (env.STAGING_MODE) {
     res.setHeader('X-Robots-Tag','noindex, nofollow, noarchive');
     next();
   });
-  app.use(['/api/payments', '/api/admin', '/telegram'], (_req, res) => {
+  app.use(['/api/payments', '/api/admin', '/telegram'], (req, res,next) => {
+    // Only the new explicitly enabled, separately authorized admin may run in QA.
+    // Legacy grants, deletion, uploads, payment and webhook routes stay blocked.
+    if(env.FEATURE_ADMIN_V4&&req.baseUrl==='/api/admin'&&(req.path==='/me'||req.path==='/v4'||req.path.startsWith('/v4/'))){next();return;}
     res.status(403).json({code:'disabled_in_staging'});
   });
   app.use('/api', requireTelegramWebApp, stagingQaOnly(stagingTelegramIds(env.STAGING_TELEGRAM_IDS)));
@@ -224,6 +230,8 @@ function storagePathFromPublicUrl(publicUrl?: string | null, bucket = 'avatars')
 }
 
 app.use('/api/admin', rateLimit({ windowMs: 60_000, max: 120 }));
+app.use('/api/admin',(req,res,next)=>{if(env.FEATURE_ADMIN_V4&&!req.path.startsWith('/v4/')&&!['GET','HEAD','OPTIONS'].includes(req.method)){res.status(409).json({code:'legacy_admin_mutation_disabled',error:'Use the role-checked, audited Admin 4.0 operation. Legacy overwrite, delete and configuration mutations are disabled.'});return;}next();});
+app.use('/api/admin/v4',requireTelegramWebApp,createAdmin40Router(supabase,{ownerId:env.ADMIN_TELEGRAM_ID,enabled:env.FEATURE_ADMIN_V4,mutationsEnabled:env.FEATURE_ADMIN_V4_MUTATIONS,storageOrigin:env.SUPABASE_URL,environment:env.STAGING_MODE?'staging':'production',commit:process.env.COMMIT_SHA??process.env.RAILWAY_GIT_COMMIT_SHA,model:env.AI_CHAT_MODEL,flags:Object.fromEntries(Object.entries(env).filter(([key,value])=>typeof value==='boolean'&&(key.startsWith('FEATURE_')||key.startsWith('LUNA')))) as Record<string,boolean>}));
 app.use('/api/payments', rateLimit({ windowMs: 60_000, max: 30 }));
 app.use('/api/luna', rateLimit({ windowMs: 60_000, max: 30 }));
 app.use('/api/client-events', rateLimit({ windowMs: 60_000, max: 120 }));
@@ -852,6 +860,7 @@ app.use('/api/universe',requireTelegramWebApp,rateLimit({windowMs:60_000,max:30}
 app.post('/api/moon-garden/dev', requireTelegramWebApp, async (req, res, next) => {
   try {
     if (!assertAdmin(req, res)) return;
+    if(env.FEATURE_ADMIN_V4){res.status(409).json({code:'legacy_garden_mutation_disabled',error:'Use audited wallet adjustments; garden progress and earned totals must not be reset.'});return;}
     const authReq = req as AuthenticatedRequest;
     const result = await updateMoonGardenDevState(authReq.telegramUser.telegram_id, {
       action: String(req.body?.action ?? ''),
@@ -884,6 +893,11 @@ app.post('/api/profile/language', requireTelegramWebApp, async (req, res, next) 
     next(error);
   }
 });
+
+const languagePreferences=createLanguagePreferences(supabase);
+app.post('/api/luna/actions/ack',requireTelegramWebApp,rateLimit({windowMs:60_000,max:60}),async(req,res,next)=>{try{res.setHeader('Cache-Control','private, no-store');res.json(await acknowledgeUi(supabase,(req as AuthenticatedRequest).telegramUser.telegram_id,req.body));}catch(error){next(error);}});
+app.get('/api/profile/language-preference',requireTelegramWebApp,async(req,res,next)=>{try{res.setHeader('Cache-Control','private, no-store');res.json(await languagePreferences.read((req as AuthenticatedRequest).telegramUser.telegram_id));}catch(error){next(error);}});
+app.put('/api/profile/language-preference',requireTelegramWebApp,rateLimit({windowMs:60_000,max:30}),async(req,res,next)=>{try{const user=(req as AuthenticatedRequest).telegramUser;await upsertUser(user);res.setHeader('Cache-Control','private, no-store');res.json(await languagePreferences.update(user.telegram_id,req.body));}catch(error){next(error);}});
 
 app.post('/api/profile/goals', requireTelegramWebApp, async (req, res, next) => {
   try {

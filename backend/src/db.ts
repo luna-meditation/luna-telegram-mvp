@@ -212,14 +212,16 @@ export async function getUserAccess(telegramId: number) {
   }
   const hasPaidPremium = Boolean(data?.lifetime_access || activeUntil > now);
   const beta=env.LUNA32_ENABLED?betaEntitlement(await readLuna32Settings(supabase),now):null;
-  const hasPremium=hasPaidPremium||Boolean(beta?.active&&beta.features.includes('meditations'));
+  const administrative=env.FEATURE_ADMIN_V4_MUTATIONS?await (await import('./luna40-grants.js')).readAdminGrants(supabase,telegramId):null;
+  const hasPremium=hasPaidPremium||Boolean(administrative?.active)||Boolean(beta?.active&&beta.features.includes('meditations'));
 
   return {
     user: data,
     hasPremium,
     hasPaidPremium,
+    administrative,
     beta,
-    plan: data?.lifetime_access ? 'Lifetime' : activeUntil > now ? 'Monthly' : 'Free'
+    plan: data?.lifetime_access ? 'Lifetime' : activeUntil > now ? 'Monthly' : administrative?.active ? 'Gift Premium' : 'Free'
   };
 }
 

@@ -8,6 +8,6 @@ export function independentPracticeTopic(message:string):'meditation'|'wellbeing
 export function astrologyWorkflowIntent(message:string,hasAttachment:boolean):'natal'|'compatibility'|null{
  const choose=/\b(?:check|calculate|compare|explore|show|start)\b|(?:проверь|рассчита|сравни|посмотр|покажи|хочу (?:проверить|сравнить|узнать))/i.test(message);
  if(/compatibility|совместим/i.test(message)&&(choose||/^(?:compatibility|совместимость)\s+(?:with|с)\s/i.test(message.trim())))return 'compatibility';
- if(!hasAttachment&&/natal chart|birth chart|натальн.{0,12}карт/i.test(message)&&/explain|show|open|explore|объясни|покажи|открой|посмотр/i.test(message))return 'natal';
+ if((!hasAttachment||/\b(?:show|open)\b|покажи|открой/i.test(message))&&/natal chart|birth chart|натальн.{0,12}карт/i.test(message)&&/explain|show|open|explore|объясни|покажи|открой|посмотр/i.test(message))return 'natal';
  return null;
 }

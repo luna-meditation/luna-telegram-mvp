@@ -3,6 +3,7 @@ import {FoundationError} from './foundation-error.js';
 import {symbolicChartFacts,astrologyReportSchema} from './luna30-astrology-report-policy.js';
 import {calculateSynastry,type NatalCalculation} from './luna30-astrology-engine.js';
 import {astrologyAttachmentSchema,type AstrologyAttachment} from './luna31-consultation.js';
+import {compatibilityReflection} from './luna40-compatibility.js';
 export async function verifiedAstrologyChatContext(db:SupabaseClient,owner:number,input:string|AstrologyAttachment){
  const attachment=astrologyAttachmentSchema.parse(typeof input==='string'?{chartId:input}:input);
  const gate=await db.from('luna30_release_settings').select('astrology_enabled,astrology_ai_enabled').eq('id',true).single();
@@ -19,5 +20,5 @@ export async function verifiedAstrologyChatContext(db:SupabaseClient,owner:numbe
  };
  let report:unknown=null;
  if(attachment.reportId){const result=await db.from('luna30_astrology_reports').select('id,first_chart_id,second_chart_id,report').eq('telegram_id',owner).eq('id',attachment.reportId).maybeSingle();if(result.error||!result.data||result.data.first_chart_id!==first.id||(result.data.second_chart_id??null)!==(second?.id??null))throw new FoundationError(404,'report_not_found','Reopen the saved report.');const saved=astrologyReportSchema.parse(result.data.report);report={summary:saved.summary.slice(0,400),sections:saved.sections.map(s=>({id:s.id,title:s.title,text:s.text.slice(0,200)})),question:saved.question};}
- return {first:compact(first.calculation),...(second?{second:compact(second.calculation),synastry:{...calculateSynastry(first.calculation,second.calculation),aspects:calculateSynastry(first.calculation,second.calculation).aspects.sort((a,b)=>a.orb-b.orb).slice(0,12)}}:{}),selectedPlanet:attachment.planet??null,selectedAspect:selectedAspect??null,savedReport:report};
+ return {first:compact(first.calculation),...(second?{second:compact(second.calculation),synastry:{...calculateSynastry(first.calculation,second.calculation),aspects:calculateSynastry(first.calculation,second.calculation).aspects.sort((a,b)=>a.orb-b.orb).slice(0,12)}}:{}),relationship:attachment.relationship??null,relationshipClarificationRequired:Boolean(second&&!attachment.relationship),compatibilityReflection:second&&attachment.relationship?compatibilityReflection(calculateSynastry(first.calculation,second.calculation),attachment.relationship):null,selectedPlanet:attachment.planet??null,selectedAspect:selectedAspect??null,savedReport:report};
 }

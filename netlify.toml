@@ -6,13 +6,14 @@
   NODE_VERSION = "22"
   PNPM_VERSION = "9.15.0"
 
-# Approved Luna 3.4 release; build requires fresh recovery, mobile and AI evidence.
+# Luna 4.0 release; build requires fresh recovery, mobile and AI evidence.
 [context.production]
   command = "pnpm --filter @luna/frontend build:production"
 
 [context.production.environment]
-  LUNA_RELEASE_PROFILE = "luna35"
-  LUNA_RELEASE_DB_REVIEW = "../qa/luna35-release-review.json"
+  LUNA_RELEASE_PROFILE = "luna40"
+  LUNA_RELEASE_DB_REVIEW = "../qa/luna40-release-review.json"
+  VITE_FEATURE_ADMIN_V4 = "true"
   VITE_FEATURE_AI_CENTRAL_EXPERIENCE = "true"
   VITE_FEATURE_PERSONALIZATION = "true"
   VITE_FEATURE_PERSONAL_MEMORY = "true"

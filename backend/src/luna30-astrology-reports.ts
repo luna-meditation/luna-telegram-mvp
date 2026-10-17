@@ -13,16 +13,16 @@ export function createAstrologyReportService(db:SupabaseClient,options:{enabled:
  async function available(){if(!options.enabled())throw new FoundationError(404,'feature_disabled','AI reports are not available yet.');const {data,error}=await db.from('luna30_release_settings').select('astrology_enabled,astrology_ai_enabled').eq('id',true).single();if(error)throw unavailable();if(!data.astrology_enabled||!data.astrology_ai_enabled)throw new FoundationError(404,'feature_disabled','AI reports are not available yet.');}
  async function cached(owner:number,key:string){const value=await db.from('luna30_astrology_reports').select(fields).eq('telegram_id',owner).eq('cache_key',key).maybeSingle();if(value.error)throw unavailable();return value.data;}
  return {
-  async open(owner:number,firstId:string,secondId:string|null,language:'en'|'ru'){
+  async open(owner:number,firstId:string,secondId:string|null,language:'en'|'ru',relationship?:import('./luna40-compatibility.js').RelationshipKind){
    await available();await chart(owner,firstId);if(secondId)await chart(owner,secondId);
-   return {report:await cached(owner,astrologyReportKey(owner,firstId,secondId,secondId?'compatibility':'portrait',language)),cached:true};
+   return {report:await cached(owner,astrologyReportKey(owner,firstId,secondId,secondId?'compatibility':'portrait',language,relationship)),cached:true};
   },
-  async generate(owner:number,input:{firstChartId:string;secondChartId?:string;language:'en'|'ru';consent:true}){
-   return withAiOperation(db,owner,'report:'+astrologyReportKey(owner,input.firstChartId,input.secondChartId??null,input.secondChartId?'compatibility':'portrait',input.language),async()=>{
+  async generate(owner:number,input:{firstChartId:string;secondChartId?:string;language:'en'|'ru';consent:true;relationship?:import('./luna40-compatibility.js').RelationshipKind}){
+   return withAiOperation(db,owner,'report:'+astrologyReportKey(owner,input.firstChartId,input.secondChartId??null,input.secondChartId?'compatibility':'portrait',input.language,input.relationship),async()=>{
    await available();const kind:AstrologyReportKind=input.secondChartId?'compatibility':'portrait';
    const first=await chart(owner,input.firstChartId),second=input.secondChartId?await chart(owner,input.secondChartId):null;
    if(second?.profile_id===first.profile_id)throw new FoundationError(400,'different_charts_required','Select two different profiles.');
-   const key=astrologyReportKey(owner,first.id,second?.id??null,kind,input.language),previous=await cached(owner,key);if(previous)return {report:previous,cached:true};
+   const key=astrologyReportKey(owner,first.id,second?.id??null,kind,input.language,input.relationship),previous=await cached(owner,key);if(previous)return {report:previous,cached:true};
    const {data:claim,error}=await db.rpc('luna30_claim_astrology_report',{p_owner:owner,p_first:first.id,p_second:second?.id??null,p_kind:kind,p_language:input.language,p_key:key,p_daily_chat_limit:await options.dailyLimit(owner)});
    if(error||!claim)throw unavailable();
    if(!claim.acquired){const result=await cached(owner,key);if(result)return {report:result,cached:true};throw new FoundationError(claim.status==='limit'?429:409,claim.status==='limit'?'daily_limit':'report_in_progress',claim.status==='failed'?'This attempt needs review before retrying. No extra generation was started.':'A report is already being prepared, or the daily limit was reached.');}
@@ -30,11 +30,11 @@ export function createAstrologyReportService(db:SupabaseClient,options:{enabled:
    // remains failed/pending until reviewed; opening the page cannot spend tokens.
    try{
     const subject=await db.from('luna30_birth_profiles').select('subject_kind').eq('telegram_id',owner).eq('id',first.profile_id).single();if(subject.error)throw unavailable();
-    const personal=subject.data.subject_kind==='self';
+    const personal=subject.data.subject_kind==='self'&&kind==='portrait';
     const before=personal?await db.from('luna_personal_profiles').select('updated_at,ai_context_consent').eq('telegram_id',owner).maybeSingle():null;
     if(before?.error)throw unavailable();
     const profile=personal?await options.personalProfile(owner):null;
-    const body=buildAstrologyReportRequest({kind,language:input.language,first:first.calculation as NatalCalculation,...(second?{second:second.calculation as NatalCalculation}:{}),profile});
+    const body=buildAstrologyReportRequest({kind,relationship:input.relationship,language:input.language,first:first.calculation as NatalCalculation,...(second?{second:second.calculation as NatalCalculation}:{}),profile});
     const response=await(options.transport??requestLunaResponse)(body,AbortSignal.timeout(45000));if(!response.ok)throw unavailable();
     const payload=await response.json(),meter=stagingAiMeterRecord(payload);
     if(!meter||meter.estimated_cost===null)throw unavailable();

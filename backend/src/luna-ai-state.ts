@@ -126,27 +126,29 @@ export function updateConversationState(input: {
   userDecision: string;
   language: 'en' | 'ru';
   clearMeditationContext?: boolean;
+  resetActivityContext?: boolean;
 }) {
+  const previous = input.resetActivityContext ? emptyState() : input.previous;
   const question = lastAssistantQuestion(input.assistantMessage);
   const meditationId = input.meditationId
-    ?? (input.clearMeditationContext ? null : input.previous.current_meditation_id);
+    ?? (input.clearMeditationContext ? null : previous.current_meditation_id);
   const recommendationId = input.meditationId
-    ?? (input.clearMeditationContext ? null : input.previous.current_recommendation_id);
+    ?? (input.clearMeditationContext ? null : previous.current_recommendation_id);
   return {
     version: 1,
-    current_topic: input.topic ?? input.previous.current_topic,
-    current_goal: input.goal ?? input.previous.current_goal,
+    current_topic: input.topic ?? previous.current_topic,
+    current_goal: input.goal ?? previous.current_goal,
     current_intent: input.intent,
     current_meditation_id: meditationId,
     current_recommendation_id: recommendationId,
-    previous_assistant_question: question ?? input.previous.previous_assistant_question,
+    previous_assistant_question: question ?? previous.previous_assistant_question,
     previous_assistant_question_hash: question
       ? clarificationHash(question)
-      : input.previous.previous_assistant_question_hash,
-    last_user_decision: input.userDecision.trim().slice(0, 160) || input.previous.last_user_decision,
+      : previous.previous_assistant_question_hash,
+    last_user_decision: input.userDecision.trim().slice(0, 160) || previous.last_user_decision,
     assistant_messages_since_question: question
       ? 0
-      : Math.min(20, input.previous.assistant_messages_since_question + 1),
+      : Math.min(20, previous.assistant_messages_since_question + 1),
     language: input.language,
     updated_at: new Date().toISOString()
   } satisfies LunaConversationState;

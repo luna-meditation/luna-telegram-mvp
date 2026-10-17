@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url';
 assert.equal(process.versions.node.split('.')[0], '22', 'Use Node.js 22');
 const frontend = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const tarotPreview = process.argv.includes('--tarot');
-const luna34Preview=process.argv.includes('--luna34');
+const luna40Preview=process.argv.includes('--luna40');
+const luna34Preview=luna40Preview||process.argv.includes('--luna34');
 const luna33Preview=luna34Preview||process.argv.includes('--luna33');
 const luna32Preview=luna33Preview||process.argv.includes('--luna32');
 const luna31Preview=luna32Preview||process.argv.includes('--luna31');
@@ -22,7 +23,7 @@ const productionFlags=process.argv.includes('--production-flags');
 const refinementPreview=process.argv.includes('--refinement')||luna21Preview;
 const legacyPreview = process.argv.includes('--legacy');
 assert.ok(!(tarotPreview&&legacyPreview),'Choose either Tarot or legacy preview');
-const outputDirectory = luna34Preview?'dist-luna34-preview':luna33Preview?'dist-luna33-preview':luna32Preview?'dist-luna32-preview':luna31Preview?'dist-luna31-preview':evolutionPreview?'dist-luna30-preview':centralPreview?'dist-luna24-preview':memoryPreview?'dist-memory-preview':productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
+const outputDirectory = luna40Preview?'dist-staging':luna34Preview?'dist-luna34-preview':luna33Preview?'dist-luna33-preview':luna32Preview?'dist-luna32-preview':luna31Preview?'dist-luna31-preview':evolutionPreview?'dist-luna30-preview':centralPreview?'dist-luna24-preview':memoryPreview?'dist-memory-preview':productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
 const output = resolve(frontend, outputDirectory);
 const flagNames = ['AI_CENTRAL_EXPERIENCE','PERSONAL_MEMORY','NEW_NAVIGATION','TAROT_DAILY','TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI','DAILY_CARD_V2','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2'];
 if(!process.argv.includes('--serve-only')){

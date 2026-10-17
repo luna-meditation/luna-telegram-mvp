@@ -4,7 +4,7 @@ import {FoundationError} from './foundation-error.js';
 import {readLuna32Settings,successfulAiLimit} from './luna32-runtime.js';
 import {stagingAiMeterRecord} from './staging-ai-meter.js';
 import {readCommercialAllowance,reserveCommercialAllowance} from './luna34-allowances.js';
-type Operation={db:SupabaseClient;owner:number;key:string;lease:string;calls:number;limit:number;commercial?:boolean;allowanceId?:string|null};
+type Operation={db:SupabaseClient;owner:number;key:string;lease:string;calls:number;limit:number;commercial?:boolean;allowanceId?:string|null;adminQuota?:boolean};
 const operationContext=new AsyncLocalStorage<Operation>();
 export const currentAiSafetyLimit=()=>operationContext.getStore()?.commercial?500:undefined;
 export function providerCostCeiling(body:unknown){
@@ -23,11 +23,12 @@ export async function withAiOperation<T>(db:SupabaseClient,owner:number,key:stri
  const user=await db.from('users').select('lifetime_access,active_until').eq('telegram_id',owner).maybeSingle();if(user.error||!user.data)throw new FoundationError(503,'access_unavailable','Could not verify your access.');
  let paid=user.data.lifetime_access||Date.parse(user.data.active_until??'')>Date.now();
  if(!paid&&env.LUNA30_PREMIUM_ENTITLEMENTS_ENABLED){const period=await db.from('luna30_entitlement_periods').select('id').eq('telegram_id',owner).is('revoked_at',null).lte('period_start',new Date().toISOString()).gt('period_end',new Date().toISOString()).limit(1).maybeSingle();if(period.error)throw new FoundationError(503,'access_unavailable','Could not verify your access.');paid=Boolean(period.data);}
- const context:Operation={db,owner,key,lease:randomUUID(),calls:0,limit:successfulAiLimit(cfg,Boolean(paid),{free:env.AI_MAX_MESSAGES_PER_DAY,premium:env.AI_PREMIUM_MAX_MESSAGES_PER_DAY})};
+ const administrative=env.FEATURE_ADMIN_V4_MUTATIONS?await (await import('./luna40-grants.js')).readAdminGrants(db,owner):null;
+ const context:Operation={db,owner,key,lease:randomUUID(),calls:0,adminQuota:env.FEATURE_ADMIN_V4_MUTATIONS,limit:successfulAiLimit(cfg,Boolean(paid||administrative?.active),{free:env.AI_MAX_MESSAGES_PER_DAY,premium:env.AI_PREMIUM_MAX_MESSAGES_PER_DAY})};
  if(env.LUNA34_COMMERCIAL_QUOTAS_ENABLED){const allowance=await readCommercialAllowance(db,owner);if(allowance.enabled){context.commercial=true;context.limit=500;}}
  let completed=false;
  try{return await operationContext.run(context,async()=>{const result=await task();completed=success(result);return result;});}
- finally{if(context.calls){const result=await db.rpc('luna32_finish_ai_operation',{p_owner:owner,p_operation:key,p_lease:context.lease,p_success:completed});if(result.error)console.error('[Luna AI accounting]',{code:'operation_settlement_failed',lease:context.lease});}if(context.allowanceId){const settled=await db.rpc('luna34_settle_allowance',{p_owner:owner,p_request:context.allowanceId,p_operation:key,p_success:completed&&context.calls>0});if(settled.error)console.error('[Luna AI accounting]',{code:'allowance_settlement_failed',lease:context.lease});}}
+ finally{if(context.calls){const result=await db.rpc('luna32_finish_ai_operation',{p_owner:owner,p_operation:key,p_lease:context.lease,p_success:completed});if(result.error)console.error('[Luna AI accounting]',{code:'operation_settlement_failed',lease:context.lease});if(context.adminQuota&&!context.commercial){const settled=await db.rpc('luna40_finish_quota',{p_owner:owner,p_operation:key,p_lease:context.lease,p_success:completed});if(settled.error)console.error('[Luna AI accounting]',{code:'admin_quota_settlement_failed',lease:context.lease});}}if(context.allowanceId){const settled=await db.rpc('luna34_settle_allowance',{p_owner:owner,p_request:context.allowanceId,p_operation:key,p_success:completed&&context.calls>0});if(settled.error)console.error('[Luna AI accounting]',{code:'allowance_settlement_failed',lease:context.lease});}}
 }
 export function guardedProviderTransport(transport:(body:unknown,signal:AbortSignal)=>Promise<Response>){
  return async(body:unknown,signal:AbortSignal)=>{
@@ -35,7 +36,8 @@ export function guardedProviderTransport(transport:(body:unknown,signal:AbortSig
   const op=operationContext.getStore();if(!op)throw new FoundationError(503,'ai_accounting_context_missing','This AI action is unavailable.');
   const ceiling=providerCostCeiling(body);if(op.calls>=2)throw new FoundationError(503,'ai_tool_round_limit','This turn reached its bounded tool limit.');
   const id=randomUUID(),index=op.calls+1;
-  const reserve=await op.db.rpc('luna32_reserve_ai_attempt',{p_owner:op.owner,p_operation:op.key,p_lease:op.lease,p_call:index,p_attempt:id,p_model:(body as {model:string}).model,p_ceiling:ceiling,p_limit:op.limit});
+  const args={p_owner:op.owner,p_operation:op.key,p_lease:op.lease,p_call:index,p_attempt:id,p_model:(body as {model:string}).model,p_ceiling:ceiling,p_limit:op.limit};
+  const reserve=await (op.adminQuota&&!op.commercial?op.db.rpc('luna40_reserve_ai_attempt',args):op.db.rpc('luna32_reserve_ai_attempt',args));
   if(reserve.error||!reserve.data)throw new FoundationError(503,'ai_budget_unavailable','Generation is temporarily unavailable; saved results remain available.');
   const status=reserve.data.status;
   if(status!=='reserved')throw new FoundationError(['daily_limit','attempt_limit'].includes(status)?429:status==='in_progress'?409:503,status==='daily_limit'?'quota_exhausted':status==='attempt_limit'?'ai_attempt_limit':status==='in_progress'?'request_in_progress':status==='already_completed'?'ai_result_already_saved':'ai_global_budget','New AI generation is paused. Saved results and non-AI features remain available.');

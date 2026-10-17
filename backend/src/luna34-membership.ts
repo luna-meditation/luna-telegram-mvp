@@ -18,7 +18,8 @@ export async function readLuna34Membership(db:SupabaseClient,owner:number,checko
  if(!settings.data?.catalog||!isDeepStrictEqual(settings.data.catalog,luna34CommercialCatalog))throw new FoundationError(503,'catalog_review_required','The product catalog needs verification. Your current rights are unchanged.');
  const active=periods.data,days=active?Math.round((Date.parse(active.period_end)-Date.parse(active.period_start))/86400000):0;
  const membership=resolveMembership({lifetime:user.data.lifetime_access,legacyUntil:user.data.active_until,period:active&&[30,365].includes(days)?{start:active.period_start,end:active.period_end,days:days as 30|365}:null});
- return {catalog:settings.data.catalog as typeof luna34CommercialCatalog,membership,commercialEnabled:checkoutEnabled&&settings.data?.checkout_enabled===true&&settings.data.live_payment_verified===true&&settings.data.owner_approved===true,quotasEnabled:settings.data?.quotas_enabled===true,
+ const administrative=process.env.FEATURE_ADMIN_V4_MUTATIONS==='true'?await (await import('./luna40-grants.js')).readAdminGrants(db,owner):null;
+ return {catalog:settings.data.catalog as typeof luna34CommercialCatalog,membership,administrative,commercialEnabled:checkoutEnabled&&settings.data?.checkout_enabled===true&&settings.data.live_payment_verified===true&&settings.data.owner_approved===true,quotasEnabled:settings.data?.quotas_enabled===true,
   balance:balance.data?.moon_seeds_available??0,earned:balance.data?.moon_seeds_earned_total??0,
   transactions:ledger.error?null:ledger.data??[],purchases:receipts.data??[],newPurchases:newReceipts.error?null:newReceipts.data??[],notice:'New commercial conditions are prepared but not activated. Existing paid rights and balances are preserved.'};
 }

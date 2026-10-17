@@ -9,6 +9,7 @@ import {createAstrologyReportService} from './luna30-astrology-reports.js';
 import {getAiPersonalProfile} from './personal-memory.js';
 import {calculateCelestialMonth} from './luna30-astrology-engine.js';
 import {currentAiSafetyLimit} from './luna32-ai-accounting.js';
+import {relationshipKind} from './luna40-compatibility.js';
 export const luna30AstrologyRouter=Router();
 const service=createAstrologyService(supabase,()=>env.FEATURE_ASTROLOGY);
 const reports=createAstrologyReportService(supabase,{enabled:()=>env.FEATURE_ASTROLOGY&&env.LUNA30_ASTROLOGY_AI_ENABLED&&env.AI_CHAT_ENABLED&&Boolean(env.OPENAI_API_KEY),personalProfile:owner=>env.FEATURE_PERSONALIZATION?getAiPersonalProfile(owner,'astrology personal growth relationships'):Promise.resolve(null),dailyLimit:async owner=>currentAiSafetyLimit()??(await getLunaUsage(owner)).limit});
@@ -16,8 +17,8 @@ luna30AstrologyRouter.use(requireTelegramWebApp,(_req,res,next)=>{res.setHeader(
 // Every route below is behind the signature-verifying middleware above.
 const owner=(req:unknown)=>(req as AuthenticatedRequest).telegramUser.telegram_id;
 luna30AstrologyRouter.get('/calendar',async(req,res,next)=>{try{if(!env.LUNA32_ENABLED){res.status(404).json({code:'feature_disabled'});return;}await service.list(owner(req));res.json(calculateCelestialMonth(z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).parse(req.query.month)));}catch(e){next(e);}});
-luna30AstrologyRouter.get('/reports',async(req,res,next)=>{try{const input=z.object({firstChartId:z.string().uuid(),secondChartId:z.string().uuid().optional(),language:z.enum(['en','ru'])}).strict().parse(req.query);res.json(await reports.open(owner(req),input.firstChartId,input.secondChartId??null,input.language));}catch(e){next(e);}});
-luna30AstrologyRouter.post('/reports',async(req,res,next)=>{try{const input=z.object({firstChartId:z.string().uuid(),secondChartId:z.string().uuid().optional(),language:z.enum(['en','ru']),consent:z.literal(true)}).strict().parse(req.body);res.json(await reports.generate(owner(req),input));}catch(e){next(e);}});
+luna30AstrologyRouter.get('/reports',async(req,res,next)=>{try{const input=z.object({firstChartId:z.string().uuid(),secondChartId:z.string().uuid().optional(),language:z.enum(['en','ru']),relationship:relationshipKind.optional()}).strict().parse(req.query);res.json(await reports.open(owner(req),input.firstChartId,input.secondChartId??null,input.language,input.relationship));}catch(e){next(e);}});
+luna30AstrologyRouter.post('/reports',async(req,res,next)=>{try{const input=z.object({firstChartId:z.string().uuid(),secondChartId:z.string().uuid().optional(),language:z.enum(['en','ru']),consent:z.literal(true),relationship:relationshipKind.optional()}).strict().parse(req.body);res.json(await reports.generate(owner(req),input));}catch(e){next(e);}});
 luna30AstrologyRouter.get('/locations',async(req,res,next)=>{try{const q=z.string().max(80).parse(req.query.q??'');res.json(await service.locations(q));}catch(e){next(e);}});
 luna30AstrologyRouter.get('/profiles',async(req,res,next)=>{try{res.json(await service.list(owner(req as AuthenticatedRequest)));}catch(e){next(e);}});
 luna30AstrologyRouter.post('/profiles',async(req,res,next)=>{try{res.status(201).json(await service.save(owner(req as AuthenticatedRequest),req.body));}catch(e){next(e);}});
@@ -25,4 +26,4 @@ luna30AstrologyRouter.put('/profiles/:id',async(req,res,next)=>{try{res.json(awa
 luna30AstrologyRouter.delete('/profiles/:id',async(req,res,next)=>{try{res.json(await service.remove(owner(req),z.string().uuid().parse(req.params.id)));}catch(e){next(e);}});
 luna30AstrologyRouter.post('/profiles/:id/chart',async(req,res,next)=>{try{z.object({}).strict().parse(req.body??{});res.json(await service.calculate(owner(req),z.string().uuid().parse(req.params.id)));}catch(e){next(e);}});
 luna30AstrologyRouter.get('/charts/:id',async(req,res,next)=>{try{res.json(await service.open(owner(req),z.string().uuid().parse(req.params.id)));}catch(e){next(e);}});
-luna30AstrologyRouter.post('/compatibility',async(req,res,next)=>{try{const body=z.object({firstChartId:z.string().uuid(),secondChartId:z.string().uuid()}).strict().parse(req.body);res.json(await service.compatibility(owner(req as AuthenticatedRequest),body.firstChartId,body.secondChartId));}catch(e){next(e);}});
+luna30AstrologyRouter.post('/compatibility',async(req,res,next)=>{try{const body=z.object({firstChartId:z.string().uuid(),secondChartId:z.string().uuid(),relationship:relationshipKind.optional()}).strict().parse(req.body);res.json(await service.compatibility(owner(req as AuthenticatedRequest),body.firstChartId,body.secondChartId,body.relationship));}catch(e){next(e);}});

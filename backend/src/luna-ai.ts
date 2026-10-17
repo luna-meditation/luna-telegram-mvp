@@ -64,6 +64,8 @@ import {messagesAfterContextReset} from './luna31-consultation.js';
 import {stagingAiMeterRecord} from './staging-ai-meter.js';
 import {readLuna32Settings,successfulAiLimit} from './luna32-runtime.js';
 import {createLunaTools,runLunaToolTurn,lunaToolInstructions} from './luna32-tools.js';
+import {recordToolOutcomes,toolOutcome,type ToolOutcome} from './luna40-actions.js';
+import {enforcePracticeActionClaims} from './luna40-meditation-selection.js';
 import {consultationTitle} from './luna33-titles.js';
 import {recordedAstrologyConsent} from './luna33-consent.js';
 import {independentPracticeTopic,astrologyWorkflowIntent} from './luna33-topic.js';
@@ -858,9 +860,9 @@ async function saveMemories(telegramId: number, conversationId: string, sourceMe
 
 export async function getLunaUsage(telegramId:number){
  if(env.LUNA34_COMMERCIAL_QUOTAS_ENABLED){const usage=await readCommercialAllowance(supabase,telegramId);if(usage.enabled&&usage.limit!==undefined&&usage.remaining!==undefined&&usage.resetAt)return {remaining:usage.remaining,limit:usage.limit,resetAt:usage.resetAt,scope:usage.scope};}
- const access=await getUserAccess(telegramId),settings=env.LUNA32_ENABLED?await readLuna32Settings(supabase):null,limit=settings?successfulAiLimit(settings,access.hasPaidPremium,{free:env.AI_MAX_MESSAGES_PER_DAY,premium:env.AI_PREMIUM_MAX_MESSAGES_PER_DAY}):access.hasPaidPremium?env.AI_PREMIUM_MAX_MESSAGES_PER_DAY:env.AI_MAX_MESSAGES_PER_DAY;
+ const access=await getUserAccess(telegramId),settings=env.LUNA32_ENABLED?await readLuna32Settings(supabase):null,limit=settings?successfulAiLimit(settings,access.hasPaidPremium||Boolean(access.administrative?.active),{free:env.AI_MAX_MESSAGES_PER_DAY,premium:env.AI_PREMIUM_MAX_MESSAGES_PER_DAY}):(access.hasPaidPremium||Boolean(access.administrative?.active))?env.AI_PREMIUM_MAX_MESSAGES_PER_DAY:env.AI_MAX_MESSAGES_PER_DAY;
  const start=new Date().toISOString().slice(0,10)+'T00:00:00.000Z';
- if(env.LUNA32_ENABLED){const usage=await supabase.rpc('luna32_ai_used',{p_owner:telegramId,p_exclude:null});if(usage.error||!Number.isSafeInteger(usage.data))throw new LunaAiError('usage_unavailable','Could not load the daily allowance.',503,true);return {remaining:Math.max(0,limit-usage.data),limit,resetAt:nextUtcReset()};}
+ if(env.LUNA32_ENABLED){const usage=await supabase.rpc('luna32_ai_used',{p_owner:telegramId,p_exclude:null});if(usage.error||!Number.isSafeInteger(usage.data))throw new LunaAiError('usage_unavailable','Could not load the daily allowance.',503,true);return env.FEATURE_ADMIN_V4_MUTATIONS?(await import('./luna40-grants.js')).adminQuotaUsage(supabase,telegramId,limit,usage.data,nextUtcReset()):{remaining:Math.max(0,limit-usage.data),limit,resetAt:nextUtcReset()};}
  const usage=await supabase.from('ai_chat_requests').select('id',{count:'exact',head:true}).eq('telegram_id',telegramId).eq('quota_charged',true).gte('created_at',start);
  if(usage.error)throw new LunaAiError('usage_unavailable','Could not load the daily allowance.',503,true);
  return {remaining:Math.max(0,limit-(usage.count??0)),limit,resetAt:nextUtcReset()};
@@ -995,7 +997,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
   if(!env.FEATURE_AI_CENTRAL_EXPERIENCE)await pruneExpiredLunaConversations(telegramId, input.conversationId);
   const access = await getUserAccess(telegramId);
   const runtimeSettings=env.LUNA32_ENABLED?await readLuna32Settings(supabase):null;
-  const limit = currentAiSafetyLimit()??(runtimeSettings?successfulAiLimit(runtimeSettings,access.hasPaidPremium,{free:env.AI_MAX_MESSAGES_PER_DAY,premium:env.AI_PREMIUM_MAX_MESSAGES_PER_DAY}):access.hasPaidPremium ? env.AI_PREMIUM_MAX_MESSAGES_PER_DAY : env.AI_MAX_MESSAGES_PER_DAY);
+  const limit = currentAiSafetyLimit()??(runtimeSettings?successfulAiLimit(runtimeSettings,access.hasPaidPremium||Boolean(access.administrative?.active),{free:env.AI_MAX_MESSAGES_PER_DAY,premium:env.AI_PREMIUM_MAX_MESSAGES_PER_DAY}):(access.hasPaidPremium||Boolean(access.administrative?.active)) ? env.AI_PREMIUM_MAX_MESSAGES_PER_DAY : env.AI_MAX_MESSAGES_PER_DAY);
   const reservation = await reserveChatRequest(telegramId, input.requestId, limit, input.conversationId);
   console.info('[Luna AI request transition]', {
     user: userHash(telegramId), clientRequestId: input.requestId, state: reservation.status,
@@ -1106,6 +1108,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
       summary: compactText(item.translations?.[responseLanguage]?.subtitle?.trim() || item.subtitle || item.description, 120)
     })) satisfies RecommendationCatalogItem[];
     const catalogForModel = catalogForPolicy.map((item) => ({
+      id: item.id,
       catalogKey: item.catalogKey,
       title: item.title,
       category: item.category,
@@ -1114,6 +1117,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
       durationSeconds:item.duration,
       audioLanguage:responseLanguage==='ru'&&catalog.find(m=>m.id===item.id)?.translations?.ru?.audioUrl?.trim()?'ru':'en',
       premium: item.premium,
+      published: item.published,
       language: item.language,
       summary: item.summary
     }));
@@ -1223,12 +1227,16 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
     let openAiResponse: OpenAiResponse = { model: 'luna-runtime-decision-engine', status: 'completed' };
     let extracted: ExtractedOpenAiText | null = null;
     let workflowActions:Array<'natal_chart'|'compatibility'|'breathing'>=[];
+    let toolOutcomes:ToolOutcome[]=[];
+    let selectedToolMeditationId:string|null=null;
+    let selectedAstrologyAction:ReturnType<ReturnType<typeof createLunaTools>['astrologyAction']>=null;
     let commerceView:import('./luna35-commerce-policy.js').CommerceView|null=null;
     let parsed: z.infer<typeof modelResultSchema>;
     const directItem = directActionMeditationId
       ? catalogForPolicy.find((item) => item.id === directActionMeditationId) ?? null
       : null;
     if (directItem) {
+      toolOutcomes.push(toolOutcome({owner:telegramId,request:input.requestId,name:'recommend_meditation',args:JSON.stringify({id:directItem.id}),data:{action:'meditation_card',meditationId:directItem.id,playbackStarted:false},latencyMs:0}));
       parsed = modelResultSchema.parse({
         message: directMeditationResponse({
           language: responseLanguage,
@@ -1277,9 +1285,12 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
           attempt: 1
         });
         const commerce=luna35Commerce(getLunaUsage);
-        const tools=createLunaTools({db:supabase,owner:telegramId,language:responseLanguage,readingId:input.readingId,astrology:input.astrology??input.chartId,readingContext,catalog:catalogForModel,personalContext:personal,access:{hasPaidPremium:access.hasPaidPremium,beta:access.beta,plan:access.plan},quota:()=>getLunaUsage(telegramId),astrologyEnabled:env.FEATURE_ASTROLOGY&&env.LUNA30_ASTROLOGY_AI_ENABLED,commerce:{read:async view=>{const card=await commerce.card(telegramId,view,responseLanguage,resolvedConversationId);return {balance:card.balance,plan:card.membership.kind,usage:card.usage,beta:card.beta,products:card.products,...(view==='shop'?{catalog:card.catalog}:{}),...(view==='earn'?{earning:card.earning}:{}),...(view==='history'?{transactions:card.transactions?.slice(0,5),pendingPayments:card.pendingOrders.map(o=>({id:o.id,product:o.product,state:o.state,stars:o.stars}))}:{}),...(view==='resume'?{pending:card.pending.map(a=>({id:a.id,type:a.action_type,expiresAt:a.expires_at}))}:{})};},eligibility:kind=>commerce.eligibility(telegramId,kind)}});
+        const tools=createLunaTools({db:supabase,owner:telegramId,operationKey:input.requestId,language:responseLanguage,readingId:input.readingId,astrology:input.astrology??input.chartId,readingContext,catalog:catalogForModel,personalContext:personal,access:{hasPremium:access.hasPremium,hasPaidPremium:access.hasPaidPremium,beta:access.beta,plan:access.plan},quota:()=>getLunaUsage(telegramId),astrologyEnabled:env.FEATURE_ASTROLOGY&&env.LUNA30_ASTROLOGY_AI_ENABLED,allowMeditationActions,commerce:{read:async view=>{const card=await commerce.card(telegramId,view,responseLanguage,resolvedConversationId);return {balance:card.balance,plan:card.membership.kind,usage:card.usage,beta:card.beta,products:card.products,...(view==='shop'?{catalog:card.catalog}:{}),...(view==='earn'?{earning:card.earning}:{}),...(view==='history'?{transactions:card.transactions?.slice(0,5),pendingPayments:card.pendingOrders.map(o=>({id:o.id,product:o.product,state:o.state,stars:o.stars}))}:{}),...(view==='resume'?{pending:card.pending.map(a=>({id:a.id,type:a.action_type,expiresAt:a.expires_at}))}:{})};},eligibility:kind=>commerce.eligibility(telegramId,kind)}});
         openAiResponse=env.LUNA32_ENABLED?await runLunaToolTurn({...request,instructions:request.instructions+'\n'+lunaToolInstructions},tools,invoke):await invoke(request);
         workflowActions=tools.workflowActions();
+        selectedAstrologyAction=tools.astrologyAction();
+        toolOutcomes=tools.outcomes();
+        selectedToolMeditationId=tools.meditationSelection()?.id??null;
         commerceView=tools.commerceView();
         consumedUsage=openAiResponse.usage;
         console.info('[Luna AI model result received]', {
@@ -1349,8 +1360,8 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
     const explicitMeditationRequest = isReadyMeditationRequest(input.message);
     const effectiveExplicitRequest = explicitMeditationRequest
       || intentResolution.action !== 'none'
-      || Boolean(resolvedPendingMeditation);
-    const validatedAction = resolveMeditationAction(parsed.meditationAction, catalogForPolicy);
+      || Boolean(resolvedPendingMeditation)||Boolean(selectedToolMeditationId);
+    const validatedAction = resolveMeditationAction(selectedToolMeditationId?{type:'meditation_card',meditationId:selectedToolMeditationId}:parsed.meditationAction, catalogForPolicy);
     if (parsed.meditationAction && !validatedAction) {
       console.warn('[Luna AI meditation action rejected]', {
         user: userHash(telegramId),
@@ -1361,17 +1372,18 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
         catalogSize: catalogForPolicy.length
       });
     }
-    const recommendationRequested = allowMeditationActions && (effectiveExplicitRequest || Boolean(parsed.meditationAction) || (
+    const recommendationRequested = !selectedAstrologyAction && allowMeditationActions && (effectiveExplicitRequest || Boolean(parsed.meditationAction) || (
       parsed.recommendationIntent.needed && !recentAssistantRecommendations.slice(-3).some(Boolean)
     ));
-    const finalRecommendationDecision = directActionMeditationId
-      ? runtimeRecommendation ?? {
-        meditationId: directActionMeditationId,
+    const verifiedActionMeditationId=directActionMeditationId??(selectedToolMeditationId&&validatedAction?validatedAction.meditationId:null);
+    const finalRecommendationDecision = verifiedActionMeditationId
+      ? runtimeRecommendation&&runtimeRecommendation.meditationId===verifiedActionMeditationId?runtimeRecommendation:{
+        meditationId: verifiedActionMeditationId,
         intent: intentResolution.goal,
         score: validatedIntentMeditation ? 100 : 90,
         runnerUpScore: 0,
         ambiguous: false,
-        reason: resolvedPendingMeditation ? 'pending_action_resolved' : 'deterministic_runtime_action'
+        reason: selectedToolMeditationId?'verified_tool_selection':resolvedPendingMeditation ? 'pending_action_resolved' : 'deterministic_runtime_action'
       }
       : rankMeditationRecommendation({
         message: resolvedPendingMeditation ? `${pendingResolution && 'resolvedIntent' in pendingResolution ? pendingResolution.resolvedIntent : ''} meditation ${input.message}` : input.message,
@@ -1411,7 +1423,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
       });
     }
     const actionFailed = Boolean(parsed.meditationAction) && !validatedAction;
-    if (!allowMeditationActions) recommendedMeditationId = null;
+    if (!allowMeditationActions||selectedAstrologyAction) recommendedMeditationId = null;
     console.info('[Luna AI resolved meditation]', {
       user: userHash(telegramId),
       requestId: input.requestId,
@@ -1434,7 +1446,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
       language: responseLanguage,
       catalog: catalogForPolicy,
       recommendedMeditationId,
-      explicitRequest: effectiveExplicitRequest && !directItem
+      explicitRequest: effectiveExplicitRequest && !directItem && !selectedAstrologyAction
     });
     const previousClarificationHash = conversationState.previous_assistant_question_hash ?? [...recent].reverse()
       .filter((message) => message.role === 'assistant')
@@ -1461,7 +1473,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
       ? repeatedClarificationFallback(responseLanguage)
       : visibleMessage;
     const attachedMeditationId = recommendedMeditationId;
-    const assistantContent = neutralRussianAddress(enforceCardClaimConsistency(safeVisibleMessage, responseLanguage, Boolean(attachedMeditationId)),responseLanguage,personal,input.message);
+    const assistantContent = neutralRussianAddress(enforcePracticeActionClaims(enforceCardClaimConsistency(safeVisibleMessage, responseLanguage, Boolean(attachedMeditationId),selectedAstrologyAction?'astrology':undefined),responseLanguage,Boolean(attachedMeditationId)),responseLanguage,personal,input.message);
     if(hasDanglingConsultationPromise(assistantContent))throw new LunaAiError('incomplete_response','Luna returned an introduction without its promised explanation.',502,true);
     if (!assistantContent) throw new LunaAiError('malformed_response', 'Luna returned no safe visible message.', 502);
     if (hasInternalDataLeak(assistantContent)) {
@@ -1488,10 +1500,10 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
       meditationId: meditationAction?.meditationId ?? null,
       generated: Boolean(meditationAction)
     });
-    const resolvedIntent = pendingResolution && 'resolvedIntent' in pendingResolution && typeof pendingResolution.resolvedIntent==='string'
+    const resolvedIntent = selectedAstrologyAction ? 'general_chat' : pendingResolution && 'resolvedIntent' in pendingResolution && typeof pendingResolution.resolvedIntent==='string'
       ? pendingResolution.resolvedIntent
       : intentResolution.intent;
-    const explicitTopicChange = ['journal', 'premium', 'relationship', 'science'].includes(intentResolution.intent);
+    const explicitTopicChange = Boolean(selectedAstrologyAction) || ['journal', 'premium', 'relationship', 'science'].includes(intentResolution.intent);
     const nextPendingState: PendingLunaState | null = recommendedMeditationId || explicitTopicChange || artifactMode
       ? null
       : recommendationRequested
@@ -1502,28 +1514,30 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
     const nextConversationState = updateConversationState({
       previous: conversationState,
       intent: resolvedIntent,
-      goal: intentResolution.goal,
-      topic: intentResolution.topic,
+      goal: selectedAstrologyAction ? null : intentResolution.goal,
+      topic: selectedAstrologyAction ? selectedAstrologyAction.workflow.kind : intentResolution.topic,
       meditationId: attachedMeditationId,
       assistantMessage: assistantContent,
       userDecision: input.message,
       language: responseLanguage,
-      clearMeditationContext: artifactMode||['journal', 'premium', 'relationship', 'science'].includes(intentResolution.intent)
+      resetActivityContext: Boolean(selectedAstrologyAction),
+      clearMeditationContext: artifactMode||Boolean(selectedAstrologyAction)||['journal', 'premium', 'relationship', 'science'].includes(intentResolution.intent)
     });
     const phase=consultationPhase({hasContext:Boolean(readingContext||chartContext),message:assistantContent,firstTurn:recent.filter(m=>m.role==='assistant').length===0});
-    const actions=validatedConsultationActions(parsed.actions??(attachedMeditationId?['breathing','journal']:undefined),{reading:Boolean(readingContext),chart:Boolean(chartContext),comparison:Boolean(input.astrology?.secondChartId),safety:false,astrologyAvailable:env.FEATURE_ASTROLOGY});
+    const actions=validatedConsultationActions(selectedAstrologyAction?[selectedAstrologyAction.workflow.kind==='natal'?'natal_chart':'compatibility']:parsed.actions??(attachedMeditationId?['breathing','journal']:undefined),{reading:Boolean(readingContext),chart:Boolean(chartContext),comparison:Boolean(input.astrology?.secondChartId),safety:false,astrologyAvailable:env.FEATURE_ASTROLOGY});
     const { data: assistant, error: assistantError } = await supabase.from('ai_messages').insert({
       conversation_id: resolvedConversationId, telegram_id: telegramId, role: 'assistant', content: assistantContent,
       request_id: input.requestId,
       metadata: {
         recommendedMeditationId: attachedMeditationId,
-        ...(resolvedIntent==='breathing'||workflowActions.includes('breathing')?{breathing:requestedBreathOptions(input.message)}:{}),
-        ...(workflowActions.length?{workflowActions}:{}),
+        ...(!selectedAstrologyAction&&(resolvedIntent==='breathing'||workflowActions.includes('breathing'))?{breathing:requestedBreathOptions(input.message)}:{}),
+        ...(!selectedAstrologyAction&&workflowActions.length?{workflowActions}:{}),
         ...(commerceView?{commerce:{version:1,view:commerceView,language:responseLanguage,checkedAt:new Date().toISOString()}}:{}),
         ...(input.contextReset?{contextReset:true}:{}),
         ...(input.chartId?{astrology:input.astrology??{chartId:input.chartId}}:{}),
         ...(input.chartId?{astrologyConsent:{version:1,chartId:input.chartId,...(input.astrology?.secondChartId?{secondChartId:input.astrology.secondChartId}:{})}}:{}),
         ...(input.readingId?{readingId:input.readingId}:{}),
+        ...(selectedAstrologyAction?{contextReset:!selectedAstrologyAction.attachment,astrologyWorkflow:selectedAstrologyAction.workflow,...(selectedAstrologyAction.attachment?{astrology:selectedAstrologyAction.attachment}:{}),readingId:undefined,astrologyConsent:undefined}:{}),
         consultation:{version:1,phase,actions,quickReplies:meaningfulQuickReplies(parsed.quickReplies,[...recent.filter(m=>m.role==='user').map(m=>m.content),...lastAssistantQuickReplies(recent)])},
         ...(env.FEATURE_AI_CENTRAL_EXPERIENCE?{contextualActions:contextualActionIds(input.message,null)}:{}),
         meditationAction,
@@ -1545,6 +1559,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
     }).select().single();
     if (assistantError) throw assistantError;
     assistantMessageId = assistant.id;
+    await recordToolOutcomes(supabase,telegramId,assistant.id,toolOutcomes);
     await updateChatRequest(telegramId, input.requestId, {
       status: 'completed', assistant_message_id: assistant.id, recommendation_id: attachedMeditationId,
       completed_at: new Date().toISOString(), error_code: null

@@ -23,6 +23,8 @@ const envSchema = z.object({
   ALLOW_UNVERIFIED_TELEGRAM_WEBAPP: envBoolean.default(false),
   RUN_MIGRATIONS: envBoolean.default(false),
   LUNA32_ENABLED: envBoolean.default(false),
+  FEATURE_ADMIN_V4: envBoolean.default(false),
+  FEATURE_ADMIN_V4_MUTATIONS: envBoolean.default(false),
   LUNA34_COMMERCIAL_QUOTAS_ENABLED: envBoolean.default(false),
   LUNA34_COMMERCIAL_ENABLED: envBoolean.default(false),
   LUNA34_REFERRALS_ENABLED: envBoolean.default(false),
@@ -96,6 +98,7 @@ const envSchema = z.object({
 });
 
 export const env = envSchema.parse(process.env);
+if(env.FEATURE_ADMIN_V4_MUTATIONS&&!env.LUNA32_ENABLED)throw new Error('Admin mutation activation requires the existing verified AI accounting guard.');
 assertStagingIsolation(env);
 
 export const telegramAppUrl =
