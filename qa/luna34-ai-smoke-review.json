@@ -1,0 +1,72 @@
+{
+  "status": "BLOCKED",
+  "release": "luna34",
+  "stagingUrl": "https://luna-staging-itfl.netlify.app",
+  "stagingDeployId": "6ad2d2b2f63f9bc13bd9be17",
+  "localCommit": "0fb32d27fcd8b36b9f270a0ef4ac4a7895737d37",
+  "remoteCommit": "890a855ce4f52f14ec86e609bff50366ce3d3745",
+  "originalProviderCalls": 4,
+  "actualCostUsd": 0.0050599,
+  "unknownCostUpperBoundUsd": 0,
+  "successfulHumanReadableAnswers": 3,
+  "completedProviderToolRequestsWithoutFinalAnswer": 1,
+  "qualityChecks": [
+    {
+      "name": "AI generation is disabled before the bounded follow-up",
+      "status": "PASS"
+    },
+    {
+      "name": "real saved Russian Tarot answer reopens intact",
+      "status": "PASS"
+    },
+    {
+      "name": "actual persisted aspect matches all three calculated identity fields independent of JSON property order",
+      "status": "PASS"
+    },
+    {
+      "name": "English interpretation names the actual planets and aspect",
+      "status": "PASS"
+    },
+    {
+      "name": "English response is prose with useful dynamic follow-ups",
+      "status": "PASS"
+    },
+    {
+      "name": "exact cached aspect request succeeds while new generation is disabled",
+      "status": "PASS"
+    },
+    {
+      "name": "reopened English history retains the same selected aspect",
+      "status": "PASS"
+    },
+    {
+      "name": "no unresolved prior provider spend",
+      "status": "PASS"
+    },
+    {
+      "name": "final Russian interpretation uses localized orientation and the owned reading",
+      "status": "PASS"
+    },
+    {
+      "name": "follow-up choices are relevant and not recycled",
+      "status": "PASS"
+    },
+    {
+      "name": "new final answer also reuses its saved response",
+      "status": "PASS"
+    },
+    {
+      "name": "subscriber rights, Seeds and garden are unchanged",
+      "status": "PASS"
+    },
+    {
+      "name": "staging remains closed to new generation",
+      "status": "PASS"
+    }
+  ],
+  "remainingBlocker": "A complete real tool-assisted answer was stopped before a fifth provider dispatch by the explicitly approved four-call test cap. Failed request did not consume a successful user quota. Two additional calls and one staging worker publication require separate approval; no extra calls have been made.",
+  "physicalIphoneOwnerConfirmed": true,
+  "productionChanged": false,
+  "productionMigrationsApplied": [],
+  "newFinancialGatesEnabled": false
+}

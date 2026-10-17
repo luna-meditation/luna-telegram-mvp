@@ -70,3 +70,44 @@ recurring period; annual access must be prepaid); Supabase RLS/function grants.
 
 This checkpoint is not a production-release PASS report. The production builder
 requires fresh, source-bound evidence and must not be bypassed.
+
+## Final validation checkpoint — 17 October, production still unchanged
+
+- Node.js 22.23.3: frontend 203 PASS; backend 397 PASS, one optional integration
+  test skipped in the general suite (that RPC test passed separately against
+  isolated PostgreSQL). Both type checks, lint and actual builds passed.
+- Latest mobile 360/375/390/393 EN/RU checks: eight Luna 3.4 cases passed.
+  The owner also confirmed on a physical iPhone that staging opens without a
+  Netlify login, new achievement artwork is visible and saved AI text/buttons
+  remain readable. This is owner-provided device evidence, not a simulated login.
+- Fresh backup: 53 Luna tables, 1,634 rows, 37 functions; two isolated restores
+  and exact security/checksum comparisons passed. All 28 encrypted Storage
+  archives (avatars and meditations, 239,528,218 bytes) were decrypted in memory
+  and their content hashes verified against fresh production metadata. No
+  separate Supabase Storage upload/restore was performed.
+- Real AI: four authorized calls cost $0.0050599, with no unknown spend. Three
+  complete human-readable answers cover the exact saved Tarot cards, Russian
+  localized orientation/new follow-up choices and the exact Sun–Jupiter aspect.
+  Reopening/retrying those answers does not generate again. A fourth response
+  requested a read-only server tool; the next dispatch was correctly blocked by
+  the four-call QA ceiling, producing a retryable error with no successful quota
+  charge. This is NOT a passed real tool-continuation test.
+- Additional two-call/$0.01 QA authorization and one final staging worker
+  publication have been requested. The prepared worker has not been deployed or
+  invoked. Production migration, merge and deployment remain blocked until this
+  final real tool-continuation check passes.
+- A read-only production snapshot covers 78 unchanged existing relations and
+  39 unchanged functions, financial row hashes and the original $100 baseline.
+  The two narrowly modified Luna tables are listed separately. No production
+  DDL, data write, merge or deployment was performed by this checkpoint.
+
+### Commercial and sharing limitations for the non-financial release
+
+New prices, quotas, rewards, referrals and checkout remain OFF. Catalog, allowance
+reservations/finality, annual monthly allocations, payment reconciliation and
+referral evidence are prepared and isolated-tested; this is not activation
+approval or proof of real Stars purchases. The proposed 3/2/1 daily reward adapter
+and new reading-price activation still require a separately reviewed activation
+configuration. Existing reward/pricing behavior is retained. Share cards currently
+cover app/Tarot/garden/achievement; specialized natal and compatibility highlights
+are not implemented. Export is not represented as proof of posting externally.
