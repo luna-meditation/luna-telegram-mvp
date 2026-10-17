@@ -99,7 +99,7 @@ export const env = envSchema.parse(process.env);
 assertStagingIsolation(env);
 
 export const telegramAppUrl =
-  `https://t.me/${env.BOT_USERNAME}/app-short-name`;
+  `https://t.me/${env.BOT_USERNAME}?startapp`;
 
 export const telegramFallbackUrl =
   `https://t.me/${env.BOT_USERNAME}?start=luna`;

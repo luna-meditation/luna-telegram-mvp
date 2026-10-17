@@ -11,10 +11,11 @@ test('retry reuses the stable client request id without another user bubble', ()
   assert.match(source, /requestId: clientRequestId/);
 });
 
-test('quota exhaustion disables retry and the composer', () => {
+test('quota exhaustion blocks paid replies and retry but keeps free account commands available', () => {
   assert.match(source, /failedTurn\.state !== 'quota_exhausted'/);
-  assert.match(source, /disabled=\{thinking \|\| contextBusy \|\| quotaExhausted\}/);
-  assert.match(source, /The limit resets tomorrow/);
+  assert.match(source, /quotaExhausted&&!commerceIntent\(draft\)/);
+  assert.match(source, /quotaExhausted&&<ChatCommerce view="quota"/);
+  assert.match(source, /Your AI allowance is used/);
 });
 
 test('recommendation stays associated with its assistant message', () => {

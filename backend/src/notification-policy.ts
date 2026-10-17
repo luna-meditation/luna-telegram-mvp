@@ -87,5 +87,7 @@ export function dueReminderTypes(input: {
 }
 
 export function reminderIdempotencyKey(telegramId: number, type: ReminderType, localDate: string) {
-  return `${telegramId}:${type}:${localDate}`;
+  // One wellbeing reminder per local day across all chosen categories, including
+  // preference changes and concurrent schedulers. Payment receipts are separate.
+  return `${telegramId}:luna-gentle:${localDate}`;
 }

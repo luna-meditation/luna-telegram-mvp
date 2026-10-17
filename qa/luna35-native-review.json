@@ -1,0 +1,65 @@
+{
+  "status": "PASS",
+  "node": "22.23.3",
+  "postgres": "PostgreSQL 17.6 on x86_64-apple-darwin23.6.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.6), 64-bit",
+  "migrationHashes": {
+    "20261017030230_luna35_conversational_commerce.sql": "58cd1a076909ca3a9c4e731bd4ba049be0c616c131a7f0b8d48804781340ea97",
+    "20261017032725_luna35_private_funnel_events.sql": "2286051dfb802e6304a8a1e992ead0e8c7274f8aa0437e0f84dc6a2c5b3e8e12"
+  },
+  "checks": [
+    {
+      "name": "additive migration applies and reapplies without old data/function changes",
+      "status": "PASS"
+    },
+    {
+      "name": "concurrent deterministic commerce turns persist exactly two messages, no provider or quota rows",
+      "status": "PASS"
+    },
+    {
+      "name": "request conflicts and cross-account conversations are rejected atomically",
+      "status": "PASS"
+    },
+    {
+      "name": "pending action is persistent and idempotent, with original parameters and bounded expiry",
+      "status": "PASS"
+    },
+    {
+      "name": "one concurrent continuation lease, no second execution, no foreign owner reads",
+      "status": "PASS"
+    },
+    {
+      "name": "successful result reference survives reconnect; reopening is a replay, not a generation",
+      "status": "PASS"
+    },
+    {
+      "name": "expired actions cannot execute; abandoned leases recover with the same operation identity",
+      "status": "PASS"
+    },
+    {
+      "name": "forced RLS and grants block anon/authenticated including forged service JWT claims and direct RPCs",
+      "status": "PASS"
+    },
+    {
+      "name": "rollback revokes only new callers, retains records; reapply restores execution without modifying other apps",
+      "status": "PASS"
+    },
+    {
+      "name": "deleting a conversation removes only its pending actions and deterministic commerce records",
+      "status": "PASS"
+    },
+    {
+      "name": "private funnel applies/reapplies and never accepts free-form private payload columns",
+      "status": "PASS"
+    },
+    {
+      "name": "funnel events deduplicate; only admin server aggregates expose counts, not user IDs",
+      "status": "PASS"
+    },
+    {
+      "name": "private funnel denies anon/authenticated and supports safe feature-off retention",
+      "status": "PASS"
+    }
+  ],
+  "personalDataCopied": false,
+  "productionTouched": false
+}

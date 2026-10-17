@@ -1,6 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {readFileSync} from 'node:fs';import {createRequire} from 'node:module';
+import {importTypescript} from './import-typescript.mjs';
 const require=createRequire(import.meta.url),ts=require('typescript'),read=p=>readFileSync('src/'+p,'utf8');
-const module=ts.transpileModule(read('navigation/navigationModel.ts'),{compilerOptions:{module:ts.ModuleKind.ES2022}}).outputText,nav=await import('data:text/javascript;base64,'+Buffer.from(module).toString('base64'));
+const nav=await importTypescript(new URL('../src/navigation/navigationModel.ts',import.meta.url).pathname);
 test('old Explore launches redirect to Home without adding a ghost navigation entry',()=>{
  for(const path of ['/explore','/explore/'])assert.equal(nav.initialPageFromLaunch(path,'','',true),'home');
  assert.equal(nav.initialPageFromLaunch('/','#explore','',true),'home');assert.equal(nav.pageFromStartParam('explore',true),'home');

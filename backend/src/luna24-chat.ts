@@ -6,12 +6,13 @@ import {supabase,upsertUser} from './db.js';
 import {requireTelegramWebApp,type AuthenticatedRequest} from './auth.js';
 import {FoundationError} from './personalization.js';
 import {getTarotReading,saveTarotReading,readingFields,type StoredReading} from './tarot.js';
-import {saveTarotSpread} from './tarot-spreads.js';
+import {saveTarotSpread,savePaidSingleTarot} from './tarot-spreads.js';
 import {chatTarotInput,chatTarotState,chatTarotHash,drawChatTarot,nextReveal,readingSize,type ChatTarotState} from './luna24-policy.js';
 import {safetyCategory} from './luna-ai-policy.js';
 import {createAstrologyWorkflowService} from './luna33-workflows.js';
 import {createLuna34Progress} from './luna34-progress.js';
 import {createLuna34Referrals} from './luna34-referrals.js';
+import {recordFunnel} from './luna35-funnel.js';
 const messageFields='id,conversation_id,request_id,role,content,metadata,created_at';
 const fail=(code:string,status=503)=>new FoundationError(status,code,'Your conversation remains saved.');
 async function ownedConversation(user:number,id:string){const {data,error}=await supabase.from('ai_conversations').select('id,title').eq('id',id).eq('telegram_id',user).eq('status','active').maybeSingle();if(error)throw fail('chat_unavailable');if(!data)throw fail('conversation_not_found',404);return data;}
@@ -54,9 +55,13 @@ export async function openChatTarot(user:number,body:unknown){
  const conversationId=input.conversationId??input.clientReadingId;
  if(input.conversationId)await ownedConversation(user,conversationId);
  else{const created=await supabase.from('ai_conversations').upsert({id:conversationId,telegram_id:user,title:input.language==='ru'?'Размышление с Таро':'Tarot reflection',language:input.language},{onConflict:'id',ignoreDuplicates:true});if(created.error)throw fail('chat_unavailable');await ownedConversation(user,conversationId);}
- const cards=drawChatTarot(input.kind),base={clientReadingId:input.clientReadingId,intention:input.intention,question:input.question,language:input.language,generate:false};
+ // A retry after the reading was saved but its chat attachment failed must reuse
+ // the original draw, not pick different cards or charge another order.
+ const stored=await supabase.from('luna_tarot_readings').select('card_id,orientation,cards,intention,question,language').eq('telegram_id',user).eq('client_reading_id',input.clientReadingId).maybeSingle();if(stored.error)throw fail('chat_unavailable');
+ if(stored.data&&(stored.data.intention!==input.intention||stored.data.question!==input.question||stored.data.language!==input.language))throw fail('reading_conflict',409);
+ const cards=stored.data?(stored.data.cards?.length?stored.data.cards:[{cardId:stored.data.card_id,orientation:stored.data.orientation}]):drawChatTarot(input.kind),base={clientReadingId:input.clientReadingId,intention:input.intention,question:input.question,language:input.language,generate:false};
  // Both interfaces call the existing authoritative reading services. No wallet or payment call.
- const saved=input.kind==='single'?await saveTarotReading(user,{...base,...cards[0]}):await saveTarotSpread(user,{reading:{...base,kind:input.kind,cards}});
+ const saved=input.kind==='single'?(input.orderId?await savePaidSingleTarot(user,{reading:{...base,...cards[0]},orderId:input.orderId}):await saveTarotReading(user,{...base,...cards[0]})):await saveTarotSpread(user,{reading:{...base,kind:input.kind,cards},...(input.orderId?{orderId:input.orderId}:{})});
  const state:ChatTarotState={readingId:saved.reading.id,clientReadingId:input.clientReadingId,kind:input.kind,revealed:0,requestHash:hash};
  const created=await supabase.from('ai_messages').insert({id:input.clientReadingId,conversation_id:conversationId,telegram_id:user,role:'assistant',message_type:'tarot_reading',request_id:`tarot:${input.clientReadingId}`,content:input.language==='ru'?'Открой карты по порядку. Посмотрим на вопрос с новой стороны.':'Reveal the cards in order. Let’s look at your question from another perspective.',metadata:{tarot:state}}).select(messageFields).maybeSingle();
  if(created.error){if(created.error.code==='23505'){const m=await ownedMessage(user,input.clientReadingId);return response(user,m);}throw fail('reading_save_failed');}
@@ -75,6 +80,7 @@ export async function revealChatTarot(user:number,id:string,body:unknown){
  if(selection[index])await progress.record(user,{kind:'reading_reveal',entityId:current.readingId,detail:selection[index]}).catch(()=>undefined);
  if(current.revealed===readingSize(current.kind))await progress.record(user,{kind:'reading_reveal',entityId:current.readingId,detail:'complete'}).catch(()=>undefined);
  if(current.revealed===readingSize(current.kind)){
+  await recordFunnel(supabase,user,'first_tarot_completed','first','verified');
   const reading=await getTarotReading(user,current.readingId) as StoredReading&{cards?:Array<{cardId:string;orientation:'upright'|'reversed'}>};
   const base={clientReadingId:reading.client_reading_id,intention:reading.intention,question:reading.question,language:reading.language,generate:true};
   // Reservation RPCs handle idempotency and limits; timeout/fallback is never paid-retried.

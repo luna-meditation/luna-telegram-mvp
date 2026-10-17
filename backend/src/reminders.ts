@@ -29,16 +29,16 @@ function reminderText(type: ReminderType, language: 'en' | 'ru', goals: string[]
       ru: personalized ?? 'Теперь день может стать мягче. Вечерняя практика уже ждёт.'
     },
     streak_risk: {
-      en: `Your ${Math.max(1, currentStreak)}-day streak is still within reach. One short practice is enough.`,
-      ru: `Серия в ${Math.max(1, currentStreak)} дн. ещё рядом. Достаточно одной короткой практики.`
+      en: 'A moment for yourself is here whenever you are ready. No pressure to keep a streak.',
+      ru: 'Момент для себя — когда будете готовы. Серию дней не нужно сохранять любой ценой.'
     },
     inactivity: {
       en: 'No pressure—Luna is here whenever you want a quiet return.',
       ru: 'Без давления — Luna рядом, когда захочется спокойно вернуться.'
     },
     weekly_summary: {
-      en: 'Your weekly Luna reflection is ready in Journey.',
-      ru: 'Твоя недельная рефлексия Luna готова в разделе «Путь».'
+      en: 'Take a look back at your week in My Journey, if you feel like it.',
+      ru: 'Если захотите, загляните в «Мой путь» и оглянитесь на прошедшую неделю.'
     }
   };
   return copy[type][language];
@@ -62,7 +62,7 @@ export async function runReminderSweep(now = new Date()) {
         lastSeenAt: candidate.lastSeenAt
       });
       const localDate = localReminderClock(now, candidate.preferences.timezone).localDate;
-      for (const type of due) {
+      for (const type of due.slice(0,1)) {
         const idempotencyKey = reminderIdempotencyKey(candidate.telegramId, type, localDate);
         const deliveryId = await claimReminderDelivery({ telegramId: candidate.telegramId, type, localDate, idempotencyKey });
         if (!deliveryId) {

@@ -20,28 +20,26 @@ import {attributeValidatedReferral} from './luna30-referrals.js';
 import {createLuna30Commerce} from './luna30-commerce.js';
 import {supabase} from './db.js';
 import {FoundationError} from './foundation-error.js';
+import {botLanguage,luna35BotCopy,welcomeKeyboard,botCommands,miniAppLink} from './luna35-bot-policy.js';
+import {recordFunnel} from './luna35-funnel.js';
 
 export const bot = new Telegraf(env.BOT_TOKEN);
 const luna30Commerce=createLuna30Commerce(supabase,env,input=>bot.telegram.callApi('createInvoiceLink',input));
 
 type BotLanguage = 'en' | 'ru';
 
-function botLanguage(languageCode?: string): BotLanguage {
-  return languageCode?.toLowerCase().startsWith('ru') ? 'ru' : 'en';
-}
-
 const botCopy = {
   en: {
     openApp: 'Open Luna App',
     tryFreePractice: 'Try Free Practice',
     explorePremium: 'Explore Premium',
-    welcome: 'Welcome to Luna 🌙\n\nYour premium AI meditation guide for deeper sleep, calmer thoughts, and emotional balance.\n\nBegin with a free practice or explore Luna Premium.'
+    welcome: luna35BotCopy.en.welcome
   },
   ru: {
     openApp: 'Открыть Luna',
     tryFreePractice: 'Попробовать бесплатно',
     explorePremium: 'Luna Premium',
-    welcome: 'Добро пожаловать в Luna 🌙\n\nТвой премиальный AI-гид по медитациям для глубокого сна, спокойствия и эмоционального баланса.\n\nНачни с бесплатной практики или открой Luna Premium.'
+    welcome: luna35BotCopy.ru.welcome
   }
 } satisfies Record<BotLanguage, Record<string, string>>;
 
@@ -190,29 +188,38 @@ export async function createStarsInvoiceLink(telegramId: number, planId: PlanId,
 }
 
 export async function configureTelegramBot() {
-  await bot.telegram.setMyCommands([
-    { command: 'start', description: 'Start Luna' },
-    { command: 'app', description: 'Open Luna App' },
-    { command: 'plans', description: 'View premium plans' },
-    { command: 'library', description: 'Open practice library' },
-    { command: 'profile', description: 'View your Luna profile' },
-    { command: 'help', description: 'Show Luna help' },
-    { command: 'paysupport', description: 'Payment support' },
-    { command: 'admin', description: 'Admin stats' }
-  ]);
+  const identity=await bot.telegram.getMe();
+  if(identity.username!==env.BOT_USERNAME.replace(/^@/,''))throw new Error('Bot identity mismatch');
+  for(const language of ['en','ru'] as const){
+    const copy=luna35BotCopy[language];
+    await bot.telegram.setMyCommands(botCommands(language),{language_code:language});
+    await bot.telegram.setMyName(copy.name,language);
+    await bot.telegram.setMyDescription(copy.description,language);
+    await bot.telegram.setMyShortDescription(copy.short,language);
+  }
+  await bot.telegram.setMyCommands(botCommands('en'));
+  await bot.telegram.setMyName(luna35BotCopy.en.name);
+  await bot.telegram.setMyDescription(luna35BotCopy.en.description);
+  await bot.telegram.setMyShortDescription(luna35BotCopy.en.short);
+  await bot.telegram.setChatMenuButton({menuButton:{type:'web_app',text:'Open Luna',web_app:{url:env.MINI_APP_URL}}});
 }
 
 bot.start(async (ctx) => {
   await ensureUser(ctx);
   if(env.LUNA30_REFERRALS_ENABLED&&ctx.from?.id&&ctx.startPayload){try{await attributeValidatedReferral(ctx.from.id,ctx.startPayload);}catch(error){logBackendError(error,{endpoint:'Luna bot referral attribution'});}}
   const language = botLanguage(ctx.from?.language_code);
-  await ctx.reply(botCopy[language].welcome, mainKeyboard(language));
+  const reply_markup=welcomeKeyboard(env.BOT_USERNAME,language,ctx.startPayload??'');
+  try{await ctx.replyWithPhoto(new URL('/images/home/luna35-bot-welcome.jpg',env.MINI_APP_URL).toString(),{caption:luna35BotCopy[language].welcome,reply_markup});}
+  catch{await ctx.reply(luna35BotCopy[language].welcome,{reply_markup});}
+  if(ctx.from)await recordFunnel(supabase,ctx.from.id,'bot_welcome_sent',String(ctx.update.update_id),'bot');
 });
+
+for(const destination of ['tarot','astrology'] as const)bot.command(destination,async ctx=>{await ensureUser(ctx);const language=botLanguage(ctx.from?.language_code);await ctx.reply(destination==='tarot'?luna35BotCopy[language].tarot:luna35BotCopy[language].astrology,{reply_markup:{inline_keyboard:[[{text:luna35BotCopy[language].open,url:miniAppLink(env.BOT_USERNAME,destination)}]]}});});
 
 bot.command('app', async (ctx) => {
   await ensureUser(ctx);
   const language = botLanguage(ctx.from?.language_code);
-  await ctx.reply(language === 'ru' ? 'Открой Luna, когда нужен мягкий момент спокойствия.' : 'Open Luna whenever you need a softer moment.', Markup.inlineKeyboard([[miniAppButton(language)]]));
+  await ctx.reply(language === 'ru' ? 'Ваше пространство для самопознания и спокойствия.' : 'Your space for self-discovery and inner calm.', Markup.inlineKeyboard([[miniAppButton(language)]]));
 });
 
 bot.command('plans', async (ctx) => {
@@ -242,8 +249,9 @@ bot.command('profile', async (ctx) => {
 });
 
 bot.command('help', async (ctx) => {
+  const language=botLanguage(ctx.from?.language_code);
   await ctx.reply(
-    'Luna commands:\n/start - Start Luna\n/app - Open Mini App\n/plans - View access plans\n/library - Open practice library\n/profile - View your access\n/help - Show help'
+    language==='ru'?'Luna: Таро, астрология, разговоры с AI и практики спокойствия.\n\n/app — открыть Luna\n/tarot — Таро\n/astrology — астрология\n/paysupport — поддержка по платежам\n\nДругие вопросы: Профиль → Поддержка.':'Luna: Tarot, astrology, meaningful AI conversations and calming practices.\n\n/app — Open Luna\n/tarot — Tarot\n/astrology — Astrology\n/paysupport — Payment support\n\nOther questions: Profile → Support.'
   );
 });
 bot.command('paysupport',async(ctx)=>{

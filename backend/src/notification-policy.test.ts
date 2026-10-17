@@ -26,4 +26,5 @@ test('scheduler emits only due configured reminders and requires consent', () =>
 test('delivery key is deterministic for duplicate prevention', () => {
   assert.equal(reminderIdempotencyKey(42, 'daily', '2026-07-18'), reminderIdempotencyKey(42, 'daily', '2026-07-18'));
   assert.notEqual(reminderIdempotencyKey(42, 'daily', '2026-07-18'), reminderIdempotencyKey(42, 'daily', '2026-07-19'));
+  assert.equal(reminderIdempotencyKey(42,'daily','2026-07-18'),reminderIdempotencyKey(42,'weekly_summary','2026-07-18'));
 });

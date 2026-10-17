@@ -3,12 +3,12 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import test from 'node:test';
+import {importTypescript} from './import-typescript.mjs';
 
 const ts = createRequire(import.meta.url)('typescript');
 const src = path => readFileSync(resolve(process.cwd(), 'src', path), 'utf8');
 async function module(path) {
-  const output = ts.transpileModule(src(path), {compilerOptions: {module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022}}).outputText;
-  return import(`data:text/javascript;base64,${Buffer.from(output).toString('base64')}`);
+  return importTypescript(resolve(process.cwd(),'src',path));
 }
 const nav = await module('navigation/navigationModel.ts');
 const {breathPractices, breathPhaseAt} = await module('features/breathing/practices.ts');
