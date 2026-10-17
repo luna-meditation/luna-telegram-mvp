@@ -8,12 +8,14 @@ import {TarotDetails} from './TarotDetails';
 import {TarotAiInterpretation} from './TarotAiInterpretation';
 import type {TarotSession,TarotAction} from './session';
 import {LunaShareButton} from '../sharing/LunaShareButton';
+import {noteCompletedReading} from '../progress/evidence';
 
 export function DailyTarot({language,initData,session,dispatch,onContinue,registerBackHandler}:{language:AppLanguage;initData?:string;session:TarotSession;dispatch:Dispatch<TarotAction>;onContinue?:(id:string)=>void;registerBackHandler:(handler:(()=>void)|null)=>void}){
  const en=language==='en',daily=session.daily,reading=daily?.reading;
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[gone,setGone]=useState(false),[revealed,setRevealed]=useState(reading?.status==='ready'),[zoom,setZoom]=useState(false);
  const lock=useRef(false),alive=useRef(true);
  const card=reading?tarotDeck.find(c=>c.id===reading.card_id):null;
+ useEffect(()=>{if(revealed&&reading)noteCompletedReading(reading,initData);},[revealed,reading?.id,initData]);
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
  async function open(generate=false){
   if(lock.current)return;lock.current=true;setBusy(true);setError('');
@@ -37,6 +39,6 @@ export function DailyTarot({language,initData,session,dispatch,onContinue,regist
   {revealed&&card&&reading&&<LunaShareButton language={language} registerBackHandler={registerBackHandler} content={{kind:'tarot',title:card.name[language],subtitle:en?'My card of the day · a moment of perspective':'Моя карта дня · момент нового взгляда',image:card.image,badge:reading.orientation==='reversed'?(en?'Reversed':'Перевёрнутая'):(en?'Upright':'Прямая')}}/>}
   <p className="tarot-hub-note">{en?'Your daily card resets at 00:00 UTC. The same saved reflection stays available today.':'Новая карта — в 00:00 UTC. Сегодня повторно откроется тот же сохранённый расклад.'}</p>
   <details className="tarot-privacy"><summary>{en?'Privacy & guidance':'Приватность и рекомендации'}</summary><p>{en?'Luna uses OpenAI to interpret this card. Only preferences you consented to share are included. Your result is private in reading history. Tarot is a reflection tool, not a prediction or professional advice.':'Luna использует OpenAI для интерпретации карты. Предпочтения учитываются только с твоего согласия. Результат хранится в приватной истории. Таро — инструмент рефлексии, не предсказание и не профессиональная консультация.'}</p></details>
-  {zoom&&card&&reading&&<TarotDetails card={card} orientation={reading.orientation} language={language} onClose={()=>setZoom(false)} registerBackHandler={registerBackHandler}/>}
+  {zoom&&card&&reading&&<TarotDetails readingId={reading?.id} initData={initData} card={card} orientation={reading.orientation} language={language} onClose={()=>setZoom(false)} registerBackHandler={registerBackHandler}/>}
  </section>;
 }

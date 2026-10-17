@@ -2,6 +2,7 @@ import {useEffect,useState} from 'react';
 import {ChevronLeft,ChevronRight} from 'lucide-react';
 import {getCelestialMonth,type AppLanguage,type CelestialMonth} from '../../api';
 import {aspectName,planetName,zodiacPosition} from './chartCopy';
+import {noteProgress} from '../progress/evidence';
 
 function MoonDisc({angle,size=22}:{angle:number;size?:number}){
  const phase=((angle%360)+360)%360,outer=phase<=180?1:0,cos=Math.cos(phase*Math.PI/180),inner=cos>=0?1-outer:outer,radius=Math.max(.001,Math.abs(cos)*10);
@@ -12,6 +13,7 @@ export default function CelestialCalendar({language,initData}:{language:AppLangu
  const [month,setMonth]=useState(today.slice(0,7)),[selectedDate,setSelectedDate]=useState(today),[result,setResult]=useState<CelestialMonth|null>(null),[error,setError]=useState(''),[retry,setRetry]=useState(0);
  useEffect(()=>{let alive=true;setResult(null);setError('');setSelectedDate(d=>d.startsWith(month)?d:month+'-01');getCelestialMonth(month,initData).then(v=>{if(alive)setResult(v);}).catch(()=>{if(alive)setError(en?'The calculated calendar could not load. No AI request was made.':'Не удалось загрузить рассчитанный календарь. AI-запрос не выполнялся.');});return()=>{alive=false;};},[month,initData,en,retry]);
  const selected=result?.days.find(d=>d.date===selectedDate)??null;
+ useEffect(()=>{if(selected)noteProgress('calendar_date','00000000-0000-4000-8000-000000000034',selected.date,initData);},[selected?.date,initData]);
  const quarterNames=en?['New Moon','First quarter','Full Moon','Last quarter']:['Новолуние','Первая четверть','Полнолуние','Последняя четверть'];
  const phases=en?['New Moon','Waxing crescent','First quarter','Waxing gibbous','Full Moon','Waning gibbous','Last quarter','Waning crescent']:['Новолуние','Растущий серп','Первая четверть','Растущая Луна','Полнолуние','Убывающая Луна','Последняя четверть','Убывающий серп'];
  const questions=en?['What would you like to begin?','What can you gently make room for?','Which small action is within your control?','What would you like to refine?','What deserves your attention?','What have you learned from your recent experience?','What is no longer useful?','Where could you leave a little space to rest?']:['С чего вам хотелось бы начать?','Для чего можно освободить немного пространства?','Какой небольшой шаг зависит от вас?','Что хотелось бы доработать?','Что заслуживает вашего внимания?','Что вы заметили в своём недавнем опыте?','Что больше не приносит пользы?','Где можно оставить немного места для отдыха?'];

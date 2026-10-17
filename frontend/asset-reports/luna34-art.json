@@ -1,0 +1,1086 @@
+{
+  "generatedAt": "2026-10-16T18:48:55.014Z",
+  "count": 60,
+  "assets": [
+    {
+      "id": "A01",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/a01.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 93482,
+      "thumbnailBytes": 6560,
+      "gridBytes": 23722,
+      "sha256": "4d6bf49cb59eeb789dc575c4fe110fd0f53d1095eb6209eaf96f7897a31ff559",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2259649
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible A01: an open celestial doorway and a ribbon of starlight"
+    },
+    {
+      "id": "A02",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/a02.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 90584,
+      "thumbnailBytes": 7446,
+      "gridBytes": 24512,
+      "sha256": "7c2461d4a37310eaa2724a3e6d5265303c0969ece6c98dc186617d25446f4272",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2353030
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible A02: one ornate Tarot card emerging from a velvet envelope"
+    },
+    {
+      "id": "A03",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/a03.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 122582,
+      "thumbnailBytes": 10176,
+      "gridBytes": 34602,
+      "sha256": "045d92b2753f73162547e5ba24ba086a1aa4a31b7ae95839ec3efab28513722f",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2518756
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible A03: three carved crystal facets holding three miniature Tarot cards"
+    },
+    {
+      "id": "A04",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/a04.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 136318,
+      "thumbnailBytes": 9938,
+      "gridBytes": 35266,
+      "sha256": "c889b409ed51910cd5d98944032f40ddd0135b6ce1102fcd7d26c5594b309ce4",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2680457
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible A04: five golden Tarot cards arranged as a luminous unfolding fan"
+    },
+    {
+      "id": "A05",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/a05.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 102870,
+      "thumbnailBytes": 8008,
+      "gridBytes": 27910,
+      "sha256": "c631c68a614c992ff4f477f08bec7f6c9bba615c7c31aafaa4361cf974abfaf4",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2415466
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible A05: an antique brass astrolabe cradling a tiny starry planet"
+    },
+    {
+      "id": "A06",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/a06.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 91652,
+      "thumbnailBytes": 7782,
+      "gridBytes": 26178,
+      "sha256": "caf01b055f102ecb61cf35ef7184d702f0f8d1b39b8ebc04777b8f67425ff703",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2287827
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible A06: a silver mirror beside a single illuminated journal page"
+    },
+    {
+      "id": "A07",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/a07.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 85626,
+      "thumbnailBytes": 7874,
+      "gridBytes": 24884,
+      "sha256": "caba0960fab2f972f43a7b61d0f7c2bc63a51c2fd22107cd37fd1565a4f6ea51",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2125853
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible A07: a solitary ivory lotus on a still moonlit pond"
+    },
+    {
+      "id": "A08",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/a08.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 88672,
+      "thumbnailBytes": 7340,
+      "gridBytes": 24638,
+      "sha256": "cf4557f31ca995a4851837217dab07aeb877408664a83a30b61149913ff26a04",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2283552
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible A08: a blue luminous breath ring encircling one delicate floating feather"
+    },
+    {
+      "id": "T01",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/t01.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 115108,
+      "thumbnailBytes": 9562,
+      "gridBytes": 31762,
+      "sha256": "d1c669f48bdc25f49d039e7cbc943e76adb902d1b3c37732f297aadf41b80352",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2509336
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible T01: two symbolic Tarot cards facing an open golden key"
+    },
+    {
+      "id": "T02",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/t02.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 127818,
+      "thumbnailBytes": 9822,
+      "gridBytes": 34788,
+      "sha256": "5ab04a9f3c3897322bff02eea36f2599ba1cb5a47a02bf84dd401cae688f8f89",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2583282
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible T02: an open celestial codex with embossed Tarot symbols"
+    },
+    {
+      "id": "T03",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/t03.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 133410,
+      "thumbnailBytes": 10420,
+      "gridBytes": 36202,
+      "sha256": "87324b96af17f19e152ec692c9ca65f3fc40849ef2a29c4e5c535857f7cac5f8",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2609931
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible T03: a deep violet cabinet of tiny rolled scrolls and Tarot cards"
+    },
+    {
+      "id": "T04",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/t04.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 123296,
+      "thumbnailBytes": 9988,
+      "gridBytes": 34292,
+      "sha256": "cc65c67aeed58bbb971f89a182fbd2c591cc1ff1efd3c39129d19d20fd8f36bc",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2556433
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible T04: five graceful golden paths branching from a crystal card"
+    },
+    {
+      "id": "T05",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/t05.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 127016,
+      "thumbnailBytes": 11196,
+      "gridBytes": 38006,
+      "sha256": "38141b3c44814c2f5942ab2feeeedd7a345ea08f24504ad2ac9ca8037535479d",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2605086
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible T05: seven crescent lunar tokens surrounding a single Tarot deck"
+    },
+    {
+      "id": "T06",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/t06.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 147616,
+      "thumbnailBytes": 11898,
+      "gridBytes": 41476,
+      "sha256": "c36d18f0fc41febe2436118d0077c2bce2a0394a7b9c3fda8348ad6049c86357",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2745422
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible T06: a complete ornate Tarot deck opening into a grand golden spiral"
+    },
+    {
+      "id": "T07",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/t07.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 128918,
+      "thumbnailBytes": 10240,
+      "gridBytes": 35018,
+      "sha256": "037dbb6b8ae0eb0bf87d4e26372db169addfd9cb8bdd9eceef7e5bf43d7669e1",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2649806
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible T07: a magnifying crystal revealing constellations inside a Tarot card"
+    },
+    {
+      "id": "T08",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/t08.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 114620,
+      "thumbnailBytes": 9742,
+      "gridBytes": 32234,
+      "sha256": "4626c1e5fb69b96afe140a979bdc397735bed551b66c1ab7015cf85ab7712ef8",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2467828
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible T08: a fine golden key unlocking a layered illustrated card"
+    },
+    {
+      "id": "S01",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/s01.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 93702,
+      "thumbnailBytes": 7338,
+      "gridBytes": 24984,
+      "sha256": "49c7cf36a6792892a24b52d2720397dd52cf4851abfeff749974f92899460629",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2325908
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible S01: a miniature personal universe inside a transparent celestial globe"
+    },
+    {
+      "id": "S02",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/s02.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 126276,
+      "thumbnailBytes": 10896,
+      "gridBytes": 37228,
+      "sha256": "d19dde3c29c4618817d93038fd17e166aa21cbc15f2a79564c50deecf8e00a1c",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2518118
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible S02: five distinct planets displayed on a refined brass orrery"
+    },
+    {
+      "id": "S03",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/s03.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 115526,
+      "thumbnailBytes": 9742,
+      "gridBytes": 32672,
+      "sha256": "6a28f27be348023e4e5e5cf955af8d2e24db7603ef7f21f8e3e0aef9b13350b3",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2465664
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible S03: a precision golden astronomical instrument with five connected nodes"
+    },
+    {
+      "id": "S04",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/s04.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 110144,
+      "thumbnailBytes": 8054,
+      "gridBytes": 28366,
+      "sha256": "0d039feaf43000bb264a40a2f769c73fcbc6d86de26c41e97b33742275d6a1c8",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2529831
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible S04: two distinct luminous constellations linked by a delicate gold bridge"
+    },
+    {
+      "id": "S05",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/s05.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 95008,
+      "thumbnailBytes": 8194,
+      "gridBytes": 27596,
+      "sha256": "472214c3882b95efe075b626d3792f5b6e3b37433bc254ecffc2cca9aadd60cd",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2305928
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible S05: three interlocking celestial lenses in blue violet and gold"
+    },
+    {
+      "id": "S06",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/s06.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 127790,
+      "thumbnailBytes": 10298,
+      "gridBytes": 35870,
+      "sha256": "8dd192e4b135e571adbcf8e0e72d1efba2840aa02ead71b215b933244b0721b4",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2627305
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible S06: an antique lunar calendar with five softly illuminated date windows"
+    },
+    {
+      "id": "S07",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/s07.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 148900,
+      "thumbnailBytes": 10286,
+      "gridBytes": 37370,
+      "sha256": "d61a3f21f1a3a4e4fed4b5233f1fbd7decee1a6158d141dea0076aeb05c6a35a",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2871257
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible S07: a winding golden star path climbing through violet crystalline mountains"
+    },
+    {
+      "id": "S08",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/s08.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 132868,
+      "thumbnailBytes": 9704,
+      "gridBytes": 34926,
+      "sha256": "cb9c4e4d078161be932827986e2585607c216328195e92a06c5e740f3b1d8e99",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2644858
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible S08: a brass telescope whose light trail forms five tiny planets"
+    },
+    {
+      "id": "R01",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/r01.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 130644,
+      "thumbnailBytes": 9858,
+      "gridBytes": 35616,
+      "sha256": "6e7c663a7805c96fcab72d1c385626f55351e18b34693f3ee5785d807d5690b9",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2675772
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible R01: a violet journal with three golden ink lines and a fine quill"
+    },
+    {
+      "id": "R02",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/r02.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 139312,
+      "thumbnailBytes": 9770,
+      "gridBytes": 35666,
+      "sha256": "404ccde9d397b111c244d1a78957d118ec5423f2a0d612553b4e03fb3b5040f5",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2790811
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible R02: an open layered journal with luminous lavender page edges"
+    },
+    {
+      "id": "R03",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/r03.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 98492,
+      "thumbnailBytes": 7348,
+      "gridBytes": 26208,
+      "sha256": "1447a967673a58c0c6fb33fbb650aac4f3bfa657da45c27d8714c340ab8522d9",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2389517
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible R03: a deep mirror pool with a journal reflected beneath its still surface"
+    },
+    {
+      "id": "R04",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/r04.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 97250,
+      "thumbnailBytes": 7366,
+      "gridBytes": 25762,
+      "sha256": "eaacec63f647c0946f7d7547a7b41ff466ce42177cd28996c5de213bb0dd0e15",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2343608
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible R04: a velvet dream notebook beneath a floating glass moon"
+    },
+    {
+      "id": "R05",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/r05.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 94718,
+      "thumbnailBytes": 7386,
+      "gridBytes": 25450,
+      "sha256": "aa8c435af496e5a503099c528cfa6f4b1e5b4d5d90d9792f2fdf68811ee4c9fd",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2344259
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible R05: five tiny dream lanterns rising from a silver-bound notebook"
+    },
+    {
+      "id": "R06",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/r06.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 93838,
+      "thumbnailBytes": 7544,
+      "gridBytes": 25542,
+      "sha256": "758e3d81422fd7ab2a39c0734320c164c58c2fa65ce54722bcef16e06a191e8e",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2306016
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible R06: a delicate reflective moon basin with seven rose-gold droplets"
+    },
+    {
+      "id": "R07",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/r07.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 94244,
+      "thumbnailBytes": 7608,
+      "gridBytes": 26232,
+      "sha256": "527e562536e10e04d43f793ecff63d03548c2b8fd9c5dd875c406d26e387863c",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2318340
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible R07: a four-sided celestial prism revealing four unique inner landscapes"
+    },
+    {
+      "id": "R08",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/r08.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 111400,
+      "thumbnailBytes": 8814,
+      "gridBytes": 29838,
+      "sha256": "8b2249f2ad71684c8e259966c3a0fc067f7a553f8894d373c42b94c829c47ccd",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2488231
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible R08: a golden question-shaped light trail reflected in an oval violet mirror"
+    },
+    {
+      "id": "M01",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/m01.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 134814,
+      "thumbnailBytes": 8220,
+      "gridBytes": 32022,
+      "sha256": "ff2bd9517a28d961335afe3d809dde99c9449adbaef211fdc07c2df63f51a537",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2703542
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible M01: a sheltered moonlit cove with a luminous lotus dock"
+    },
+    {
+      "id": "M02",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/m02.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 138690,
+      "thumbnailBytes": 9408,
+      "gridBytes": 34260,
+      "sha256": "86c7f5b14907016a1dea13281326c3e1712f58248f1f8d396ac0aae94962cdc4",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2782795
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible M02: an open pavilion over calm water with violet curtains"
+    },
+    {
+      "id": "M03",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/m03.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 145196,
+      "thumbnailBytes": 11068,
+      "gridBytes": 38722,
+      "sha256": "e1db929fb071be8593695e7cc17ab2fa46cb47f25b1ff8353a6cde400429868e",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2842580
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible M03: a tranquil stone meditation sanctuary illuminated by a large moon"
+    },
+    {
+      "id": "M04",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/m04.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 116324,
+      "thumbnailBytes": 9956,
+      "gridBytes": 33340,
+      "sha256": "302e5b921b36c9a15c72c4e6884b9db1bad852fe2f29c1413830a0f2cd9019b5",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2481860
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible M04: five cyan ribbons of air weaving around a sapphire orb"
+    },
+    {
+      "id": "M05",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/m05.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 109350,
+      "thumbnailBytes": 10136,
+      "gridBytes": 33680,
+      "sha256": "3fa04a86c380bfefd29436ce7c9b7688642bc441b6090fa40ede3f7c6cdd0dec",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2353108
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible M05: a rhythmic sequence of luminous blue ripples around a floating crystal"
+    },
+    {
+      "id": "M06",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/m06.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 140786,
+      "thumbnailBytes": 10996,
+      "gridBytes": 39026,
+      "sha256": "9aca9d8d383d0ea212a7e92a94ab124d556b4a906a42f0ad31ec98a461757280",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2693550
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible M06: three distinct translucent blue breath rings arranged in depth"
+    },
+    {
+      "id": "M07",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/m07.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 109992,
+      "thumbnailBytes": 9960,
+      "gridBytes": 32764,
+      "sha256": "69105964d4138859ae53048a0c4c6f985f2b9430ecd776e2e82a18a4c7f97073",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2368969
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible M07: a golden hourglass holding tiny luminous lotus petals"
+    },
+    {
+      "id": "M08",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/m08.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 119110,
+      "thumbnailBytes": 10328,
+      "gridBytes": 35042,
+      "sha256": "2903d0333a82d50fee085268d2861e58df3978bbf8625374dc4db01bd91c48c0",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2462418
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible M08: an ivory lotus encircled by a sapphire breath halo on a still lake"
+    },
+    {
+      "id": "G01",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/g01.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 124208,
+      "thumbnailBytes": 10654,
+      "gridBytes": 36810,
+      "sha256": "5b0e2b752f268679d52a18f968d0ce85dd77f1e013228e40d2ef8cea0cfcd4d4",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2432566
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible G01: three moonlit stepping stones with tiny golden sprouts"
+    },
+    {
+      "id": "G02",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/g02.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 171562,
+      "thumbnailBytes": 12172,
+      "gridBytes": 46212,
+      "sha256": "3e34261be976effe578e070084ce6aa4dcebf3f00f472918c2af42c5594f7cde",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2975460
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible G02: seven small lanterns leading along a moonlit garden path"
+    },
+    {
+      "id": "G03",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/g03.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 161176,
+      "thumbnailBytes": 10196,
+      "gridBytes": 40024,
+      "sha256": "e7370f58a493263a3798f0a9b808b05fe7244ceb0989dfe4f92a2403caa5ef18",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2953221
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible G03: a full cycle of lunar phases surrounding a flowering garden gate"
+    },
+    {
+      "id": "G04",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/g04.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 90154,
+      "thumbnailBytes": 8352,
+      "gridBytes": 26168,
+      "sha256": "15daf30d48826248bb7c340907bd4243fbb3b4c0577b7a6bd27c9583ca5f5174",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2264079
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible G04: one precious gold-tipped green sprout in a violet stone vessel"
+    },
+    {
+      "id": "G05",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/g05.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 165828,
+      "thumbnailBytes": 10178,
+      "gridBytes": 40404,
+      "sha256": "a0ed0752d275b70ab508c0116e13a270fc434853f263ffd63599ad249b95707b",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2991469
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible G05: a miniature four-part garden with lotus lantern path and young tree"
+    },
+    {
+      "id": "G06",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/g06.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 173872,
+      "thumbnailBytes": 10794,
+      "gridBytes": 42428,
+      "sha256": "076c09a6759c2705fc9141a9361494d3a05bb9d3713f60dff8e21a6beab31f66",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 3058449
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible G06: a complete moonlit miniature garden with bridge mature blossom and golden lanterns"
+    },
+    {
+      "id": "C01",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/c01.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 145944,
+      "thumbnailBytes": 10132,
+      "gridBytes": 36936,
+      "sha256": "0bac9f2d396c6ea8e0bca871e3f3733128abff8b7f3ad1c005ff183326ad7a6e",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2815613
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible C01: two open celestial doors joined by a warm path of starlight"
+    },
+    {
+      "id": "C02",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/c02.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 136260,
+      "thumbnailBytes": 9446,
+      "gridBytes": 35394,
+      "sha256": "f0697e0e2ede2e43d9ada0ebb99b07c2a79a6c85b7364a3820e0293ef758a73c",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2707942
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible C02: three distinct stars connected above a welcoming garden arch"
+    },
+    {
+      "id": "C03",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/c03.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 63556,
+      "thumbnailBytes": 5198,
+      "gridBytes": 16920,
+      "sha256": "c0ff24cd5212f78fbb02913faa086d5c9276f1b6d496f165f408e8ce8a01bcc6",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2075058
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible C03: five jewel-like stars forming a small elegant constellation"
+    },
+    {
+      "id": "C04",
+      "kind": "achievement",
+      "src": "/images/achievements/luna34/c04.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 87692,
+      "thumbnailBytes": 8012,
+      "gridBytes": 25644,
+      "sha256": "156dd5d88d3c5817aedf0b932e375dae46fc485be66c8e7a511f4b5123a37e4a",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2199794
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Luna collectible C04: a luminous small celestial card carried outward by two gentle golden light ribbons"
+    },
+    {
+      "id": "seeker",
+      "kind": "status",
+      "src": "/images/statuses/luna34/seeker.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 109416,
+      "thumbnailBytes": 9164,
+      "gridBytes": 31520,
+      "sha256": "3dffbde2d933ea18eeb8e287137d6fb264358afa555edf8b29834fec740daabd",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2387871
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Use case: premium fantasy collectible illustration for Luna Meditation rank seeker. Single standalone square raster artwork, no text. Subject: a glowing gold compass pendant above a single violet moonstone. Coherent elegant cinematic painterly 3D collection, dimensional materials, deep midnight navy #10152b, soft violet moonlight, restrained warm gold highlights. One distinctive central subject occupying 70 percent, clean dark edges, recognizable at 64 pixels, beautiful at 768 pixels. Rich material detail, subtle volume and atmosphere, no generic flat icon, no trophy, no UI, no logo, no lettering, no numbers, no border. Render at least 1024x1024."
+    },
+    {
+      "id": "observer",
+      "kind": "status",
+      "src": "/images/statuses/luna34/observer.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 112148,
+      "thumbnailBytes": 8424,
+      "gridBytes": 30128,
+      "sha256": "012dc11f155266de6028ede3d8e33c7618a783ef3ab9a75bde8fc83232aba698",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2446189
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Use case: premium fantasy collectible illustration for Luna Meditation rank observer. Single standalone square raster artwork, no text. Subject: a polished brass astronomical telescope gazing at a silver crescent. Coherent elegant cinematic painterly 3D collection, dimensional materials, deep midnight navy #10152b, soft violet moonlight, restrained warm gold highlights. One distinctive central subject occupying 70 percent, clean dark edges, recognizable at 64 pixels, beautiful at 768 pixels. Rich material detail, subtle volume and atmosphere, no generic flat icon, no trophy, no UI, no logo, no lettering, no numbers, no border. Render at least 1024x1024."
+    },
+    {
+      "id": "explorer",
+      "kind": "status",
+      "src": "/images/statuses/luna34/explorer.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 143374,
+      "thumbnailBytes": 9820,
+      "gridBytes": 37722,
+      "sha256": "2095a484789b0e5fc0f8759992f76db303f46b325f2c486570dce868c691c54c",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2726996
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Use case: premium fantasy collectible illustration for Luna Meditation rank explorer. Single standalone square raster artwork, no text. Subject: an open indigo celestial atlas with golden paths emerging in light. Coherent elegant cinematic painterly 3D collection, dimensional materials, deep midnight navy #10152b, soft violet moonlight, restrained warm gold highlights. One distinctive central subject occupying 70 percent, clean dark edges, recognizable at 64 pixels, beautiful at 768 pixels. Rich material detail, subtle volume and atmosphere, no generic flat icon, no trophy, no UI, no logo, no lettering, no numbers, no border. Render at least 1024x1024."
+    },
+    {
+      "id": "wanderer",
+      "kind": "status",
+      "src": "/images/statuses/luna34/wanderer.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 133890,
+      "thumbnailBytes": 9600,
+      "gridBytes": 34420,
+      "sha256": "ea5fa02f37933c945d5ed44463e3684892240c0d1a5a98e94f6f4dc0b25669d4",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2616553
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Use case: premium fantasy collectible illustration for Luna Meditation rank wanderer. Single standalone square raster artwork, no text. Subject: a solitary cloaked traveler crossing a moonlit blue mountain bridge. Coherent elegant cinematic painterly 3D collection, dimensional materials, deep midnight navy #10152b, soft violet moonlight, restrained warm gold highlights. One distinctive central subject occupying 70 percent, clean dark edges, recognizable at 64 pixels, beautiful at 768 pixels. Rich material detail, subtle volume and atmosphere, no generic flat icon, no trophy, no UI, no logo, no lettering, no numbers, no border. Render at least 1024x1024."
+    },
+    {
+      "id": "guardian",
+      "kind": "status",
+      "src": "/images/statuses/luna34/guardian.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 134048,
+      "thumbnailBytes": 10410,
+      "gridBytes": 36680,
+      "sha256": "a73630074b49300461ca5bea6a42299b395714c6f49d9ed3b6023066220907e9",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2702003
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Use case: premium fantasy collectible illustration for Luna Meditation rank guardian. Single standalone square raster artwork, no text. Subject: a sculptural silver and gold lunar shield embracing a tiny cosmic garden. Coherent elegant cinematic painterly 3D collection, dimensional materials, deep midnight navy #10152b, soft violet moonlight, restrained warm gold highlights. One distinctive central subject occupying 70 percent, clean dark edges, recognizable at 64 pixels, beautiful at 768 pixels. Rich material detail, subtle volume and atmosphere, no generic flat icon, no trophy, no UI, no logo, no lettering, no numbers, no border. Render at least 1024x1024."
+    },
+    {
+      "id": "contemplator",
+      "kind": "status",
+      "src": "/images/statuses/luna34/contemplator.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 98206,
+      "thumbnailBytes": 8822,
+      "gridBytes": 29448,
+      "sha256": "d8b96fbf2dc2698cd9ad70b29b55a19a64943e1ad3d4f496ae2e301eba6933c6",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2293387
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Use case: premium fantasy collectible illustration for Luna Meditation rank contemplator. Single standalone square raster artwork, no text. Subject: a floating crystal orb above still violet water with intricate concentric ripples. Coherent elegant cinematic painterly 3D collection, dimensional materials, deep midnight navy #10152b, soft violet moonlight, restrained warm gold highlights. One distinctive central subject occupying 70 percent, clean dark edges, recognizable at 64 pixels, beautiful at 768 pixels. Rich material detail, subtle volume and atmosphere, no generic flat icon, no trophy, no UI, no logo, no lettering, no numbers, no border. Render at least 1024x1024."
+    },
+    {
+      "id": "guide",
+      "kind": "status",
+      "src": "/images/statuses/luna34/guide.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 150792,
+      "thumbnailBytes": 12024,
+      "gridBytes": 42198,
+      "sha256": "06850183fcc832826702e3c00387814d3cd79e6ed9b164dffbfb653076ab4897",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2643421
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Use case: premium fantasy collectible illustration for Luna Meditation rank guide. Single standalone square raster artwork, no text. Subject: an ornate golden lantern lighting a path through indigo celestial clouds. Coherent elegant cinematic painterly 3D collection, dimensional materials, deep midnight navy #10152b, soft violet moonlight, restrained warm gold highlights. One distinctive central subject occupying 70 percent, clean dark edges, recognizable at 64 pixels, beautiful at 768 pixels. Rich material detail, subtle volume and atmosphere, no generic flat icon, no trophy, no UI, no logo, no lettering, no numbers, no border. Render at least 1024x1024."
+    },
+    {
+      "id": "alchemist",
+      "kind": "status",
+      "src": "/images/statuses/luna34/alchemist.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 112512,
+      "thumbnailBytes": 9352,
+      "gridBytes": 31264,
+      "sha256": "eff6efa252ca2103e404219f4c14730787d5b0ae58ad293c0b4a4eb0788f6f75",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2428221
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Use case: premium fantasy collectible illustration for Luna Meditation rank alchemist. Single standalone square raster artwork, no text. Subject: a refined crystal alembic transforming moonlight into liquid gold. Coherent elegant cinematic painterly 3D collection, dimensional materials, deep midnight navy #10152b, soft violet moonlight, restrained warm gold highlights. One distinctive central subject occupying 70 percent, clean dark edges, recognizable at 64 pixels, beautiful at 768 pixels. Rich material detail, subtle volume and atmosphere, no generic flat icon, no trophy, no UI, no logo, no lettering, no numbers, no border. Render at least 1024x1024."
+    },
+    {
+      "id": "sage",
+      "kind": "status",
+      "src": "/images/statuses/luna34/sage.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 152704,
+      "thumbnailBytes": 9672,
+      "gridBytes": 37528,
+      "sha256": "7aa9849e5464e6e10a342e2312e81057e69ecd50a6fce9abb96d04d26e8868cf",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2975717
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Use case: premium fantasy collectible illustration for Luna Meditation rank sage. Single standalone square raster artwork, no text. Subject: an ancient midnight-blue book and radiant pearl surrounded by quiet stars. Coherent elegant cinematic painterly 3D collection, dimensional materials, deep midnight navy #10152b, soft violet moonlight, restrained warm gold highlights. One distinctive central subject occupying 70 percent, clean dark edges, recognizable at 64 pixels, beautiful at 768 pixels. Rich material detail, subtle volume and atmosphere, no generic flat icon, no trophy, no UI, no logo, no lettering, no numbers, no border. Render at least 1024x1024."
+    },
+    {
+      "id": "constellation",
+      "kind": "status",
+      "src": "/images/statuses/luna34/constellation.webp",
+      "width": 768,
+      "height": 768,
+      "bytes": 128608,
+      "thumbnailBytes": 10590,
+      "gridBytes": 37242,
+      "sha256": "5f9bb3fec07aed03a4c7b4ba7e7eb2ecd3e29ae3e98d594ead9f37eed2df284b",
+      "original": {
+        "width": 1254,
+        "height": 1254,
+        "bytes": 2546492
+      },
+      "source": "built_in_imagegen",
+      "prompt": "Use case: premium fantasy collectible illustration for Luna Meditation rank constellation. Single standalone square raster artwork, no text. Subject: an intricate luminous constellation crown spanning a deep blue galaxy. Coherent elegant cinematic painterly 3D collection, dimensional materials, deep midnight navy #10152b, soft violet moonlight, restrained warm gold highlights. One distinctive central subject occupying 70 percent, clean dark edges, recognizable at 64 pixels, beautiful at 768 pixels. Rich material detail, subtle volume and atmosphere, no generic flat icon, no trophy, no UI, no logo, no lettering, no numbers, no border. Render at least 1024x1024."
+    }
+  ]
+}

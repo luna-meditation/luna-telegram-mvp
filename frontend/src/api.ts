@@ -236,6 +236,7 @@ export type ProfileStats = {
   calmScore: number;
   rewards: Record<7 | 14 | 30 | 100, boolean>;
   achievements?: {
+    version?:number;
     unlocked: number;
     total: number;
     items: Array<{
@@ -248,6 +249,8 @@ export type ProfileStats = {
       progress?: number;
       current?: number;
       target?: number;
+      art?:string;
+      celebrationPending?:boolean;
     }>;
   };
   journeyStatus?: {
@@ -390,7 +393,7 @@ export type LunaConversationSummary = {
   latestMessage: string;
 };
 
-export type AstrologyChatAttachment={chartId:string;secondChartId?:string;reportId?:string;planet?:'sun'|'moon'|'mercury'|'venus'|'mars'|'jupiter'|'saturn'|'uranus'|'neptune'|'pluto'};
+export type AstrologyChatAttachment={chartId:string;secondChartId?:string;reportId?:string;planet?:'sun'|'moon'|'mercury'|'venus'|'mars'|'jupiter'|'saturn'|'uranus'|'neptune'|'pluto';aspect?:{from:string;to:string;type:string}};
 export type AstrologyWorkflow={version:1;kind:'natal'|'compatibility';state:'selecting'|'ready';firstProfileId?:string;secondProfileId?:string;firstChartId?:string;secondChartId?:string};
 export const openLunaAstrology=(input:{requestId:string;conversationId?:string;kind:'natal'|'compatibility';language:AppLanguage;firstProfileId?:string;secondProfileId?:string},initData?:string)=>request<{conversationId:string;message:LunaMessage}>('/api/luna/tools/astrology',{method:'POST',body:JSON.stringify(input)},initData);
 export type LunaMessage = {
@@ -405,7 +408,8 @@ export type LunaMessage = {
     astrologyConsent?:{version:1;chartId:string;secondChartId?:string};
     workflowActions?:Array<'natal_chart'|'compatibility'|'breathing'>;
     readingId?:string;
-    consultation?:{version:1;phase:string;actions:Array<'continue'|'alternative'|'tarot'|'natal_chart'|'compatibility'|'meditation'|'breathing'|'journal'|'history'>};
+    consultation?:{version:1;phase:string;actions:Array<'continue'|'alternative'|'tarot'|'natal_chart'|'compatibility'|'meditation'|'breathing'|'journal'|'history'>;quickReplies?:string[]};
+    breathing?:{practiceId:string;minutes:number};
     contextualActions?:Array<'tarot'|'birth_profile'|'journal'|'meditation'>;
     tarot?:{readingId:string;clientReadingId:string;kind:'single'|'three'|'five';revealed:number;requestHash:string;reading:TarotReading|null};
     recommendedMeditationId?: string | null;
@@ -584,6 +588,7 @@ export async function heartbeatPlaybackSession(sessionId: string, lastPosition: 
 }
 
 export async function saveBreathSession(input: {
+  session_id?:string;
   mode: 'calm' | 'box' | '478' | 'coherent' | 'triangle' | 'sigh' | 'anxiety_reset' | 'sleep' | 'morning_energy';
   duration_seconds: number;
   breath_count: number;
@@ -594,6 +599,24 @@ export async function saveBreathSession(input: {
     body: JSON.stringify(input)
   }, initData);
 }
+
+export const startVerifiedBreath=(clientId:string,mode:string,duration:number,initData?:string)=>request<{id:string;verifiedSeconds:number;completed:boolean}>('/api/luna34/breath/start',{method:'POST',body:JSON.stringify({clientId,mode,duration})},initData);
+export const heartbeatVerifiedBreath=(id:string,active:boolean,initData?:string)=>request<{verifiedSeconds:number;completed:boolean}>(`/api/luna34/breath/${id}/heartbeat`,{method:'POST',body:JSON.stringify({active})},initData);
+export const recordProgressEvidence=(input:{kind:string;entityId:string;detail?:string;secondChartId?:string},initData?:string)=>request<{recorded:boolean}>('/api/luna34/progress/events',{method:'POST',body:JSON.stringify(input)},initData);
+export const acknowledgeMilestones=(ids:string[],initData?:string)=>request('/api/luna34/progress/acknowledge',{method:'POST',body:JSON.stringify({ids})},initData);
+export const prepareShareExport=(input:{kind:string;asset?:string;format:string},initData?:string)=>request<{ticket:string}>('/api/luna34/share/prepare',{method:'POST',body:JSON.stringify(input)},initData);
+export const completeShareExport=(input:{ticket:string;outcome:'download_invoked'|'native_share_completed';sha256:string;bytes:number},initData?:string)=>request('/api/luna34/share/complete',{method:'POST',body:JSON.stringify(input)},initData);
+export type MembershipOverview={catalog:{version:string;premium:{monthlyStars:number;ordinaryAiRepliesPerBillingMonth:number;threeCardReadings:number;fiveCardReadings:number;compatibilityReports:number;renewalSeeds:number;meditations:number};annual:{stars:number;days:number;recurring:false};free:{aiSuccessfulRepliesPerUtcDay:number;meditations:number};packages:Array<{id:string;seeds:number;stars:number}>;supportStars:number[]};membership:{kind:'free'|'monthly'|'annual'|'lifetime'|'legacy_fixed_term';paid:boolean;until:string|null;preserveLegacy:boolean;ordinaryLimit:number|null;resetAt:string|null};commercialEnabled:boolean;quotasEnabled:boolean;balance:number;earned:number;transactions:Array<{id:string;kind:string;delta:number;balance_after:number;created_at:string}>|null;purchases:Array<{id:string;plan:string;amount_stars:number;currency:string;status:string;created_at:string}>;newPurchases:Array<{charge_id:string;order_id:string;stars:number;state:string;subscription_expires_at:string|null;cancelled_at:string|null;created_at:string}>|null;usage:{limit:number;remaining:number;resetAt:string;scope?:'utc_day'|'billing_month'};beta:{active:boolean;expiresAt:string|null}};
+export type ReferralOverview={enabled:boolean;link:string|null;total:number;pending:number;qualified:number;rewarded:number;seedsEarned:number;monthlyCap:number;rewardsEnabled:boolean;onboardingRequired:boolean};
+export const getReferralOverview=(initData?:string)=>request<ReferralOverview>('/api/luna34/referrals',undefined,initData);
+export type Luna34Operations={achievement_count:number;progress_settings:{enabled:boolean;achievement_rewards_enabled:boolean};event_volume_last_hour:number;stale_allowance_reservations:number;financial_activation:Record<string,unknown>;pricing_basis:string;groups:Array<{billing_month:string;feature:string;model:string;requests:number;operations:number;active_users:number;completed:number;failed_or_unknown:number;retry_leases:number;additional_provider_calls:number;input_tokens:number;cached_input_tokens:number;output_tokens:number;cost_microusd:number;held_microusd:number;average_per_active_user_microusd:number;recorded_run_rate_projection_microusd:number|null}>};
+export const getLuna34Operations=(initData?:string)=>request<Luna34Operations>('/api/luna34/admin/metrics',undefined,initData);
+export const makeReferralLink=(initData?:string)=>request<ReferralOverview>('/api/luna34/referrals/link',{method:'POST',body:'{}'},initData);
+export const finishReferralOnboarding=(initData?:string)=>request<{completed:boolean}>('/api/luna34/referrals/onboarding',{method:'POST',body:JSON.stringify({completed:true})},initData);
+export const cancelCommercialSubscription=(chargeId:string,initData?:string)=>request('/api/luna30/commerce/subscriptions/cancel',{method:'POST',body:JSON.stringify({chargeId,confirmed:true})},initData);
+export const getMembershipOverview=(initData?:string)=>request<MembershipOverview>('/api/luna34/membership',undefined,initData);
+export const createCommercialOrder=(input:{requestId:string;product:string;expectedStars:number;confirmed:true;termsAccepted:true},initData?:string)=>request<{order:{id:string;state:string};invoiceUrl:string|null}>('/api/luna30/commerce/orders',{method:'POST',body:JSON.stringify(input)},initData);
+export const getCommercialOrder=(id:string,initData?:string)=>request<{order:{id:string;state:string}}>(`/api/luna30/commerce/orders/${id}`,undefined,initData);
 
 export async function plantMoonGardenElement(elementId: string, initData?: string) {
   return request<{

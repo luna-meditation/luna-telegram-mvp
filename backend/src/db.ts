@@ -5,6 +5,7 @@ import {readLuna32Settings,betaEntitlement} from './luna32-runtime.js';
 import {stagingUserRecord} from './staging-policy.js';
 import {buildLuna30Progress,type Luna30ProgressInput} from './luna30-progression.js';
 import {loadLuna30ActivityMetadata} from './luna30-progress-source.js';
+import {createLuna34Progress} from './luna34-progress.js';
 import {
   paymentPlanDetails,
   payloadPlanFromStoredPayment,
@@ -59,6 +60,7 @@ async function syncPermanentJourneyStatus(telegramId: number, metrics: JourneySt
 
   if (readError) {
     logBackendError(readError, { endpoint: 'database Journey status read', telegramId });
+    if(diverse?.achievements!==undefined)throw readError;
     return buildJourneyStatus(metrics);
   }
 
@@ -68,9 +70,10 @@ async function syncPermanentJourneyStatus(telegramId: number, metrics: JourneySt
     ? stored.journey_status_unlocked_at
     : null;
   const status = buildJourneyStatus(metrics, storedRank, unlockedAt);
-  const targetRank=Math.max(status.eligibleRank,diverse?buildLuna30Progress(diverse,storedRank).eligibleRank:-1);
+  const diverseEligible=diverse?buildLuna30Progress(diverse,storedRank).eligibleRank:-1;
+  const targetRank=diverse?.achievements!==undefined?diverseEligible:Math.max(status.eligibleRank,diverseEligible);
 
-  if (targetRank <= storedRank) return status;
+  if (targetRank <= storedRank) return {...status,permanentRank:storedRank};
 
   const nextUnlockedAt = new Date().toISOString();
   const { data: updated, error: updateError } = await supabase
@@ -86,15 +89,15 @@ async function syncPermanentJourneyStatus(telegramId: number, metrics: JourneySt
 
   if (updateError) {
     logBackendError(updateError, { endpoint: 'database Journey status update', telegramId });
-    return status;
+    return {...status,permanentRank:storedRank};
   }
 
-  if (!updated) return status;
-  return buildJourneyStatus(
+  if (!updated) {const latest=await supabase.from('users').select('journey_status_rank').eq('telegram_id',telegramId).maybeSingle();return {...status,permanentRank:Number(latest.data?.journey_status_rank??storedRank)};}
+  return {...buildJourneyStatus(
     metrics,
     Number(updated.journey_status_rank ?? targetRank),
     typeof updated.journey_status_unlocked_at === 'string' ? updated.journey_status_unlocked_at : nextUnlockedAt
-  );
+  ),permanentRank:Number(updated.journey_status_rank??targetRank)};
 }
 
 export type TelegramUserInput = {
@@ -745,48 +748,22 @@ export async function upsertHistory(telegramId: number, input: HistoryInput) {
 }
 
 export async function recordBreathSession(telegramId: number, input: {
+  session_id?:string;
   mode: string;
   duration_seconds: unknown;
   breath_count: unknown;
   local_date?: string;
 }) {
-  const allowedModes = ['calm', 'box', '478', 'coherent', 'triangle', 'sigh', 'anxiety_reset', 'sleep', 'morning_energy'];
-  const mode = allowedModes.includes(input.mode) ? input.mode : 'calm';
-  const requestedDurationSeconds = normalizePlaybackSeconds(input.duration_seconds, {
-    field: 'duration_seconds',
-    fallback: 60
-  });
-  const requestedBreathCount = normalizePlaybackSeconds(input.breath_count, {
-    field: 'breath_count',
-    fallback: 1
-  });
-  if (requestedDurationSeconds === 0) {
-    throw new PlaybackInputError('duration_seconds', 'must be greater than zero.');
+  if(input.session_id){
+    const result=await supabase.rpc('luna34_finish_breath',{p_owner:telegramId,p_session:input.session_id});
+    if(result.error)throw result.error;
+    if(!result.data?.completed)throw new PlaybackInputError('session_id','verified practice time is not complete yet.');
+    if(result.data.newlyCompleted){await recordPracticeDay(telegramId,'breath',Math.max(1,Math.round(result.data.duration_seconds/60)),input.local_date);await updateStreak(telegramId,input.local_date);}
+    return result.data;
   }
-  if (requestedBreathCount === 0) {
-    throw new PlaybackInputError('breath_count', 'must be greater than zero.');
-  }
-  const durationSeconds = Math.max(30, Math.min(600, requestedDurationSeconds));
-  const breathCount = Math.max(1, Math.min(120, requestedBreathCount));
-
-  const { error } = await supabase.from('breath_sessions').insert({
-    telegram_id: telegramId,
-    mode,
-    duration_seconds: durationSeconds,
-    breath_count: breathCount
-  });
-
-  if (error) throw error;
-  await awardMoonSeeds(telegramId, 1);
-  await recordPracticeDay(telegramId, 'breath', Math.max(1, Math.round(durationSeconds / 60)), input.local_date);
-  await updateStreak(telegramId, input.local_date);
-
-  return {
-    completed: true,
-    mode,
-    duration_seconds: durationSeconds,
-    breath_count: breathCount
-  };
+  // Old WebViews must refresh before earning a new completion. Merely claiming
+  // a duration cannot create progress or issue a reward.
+  throw new PlaybackInputError('session_id','reload Luna to start a verified breathing session.');
 }
 
 export async function recordSceneMoonSeed(telegramId: number, input: {
@@ -1322,10 +1299,10 @@ function earnedMoonSeeds(input: {
   return input.completedMeditations + input.completedBreathSessions + streakSeeds;
 }
 
-async function syncAchievements(telegramId: number, stats: AchievementStats) {
+async function syncAchievements(telegramId: number, stats: AchievementStats, freezeLegacy=false) {
   const unlockedDefinitions = achievementDefinitions.filter((definition) => definition.current(stats) >= definition.target);
   try {
-    if (unlockedDefinitions.length > 0) {
+    if (!freezeLegacy && unlockedDefinitions.length > 0) {
       const now = new Date().toISOString();
       const { error: upsertError } = await supabase
         .from('achievements')
@@ -1348,7 +1325,8 @@ async function syncAchievements(telegramId: number, stats: AchievementStats) {
       .eq('telegram_id', telegramId);
     if (error) throw error;
 
-    const items = buildAchievementItems(stats, data ?? []);
+    const projected=buildAchievementItems(stats,data??[]);
+    const items=freezeLegacy?(data??[]).filter(row=>row.unlocked_at&&!/^[ATSRMGC][0-9]{2}$/.test(row.achievement_id)).map(row=>{const definition=projected.find(item=>item.id===row.achievement_id);return {...(definition??{id:row.achievement_id,title:row.achievement_id,description:'Earlier Luna achievement. Original earned date preserved.',category:'legacy',current:1,target:1}),unlocked:true,unlockedAt:row.unlocked_at,progress:100};}):projected;
 
     return {
       unlocked: items.filter((item) => item.unlocked).length,
@@ -1357,7 +1335,7 @@ async function syncAchievements(telegramId: number, stats: AchievementStats) {
     };
   } catch (error) {
     logBackendError(error, { endpoint: 'database achievements lookup', telegramId });
-    const items = buildAchievementItems(stats, []);
+    const items = freezeLegacy?[]:buildAchievementItems(stats, []);
     return {
       unlocked: items.filter((item) => item.unlocked).length,
       total: achievementDefinitions.length,
@@ -1719,6 +1697,7 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     env.FEATURE_ASTROLOGY?supabase.from('luna30_astrology_reports').select('id',{count:'exact',head:true}).eq('telegram_id',telegramId).eq('report_kind','compatibility'):Promise.resolve({count:0}),
     env.FEATURE_PERSONAL_MEMORY?supabase.from('user_memories').select('id',{count:'exact',head:true}).eq('telegram_id',telegramId).eq('confirmation_status','confirmed').eq('is_active',true).eq('memory_kind','fact'):Promise.resolve({count:0})
   ]);
+  const progression34=await createLuna34Progress(supabase).snapshot(telegramId);
   const achievements = await syncAchievements(telegramId, {
     tarotReadings:tarotCount.count??0,dailyCards:dailyCount.count??0,aiConversations:conversationCount.count??0,
     calculatedCharts:chartCount.count??0,compatibilityReports:comparisonCount.count??0,confirmedMemories:memoryCount.count??0,
@@ -1737,7 +1716,7 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     completedWeeks: lifetimeStats.completedWeeks,
     perfectWeeks: lifetimeStats.completedWeeks,
     categoryCounts
-  });
+  },Boolean(progression34));
   let diverse:Luna30ProgressInput|undefined;
   if(env.LUNA30_PROGRESSION_ENABLED){
     // Only timestamps/counts enter progress. Never expose questions or messages.
@@ -1750,10 +1729,11 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
       diverse={meaningfulDays:days.size,meditations:completedMeditations,breathwork:completedBreathSessions,tarot:readings.count,reflections:checkins?.length??0,conversations:conversations.count};
     }
   }
+  if(progression34){const m=progression34.metrics;diverse={meaningfulDays:m.meaningfulDays,meditations:m.meditations,breathwork:m.breaths,tarot:m.readings,reflections:m.reflections,conversations:m.aiInteractions,achievements:progression34.unlocked};}
   const journeyStatus = await syncPermanentJourneyStatus(telegramId, {
-    completedMeditations,
+    completedMeditations:progression34?.metrics.meditations??completedMeditations,
     longestStreak,
-    unlockedAchievements: achievements.unlocked,
+    unlockedAchievements: progression34?.unlocked??achievements.unlocked,
     gardenLevel: moonGarden.gardenLevel
   },diverse);
 
@@ -1808,9 +1788,9 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     lastPracticeDate,
     purchasedPlan: user?.lifetime_access ? 'lifetime' : activeUntil > Date.now() ? 'monthly' : 'free',
     calmScore,
-    achievements,
+    achievements:progression34?{version:34,unlocked:progression34.unlocked,total:50,items:[...progression34.items,...achievements.items]}:achievements,
     journeyStatus,
-    ...(diverse?{journeyV3:buildLuna30Progress(diverse,journeyStatus.rank)}:{}),
+    ...(diverse?{journeyV3:buildLuna30Progress(diverse,progression34&&'permanentRank' in journeyStatus?journeyStatus.permanentRank:journeyStatus.rank)}:{}),
     progressDiagnostics: telegramId === env.ADMIN_TELEGRAM_ID ? {
       localWeekStart: currentWeek.weekStart,
       localWeekEnd: shiftDateKey(currentWeek.weekStart, 6),

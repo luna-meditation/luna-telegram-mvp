@@ -88,6 +88,6 @@ export default function TarotPage({language,onBack,session,dispatch,registerBack
   {coverFailed&&<div className="tarot-error" role="alert"><p>{t.imageError}</p><button type="button" className="tarot-text-button" onClick={()=>{setCoverFailed(false);setCoverAttempt(value=>value+1);}}>{t.retry}</button></div>}
   {error&&<p className="tarot-error" role="alert">{t.drawError}</p>}
   <footer className="tarot-footnote"><p>{t.disclaimer}</p></footer>
-  {zoom&&card&&session.result&&<TarotDetails card={card} orientation={session.result.orientation} language={language} onClose={closeZoom} registerBackHandler={registerBackHandler}/>}
+  {zoom&&card&&session.result&&<TarotDetails readingId={session.savedReading?.id} initData={initData} card={card} orientation={session.result.orientation} language={language} onClose={closeZoom} registerBackHandler={registerBackHandler}/>}
  </div>;
 }

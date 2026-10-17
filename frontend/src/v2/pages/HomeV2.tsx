@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
-import { Crown } from 'lucide-react';
+import { useState } from 'react';
 import type { AppLanguage, Meditation } from '../../api';
 import { BrandLogo } from '../../design-system/components/BrandLogo';
 import { V2Continue } from '../components/V2Continue';
@@ -7,6 +6,7 @@ import { V2Discovery, V2PracticeTiles } from '../components/V2Discovery';
 import { V2Hero, V2HeroFallback } from '../components/V2Hero';
 import { V2Recommendation } from '../components/V2Recommendation';
 import { V2Sound } from '../components/V2Sound';
+import {SoundscapeSheet} from '../components/SoundscapeSheet';
 import { V2Stats, type V2Stat } from '../components/V2Stats';
 import { HomeDiscovery, HomeProgress } from '../../luna2/HomeDiscovery';
 import '../design-system/homeV2.css';
@@ -65,6 +65,7 @@ type HomeV2Labels = {
 };
 
 type HomeV2Props = {
+  registerBackHandler?:(handler:(()=>void)|null)=>void;
   initData?:string;
   newNavigation?: boolean;
   tarotEnabled?: boolean;
@@ -117,29 +118,8 @@ type HomeV2Props = {
 
 export function HomeV2(props: HomeV2Props) {
   const [soundExpanded, setSoundExpanded] = useState(false);
-  const [soundOverflow, setSoundOverflow] = useState(false);
-  const soundChooserRef = useRef<HTMLDivElement | null>(null);
   const activeScene = props.selectedScene ?? props.scenes[0] ?? null;
   const discoveryItems = props.explore.length ? props.explore : props.recentlyPlayed;
-
-  useEffect(() => {
-    if (!soundExpanded) {
-      setSoundOverflow(false);
-      return;
-    }
-
-    const chooser = soundChooserRef.current;
-    if (!chooser) return;
-    const measure = () => setSoundOverflow(chooser.scrollWidth > chooser.clientWidth + 2);
-    measure();
-    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(measure);
-    observer?.observe(chooser);
-    window.addEventListener('resize', measure);
-    return () => {
-      observer?.disconnect();
-      window.removeEventListener('resize', measure);
-    };
-  }, [props.scenes.length, soundExpanded]);
 
   if (props.loading && !props.daily) {
     return (
@@ -238,33 +218,17 @@ export function HomeV2(props: HomeV2Props) {
             language={props.language}
             activeLabel={props.labels.soundActive}
             selectLabel={props.labels.soundSelect}
-            onOpen={props.onSoundOpen}
+            onOpen={() => setSoundExpanded(true)}
             onToggle={props.onSoundToggle}
             onExpand={() => setSoundExpanded((value) => !value)}
           />
         ) : null}
-      {soundExpanded ? (
-        <div ref={soundChooserRef} className={`home-v2-sound-chooser ${soundOverflow ? 'home-v2-sound-chooser-overflow' : ''}`}>
-          {props.scenes.map((scene) => {
-            const locked = scene.access === 'premium' && !props.hasPremium;
-            return (
-              <button
-                key={scene.id}
-                type="button"
-                onClick={() => props.onSoundSelect(scene)}
-                className={props.selectedScene?.id === scene.id ? 'home-v2-choice home-v2-choice-active' : 'home-v2-choice'}
-              >
-                {scene.title[props.language]} {locked ? <Crown size={11} aria-label={props.labels.premium} /> : null}
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
+      {soundExpanded && <SoundscapeSheet scenes={props.scenes} selectedId={props.selectedScene?.id} playing={props.scenePlaying} language={props.language} hasPremium={props.hasPremium} onSelect={id=>{const scene=props.scenes.find(item=>item.id===id);if(scene)props.onSoundSelect(scene);}} onToggle={props.onSoundToggle} onClose={()=>setSoundExpanded(false)} registerBackHandler={props.registerBackHandler}/>}
       </section>
 
       {props.newNavigation && <button type="button" onClick={props.onAddHome} className="home-v2-home-action luna30-install">
         <BrandLogo size={28} alt="Luna" />
-        <span><strong>{props.labels.addHomeTitle}</strong><small>{props.homeScreenMessage || props.labels.addHomeBody}</small></span>
+        <span><strong>{props.labels.addHomeTitle}</strong>{props.homeScreenMessage&&<small role="status">{props.homeScreenMessage}</small>}</span>
       </button>}
       </div>
 

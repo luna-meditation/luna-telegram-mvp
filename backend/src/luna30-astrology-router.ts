@@ -8,9 +8,10 @@ import {createAstrologyService} from './luna30-astrology-service.js';
 import {createAstrologyReportService} from './luna30-astrology-reports.js';
 import {getAiPersonalProfile} from './personal-memory.js';
 import {calculateCelestialMonth} from './luna30-astrology-engine.js';
+import {currentAiSafetyLimit} from './luna32-ai-accounting.js';
 export const luna30AstrologyRouter=Router();
 const service=createAstrologyService(supabase,()=>env.FEATURE_ASTROLOGY);
-const reports=createAstrologyReportService(supabase,{enabled:()=>env.FEATURE_ASTROLOGY&&env.LUNA30_ASTROLOGY_AI_ENABLED&&env.AI_CHAT_ENABLED&&Boolean(env.OPENAI_API_KEY),personalProfile:owner=>env.FEATURE_PERSONALIZATION?getAiPersonalProfile(owner,'astrology personal growth relationships'):Promise.resolve(null),dailyLimit:async owner=>(await getLunaUsage(owner)).limit});
+const reports=createAstrologyReportService(supabase,{enabled:()=>env.FEATURE_ASTROLOGY&&env.LUNA30_ASTROLOGY_AI_ENABLED&&env.AI_CHAT_ENABLED&&Boolean(env.OPENAI_API_KEY),personalProfile:owner=>env.FEATURE_PERSONALIZATION?getAiPersonalProfile(owner,'astrology personal growth relationships'):Promise.resolve(null),dailyLimit:async owner=>currentAiSafetyLimit()??(await getLunaUsage(owner)).limit});
 luna30AstrologyRouter.use(requireTelegramWebApp,(_req,res,next)=>{res.setHeader('Cache-Control','private, no-store');next();});
 // Every route below is behind the signature-verifying middleware above.
 const owner=(req:unknown)=>(req as AuthenticatedRequest).telegramUser.telegram_id;

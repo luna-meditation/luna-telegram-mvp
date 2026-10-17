@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url';
 assert.equal(process.versions.node.split('.')[0], '22', 'Use Node.js 22');
 const frontend = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const tarotPreview = process.argv.includes('--tarot');
-const luna33Preview=process.argv.includes('--luna33');
+const luna34Preview=process.argv.includes('--luna34');
+const luna33Preview=luna34Preview||process.argv.includes('--luna33');
 const luna32Preview=luna33Preview||process.argv.includes('--luna32');
 const luna31Preview=luna32Preview||process.argv.includes('--luna31');
 const evolutionPreview=luna31Preview||process.argv.includes('--luna30');
@@ -21,7 +22,7 @@ const productionFlags=process.argv.includes('--production-flags');
 const refinementPreview=process.argv.includes('--refinement')||luna21Preview;
 const legacyPreview = process.argv.includes('--legacy');
 assert.ok(!(tarotPreview&&legacyPreview),'Choose either Tarot or legacy preview');
-const outputDirectory = luna33Preview?'dist-luna33-preview':luna32Preview?'dist-luna32-preview':luna31Preview?'dist-luna31-preview':evolutionPreview?'dist-luna30-preview':centralPreview?'dist-luna24-preview':memoryPreview?'dist-memory-preview':productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
+const outputDirectory = luna34Preview?'dist-luna34-preview':luna33Preview?'dist-luna33-preview':luna32Preview?'dist-luna32-preview':luna31Preview?'dist-luna31-preview':evolutionPreview?'dist-luna30-preview':centralPreview?'dist-luna24-preview':memoryPreview?'dist-memory-preview':productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
 const output = resolve(frontend, outputDirectory);
 const flagNames = ['AI_CENTRAL_EXPERIENCE','PERSONAL_MEMORY','NEW_NAVIGATION','TAROT_DAILY','TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI','DAILY_CARD_V2','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2'];
 if(!process.argv.includes('--serve-only')){
@@ -39,7 +40,8 @@ const astrology=evolutionPreview?{
  ...await import('../../backend/dist/luna30-locations.js'),
  ...await import('../../backend/dist/luna30-progression.js'),
  ...await import('../../backend/dist/progress-achievements.js'),
- ...await import('../../backend/dist/luna30-astrology-policy.js')
+ ...await import('../../backend/dist/luna30-astrology-policy.js'),
+ ...(luna34Preview?{...await import('../../backend/dist/luna34-achievements.js'),...await import('../../backend/dist/luna34-commercial-catalog.js'),...await import('../../backend/dist/luna34-conversation.js')}: {})
 }:null;
 const birthProfiles=new Map(),birthCharts=new Map(),dreamEntries=new Map();
 const date = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -55,6 +57,7 @@ const previewMemories=new Map();let previewMemoryEnabled=true;
 if(refinementPreview)profile.gardenAtomicReady=true;
 if(refinementPreview)profile.journeyStatus={id:'adept',rank:2,earned:true,eligibleRank:2,next:{id:'guardian',rank:3,progressPercent:75,remaining:[{key:'completedMeditations',current:10,target:20,remaining:10}]}};
 if(astrology){profile.journeyV3=astrology.buildLuna30Progress({meaningfulDays:12,meditations:10,breathwork:4,tarot:3,reflections:9,conversations:5},2);const items=astrology.buildAchievementItems({completedMeditations:10,completedBreathSessions:4,completed:14,minutesListened:100,currentStreak:5,longestStreak:10,checkinsCount:9,hasPremiumAccess:true,gardenLevel:3,hasMorningPractice:true,hasEveningPractice:true,practiceDays:12,completedWeeks:1,perfectWeeks:1,categoryCounts:{calm:5},tarotReadings:3,dailyCards:2,aiConversations:5},[]);profile.achievements={items,unlocked:items.filter(i=>i.unlocked).length,total:items.length};}
+if(luna34Preview){const archive=profile.achievements.items.filter(i=>i.unlocked),items=astrology.evaluateLuna34Achievements({aiInteractions:3,revealedCards:5,readings:3,threeReadings:1,reflections:3,meditations:5,breaths:2,meditationMinutes:100,gardenImprovements:3,meaningfulDays:12,placements:2},[]).map(i=>({...i,title:i.title.en,description:i.description.en,unlockedAt:i.unlocked?'2026-01-01T12:00:00Z':null,celebrationPending:false}));profile.achievements={version:34,total:50,unlocked:items.filter(i=>i.unlocked).length,items:[...items,...archive]};profile.journeyV3=astrology.buildLuna30Progress({meaningfulDays:12,meditations:5,breathwork:2,tarot:3,reflections:3,conversations:3,achievements:profile.achievements.unlocked},2);}
 // LAN previews are HTTP. Supply an RFC4122 ID only in this isolated QA bridge;
 // production always uses the real SDK on HTTPS and never receives this script.
 const bridge=`<script>if(!crypto.randomUUID)Object.defineProperty(crypto,'randomUUID',{value:()=>{const b=crypto.getRandomValues(new Uint8Array(16));b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;const h=Array.from(b,x=>x.toString(16).padStart(2,'0')).join('');return [h.slice(0,8),h.slice(8,12),h.slice(12,16),h.slice(16,20),h.slice(20)].join('-');}});window.Telegram??={WebApp:{initData:'offline-local-qa',initDataUnsafe:{user:{id:880000002,first_name:'Alex',language_code:'en'}},platform:'web',ready(){},expand(){},onEvent(){},offEvent(){},setHeaderColor(){},setBackgroundColor(){},setBottomBarColor(){}}};</script>`;
@@ -66,6 +69,16 @@ const server=createServer(async(req,res)=>{
   try {
     if(url.pathname.startsWith('/api/')){
       let body={};if(req.method!=='GET'){let input='';for await(const part of req){input+=part;if(input.length>20000)return json({error:'Preview input too large'},413);}if(input)body=JSON.parse(input);}
+      if(luna34Preview&&url.pathname.startsWith('/api/luna34/')){
+       if(url.pathname==='/api/luna34/membership')return json({catalog:astrology.luna34CommercialCatalog,membership:astrology.resolveMembership({lifetime:true}),commercialEnabled:false,quotasEnabled:false,balance:123,earned:345,transactions:[],purchases:[],newPurchases:[],usage:{limit:40,remaining:38,resetAt:new Date(new Date().setUTCHours(24,0,0,0)).toISOString()},beta:{active:true,expiresAt:'2026-11-01T00:00:00Z'}});
+       if(url.pathname.startsWith('/api/luna34/referrals'))return json({enabled:false,link:null,total:0,qualified:0,rewarded:0,pending:0,seedsEarned:0,monthlyCap:5,rewardsEnabled:false,onboardingRequired:false});
+       if(url.pathname==='/api/luna34/breath/start')return json({id:randomUUID(),verifiedSeconds:0,completed:false});
+       if(url.pathname.includes('/heartbeat'))return json({verifiedSeconds:0,completed:false});
+       if(url.pathname==='/api/luna34/share/prepare')return json({ticket:'offline-fixture-not-a-real-proof'});
+       if(url.pathname==='/api/luna34/share/complete'||url.pathname==='/api/luna34/progress/events')return json({recorded:true,localFixtureOnly:true});
+       if(url.pathname==='/api/luna34/progress/acknowledge')return json({acknowledged:true,localFixtureOnly:true});
+       return json({code:'offline_action_unavailable'},404);
+      }
       if(luna32Preview&&url.pathname==='/api/luna32/local-reset'&&req.method==='POST'){checkin=null;if(body.resetAstrology===true){birthProfiles.clear();birthCharts.clear();}return json({ok:true,localFixtureOnly:true});}
       if(astrology&&url.pathname.startsWith('/api/astrology/')){
        if(luna32Preview&&url.pathname==='/api/astrology/calendar')return json(astrology.calculateCelestialMonth(url.searchParams.get('month')));
@@ -173,7 +186,7 @@ const server=createServer(async(req,res)=>{
           const prior=[...centralConversations.values()].find(c=>c.messages.some(m=>m.request_id===body.requestId&&m.role==='assistant'));const id=prior?.id??body.conversationId??randomUUID();let c=centralConversations.get(id);
           if(!c){c={id,title:body.message.slice(0,60),language:body.language,status:'active',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),last_message_at:new Date().toISOString(),messages:[]};centralConversations.set(id,c);}
           let m=c.messages.find(m=>m.request_id===body.requestId&&m.role==='assistant');
-          if(!m){m={id:randomUUID(),request_id:body.requestId,role:'assistant',content:body.language==='ru'?'Локальный UI preview: серверный AI здесь не вызывается.':'Offline UI preview: no server AI is called here.',created_at:new Date().toISOString(),metadata:luna33Preview?{...(body.astrology?{astrology:body.astrology,astrologyConsent:{version:1,chartId:body.astrology.chartId,...(body.astrology.secondChartId?{secondChartId:body.astrology.secondChartId}:{})}}:{}),...(/meditat|медитац/i.test(body.message)?{recommendedMeditationId:meditation.id,meditationAction:{type:'meditation_card',meditationId:meditation.id},recommendedMeditation:meditation}:{}),...(/breath|дых/i.test(body.message)?{workflowActions:['breathing'],resolvedIntent:'breathing'}:{})}:{}};c.messages.push({id:randomUUID(),role:'user',content:body.message,created_at:new Date().toISOString()},m);}
+          if(!m){m={id:randomUUID(),request_id:body.requestId,role:'assistant',content:body.language==='ru'?'Локальный UI preview: серверный AI здесь не вызывается.':'Offline UI preview: no server AI is called here.',created_at:new Date().toISOString(),metadata:luna33Preview?{...(body.astrology?{astrology:body.astrology,astrologyConsent:{version:1,chartId:body.astrology.chartId,...(body.astrology.secondChartId?{secondChartId:body.astrology.secondChartId}:{})}}:{}),...(/meditat|медитац/i.test(body.message)?{recommendedMeditationId:meditation.id,meditationAction:{type:'meditation_card',meditationId:meditation.id},recommendedMeditation:meditation}:{}),...(/breath|дых/i.test(body.message)?{workflowActions:['breathing'],resolvedIntent:'breathing',...(luna34Preview?{breathing:astrology.requestedBreathOptions(body.message)}:{})}:{})}:{}};c.messages.push({id:randomUUID(),role:'user',content:body.message,created_at:new Date().toISOString()},m);}
           return json({conversationId:id,message:m,duplicate:false,remaining:7,requestState:'completed'});
         }
       }

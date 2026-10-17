@@ -2,7 +2,7 @@ import { useEffect,useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Check, LockKeyhole, Sparkles, X, Sprout, Compass, Flame, Shield, Sun, BookOpen, Mountain, Orbit, Star, Crown } from 'lucide-react';
 import type { AppLanguage, ProfileStats } from '../../api';
-import {luna30StatusCatalog} from '../../../../backend/src/luna30-progression';
+import {luna30StatusCatalog,luna34StatusAchievementMilestones} from '../../../../backend/src/luna30-progression';
 import {
   journeyStatusDefinitions,
   type JourneyStatusId,
@@ -51,11 +51,11 @@ export function resolveJourneyStatus(profile: ProfileStats | null): JourneyStatu
   };
 }
 
-export function JourneyStatusMark({ statusId = 'initiate', compact = false }: { statusId?: JourneyStatusId; compact?: boolean }) {
+export function JourneyStatusMark({ statusId = 'initiate', compact = false, rankId }: { statusId?: JourneyStatusId; compact?: boolean; rankId?:string }) {
   const Icon={initiate:Sprout,seeker:Compass,adept:Flame,guardian:Shield,luminary:Sun,sage:BookOpen,ascendant:Mountain,celestial:Orbit,ethereal:Star,lunaris:Crown}[statusId];
   return (
     <span className={`progress-v5-status-seal ${compact ? 'is-compact' : ''}`} data-status={statusId} aria-hidden="true">
-      <Icon size={compact ? 18 : 28} />
+      {rankId?<img src={`/images/statuses/luna34/${rankId}-small.webp`} width={compact?36:64} height={compact?36:64} alt="" loading="lazy"/>:<Icon size={compact ? 18 : 28} />}
       <Sparkles className="progress-v5-status-sparkle" size={compact ? 9 : 13} />
     </span>
   );
@@ -129,7 +129,7 @@ export function StatusProgressionSheet({
         </header>
 
         <ol className="status-progression-list">
-          {v3?luna30StatusCatalog.map((definition,rank)=>{const state=rank<currentRank?'unlocked':rank===currentRank?'current':'locked';return<li key={definition.id} className={`status-progression-item is-${state}`} aria-current={state==='current'?'step':undefined}><JourneyStatusMark statusId={journeyStatusDefinitions[rank].id} compact/><div className="status-progression-copy"><span>{rank+1} / 10</span><h3>{definition.names[language]}</h3><p>{language==='en'?`${definition.days} active days · ${definition.moments} meaningful moments · ${definition.directions} directions`:`Активные дни: ${definition.days} · Осмысленные действия: ${definition.moments} · Направления: ${definition.directions}`}</p></div><span className="status-progression-state">{state==='unlocked'?<Check size={15}/>:state==='locked'?<LockKeyhole size={14}/>:<Sparkles size={14}/>}<span>{language==='en'?(state==='unlocked'?'Unlocked':state==='current'?'Current':'Locked'):(state==='unlocked'?'Открыт':state==='current'?'Текущий':'Закрыт')}</span></span></li>;}) :journeyStatusDefinitions.map((definition) => {
+          {v3?luna30StatusCatalog.map((definition,rank)=>{const state=rank<currentRank?'unlocked':rank===currentRank?'current':'locked';return<li key={definition.id} className={`status-progression-item is-${state}`} aria-current={state==='current'?'step':undefined}><JourneyStatusMark statusId={journeyStatusDefinitions[rank].id} rankId={definition.id} compact/><div className="status-progression-copy"><span>{rank+1} / 10</span><h3>{definition.names[language]}</h3><p>{language==='en'?`${definition.days} active days · ${definition.moments} meaningful moments · ${definition.directions} directions${profile?.achievements?.version===34?' · '+luna34StatusAchievementMilestones[rank]+' discoveries':''}`:`Активные дни: ${definition.days} · Осмысленные действия: ${definition.moments} · Направления: ${definition.directions}${profile?.achievements?.version===34?' · Достижения: '+luna34StatusAchievementMilestones[rank]:''}`}</p></div><span className="status-progression-state">{state==='unlocked'?<Check size={15}/>:state==='locked'?<LockKeyhole size={14}/>:<Sparkles size={14}/>}<span>{language==='en'?(state==='unlocked'?'Unlocked':state==='current'?'Current':'Locked'):(state==='unlocked'?'Открыт':state==='current'?'Текущий':'Закрыт')}</span></span></li>;}) :journeyStatusDefinitions.map((definition) => {
             const state = definition.rank < currentRank ? 'unlocked' : definition.rank === currentRank ? 'current' : 'locked';
             const name = journeyStatusNames[language][definition.id];
             return (

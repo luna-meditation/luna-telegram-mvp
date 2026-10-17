@@ -9,6 +9,8 @@ export async function verifiedAstrologyChatContext(db:SupabaseClient,owner:numbe
  if(gate.error||!gate.data?.astrology_enabled||!gate.data?.astrology_ai_enabled)throw new FoundationError(503,'astrology_unavailable','Calculated astrology is unavailable.');
  async function chart(id:string){const {data,error}=await db.from('luna30_chart_cache').select('id,profile_id,calculation').eq('telegram_id',owner).eq('id',id).maybeSingle();if(error||!data)throw new FoundationError(404,'chart_not_found','Reopen your calculated chart.');return data;}
  const first=await chart(attachment.chartId),second=attachment.secondChartId?await chart(attachment.secondChartId):null;
+ const selectedAspect=attachment.aspect?(first.calculation as NatalCalculation).aspects.find(a=>a.from===attachment.aspect!.from&&a.to===attachment.aspect!.to&&a.type===attachment.aspect!.type):null;
+ if(attachment.aspect&&!selectedAspect)throw new FoundationError(422,'aspect_not_found','Select an aspect actually calculated for this chart.');
  if(second?.profile_id===first.profile_id)throw new FoundationError(400,'different_charts_required','Two different profiles are required.');
  const compact=(calculation:NatalCalculation)=>{
   const facts=symbolicChartFacts(calculation);
@@ -17,5 +19,5 @@ export async function verifiedAstrologyChatContext(db:SupabaseClient,owner:numbe
  };
  let report:unknown=null;
  if(attachment.reportId){const result=await db.from('luna30_astrology_reports').select('id,first_chart_id,second_chart_id,report').eq('telegram_id',owner).eq('id',attachment.reportId).maybeSingle();if(result.error||!result.data||result.data.first_chart_id!==first.id||(result.data.second_chart_id??null)!==(second?.id??null))throw new FoundationError(404,'report_not_found','Reopen the saved report.');const saved=astrologyReportSchema.parse(result.data.report);report={summary:saved.summary.slice(0,400),sections:saved.sections.map(s=>({id:s.id,title:s.title,text:s.text.slice(0,200)})),question:saved.question};}
- return {first:compact(first.calculation),...(second?{second:compact(second.calculation),synastry:{...calculateSynastry(first.calculation,second.calculation),aspects:calculateSynastry(first.calculation,second.calculation).aspects.sort((a,b)=>a.orb-b.orb).slice(0,12)}}:{}),selectedPlanet:attachment.planet??null,savedReport:report};
+ return {first:compact(first.calculation),...(second?{second:compact(second.calculation),synastry:{...calculateSynastry(first.calculation,second.calculation),aspects:calculateSynastry(first.calculation,second.calculation).aspects.sort((a,b)=>a.orb-b.orb).slice(0,12)}}:{}),selectedPlanet:attachment.planet??null,selectedAspect:selectedAspect??null,savedReport:report};
 }

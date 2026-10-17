@@ -4,11 +4,13 @@ import {X} from 'lucide-react';
 import type {AppLanguage} from '../../api';
 import type {TarotCardDefinition,TarotOrientation} from './deck';
 import {tarotCopy} from './copy';
+import {noteProgress} from '../progress/evidence';
 
-export function TarotDetails({card,orientation,language,position,onClose,registerBackHandler}:{card:TarotCardDefinition;orientation:TarotOrientation;language:AppLanguage;position?:string;onClose:()=>void;registerBackHandler:(handler:(()=>void)|null)=>void;}){
+export function TarotDetails({card,orientation,language,position,onClose,registerBackHandler,readingId,initData}:{card:TarotCardDefinition;orientation:TarotOrientation;language:AppLanguage;position?:string;onClose:()=>void;registerBackHandler:(handler:(()=>void)|null)=>void;readingId?:string;initData?:string}){
  const t=tarotCopy[language],dialog=useRef<HTMLDivElement>(null),close=useRef<HTMLButtonElement>(null);
  const handlers=useRef({onClose,registerBackHandler});handlers.current={onClose,registerBackHandler};
  const [failed,setFailed]=useState(false),[attempt,setAttempt]=useState(0);
+ useEffect(()=>{noteProgress('card_detail',readingId,card.id,initData);},[readingId,card.id,initData]);
  useEffect(()=>{
   const previousFocus=document.activeElement as HTMLElement|null,previousOverflow=document.body.style.overflow;
   const app=document.querySelector('.app-root'),wasInert=app?.hasAttribute('inert');

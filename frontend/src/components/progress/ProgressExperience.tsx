@@ -1,6 +1,7 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import {JourneyV3Hero} from './JourneyV3Hero';
+import {Luna34Achievements} from './Luna34Achievements';
 import {projectLuna30Achievements,luna30AchievementFamily,luna30AchievementCategories} from '../../../../backend/src/luna30-progression';
 import {
   Check,
@@ -44,6 +45,8 @@ export type ProgressAchievement = {
   progress?: number;
   current?: number;
   target?: number;
+  art?:string;
+  celebrationPending?:boolean;
 };
 
 type AchievementFilter = 'all' | 'unlocked' | 'progress' | 'locked';
@@ -240,7 +243,11 @@ function AchievementCard({ item, language, compact = false }: { item: ProgressAc
   );
 }
 
-export function AchievementsStory({ items:allItems, language, initiallyOpen = false, onClose,version3=false }: { items: ProgressAchievement[]; language: AppLanguage; initiallyOpen?: boolean; onClose?: () => void;version3?:boolean }) {
+export function AchievementsStory(props:{items:ProgressAchievement[];language:AppLanguage;initiallyOpen?:boolean;onClose?:()=>void;version3?:boolean;registerBackHandler?:(handler:(()=>void)|null)=>void}){
+ if(props.items.some(i=>i.id==='A01'))return <Luna34Achievements {...props}/>;
+ return <LegacyAchievementsStory {...props}/>;
+}
+function LegacyAchievementsStory({ items:allItems, language, initiallyOpen = false, onClose,version3=false }: { items: ProgressAchievement[]; language: AppLanguage; initiallyOpen?: boolean; onClose?: () => void;version3?:boolean }) {
   const projection=projectLuna30Achievements(allItems),items=version3?projection.featured:allItems,archive=version3?projection.legacyArchive:[];
   const t = progressCopy[language];
   const [open, setOpen] = useState(initiallyOpen);

@@ -1,6 +1,9 @@
 import {OptimizedImage,imageSource} from './design-system/components/OptimizedImage';
+import './luna34.css';
+import {ReferralWelcome} from './features/membership/ReferralPanel';
 import {Luna30FinancePanel} from './components/Luna30FinancePanel';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
+const Luna34OperationsPanel=lazy(()=>import('./components/Luna34OperationsPanel').then(module=>({default:module.Luna34OperationsPanel})));
 import { createPortal } from 'react-dom';
 import {
   Bot,
@@ -62,6 +65,8 @@ import {
   removeProfileAvatar,
   saveDailyCheckin,
   saveBreathSession,
+  startVerifiedBreath,
+  heartbeatVerifiedBreath,
   saveHistory,
   startPlaybackSession,
   setFavorite,
@@ -131,11 +136,13 @@ import { formatMeditationDuration } from './utils/duration';
 import { breathCycleSeconds, breathPhaseAt, breathPhaseLabel, breathPractices, type BreathPracticeId } from './features/breathing/practices';
 import { HomeV2 } from './v2/pages/HomeV2';
 import { ExplorePage, FeaturePreview, SectionBack, type ExploreCategory } from './luna2/ExplorePage';
-import { ProfileOverview, WalletPage } from './luna2/ProfileOverview';
+import { ProfileOverview } from './luna2/ProfileOverview';
 import {BetaNotice} from './luna2/BetaNotice';
 import { MyUniverse } from './luna2/MyUniverse';
 import { BreathAudioModes, BreathingVisual } from './luna2/BreathingVisual';
 import {PracticePicker} from './features/breathing/PracticePicker';
+import {luna34Achievements} from '../../backend/src/luna34-achievements';
+import {MembershipPage} from './features/membership/MembershipPage';
 import {ProgressMilestone} from './components/progress/ProgressMilestone';
 import {useBreathAudio} from './features/breathing/useBreathAudio';
 import {LunaShareButton} from './features/sharing/LunaShareButton';
@@ -1834,7 +1841,10 @@ function App() {
   const [tarotSetupKey,setTarotSetupKey]=useState(0);
   const tarotBackHandlerRef = useRef<(() => void) | null>(null);
   const [nestedBack,setNestedBack]=useState(false);
-  const registerTarotBackHandler = useCallback((handler: (() => void) | null) => { tarotBackHandlerRef.current = handler;setNestedBack(Boolean(handler)); }, []);
+  const registerTarotBackHandler = useCallback((handler: (() => void) | null) => {
+    const previous=tarotBackHandlerRef.current;tarotBackHandlerRef.current=handler;setNestedBack(Boolean(handler));
+    if(handler)return()=>{if(tarotBackHandlerRef.current===handler){tarotBackHandlerRef.current=previous;setNestedBack(Boolean(previous));}};
+  }, []);
   const initialPage = initialPageFromLaunch(window.location.pathname, window.location.hash, launchStartParam, featureFlags.new_navigation);
   const { page, setPage, navigatePrimary, goBack } = useAppRouteState(initialPage, {
     newNavigation: featureFlags.new_navigation,
@@ -1885,7 +1895,7 @@ function App() {
   const [access, setAccess] = useState<AccessState>(() => initialAccountCache?.access ?? { hasPremium: false, plan: 'Free' });
   const [profile, setProfile] = useState<ProfileStats | null>(() => initialAccountCache?.profile ?? null);
   const [profileNestedActive, setProfileNestedActive] = useState(false);
-  const [profileEntry, setProfileEntry] = useState<'main'|'personalization'|'universe'>('main');
+  const [profileEntry, setProfileEntry] = useState<'main'|'personalization'|'universe'|'terms'>('main');
   useEffect(()=>{if(!featureFlags.ai_central_experience)return;const activity=()=>setPage('activity'),astrology=(event:Event)=>{const value=(event as CustomEvent).detail?.section;setAstrologyEntry(value==='natal'||value==='compatibility'?value:undefined);setPage('astrology');};window.addEventListener('luna-open-activity',activity);window.addEventListener('luna-open-astrology',astrology);return()=>{window.removeEventListener('luna-open-activity',activity);window.removeEventListener('luna-open-astrology',astrology);};},[setPage]);
   useEffect(()=>{const open=()=>{if(!featureFlags.personal_memory)return;setProfileEntry('universe');navigatePrimary('profile');};window.addEventListener('luna-open-universe',open);return()=>window.removeEventListener('luna-open-universe',open);},[navigatePrimary]);
   const [personalDisplayName, setPersonalDisplayName] = useState<string|null>(null);
@@ -2536,6 +2546,7 @@ function App() {
   };
 
   const [breathLaunch,setBreathLaunch]=useState<{practiceId:BreathPracticeId;minutes:number;key:number}|null>(null);
+  useEffect(()=>{const pause=()=>{sceneAudioRef.current?.pause();setScenePlaying(false);moonGardenAudioRef.current?.pause();setMoonGardenAmbiencePlaying(false);};window.addEventListener('luna-practice-audio-focus',pause);return()=>window.removeEventListener('luna-practice-audio-focus',pause);},[]);
   const openBreathCircle = () => {
     setBreathLaunch(null);
     telegram?.HapticFeedback?.impactOccurred('light');
@@ -2544,9 +2555,9 @@ function App() {
   useEffect(()=>{const open=(event:Event)=>{const value=(event as CustomEvent<{practiceId?:string;minutes?:number}>).detail;const practice=breathPractices.find(p=>p.id===value?.practiceId);setBreathLaunch(practice?{practiceId:practice.id,minutes:[1,3,5,10].includes(value.minutes??0)?value.minutes!:1,key:Date.now()}:null);setPage('breathCircle');};window.addEventListener('luna-open-breathing',open);return()=>window.removeEventListener('luna-open-breathing',open);},[setPage]);
   useEffect(()=>{if(aiReadingId)setAiChartId(undefined);},[aiReadingId]);
 
-  const completeBreathCircle = async (mode: BreathMode, durationSeconds: number, breathCount: number) => {
+  const completeBreathCircle = async (mode: BreathMode, durationSeconds: number, breathCount: number,sessionId?:string) => {
     try {
-      await saveBreathSession({ mode, duration_seconds: durationSeconds, breath_count: breathCount, local_date: todayLocalDate() }, initData);
+      await saveBreathSession({ session_id:sessionId,mode, duration_seconds: durationSeconds, breath_count: breathCount, local_date: todayLocalDate() }, initData);
       await refreshAccount();
     } catch (error) {
       console.info('[Luna breath session save failed]', error instanceof Error ? error.message : 'Breath session save failed.');
@@ -2947,13 +2958,15 @@ function App() {
   return (
     <main className={`app-root overflow-x-clip bg-night text-cream ${page === 'home' ? 'home-v2-shell' : ''} ${featureFlags.new_navigation ? 'luna2-shell' : ''}`}>
       <div className="fixed inset-0 luna-bg" />
-      <ProgressMilestone owner={user.id} profile={accountLoading||accountUnavailable?null:profile} language={language}/>
+      <ProgressMilestone owner={user.id} profile={accountLoading||accountUnavailable?null:profile} language={language} initData={initData} allowed={['home','journey','profile','achievements'].includes(page)&&!selectedMeditation&&!selectedMantra&&!selectedScene&&!showCheckin&&!profileNestedActive}/>
       <section ref={appShellRef} data-page={page} className={`app-shell ${page === 'luna' ? 'app-shell-chat' : ''} ${page === 'admin' || (page === 'profile' && profileNestedActive) ? 'app-shell-no-nav' : ''}`}>
         {page !== 'luna' && !(featureFlags.new_navigation && page==='breathCircle') && <AppHeader statusLabel={(profile?.currentStreak ?? 0) > 0 ? streakLabel(profile?.currentStreak ?? 0, language) : planLabel(access.plan, language)} language={language} languageLabel={copy[language].language} onLanguageChange={changeLanguage} showSeeds={featureFlags.new_navigation} moonSeeds={profile ? availableMoonSeeds(profile) : undefined} onWallet={() => setPage('wallet')} />}
         {appNotice && <div className="theme-floating fixed left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+12px)] z-50 mx-auto max-w-md rounded-full border border-gold/20 px-4 py-3 text-center text-xs font-semibold text-cream shadow-glow backdrop-blur-xl luna-fade" role="status">{appNotice}</div>}
 
-        {page === 'home' && (
+        {page === 'home' && (<>
+          {launchStartParam?.startsWith('ref_')&&<ReferralWelcome language={language} initData={initData}/>}
           <HomeV2
+            registerBackHandler={registerTarotBackHandler}
             initData={initData}
             newNavigation={featureFlags.new_navigation}
             tarotEnabled={featureFlags.tarot_daily}
@@ -3038,7 +3051,7 @@ function App() {
             moodLabel={(value) => translateCategory(value, language)}
             durationLabel={(seconds) => formatMeditationDuration(seconds, language)}
           />
-        )}
+        </>)}
 
         {page === 'luna' && (<Suspense fallback={<PageSkeleton rows={2}/>}>
           <LunaPage
@@ -3061,9 +3074,9 @@ function App() {
         {featureFlags.new_navigation && page === 'explore' && <ExplorePage language={language} tarotEnabled={featureFlags.tarot_daily} onOpen={openExploreCategory} />}
         {featureFlags.new_navigation && page === 'tarot' && (featureFlags.tarot_daily ? <Suspense fallback={<PageSkeleton rows={2} />}><TarotPage language={language} onBack={goBack} session={tarotSession} dispatch={tarotDispatch} registerBackHandler={registerTarotBackHandler} initData={initData} onContinue={id=>{setAiReadingId(id);navigatePrimary('luna');}} /></Suspense> : <FeaturePreview kind="tarot" language={language} featureEnabled={false} onBack={goBack} onMeditate={() => openExploreCategory('meditations')} />)}
         {featureFlags.new_navigation && page === 'astrology' && (featureFlags.astrology?<Suspense fallback={<PageSkeleton rows={3}/>}><AstrologyPage key={initData??'browser'} language={language} initData={initData} onBack={goBack} initialSection={astrologyEntry} registerBackHandler={registerTarotBackHandler}/></Suspense>:<FeaturePreview kind="astrology" language={language} featureEnabled={false} onBack={goBack} onMeditate={() => openExploreCategory('meditations')} />)}
-        {featureFlags.new_navigation && page === 'wallet' && <WalletPage language={language} profile={profile} onBack={goBack} onGarden={() => setPage('moonGarden')} />}
+        {featureFlags.new_navigation && page === 'wallet' && <MembershipPage language={language} initData={initData} onTerms={()=>{setProfileEntry('terms');navigatePrimary('profile');}} onBack={goBack} onGarden={()=>setPage('moonGarden')} onRestore={refreshAccessAndPayments}/>}
         {featureFlags.new_navigation && page === 'activity' && <Suspense fallback={<PageSkeleton rows={3}/>}><ActivityPage language={language} history={history} meditations={decoratedMeditations} wellness={wellness} onBack={goBack} onOpen={openMeditation} initData={initData} onReading={reading=>{tarotDispatch({type:'resume',reading});setPage('tarot');}} /></Suspense>}
-        {featureFlags.new_navigation && page === 'achievements' && <AchievementsStory items={buildAchievementViews(profile, language)} language={language} initiallyOpen onClose={goBack} version3={Boolean(profile?.journeyV3)} />}
+        {featureFlags.new_navigation && page === 'achievements' && <AchievementsStory items={buildAchievementViews(profile, language)} language={language} initiallyOpen onClose={goBack} version3={Boolean(profile?.journeyV3)} registerBackHandler={registerTarotBackHandler}/>}
 
         {page === 'library' && (
           <>
@@ -3096,7 +3109,7 @@ function App() {
         )}
 
         {page === 'pricing' && (
-          <PricingPage plans={planCatalog} access={access} accessVerified={accessVerified} onBuy={buyPlan} onRestore={refreshAccessAndPayments} onOpenFallbackInvoice={openFallbackInvoice} fallbackInvoice={fallbackInvoice} message={paymentMessage} openingPlan={openingPlan} onLibrary={() => setPage('library')} locked={selectedMeditation} language={language} />
+          featureFlags.new_navigation?<MembershipPage language={language} initData={initData} onTerms={()=>{setProfileEntry('terms');navigatePrimary('profile');}} onBack={goBack} onGarden={()=>setPage('moonGarden')} onRestore={refreshAccessAndPayments}/>:<PricingPage plans={planCatalog} access={access} accessVerified={accessVerified} onBuy={buyPlan} onRestore={refreshAccessAndPayments} onOpenFallbackInvoice={openFallbackInvoice} fallbackInvoice={fallbackInvoice} message={paymentMessage} openingPlan={openingPlan} onLibrary={() => setPage('library')} locked={selectedMeditation} language={language} />
         )}
 
         {(page === 'progress' || (!featureFlags.new_navigation && page === 'moonGarden')) && (
@@ -3244,6 +3257,7 @@ function App() {
           <BreathCirclePage
             key={breathLaunch?.key??'default'}
             launch={breathLaunch}
+            initData={initData}
             registerBackHandler={registerTarotBackHandler}
             onComplete={completeBreathCircle}
             onClose={() => featureFlags.new_navigation ? goBack() : setPage('home')}
@@ -3303,7 +3317,7 @@ function App() {
           />
         )}
         {showCheckin && page !== 'admin' && (
-          <DailyCheckinSheet onClose={dismissCheckin} onSave={saveCheckin} initialMood={moodChipToCheckinMood(mood)} hideMood={Boolean(wellness?.todayCheckin)} language={language} />
+          <DailyCheckinSheet onClose={dismissCheckin} onSave={saveCheckin} initialMood={wellness?.todayCheckin?.mood??moodChipToCheckinMood(mood)} language={language} registerBackHandler={registerTarotBackHandler} />
         )}
       </section>
     </main>
@@ -3623,8 +3637,8 @@ function buildAchievementViews(profile: ProfileStats | null, language: AppLangua
   if (backendItems.length) {
     return backendItems.map((item) => ({
       ...item,
-      title: achievementCopy[item.id]?.[language]?.title ?? item.title,
-      description: achievementCopy[item.id]?.[language]?.description ?? item.description
+      title: luna34Achievements.find(definition=>definition.id===item.id)?.title[language] ?? achievementCopy[item.id]?.[language]?.title ?? item.title,
+      description: luna34Achievements.find(definition=>definition.id===item.id)?.description[language] ?? achievementCopy[item.id]?.[language]?.description ?? item.description
     }));
   }
 
@@ -3908,85 +3922,21 @@ function FavoritesPage({ meditations, favoritePendingIds, onOpen, onFavorite, la
   );
 }
 
-function DailyCheckinSheet({
-  initialMood,
-  hideMood,
-  onClose,
-  onSave,
-  language
-}: {
-  initialMood: DailyCheckin['mood'];
-  hideMood: boolean;
-  onClose: () => void;
-  onSave: (input: DailyCheckinPayload) => Promise<void>;
-  language: AppLanguage;
+function DailyCheckinSheet({initialMood,onClose,onSave,language,registerBackHandler}: {
+  initialMood:DailyCheckin['mood']; onClose:()=>void; onSave:(input:DailyCheckinPayload)=>Promise<void>;language:AppLanguage;registerBackHandler?:(handler:(()=>void)|null)=>void;
 }) {
-  const t = copy[language];
-  const [sleepRange, setSleepRange] = useState<NonNullable<DailyCheckin['sleep_range']>>('6_8');
-  const [mood, setMood] = useState<DailyCheckin['mood']>(initialMood);
-  const [availableMinutes] = useState<DailyCheckin['available_minutes']>('5');
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
-  const save = async () => {
-    setSaving(true);
-    setError('');
-    try {
-      await onSave({ sleep_range: sleepRange, mood, available_minutes: availableMinutes, local_date: todayLocalDate() });
-    } catch (saveError) {
-      console.error('[Luna check-in save failed]', saveError);
-      setError(t.checkinSaveError);
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="theme-overlay fixed inset-0 z-[100] flex items-end px-4 pb-[calc(16px+env(safe-area-inset-bottom))] backdrop-blur-sm">
-      <section className="theme-sheet max-h-[min(760px,calc(100dvh-24px))] w-full overflow-y-auto rounded-[30px] border border-white/10 p-5 pb-[calc(20px+env(safe-area-inset-bottom))] shadow-glow luna-fade">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.18em] text-gold">{t.checkinKicker}</p>
-            <h3 className="type-page-title mt-1">{t.checkinTitle}</h3>
-          </div>
-          <button onClick={onClose} className="rounded-full bg-surface px-3 py-2 text-sm text-lavender">{t.checkinSkip}</button>
-        </div>
-        <p className="mt-3 max-w-[290px] text-xs leading-5 text-lavender/75">{t.checkinContextHint}</p>
-        <CheckinGroup
-          title={t.checkinSleep}
-          options={[
-            ['less_than_4', t.sleepLess4],
-            ['4_6', t.sleep4To6],
-            ['6_8', t.sleep6To8],
-            ['8_plus', t.sleep8Plus]
-          ]}
-          value={sleepRange}
-          onChange={(value) => setSleepRange(value as NonNullable<DailyCheckin['sleep_range']>)}
-        />
-        {!hideMood && (
-          <CheckinGroup
-            title={t.checkinMood}
-            options={[
-              ['calm', t.moodCalm],
-              ['stressed', t.moodStressed],
-              ['tired', t.moodTired],
-              ['anxious', t.moodAnxious],
-              ['focused', t.moodFocused],
-              ['low_energy', t.moodLowEnergy]
-            ]}
-            value={mood}
-            onChange={(value) => setMood(value as DailyCheckin['mood'])}
-          />
-        )}
-        {error && <p className="mt-3 rounded-2xl bg-red-500/15 p-3 text-sm text-red-100">{error}</p>}
-        <button onClick={save} disabled={saving} className="sticky bottom-0 mt-5 flex w-full items-center justify-center gap-2 rounded-[20px] bg-gold px-5 py-4 font-semibold text-night shadow-[0_-16px_24px_rgba(10,6,16,.82)] disabled:opacity-70">
-          {saving && <span className="h-4 w-4 animate-spin rounded-full border-2 border-night/30 border-t-night" />}
-          {saving ? t.checkinSaving : t.checkinSave}
-        </button>
-      </section>
-    </div>
-  );
+  const t=copy[language],dialog=useRef<HTMLDialogElement>(null),close=useRef(onClose);close.current=onClose;
+  const [mood,setMood]=useState(initialMood),[saving,setSaving]=useState(false),[error,setError]=useState('');
+  useEffect(()=>{const previous=document.activeElement as HTMLElement|null;dialog.current?.showModal();registerBackHandler?.(()=>close.current());return()=>{dialog.current?.close();registerBackHandler?.(null);previous?.focus({preventScroll:true});};},[registerBackHandler]);
+  async function save(){if(saving)return;setSaving(true);setError('');try{await onSave({mood,local_date:todayLocalDate()});}catch{setError(t.checkinSaveError);setSaving(false);}}
+  return createPortal(<dialog ref={dialog} className="luna34-checkin theme-sheet" aria-labelledby="luna34-checkin-title" onCancel={onClose}>
+    <header><div><small>LUNA</small><h2 id="luna34-checkin-title">{language==='en'?'How are you feeling?':'Как вы себя чувствуете?'}</h2></div><button type="button" onClick={onClose} aria-label={language==='en'?'Close mood check-in':'Закрыть отметку настроения'}><X size={22}/></button></header>
+    <p>{language==='en'?'You can update today’s mood. Your earlier progress is preserved.':'Настроение за сегодня можно изменить. Ваш прогресс сохранится.'}</p>
+    <CheckinGroup title={t.checkinMood} options={[['calm',t.moodCalm],['stressed',t.moodStressed],['tired',t.moodTired],['anxious',t.moodAnxious],['focused',t.moodFocused],['low_energy',t.moodLowEnergy]]} value={mood} onChange={value=>setMood(value as DailyCheckin['mood'])}/>
+    {error&&<p role="alert">{error}</p>}
+    <button type="button" className="luna34-checkin-save" disabled={saving} onClick={()=>void save()}>{saving?t.checkinSaving:t.checkinSave}</button>
+  </dialog>,document.body);
 }
-
 function CheckinGroup({
   title,
   options,
@@ -4005,6 +3955,8 @@ function CheckinGroup({
         {options.map(([id, label]) => (
           <button
             key={id}
+            type="button"
+            aria-pressed={value===id}
             onClick={() => onChange(id)}
             className={`rounded-full px-4 py-2 text-sm transition ${value === id ? 'bg-gold text-night' : 'bg-surface text-cream'}`}
           >
@@ -4583,6 +4535,7 @@ function IconButton({ label, children, onClick }: { label: string; children: Rea
 }
 
 function BreathCirclePage({
+  initData,
   launch,
   onComplete,
   onClose,
@@ -4590,8 +4543,9 @@ function BreathCirclePage({
   redesigned = false,
   registerBackHandler
 }: {
+  initData?:string;
   launch?:{practiceId:BreathPracticeId;minutes:number}|null;
-  onComplete: (mode: BreathMode, durationSeconds: number, breathCount: number) => Promise<void>;
+  onComplete: (mode: BreathMode, durationSeconds: number, breathCount: number,sessionId?:string) => Promise<void>;
   onClose: () => void;
   language: AppLanguage;
   redesigned?: boolean;
@@ -4612,6 +4566,19 @@ function BreathCirclePage({
   const practice = breathPractices.find((item) => item.id === mode) ?? breathPractices[0];
   const phase = breathPhaseAt(practice, elapsed);
   const hasStarted = (redesigned ? sessionStarted : elapsed > 0) && !done;
+  const proof=useRef<{clientId:string;promise?:Promise<{id:string}>;previous?:Promise<unknown>}>({clientId:crypto.randomUUID()});
+  const ensureProof=()=>{const current=proof.current;return current.promise??(current.promise=Promise.resolve(current.previous).then(()=>startVerifiedBreath(current.clientId,mode,durationSeconds,initData)));};
+  const resetProof=()=>{const current=proof.current;proof.current={clientId:crypto.randomUUID(),previous:current.promise?current.promise.then(value=>heartbeatVerifiedBreath(value.id,false,initData)).catch(()=>undefined):current.previous};};
+  useEffect(()=>{
+    if(!running)return;
+    let alive=true;
+    const session=ensureProof();
+    const beat=(active:boolean)=>void session.then(value=>heartbeatVerifiedBreath(value.id,active,initData)).catch(()=>{if(alive)setSavingError(copy[language].breathSaveError);});
+    beat(true);const timer=window.setInterval(()=>beat(true),5000);
+    const hidden=()=>{if(document.visibilityState==='hidden')setRunning(false);};document.addEventListener('visibilitychange',hidden);
+    window.dispatchEvent(new Event('luna-practice-audio-focus'));
+    return()=>{alive=false;window.clearInterval(timer);document.removeEventListener('visibilitychange',hidden);beat(false);};
+  },[running,mode,durationSeconds,initData]);
 
   useEffect(() => {
     if (!running) return;
@@ -4624,13 +4591,14 @@ function BreathCirclePage({
         setRunning(false);
         setDone(true);
         const completedBreaths = Math.max(1, Math.floor(durationSeconds / breathCycleSeconds(practice)));
-        onComplete(mode, durationSeconds, completedBreaths).catch(() => setSavingError(copy[language].breathSaveError));
+        void ensureProof().then(value=>onComplete(mode, durationSeconds, completedBreaths,value.id)).catch(() => setSavingError(copy[language].breathSaveError));
       }
     }, 200);
     return () => window.clearInterval(timer);
   }, [durationSeconds, language, mode, onComplete, practice, running]);
 
   const startOrResume = () => {
+    if(done||!sessionStarted)resetProof();
     breathAudio.start();
     const resumeElapsed = done ? 0 : elapsed;
     setSavingError('');
@@ -4643,6 +4611,7 @@ function BreathCirclePage({
   };
 
   const restart = () => {
+    resetProof();
     setRunning(false);
     setDone(false);
     setElapsed(0);
@@ -5251,7 +5220,7 @@ function ProfilePage({
   telegramUserId,
   onRefreshDiagnostics
 }: {
-  initialView?: 'main'|'personalization'|'universe';
+  initialView?: 'main'|'personalization'|'universe'|'terms';
   profile: ProfileStats | null;
   access: AccessState;
   loading: boolean;
@@ -5694,6 +5663,7 @@ function ProfilePage({
   }
 
   if (view === 'subscription') {
+    if(featureFlags.new_navigation)return <MembershipPage language={language} initData={initData} onTerms={()=>setView('terms')} onBack={()=>setView('main')} onGarden={onGarden} onRestore={restorePurchases}/>;
     return (
       <ProfileChildScreen title={language === 'en' ? 'Subscription' : 'Подписка'} onBack={() => setView('main')} language={language}>
         <section className="luna-surface rounded-[24px] p-4">
@@ -5837,7 +5807,6 @@ function ProfilePage({
   return (
     <div className="luna-page space-y-4">
       <PageHeader title={copy[language].profile} />
-      <BetaNotice access={access} language={language}/>
 
       <section className="profile-identity">
         <button
@@ -5856,7 +5825,7 @@ function ProfilePage({
           <p className={`profile-plan-status ${access.hasPremium ? 'is-premium' : ''}`}>{localizedPlanStatus}</p>
         </div>
         <button type="button" className="profile-journey-status" onClick={() => setStatusProgressionOpen(true)} aria-label={language === 'en' ? `Luna status ${journeyStatusName}, ${journeyStatusRank} of 10. Open all statuses.` : `Статус Luna: ${journeyStatusName}, ${journeyStatusRank} из 10. Открыть все статусы.`}>
-          <JourneyStatusMark statusId={journeyStatus.id} compact />
+          <JourneyStatusMark statusId={journeyStatus.id} compact rankId={profile?.journeyV3?.current?.id} />
           <span>
             <small>Luna</small>
             <strong>{journeyStatusName}</strong>
@@ -5874,7 +5843,7 @@ function ProfilePage({
       {featureFlags.personal_memory&&<button className="universe-profile-entry" onClick={()=>setView('universe')}><span aria-hidden="true">✧</span><span><strong>{language==='en'?'My Universe':'Мой космос'}</strong><small>{language==='en'?'Your portrait, discoveries and confirmed memory':'Твой портрет, открытия и подтверждённая память'}</small></span><ChevronRight size={20}/></button>}
 
       <section className="luna-surface rounded-[26px] p-2">
-        <ProfileSettingsRow icon={CreditCard} title={language === 'en' ? 'Subscription & purchases' : 'Подписка и покупки'} value={localizedPlanStatus} onClick={() => setView('subscription')} />
+        <ProfileSettingsRow icon={CreditCard} title={language === 'en' ? 'Membership & Moon Seeds' : 'Подписка и Moon Seeds'} value={localizedPlanStatus} onClick={() => setView('subscription')} />
         <ProfileSettingsRow icon={Settings} title={language==='en'?'Settings':'Настройки'} value={languageLabel} onClick={()=>setView('settings')}/>
       </section>
 
@@ -6532,7 +6501,7 @@ function AdminPage({
 
       {dashboard && activeTab === 'users' && <UsersPanel users={filteredUsers} search={userSearch} selectedUser={selectedUser} onSearch={setUserSearch} onSelect={setSelectedUser} onAction={updateUserAccess} />}
       {dashboard && activeTab === 'subscriptions' && <SubscriptionsPanel dashboard={dashboard} onAction={updateUserAccess} />}
-      {dashboard && activeTab === 'revenue' && <><RevenuePanel dashboard={dashboard} /><Luna30FinancePanel initData={initData}/></>}
+      {dashboard && activeTab === 'revenue' && <><RevenuePanel dashboard={dashboard} /><Suspense fallback={<p role="status">Loading restricted metrics…</p>}><Luna34OperationsPanel initData={initData}/></Suspense><details><summary>Earlier accounting view</summary><Luna30FinancePanel initData={initData}/></details></>}
       {dashboard && activeTab === 'analytics' && <AnalyticsPanel dashboard={dashboard} />}
       {activeTab === 'support' && <SupportInbox requests={supportRequests} onStatus={updateSupportStatus} />}
       {dashboard && activeTab === 'settings' && <SettingsPanel plans={plans} />}
