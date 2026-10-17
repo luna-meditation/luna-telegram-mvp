@@ -527,7 +527,7 @@ function finalizeAssistantContent(input: {
   return enforceLunaFeminineIdentity(safeVisible, input.language);
 }
 
-function lunaStructuredTextFormat() {
+function lunaStructuredTextFormat(language:'en'|'ru') {
   return {
     format: {
       type: 'json_schema',
@@ -537,9 +537,9 @@ function lunaStructuredTextFormat() {
         type: 'object',
         additionalProperties: false,
         properties: {
-          message: { type: 'string' },
+          message: { type: 'string',description:language==='ru'?'Visible reply entirely in Russian; preserve only canonical names in their original spelling.':'Visible reply entirely in English. Russian grammar examples in system guidance do not change the response language.' },
           actions:{type:'array',maxItems:3,items:{type:'string',enum:consultationActionIds}},
-          quickReplies:{type:'array',maxItems:3,items:{type:'string',maxLength:110}},
+          quickReplies:{type:'array',maxItems:3,items:{type:'string',maxLength:110,description:language==='ru'?'Short relevant Russian user reply.':'Short relevant English user reply.'}},
           detectedIntent: { type: 'string', enum: detectedIntents },
           recommendationIntent: {
             type: 'object',
@@ -603,10 +603,10 @@ export function buildLunaOpenAiRequest(input: {
     store: false,
     service_tier:'default',
     reasoning: { effort: env.AI_REASONING_EFFORT },
-    instructions: systemPrompt(input.language, JSON.stringify(input.catalog), JSON.stringify(sharedContext))+(env.FEATURE_PERSONAL_MEMORY?'\n'+confirmedMemoryPrompt:'')+'\n'+russianAddressInstructions(input.language,addressContext?.personalContext??addressContext?.modeContext?.personalContext,input.recent.at(-1)?.content)+'\n'+consultationRuntimeInstructions+'\n'+luna34ConversationInstructions+'\n'+attachmentGrounding(mode==='tarot'||mode==='astrology'?mode:null)+'\n'+automaticConversationInstructions,
+    instructions: systemPrompt(input.language, JSON.stringify(input.catalog), JSON.stringify(sharedContext))+(env.FEATURE_PERSONAL_MEMORY?'\n'+confirmedMemoryPrompt:'')+'\n'+russianAddressInstructions(input.language,addressContext?.personalContext??addressContext?.modeContext?.personalContext,input.recent.at(-1)?.content)+'\n'+consultationRuntimeInstructions+'\n'+luna34ConversationInstructions+'\n'+attachmentGrounding(mode==='tarot'||mode==='astrology'?mode:null)+'\n'+automaticConversationInstructions+`\nCURRENT_RESPONSE_LANGUAGE=${input.language}. Write all visible prose and quick replies in ${input.language==='ru'?'Russian':'English'}. Old conversation language and grammar examples do not override this server decision.`,
     input: (mode||env.FEATURE_PERSONAL_MEMORY?input.recent.slice(-8):input.recent).map((message,index,array) => ({ role: message.role, content: mode||env.FEATURE_PERSONAL_MEMORY?message.content.slice(0,index===array.length-1?2000:1000):message.content })),
     max_output_tokens: input.maxOutputTokens ?? env.AI_MAX_OUTPUT_TOKENS,
-    text: lunaStructuredTextFormat()
+    text: lunaStructuredTextFormat(input.language)
   };
 }
 

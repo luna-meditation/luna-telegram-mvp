@@ -19,4 +19,7 @@ export function evaluationUsage(payload:unknown,model:typeof luna41EvaluationMod
  if(![input,output,cached,written].every(v=>Number.isSafeInteger(v)&&Number(v)>=0)||cached+Number(written)>Number(input))return null;
  return {inputTokens:input!,cachedInputTokens:cached,cacheWriteTokens:written!,outputTokens:output!,costMicrousd:Math.ceil((input!-cached-written!)*model.input+cached*model.cached+written!*model.cacheWrite+output!*model.output)};
 }
-export function evaluationCanReserve(state:{providerCalls:number;spentMicrousd:number;heldMicrousd:number;activeCall?:unknown},ceiling:number){return !state.activeCall&&Number.isSafeInteger(ceiling)&&ceiling>0&&state.providerCalls<luna41EvaluationLimit.calls&&state.spentMicrousd+state.heldMicrousd+ceiling<=luna41EvaluationLimit.microusd;}
+export function boundedQaReservation(state:{providerCalls:number;spentMicrousd:number;heldMicrousd:number;activeCall?:unknown},ceiling:number,limit:{calls:number;microusd:number}){
+ return !state.activeCall&&[state.providerCalls,state.spentMicrousd,state.heldMicrousd,ceiling,limit.calls,limit.microusd].every(v=>Number.isSafeInteger(v)&&v>=0)&&ceiling>0&&limit.calls>0&&limit.microusd>0&&state.providerCalls<limit.calls&&state.spentMicrousd+state.heldMicrousd+ceiling<=limit.microusd;
+}
+export function evaluationCanReserve(state:{providerCalls:number;spentMicrousd:number;heldMicrousd:number;activeCall?:unknown},ceiling:number){return boundedQaReservation(state,ceiling,luna41EvaluationLimit);}
