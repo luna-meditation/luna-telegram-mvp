@@ -2,6 +2,12 @@
 
 ## Scope and release boundary
 
+Owner follow-up on 2026-10-17 now explicitly authorizes production publication
+after the release gates. This is not permission to bypass failed checks, spend
+outside the fresh 4-provider-call / USD0.03 staging allowance, activate new sales,
+change prices, or modify existing balances/paid rights. New paid services are not
+introduced. Financial Admin mutation activation remains OFF for this release.
+
 Sources: owner attachments `f1133b9b…` (all four Admin parts, 2,748 lines) and
 `4122a84b…` (Companion parts 2–4, 1,421 lines), read completely on 2026-10-17.
 Companion Part 1 was supplied in the owner's follow-up and read in full; the complete
@@ -70,6 +76,73 @@ grants, transaction-safe RPCs, audit and server RBAC before UI activation.
 5. Full Node22 tests, native PG17 integration, existing staging end-to-end checks;
    current encrypted backup + isolated restoration before any production migration.
    Production unchanged until all gates pass; incomplete work is not a release.
+
+## Operational implementation checkpoint (2026-10-17)
+
+- Added an owner-bound, idempotent SQL operation/audit boundary; atomic wallet
+  adjustments share the existing wallet lock and preserve earned totals. Every
+  operation requires reviewed input, reason, confirmation and a stable request ID.
+- Separate expiring/Lifetime gifts, revocation, eligible restoration and optimistic
+  extension; existing paid rows are never overwritten. All entitlement readers
+  remain unchanged while the new mutation switch is OFF.
+- Additional AI answers use expiring grants and per-operation holds. Two provider
+  calls hold one grant; failure releases only that hold, success consumes one;
+  revocation affects only unused allowance. The original global cost reservation
+  is wrapped, not replaced. Commercial allowances are not reset or changed.
+- Explicit role assignment/revocation is implemented behind the same closed
+  mutation gate. No roles are seeded and the configured owner is immutable.
+- User workspace has operational activity, paid sources, independent gifts,
+  wallet adjustments, AI operations, payment records and audit tabs. It does not
+  load private chat content, journals, personal memory or birth data.
+- Meditation CMS reads the real catalog; creates/duplicates drafts; validates
+  metadata and permitted media; previews files; publishes/archives into the same
+  meditation table; preserves immutable versions; restores metadata as a new
+  reviewed version. Upload paths are unique and never overwrite original assets.
+- Seven other content collections support editorial drafts only. Their runtime
+  adapters are not verified, so publication is deliberately rejected, not faked.
+- Support uses existing tickets plus an additive workflow/priority/notes overlay;
+  closed maps to legacy resolved without widening legacy constraints. Notes are
+  internal and never sent to users. Refunds/broadcasts are unavailable.
+- Operational analytics expose server aggregates for tools, UI observations,
+  provider costs, authoritative wallet events and referral states. Unknown data
+  is unavailable rather than zero; client playback observations never grant rewards.
+- Settings shows current safe flags/model and an actual database probe; provider
+  connectivity is not inferred from key presence. All secret values stay server-side.
+- Old Admin writes and the old garden developer balance/reset endpoint are
+  blocked when Admin4 is enabled, avoiding bypass of the new audit boundary.
+- Structured chart tools prepare the actual chart card/selector. One unambiguous
+  self profile uses the existing deterministic cache. Birth details/positions are
+  not included in this new tool output; AI interpretation still requires consent.
+  A new astrology action clears stale meditation card metadata.
+- Compatibility now has explicit romantic/business/friendship/family context,
+  persisted in chat attachment/workflow state and isolated report cache keys.
+  Server-only versioned symbolic index uses calculated aspects and transparent
+  weights; unknown birth time or insufficient evidence yields no numeric index.
+  Compatibility reports exclude unrelated personal goals/preferences by default.
+- Future garden season concepts reuse clearly labeled existing Luna art, remain
+  Coming soon and never reset progress or enable purchases. Verified RU/EN voice
+  clips are missing; Guided stays unavailable. A cue contract shares all nine
+  existing elapsed-time phase definitions; no second timer or generated audio.
+
+### Verification / not a completion claim
+
+- Node22 backend: 479 passed, 1 optional skip in the latest complete run;
+  frontend: 226 passed before adding the new release-gate test.
+- Native PostgreSQL: 29 passed, including reapply, RLS/grants, forged claims,
+  rollback gate, concurrency/idempotency, wallet, gifts, quota, roles and CMS/support.
+- Mobile browser: 131 checks at 360/375/390/393/1440 in RU/EN, with synthetic
+  API fixtures. This is not new physical-iPhone or real-provider evidence.
+- `20261017070223_luna40_admin_operations.sql` applied ONLY to existing staging
+  after dependency checks. User/garden/payment/runtime hashes were identical.
+- Fresh production backup: 63 tables / 1,876 exact rows / 60 functions, encrypted
+  before transfer and restored twice with full rows, constraints, ACLs, RLS,
+  indexes and triggers verified. Temporary plaintext PostgreSQL removed afterward.
+  Storage verification and real staging AI smoke still pending at this checkpoint.
+- Four fresh staging provider calls / USD0.03 authorized; none spent yet.
+- Production source, schema, configuration and deployments still unchanged.
+- Remaining release gates: fresh media integrity, full final source tests/builds,
+  consolidated staging runtime/persistence/provider check, final mobile review,
+  reviewed production migration postflight, and source-matched release evidence.
 
 ## Evidence status
 

@@ -14,6 +14,7 @@ const goalNudge: Record<string, Record<'en' | 'ru', string>> = {
 };
 
 function reminderText(type: ReminderType, language: 'en' | 'ru', goals: string[], currentStreak: number) {
+  void currentStreak; // Retain the caller contract; reminders never invent streak claims.
   const personalized = goals.map((goal) => goalNudge[goal]?.[language]).find(Boolean);
   const copy: Record<ReminderType, Record<'en' | 'ru', string>> = {
     daily: {

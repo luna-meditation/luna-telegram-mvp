@@ -1,6 +1,7 @@
 // Package only the existing isolated QA site. No deployment or test worker.
 import {readFile,writeFile,cp,mkdir,mkdtemp,realpath} from 'node:fs/promises';
 import {createRequire} from 'node:module';import {dirname,resolve} from 'node:path';import {fileURLToPath} from 'node:url';import {execFileSync} from 'node:child_process';import assert from 'node:assert/strict';
+import {createHash,randomBytes} from 'node:crypto';
 assert.equal(process.versions.node.split('.')[0],'22');
 const source=resolve(dirname(fileURLToPath(import.meta.url)),'../..'),commit=execFileSync('git',['rev-parse','HEAD'],{cwd:source,encoding:'utf8'}).trim();
 assert.equal(process.env.LUNA_STAGING_SOURCE_COMMIT,commit,'Commit verified source first');
@@ -18,7 +19,14 @@ const plugins=[{name:'verified-runtime-assets',setup(b){
  b.onLoad({filter:/\/dist\/luna30-locations\.js$/},async({path})=>{const text=await readFile(path,'utf8'),needle="const compressed = readFileSync(new URL(directory + 'geonames-cities15000.json.gz', import.meta.url)), meta = JSON.parse(readFileSync(new URL(directory + 'geonames-attribution.json', import.meta.url), 'utf8'));";assert.ok(text.includes(needle));return{contents:text.replace(needle,`const compressed = Buffer.from('${compressed}','base64'),meta=${metadata};`),loader:'js'};});
  b.onLoad({filter:/\/dist\/luna30-astrology-engine\.js$/},async({path})=>{const text=await readFile(path,'utf8'),needle="createRequire(import.meta.url)('astronomy-engine')";assert.ok(text.includes(needle));return{contents:`import lunaAstronomy from ${JSON.stringify(astronomy)};\n`+text.replace(needle,'lunaAstronomy'),loader:'js'};});
 }}];
-await build({bundle:true,packages:'bundle',format:'esm',platform:'node',target:'node22',external:['pg-native'],banner:{js:"import {createRequire as __lunaCreateRequire} from 'node:module'; const require=__lunaCreateRequire(import.meta.url);"},plugins,logLevel:'warning',entryPoints:[source+'/backend/staging/functions/luna-staging.mjs'],outfile:functions+'/luna-staging.mjs'});
+const options={bundle:true,packages:'bundle',format:'esm',platform:'node',target:'node22',external:['pg-native'],banner:{js:"import {createRequire as __lunaCreateRequire} from 'node:module'; const require=__lunaCreateRequire(import.meta.url);"},plugins,logLevel:'warning'};
+await build({...options,entryPoints:[source+'/backend/staging/functions/luna-staging.mjs'],outfile:functions+'/luna-staging.mjs'});
+let authFile=null,expiresAt=null;
+if(process.env.LUNA40_SMOKE_APPROVED==='owner-4-calls-usd0.03'){
+ const nonce=randomBytes(32).toString('hex'),authSha256=createHash('sha256').update(nonce).digest('hex');expiresAt=new Date(Date.now()+90*60000).toISOString();
+ await build({...options,stdin:{contents:`import {run} from '${source}/backend/test/luna40-staging-smoke.mjs';export default async function(request,context){return run(request,context,${JSON.stringify({authSha256,expiresAt,sourceCommit:commit})});}export const config={background:true};`,resolveDir:source,sourcefile:'luna40-qa-background.mjs'},outfile:functions+'/luna40-qa-background.mjs'});
+ authFile=directory+'/qa-command-private.json';await writeFile(authFile,JSON.stringify({nonce,expiresAt}),{mode:0o600,flag:'wx'});
+}
 const staging=await readFile(source+'/staging/netlify.toml','utf8');await writeFile(directory+'/netlify.toml','[build]\n publish="public"\n[functions]\n directory="functions"\n node_bundler="esbuild"\n'+staging.slice(staging.indexOf('[[headers]]')));
-await writeFile(process.env.LUNA_STAGING_ARTIFACT_LOCATION??'/tmp/luna40-staging-location.json',JSON.stringify({directory,functions,sourceCommit:commit}),{mode:0o600});
-console.log(JSON.stringify({status:'PACKAGED_NOT_DEPLOYED',directory,sourceCommit:commit,functions:['luna-staging'],secretsEmbedded:false}));
+await writeFile(process.env.LUNA_STAGING_ARTIFACT_LOCATION??'/tmp/luna40-staging-location.json',JSON.stringify({directory,functions,sourceCommit:commit,authFile,expiresAt}),{mode:0o600});
+console.log(JSON.stringify({status:'PACKAGED_NOT_DEPLOYED',directory,sourceCommit:commit,functions:['luna-staging',...(authFile?['luna40-qa-background']:[])],secretsEmbedded:false}));

@@ -14,7 +14,7 @@ export function toolOutcome(input:{owner:number;request:string;name:string;args:
  const value=input.data as {error?:string;requiresSelection?:boolean;requiresTwoSelectedCharts?:boolean;action?:string;meditationId?:unknown}|null;
  const code=typeof value?.error==='string'&&/^[a-z_]{3,80}$/.test(value.error)?value.error:null;
  const selection=Boolean(value?.requiresSelection||value?.requiresTwoSelectedCharts||value?.action==='natal_chart'&&input.name==='get_birth_profiles');
- const navigation=value?.action==='breathing';
+ const navigation=value?.action==='breathing'||value?.action==='natal_chart'&&!selection||value?.action==='compatibility'&&!selection;
  const meditation=input.name==='recommend_meditation'&&value?.action==='meditation_card'?z.string().uuid().safeParse(value.meditationId):null;
  return {version:1,operationId:toolOperationId(input.owner,input.request,input.name,input.args),toolName:input.name,status:code?'failed':selection?'requires_selection':'completed',resultReference:code?null:meditation?.success?{kind:'meditation',id:meditation.data}:input.name==='get_tarot_reading'&&input.readingId?{kind:'tarot_reading',id:input.readingId}:['get_natal_chart','calculate_compatibility'].includes(input.name)&&input.chartId&&!selection?{kind:'natal_chart',id:input.chartId}:null,uiState:code?'not_requested':selection?'selection_required':navigation?'navigation_requested':'not_requested',data:input.data,error:code?{code,retryable:!['context_not_selected','invalid_tool_arguments','reading_not_found','meditation_unavailable','meditation_already_selected'].includes(code)}:null,latencyMs:Math.max(0,Math.min(600000,Math.round(input.latencyMs)))};
 }

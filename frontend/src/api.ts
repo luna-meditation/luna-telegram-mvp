@@ -66,13 +66,14 @@ export type AccessState = {
 };
 
 export type AppLanguage = 'en' | 'ru';
+export type RelationshipKind='romantic'|'business'|'friendship'|'family';
 export type BirthLocation={placeId:string;label:string;latitude:number;longitude:number;timezone:string;provider:string;confirmed:true};
 export type BirthProfile={id:string;subject_kind:'self'|'other';display_label:string;birth_date:string;birth_time:string|null;location:BirthLocation;revision:number;created_at:string;updated_at:string};
 export type BirthProfileInput={subjectKind:'self'|'other';label:string;date:string;time:string|null;placeId:string;consent:true;revision?:number};
 export type NatalCalculation={engine:string;engineVersion:string;ephemeris:string;timezoneDatabaseVersion:string;timePrecision:'exact'|'unknown';utcInstant:string|null;ascendant:number|null;houses:number[];planets:Array<{id:string;longitude:number}>;aspects:Array<{from:string;to:string;type:string;orb:number}>;houseSystem:'whole-sign';uncertainPlanets:Array<{id:string;signs:number[]}>;warnings:string[];approximatePlanets:boolean};
 export type NatalChart={id:string;profile_id:string;profile_revision:number;calculation:NatalCalculation;created_at:string};
 export type BirthLocationResult={placeId:string;label:string;country:string;timezone:string;latitude:number;longitude:number};
-export type SynastryResult={firstChartId:string;secondChartId:string;aspects:Array<{from:string;to:string;type:string;orb:number}>;unknownTime:boolean;excluded:{first:string[];second:string[]};percentage:null;disclaimer:string};
+export type SynastryResult={firstChartId:string;secondChartId:string;aspects:Array<{from:string;to:string;type:string;orb:number}>;unknownTime:boolean;excluded:{first:string[];second:string[]};percentage:null;disclaimer:string;reflection?:{version:string;relationship:RelationshipKind;index:number|null;scale:number;reason:string|null;methodology:string;dimensions:Array<{id:string;flow:number;tension:number;conjunctions:number;evidence:Array<{from:string;to:string;type:string;orb:number}>}>}|null};
 export const findBirthLocations=(q:string,initData?:string)=>request<{locations:BirthLocationResult[]}>(`/api/astrology/locations?q=${encodeURIComponent(q)}`,undefined,initData);
 export const getBirthProfiles=(initData?:string)=>request<{profiles:BirthProfile[]}>('/api/astrology/profiles',undefined,initData);
 export type CelestialMonth={month:string;timezone:'UTC';events:Array<{quarter:number;at:string}>;days:Array<{date:string;at?:string;moonPhaseDegrees:number;illuminatedFraction:number;planets?:Array<{id:string;longitude:number}>;aspects?:Array<{from:string;to:string;type:string;orb:number}>}>;personalPrediction:false;transitScope?:'general_sky_at_12_utc'};
@@ -85,12 +86,12 @@ export const saveBirthProfile=(input:BirthProfileInput,initData?:string,id?:stri
 export const removeBirthProfile=(id:string,initData?:string)=>request<{ok:boolean}>(`/api/astrology/profiles/${id}`,{method:'DELETE'},initData);
 export const calculateBirthChart=(id:string,initData?:string)=>request<{chart:NatalChart;cached:boolean}>(`/api/astrology/profiles/${id}/chart`,{method:'POST',body:'{}'},initData);
 export const getBirthChart=(id:string,initData?:string)=>request<{chart:NatalChart}>(`/api/astrology/charts/${id}`,undefined,initData);
-export const compareBirthCharts=(firstChartId:string,secondChartId:string,initData?:string)=>request<SynastryResult>('/api/astrology/compatibility',{method:'POST',body:JSON.stringify({firstChartId,secondChartId})},initData);
+export const compareBirthCharts=(firstChartId:string,secondChartId:string,initData?:string,relationship?:RelationshipKind)=>request<SynastryResult>('/api/astrology/compatibility',{method:'POST',body:JSON.stringify({firstChartId,secondChartId,...(relationship?{relationship}:{})})},initData);
 export type AstrologyReportRecord={id:string;first_chart_id:string;second_chart_id:string|null;report_kind:'portrait'|'compatibility';language:AppLanguage;report:{summary:string;sections:Array<{id:string;title:string;text:string}>;question:string;disclaimer:string};created_at:string};
 export type Luna30Finance={ai:Array<{category:string;requests:number;input_tokens:number;output_tokens:number;known_cost_usd:number;unknown_cost_requests:number}>;legacy_paid_stars:number;new_paid_stars:number;refund_stars:number;refunds_needing_review:number;active_new_periods:number;seed_delta:number;net_usd:null;sales_flags:Record<string,unknown>};
 export const getLuna30Finance=(initData?:string)=>request<Luna30Finance>('/api/luna30/commerce/admin/metrics',undefined,initData);
-export const openAstrologyReport=(firstChartId:string,secondChartId:string|null,language:AppLanguage,initData?:string)=>request<{report:AstrologyReportRecord|null;cached:true}>(`/api/astrology/reports?${new URLSearchParams({firstChartId,...(secondChartId?{secondChartId}:{}),language})}`,undefined,initData);
-export const generateAstrologyReport=(firstChartId:string,secondChartId:string|null,language:AppLanguage,initData?:string)=>request<{report:AstrologyReportRecord;cached:boolean}>('/api/astrology/reports',{method:'POST',body:JSON.stringify({firstChartId,...(secondChartId?{secondChartId}:{}),language,consent:true})},initData);
+export const openAstrologyReport=(firstChartId:string,secondChartId:string|null,language:AppLanguage,initData?:string,relationship?:RelationshipKind)=>request<{report:AstrologyReportRecord|null;cached:true}>(`/api/astrology/reports?${new URLSearchParams({firstChartId,...(secondChartId?{secondChartId}:{}),language,...(relationship?{relationship}:{})})}`,undefined,initData);
+export const generateAstrologyReport=(firstChartId:string,secondChartId:string|null,language:AppLanguage,initData?:string,relationship?:RelationshipKind)=>request<{report:AstrologyReportRecord;cached:boolean}>('/api/astrology/reports',{method:'POST',body:JSON.stringify({firstChartId,...(secondChartId?{secondChartId}:{}),language,consent:true,...(relationship?{relationship}:{})})},initData);
 
 export type MeditationTranslation = {
   title?: string | null;
@@ -393,9 +394,9 @@ export type LunaConversationSummary = {
   latestMessage: string;
 };
 
-export type AstrologyChatAttachment={chartId:string;secondChartId?:string;reportId?:string;planet?:'sun'|'moon'|'mercury'|'venus'|'mars'|'jupiter'|'saturn'|'uranus'|'neptune'|'pluto';aspect?:{from:string;to:string;type:string}};
-export type AstrologyWorkflow={version:1;kind:'natal'|'compatibility';state:'selecting'|'ready';firstProfileId?:string;secondProfileId?:string;firstChartId?:string;secondChartId?:string};
-export const openLunaAstrology=(input:{requestId:string;conversationId?:string;kind:'natal'|'compatibility';language:AppLanguage;firstProfileId?:string;secondProfileId?:string},initData?:string)=>request<{conversationId:string;message:LunaMessage}>('/api/luna/tools/astrology',{method:'POST',body:JSON.stringify(input)},initData);
+export type AstrologyChatAttachment={chartId:string;secondChartId?:string;reportId?:string;relationship?:'romantic'|'business'|'friendship'|'family';planet?:'sun'|'moon'|'mercury'|'venus'|'mars'|'jupiter'|'saturn'|'uranus'|'neptune'|'pluto';aspect?:{from:string;to:string;type:string}};
+export type AstrologyWorkflow={version:1;kind:'natal'|'compatibility';state:'selecting'|'ready';relationship?:'romantic'|'business'|'friendship'|'family';firstProfileId?:string;secondProfileId?:string;firstChartId?:string;secondChartId?:string};
+export const openLunaAstrology=(input:{requestId:string;conversationId?:string;kind:'natal'|'compatibility';language:AppLanguage;relationship?:'romantic'|'business'|'friendship'|'family';firstProfileId?:string;secondProfileId?:string},initData?:string)=>request<{conversationId:string;message:LunaMessage}>('/api/luna/tools/astrology',{method:'POST',body:JSON.stringify(input)},initData);
 export type LunaMessage = {
   id: string;
   request_id?: string | null;
@@ -860,6 +861,8 @@ export async function updateUserLanguage(language: AppLanguage, initData?: strin
 
 export const getLanguagePreference=(initData?:string)=>request<import('./localization/languagePreference').LanguagePreference>('/api/profile/language-preference',undefined,initData);
 export const getAdmin40Session=(initData?:string)=>request<import('./admin/types').Admin40Session>('/api/admin/v4/session',undefined,initData);
+export const admin40Request=<T,>(path:string,initData?:string,body?:unknown)=>request<T>('/api/admin/v4'+path,body===undefined?undefined:{method:'POST',body:JSON.stringify(body)},initData);
+export const uploadAdmin40Media=(file:File,initData?:string)=>request<{publicUrl:string;bytes:number}>('/api/admin/v4/media',{method:'POST',headers:{'Content-Type':file.type==='audio/mp3'?'audio/mpeg':file.type},body:file},initData);
 export const getAdmin40Overview=(period:{from:string;to:string},initData?:string)=>request<import('./admin/types').Admin40Overview>('/api/admin/v4/overview?'+new URLSearchParams(period),undefined,initData);
 export const getAdmin40Users=(filters:{search:string;page:number;size:number;sort:string;plan:string},initData?:string)=>request<import('./admin/types').Admin40Users>('/api/admin/v4/users?'+new URLSearchParams(Object.fromEntries(Object.entries(filters).map(([k,v])=>[k,String(v)]))),undefined,initData);
 export type MeditationActionOrigin={messageId:string;referenceId:string};

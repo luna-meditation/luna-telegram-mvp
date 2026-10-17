@@ -1,12 +1,13 @@
 {
   "status": "PASS",
-  "scope": "P0 language and action telemetry only",
+  "scope": "Language, tool telemetry, Admin operations, CMS and support; synthetic local data only",
   "node": "22.23.3",
   "postgres": "PostgreSQL 17.6 on x86_64-apple-darwin23.6.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.6), 64-bit",
   "migrations": {
     "20261017051755_luna40_language_preferences.sql": "dd537fa315cdb5f38c7ae51ae26ef4356ad51611ba3747ad6756ce2e592e6ff8",
     "20261017052134_luna40_action_observability.sql": "66200e2647fbf568d20276a2fb45273a152726ba25c0012719db4c340b55cba7",
-    "20261017052535_luna40_admin_read_foundation.sql": "2867c52d7faa95fa05939f58c05c02d71dfd9e56d252642f5ca7d41e56c9d25d"
+    "20261017052535_luna40_admin_read_foundation.sql": "2867c52d7faa95fa05939f58c05c02d71dfd9e56d252642f5ca7d41e56c9d25d",
+    "20261017070223_luna40_admin_operations.sql": "76a7b64170a32ebe746a5250de9f4eac39e326c0ae8401e669dead7b8b6b6781"
   },
   "checks": [
     {
@@ -59,6 +60,70 @@
     },
     {
       "name": "no role is assigned automatically and database clients cannot invoke admin aggregates",
+      "status": "PASS"
+    },
+    {
+      "name": "wallet retries execute exactly once across eight concurrent requests",
+      "status": "PASS"
+    },
+    {
+      "name": "wallet concurrent confirmations cannot overwrite another adjustment or make a negative balance",
+      "status": "PASS"
+    },
+    {
+      "name": "independent grants revoke/restore without touching paid or Lifetime rights",
+      "status": "PASS"
+    },
+    {
+      "name": "CMS saves immutable versions, rejects stale edits and publishes into the existing catalog",
+      "status": "PASS"
+    },
+    {
+      "name": "CMS invalid publication rolls back both catalog and version history atomically",
+      "status": "PASS"
+    },
+    {
+      "name": "support lifecycle, private notes and concurrent revision protection preserve existing ticket API",
+      "status": "PASS"
+    },
+    {
+      "name": "audit and versions cannot be rewritten by the service caller; direct clients have no grants",
+      "status": "PASS"
+    },
+    {
+      "name": "operation rollback gate preserves data and reapplication restores only its scoped RPC",
+      "status": "PASS"
+    },
+    {
+      "name": "operational analytics aggregate real statuses, not private messages or invented missing referral data",
+      "status": "PASS"
+    },
+    {
+      "name": "quota bonuses cannot bypass the closed global budget and do not disappear on denied calls",
+      "status": "PASS"
+    },
+    {
+      "name": "two provider calls in one operation hold one quota bonus; duplicate attempts and foreign leases do not consume another",
+      "status": "PASS"
+    },
+    {
+      "name": "failed answers release only their own bonus, while history and provider-cost reservations remain intact",
+      "status": "PASS"
+    },
+    {
+      "name": "success consumes one bonus; revoking unused allowance never restores consumed answers",
+      "status": "PASS"
+    },
+    {
+      "name": "explicit role changes are audited and cannot manufacture the configured owner role",
+      "status": "PASS"
+    },
+    {
+      "name": "grant extension uses expected expiry and preserves the paid fallback source",
+      "status": "PASS"
+    },
+    {
+      "name": "extra quota tables and RPCs deny direct client access even with forged role claims",
       "status": "PASS"
     }
   ],

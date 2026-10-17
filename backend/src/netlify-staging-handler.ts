@@ -14,7 +14,7 @@ const runtimeKeys = [
   'STAGING_MODE','STAGING_HOST','STAGING_SETUP_QA_BOT','STAGING_SUPABASE_PROJECT_REF','STAGING_TELEGRAM_IDS',
   'RUN_MIGRATIONS','ALLOW_UNVERIFIED_TELEGRAM_WEBAPP','REMINDER_SCHEDULER_ENABLED',
   'FEATURE_GARDEN_ATOMIC','FEATURE_PERSONALIZATION','FEATURE_PERSONAL_MEMORY','FEATURE_AI_MODES',
-  'FEATURE_ADMIN_V4',
+  'FEATURE_ADMIN_V4','FEATURE_ADMIN_V4_MUTATIONS',
   'FEATURE_AI_CENTRAL_EXPERIENCE','FEATURE_TAROT_SPREAD_AI_QA',
   'STAGING_TAROT_AI_QA_OWNER_ID','STAGING_TAROT_AI_QA_GRANT_ID',
   'FEATURE_TAROT_HISTORY','FEATURE_TAROT_AI','FEATURE_DAILY_CARD_V2','FEATURE_ECONOMY_REWARDS_V2',
@@ -39,7 +39,7 @@ function loadRuntimeConfiguration() {
   }
 }
 
-async function boundedBody(request: Request) {
+async function boundedBody(request: Request,maximum=128*1024) {
   if (!request.body) return Buffer.alloc(0);
   const reader = request.body.getReader();
   const chunks: Uint8Array[] = [];
@@ -49,7 +49,7 @@ async function boundedBody(request: Request) {
       const {done,value} = await reader.read();
       if (done) return Buffer.concat(chunks);
       length += value.length;
-      if (length > 128 * 1024) {
+      if (length > maximum) {
         await reader.cancel();
         return null;
       }
@@ -73,7 +73,7 @@ export async function netlifyStagingHandler(request: Request, context: StagingCo
   if (path !== '/health' && path !== '/api' && !path.startsWith('/api/') && !path.startsWith('/telegram/')) {
     return Response.json({code:'not_found'},{status:404,headers:{'Cache-Control':'private, no-store'}});
   }
-  const body = await boundedBody(request);
+  const body = await boundedBody(request,path==='/api/admin/v4/media'?4*1024*1024:128*1024);
   if (!body) return Response.json({code:'request_too_large'},{status:413});
   if (!adapter) {
     try {

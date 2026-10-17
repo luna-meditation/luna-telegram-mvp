@@ -230,8 +230,8 @@ function storagePathFromPublicUrl(publicUrl?: string | null, bucket = 'avatars')
 }
 
 app.use('/api/admin', rateLimit({ windowMs: 60_000, max: 120 }));
-app.use('/api/admin',(req,res,next)=>{if(env.FEATURE_ADMIN_V4&&req.method==='POST'&&/^\/users\/[^/]+\/access\/?$/.test(req.path)){res.status(409).json({code:'legacy_access_mutation_disabled',error:'Use independent audited grants. Paid and Lifetime entitlements must not be overwritten.'});return;}next();});
-app.use('/api/admin/v4',requireTelegramWebApp,createAdmin40Router(supabase,{ownerId:env.ADMIN_TELEGRAM_ID,enabled:env.FEATURE_ADMIN_V4,environment:env.STAGING_MODE?'staging':'production',commit:process.env.COMMIT_SHA??process.env.RAILWAY_GIT_COMMIT_SHA,model:env.AI_CHAT_MODEL}));
+app.use('/api/admin',(req,res,next)=>{if(env.FEATURE_ADMIN_V4&&!req.path.startsWith('/v4/')&&!['GET','HEAD','OPTIONS'].includes(req.method)){res.status(409).json({code:'legacy_admin_mutation_disabled',error:'Use the role-checked, audited Admin 4.0 operation. Legacy overwrite, delete and configuration mutations are disabled.'});return;}next();});
+app.use('/api/admin/v4',requireTelegramWebApp,createAdmin40Router(supabase,{ownerId:env.ADMIN_TELEGRAM_ID,enabled:env.FEATURE_ADMIN_V4,mutationsEnabled:env.FEATURE_ADMIN_V4_MUTATIONS,storageOrigin:env.SUPABASE_URL,environment:env.STAGING_MODE?'staging':'production',commit:process.env.COMMIT_SHA??process.env.RAILWAY_GIT_COMMIT_SHA,model:env.AI_CHAT_MODEL,flags:Object.fromEntries(Object.entries(env).filter(([key,value])=>typeof value==='boolean'&&(key.startsWith('FEATURE_')||key.startsWith('LUNA')))) as Record<string,boolean>}));
 app.use('/api/payments', rateLimit({ windowMs: 60_000, max: 30 }));
 app.use('/api/luna', rateLimit({ windowMs: 60_000, max: 30 }));
 app.use('/api/client-events', rateLimit({ windowMs: 60_000, max: 120 }));
@@ -860,6 +860,7 @@ app.use('/api/universe',requireTelegramWebApp,rateLimit({windowMs:60_000,max:30}
 app.post('/api/moon-garden/dev', requireTelegramWebApp, async (req, res, next) => {
   try {
     if (!assertAdmin(req, res)) return;
+    if(env.FEATURE_ADMIN_V4){res.status(409).json({code:'legacy_garden_mutation_disabled',error:'Use audited wallet adjustments; garden progress and earned totals must not be reset.'});return;}
     const authReq = req as AuthenticatedRequest;
     const result = await updateMoonGardenDevState(authReq.telegramUser.telegram_id, {
       action: String(req.body?.action ?? ''),

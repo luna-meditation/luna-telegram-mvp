@@ -1,5 +1,6 @@
 import {z} from 'zod';
 import type {LunaIntentResolution} from './luna-ai-intent.js';
+import {relationshipKind} from './luna40-compatibility.js';
 
 export function artifactScopedIntent(intent:LunaIntentResolution,mode:string|undefined):LunaIntentResolution{
  if(mode!=='tarot'&&mode!=='astrology')return intent;
@@ -12,7 +13,7 @@ export const consultationActionsSchema = z.array(z.enum(consultationActionIds)).
 export const consultationPhases = ['greeting','discovering_intent','clarifying_question','selecting_experience','collecting_required_information','performing_action','presenting_results','exploring_meaning','suggesting_next_step','continuing_conversation','session_complete'] as const;
 export type ConsultationPhase = typeof consultationPhases[number];
 const planetSchema=z.enum(['sun','moon','mercury','venus','mars','jupiter','saturn','uranus','neptune','pluto']);
-export const astrologyAttachmentSchema = z.object({chartId:z.string().uuid(),secondChartId:z.string().uuid().optional(),reportId:z.string().uuid().optional(),planet:planetSchema.optional(),aspect:z.object({from:planetSchema,to:planetSchema,type:z.enum(['conjunction','sextile','square','trine','opposition'])}).strict().optional()}).strict();
+export const astrologyAttachmentSchema = z.object({chartId:z.string().uuid(),secondChartId:z.string().uuid().optional(),reportId:z.string().uuid().optional(),relationship:relationshipKind.optional(),planet:planetSchema.optional(),aspect:z.object({from:planetSchema,to:planetSchema,type:z.enum(['conjunction','sextile','square','trine','opposition'])}).strict().optional()}).strict();
 export type AstrologyAttachment = z.infer<typeof astrologyAttachmentSchema>;
 export function messagesAfterContextReset<T extends {role?:string;metadata?:unknown}>(messages:T[]):T[]{
  let boundary=-1;messages.forEach((m,i)=>{if(m.role==='assistant'&&(m.metadata as {contextReset?:unknown}|null)?.contextReset===true)boundary=i;});return messages.slice(Math.max(0,boundary));

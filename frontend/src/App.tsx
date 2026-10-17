@@ -117,6 +117,7 @@ import {
   type InvoiceLinkResult
 } from './api';
 import { MoonGardenScene as AnimatedMoonGardenScene } from './components/moon-garden/MoonGardenScene';
+import {GardenSeasons} from './components/moon-garden/GardenSeasons';
 import { JourneyHub } from './components/journey/JourneyHub';
 import { CompactJourney } from './components/journey/CompactJourney';
 import { PersonalizationSettings } from './luna2/PersonalizationSettings';
@@ -4977,6 +4978,7 @@ function MoonGardenPage({
       <button type="button" className="journey-garden-journey-link" onClick={() => setGardenJourneyOpen(true)}>
         {language === 'en' ? 'View garden journey' : 'Посмотреть путь сада'} <span aria-hidden="true">→</span>
       </button>
+      {!embedded&&<GardenSeasons language={language}/>}
 
       {gardenJourneyOpen && typeof document !== 'undefined' && createPortal(
         <div className="journey-garden-sheet" role="dialog" aria-modal="true" aria-label={copy[language].gardenJourney}>

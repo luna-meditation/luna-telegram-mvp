@@ -5,6 +5,7 @@ import {trustedBirthInput} from './luna30-astrology-policy.js';
 import {astrologyEngineMetadata,calculateNatalChart,calculateSynastry,natalCacheKey,type NatalCalculation} from './luna30-astrology-engine.js';
 import {searchBirthLocations} from './luna30-locations.js';
 import {recordFunnel} from './luna35-funnel.js';
+import {compatibilityReflection,type RelationshipKind} from './luna40-compatibility.js';
 
 const fields='id,subject_kind,display_label,birth_date,birth_time,location,revision,created_at,updated_at';
 const unavailable=()=>new FoundationError(503,'astrology_unavailable','Astrology is temporarily unavailable.');
@@ -35,6 +36,6 @@ export function createAstrologyService(db:SupabaseClient,configured:()=>boolean)
    const result=await db.from('luna30_chart_cache').select('id,profile_id,profile_revision,calculation,created_at').eq('telegram_id',owner).eq('cache_key',key).single();if(result.error)throw unavailable();return{chart:result.data,cached:false};
   },
   async open(owner:number,id:string){await enabled();return{chart:await chart(owner,id)};},
-  async compatibility(owner:number,firstId:string,secondId:string){await enabled();if(firstId===secondId)throw new FoundationError(400,'different_charts_required','Select two different birth profiles.');const [first,second]=await Promise.all([chart(owner,firstId),chart(owner,secondId)]);if(first.profile_id===second.profile_id)throw new FoundationError(400,'different_charts_required','Select two different birth profiles.');return{firstChartId:first.id,secondChartId:second.id,...calculateSynastry(first.calculation as NatalCalculation,second.calculation as NatalCalculation)};}
+  async compatibility(owner:number,firstId:string,secondId:string,relationship?:RelationshipKind){await enabled();if(firstId===secondId)throw new FoundationError(400,'different_charts_required','Select two different birth profiles.');const [first,second]=await Promise.all([chart(owner,firstId),chart(owner,secondId)]);if(first.profile_id===second.profile_id)throw new FoundationError(400,'different_charts_required','Select two different birth profiles.');const comparison=calculateSynastry(first.calculation as NatalCalculation,second.calculation as NatalCalculation);return{firstChartId:first.id,secondChartId:second.id,...comparison,reflection:relationship?compatibilityReflection(comparison,relationship):null};}
  };
 }

@@ -1,5 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {createClient} from '@supabase/supabase-js';import {randomUUID} from 'node:crypto';
 import {createAstrologyWorkflowService} from './luna33-workflows.js';
+import {prepareAstrologyAction} from './luna40-astrology-action.js';
+import {createLunaTools} from './luna32-tools.js';
 const owner=33001,foreignOwner=33002;
 function fixture(){
  const first=randomUUID(),second=randomUUID(),foreign=randomUUID(),writes:string[]=[];
@@ -14,8 +16,11 @@ function fixture(){
   const data=headers.get('accept')?.includes('vnd.pgrst.object')?result[0]??null:result;
   return Response.json(data,{headers:{'content-range':`0-${Math.max(0,result.length-1)}/${result.length}`}});
  }}});
- return{service:createAstrologyWorkflowService(db,()=>true),tables,writes,first,second,foreign};
+ return{db,service:createAstrologyWorkflowService(db,()=>true),tables,writes,first,second,foreign};
 }
+test('structured chart tool prepares the real cached self chart without sending positions or birth data to AI',async()=>{const f=fixture(),registry=createLunaTools({db:f.db,owner,language:'ru',readingContext:null,catalog:[],personalContext:null,access:{},quota:async()=>({remaining:1}),astrologyEnabled:true}),a=await registry.executeResult('open_saved_natal_chart','{}'),b=await registry.executeResult('open_saved_natal_chart','{}');assert.equal(a,b);assert.equal(a.status,'completed');assert.equal(registry.astrologyAction()?.workflow.state,'ready');assert.equal(f.tables.luna30_chart_cache.length,1);assert.equal(registry.workflowActions().length,0);assert.doesNotMatch(JSON.stringify(a.data),/1990|51\.5|longitude|latitude|planet|Europe|QA A|birth_date/);assert.equal((a.data as {requiresSeparateAiConsent:boolean}).requiresSeparateAiConsent,true);assert.equal(f.tables.ai_messages.length,0);});
+test('multiple self profiles show one real selector; another account profile is never selected',async()=>{const f=fixture();f.tables.luna30_birth_profiles.find(p=>p.id===f.second)!.subject_kind='self';const action=await prepareAstrologyAction(f.db,owner,'natal',()=>true);assert.equal(action.workflow.state,'selecting');assert.equal(action.attachment,null);assert.equal(f.tables.luna30_chart_cache.length,0);assert.equal(action.providerResult.profileCount,2);});
+test('compatibility tool prepares a selector without assuming a relationship or disclosing either chart',async()=>{const f=fixture(),action=await prepareAstrologyAction(f.db,owner,'compatibility',()=>true);assert.equal(action.workflow.state,'selecting');assert.equal(action.providerResult.requiresSelection,true);assert.equal(f.tables.luna30_chart_cache.length,0);assert.doesNotMatch(JSON.stringify(action.providerResult),/1990|1992|longitude|latitude/);await assert.rejects(prepareAstrologyAction(f.db,owner,'natal',()=>false),/not available/);});
 test('inline compatibility persists selection, uses real calculated caches and reopens without a duplicate',async()=>{
  const f=fixture(),requestId=randomUUID(),input={requestId,kind:'compatibility',language:'ru'};
  const selecting=await f.service.open(owner,input);assert.equal(selecting.message.metadata.astrologyWorkflow.state,'selecting');

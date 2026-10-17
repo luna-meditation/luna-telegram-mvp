@@ -19,7 +19,7 @@ type PurchaseService=ReturnType<typeof createLuna30Commerce>;
 export function createLuna35Commerce(db:SupabaseClient,config:Config,payments:Pick<PurchaseService,'availability'>,usage:(owner:number)=>Promise<Usage>){
  async function overview(owner:number){
   const [membership,quota,settings,products]=await Promise.all([readLuna34Membership(db,owner,config.LUNA34_COMMERCIAL_ENABLED),usage(owner),readLuna32Settings(db),payments.availability()]);
-  const beta=betaEntitlement(settings),facts:CommerceFacts={balance:membership.balance,paid:membership.membership.paid,lifetime:membership.membership.kind==='lifetime',beta,usage:quota,checkout:membership.commercialEnabled,prices:membership.catalog.seeds,paidReadings:config.FEATURE_TAROT_PAID_READINGS};
+  const beta=betaEntitlement(settings),facts:CommerceFacts={balance:membership.balance,paid:membership.membership.paid||membership.administrative?.active===true,lifetime:membership.membership.kind==='lifetime'||membership.administrative?.lifetime===true,beta,usage:quota,checkout:membership.commercialEnabled,prices:membership.catalog.seeds,paidReadings:config.FEATURE_TAROT_PAID_READINGS};
   const included:Partial<Record<'three'|'five'|'compatibility',number>>={};
   if(config.LUNA34_COMMERCIAL_QUOTAS_ENABLED)for(const kind of ['three','five','compatibility'] as const){const value=await readCommercialAllowance(db,owner,kind);if(value.enabled&&typeof value.remaining==='number')included[kind]=value.remaining;}
   facts.included=included;

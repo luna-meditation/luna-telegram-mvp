@@ -13,6 +13,7 @@ export function selectToolMeditation(id:string,catalog:unknown[],hasPremium:bool
  const item=catalog.map(value=>catalogItem.safeParse(value)).find(value=>value.success&&value.data.id===id);
  if(!item?.success||item.data.published===false)throw new FoundationError(404,'meditation_unavailable','Choose an available meditation from the current library.');
  const {published:_published,...meditation}=item.data;
+ void _published;
  return {...meditation,access:meditation.premium&&!hasPremium?'premium_required':'available'};
 }
 
