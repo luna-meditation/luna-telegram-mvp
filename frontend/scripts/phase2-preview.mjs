@@ -53,6 +53,7 @@ const astrology=evolutionPreview?{
 const birthProfiles=new Map(),birthCharts=new Map(),dreamEntries=new Map();
 const meetPatch=luna42Preview?(await import('../../backend/dist/luna42-meet.js')).meetStepPatch:null;
 const reflection=luna42Preview?(await import('../../backend/dist/luna40-compatibility.js')).compatibilityReflection:null;
+const buildMemoryProposal=luna42Preview?(await import('../../backend/dist/luna42-memory-proposal.js')).buildMemoryProposal:null;
 let meetState={meet:{},revision:0,updatedAt:null};
 const date = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const monday=new Date();monday.setDate(monday.getDate()-((monday.getDay()+6)%7));
@@ -64,6 +65,7 @@ const emptyPersonal={interests:[],preferences:'',birth_date:null,birth_time:null
 const centralConversations=new Map();
 const previewDeck=centralPreview?JSON.parse(await readFile(resolve(frontend,'src/features/tarot/manifest.json'),'utf8')).cards:[];
 const previewMemories=new Map();let previewMemoryEnabled=true;
+const previewDiscoveries=new Map();
 let cosmosState={skipped:[],revision:0,updatedAt:null};
 if(refinementPreview)profile.gardenAtomicReady=true;
 if(refinementPreview)profile.journeyStatus={id:'adept',rank:2,earned:true,eligibleRank:2,next:{id:'guardian',rank:3,progressPercent:75,remaining:[{key:'completedMeditations',current:10,target:20,remaining:10}]}};
@@ -91,7 +93,7 @@ const server=createServer(async(req,res)=>{
        if(url.pathname==='/api/luna34/progress/acknowledge')return json({acknowledged:true,localFixtureOnly:true});
        return json({code:'offline_action_unavailable'},404);
       }
-      if(luna32Preview&&url.pathname==='/api/luna32/local-reset'&&req.method==='POST'){checkin=null;if(body.resetAstrology===true){birthProfiles.clear();birthCharts.clear();}if(luna42Preview&&body.resetMeet===true){meetState={meet:{},revision:0,updatedAt:null};previewMemories.clear();personal={...emptyPersonal};previewMemoryEnabled=false;}return json({ok:true,localFixtureOnly:true});}
+      if(luna32Preview&&url.pathname==='/api/luna32/local-reset'&&req.method==='POST'){checkin=null;if(body.resetAstrology===true){birthProfiles.clear();birthCharts.clear();}if(luna42Preview&&body.resetMeet===true){meetState={meet:{},revision:0,updatedAt:null};previewMemories.clear();previewDiscoveries.clear();personal={...emptyPersonal};previewMemoryEnabled=false;}return json({ok:true,localFixtureOnly:true});}
       if(astrology&&url.pathname.startsWith('/api/astrology/')){
        if(luna32Preview&&url.pathname==='/api/astrology/calendar')return json(astrology.calculateCelestialMonth(url.searchParams.get('month')));
        if(url.pathname==='/api/astrology/locations')return json({locations:astrology.searchBirthLocations(url.searchParams.get('q')??'')});
@@ -125,6 +127,26 @@ const server=createServer(async(req,res)=>{
        if(req.method==='PUT'){if(body.expectedRevision!==cosmosState.revision)return json({code:'cosmos_changed'},409);cosmosState={skipped:body.skipped??[],revision:cosmosState.revision+1,updatedAt:new Date().toISOString()};}return json(cosmosState);
       }
       if(memoryPreview&&url.pathname==='/api/universe')return json({memories:[...previewMemories.values()],profile:personal,identity:{firstName:user.first_name,language:user.language_code,goals:user.profile_goals},memoryEnabled:previewMemoryEnabled,contextConsent:personal.ai_context_consent});
+      if(luna42Preview&&url.pathname==='/api/luna42/local-proposal'){
+       const id=randomUUID(),sourceId=randomUUID(),messageId=randomUUID(),old=[...previewMemories.values()].find(m=>m.memory_key===body.key);let proposal;
+       try{proposal=buildMemoryProposal(body,{id:randomUUID(),sourceMessageId:sourceId,boundary:null,existing:old??null});}catch{return json({code:'invalid_local_proposal'},422);}
+       centralConversations.set(id,{id,title:'LOCAL QA — confirmation UI fixture',messages:[{id:sourceId,role:'user',content:'LOCAL QA — review this synthetic memory change',created_at:new Date().toISOString()},{id:messageId,role:'assistant',content:'LOCAL QA — no provider request. Please review and confirm.',created_at:new Date().toISOString(),metadata:{memoryProposal:proposal}}],created_at:new Date().toISOString(),updated_at:new Date().toISOString()});return json({conversationId:id});
+      }
+      if(luna42Preview&&url.pathname.startsWith('/api/universe/proposals/')){
+       const message=[...centralConversations.values()].flatMap(c=>c.messages).find(m=>m.id===url.pathname.split('/')[4]),p=message?.metadata?.memoryProposal;
+       if(!p||p.id!==body.proposalId)return json({code:'not_found'},404);if(p.state!=='pending')return p.state===(body.confirmed?'applied':'cancelled')?json({proposal:p}):json({code:'changed'},409);
+       if(body.confirmed){const old=p.memoryId?previewMemories.get(p.memoryId):null;if((old?.revision??0)!==p.expectedRevision)return json({code:'changed'},409);if(p.operation==='delete')previewMemories.delete(p.memoryId);else{const now=new Date().toISOString(),id=p.memoryId??randomUUID();previewMemories.set(id,{id,category:p.category,memory_key:p.key,memory_value:p.after,revision:p.expectedRevision+1,confirmation_status:'confirmed',memory_kind:p.category==='reflections'?'symbolic':'fact',is_sensitive:false,source_type:'user_message',source_message_id:p.sourceMessageId,created_at:old?.created_at??now,updated_at:now,confirmed_at:now});}}
+       p.state=body.confirmed?'applied':'cancelled';return json({proposal:p});
+      }
+      if(luna42Preview&&url.pathname.startsWith('/api/universe/discoveries')){
+       const id=url.pathname.split('/')[4],old=previewDiscoveries.get(id);
+       if(req.method==='GET'&&!id)return json({discoveries:[...previewDiscoveries.values()]});
+       if(req.method==='POST'){let exists=body.kind==='tarot'?[...readings.values()].some(r=>r.id===body.referenceId):body.kind==='astrology'?[...centralConversations.values()].some(c=>c.messages.some(m=>m.id===body.referenceId&&m.metadata?.astrologyWorkflow?.state==='ready')):previewMemories.get(body.referenceId)?.memory_kind==='symbolic';if(!exists)return json({code:'source_not_found'},404);const prior=[...previewDiscoveries.values()].find(d=>d.kind===body.kind&&d.reference_id===body.referenceId);if(prior)return json({discovery:prior});const now=new Date().toISOString(),discovery={id:randomUUID(),kind:body.kind,reference_id:body.referenceId,title:body.title,revision:1,created_at:now,updated_at:now};previewDiscoveries.set(discovery.id,discovery);return json({discovery});}
+       if(!old)return req.method==='DELETE'?json({removed:true,sourceDeleted:false}):json({code:'not_found'},404);
+       if(req.method==='PATCH'){if(old.revision!==body.expectedRevision)return json({code:'changed'},409);Object.assign(old,{title:body.title,revision:old.revision+1,updated_at:new Date().toISOString()});return json({discovery:old});}
+       if(req.method==='DELETE'){previewDiscoveries.delete(id);return json({removed:true,sourceDeleted:false});}
+       const conversation=[...centralConversations.values()].find(c=>c.messages.some(m=>m.id===old.reference_id));return json({kind:old.kind,referenceId:old.reference_id,...(conversation?{conversationId:conversation.id}:{})});
+      }
       if(memoryPreview&&url.pathname.startsWith('/api/universe/memories')){
         const id=url.pathname.split('/')[4],old=id?previewMemories.get(id):null;
         if(req.method==='DELETE'){if(id)previewMemories.delete(id);else previewMemories.clear();return json({ok:true});}

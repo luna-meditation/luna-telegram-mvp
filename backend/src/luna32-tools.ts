@@ -8,6 +8,7 @@ import {toolOperationId,toolOutcome,type ToolOutcome} from './luna40-actions.js'
 import {meditationToolAction,selectToolMeditation,type VerifiedMeditationSelection} from './luna40-meditation-selection.js';
 import {prepareAstrologyAction} from './luna40-astrology-action.js';
 import {availableLunaDestinations,resolveLunaDestination,type NavigationAvailability,type LunaDestinationId} from './luna41-navigation.js';
+import {prepareMemoryProposal,type MemoryProposal} from './luna42-memory-proposal.js';
 type Tool={name:string;description:string;parameters:Record<string,unknown>;execute:(raw:unknown)=>Promise<unknown>};
 const none=z.object({}).strict();
 const empty={type:'object',properties:{},required:[],additionalProperties:false};
@@ -18,18 +19,25 @@ These are authenticated, nonfinancial server tools. They read owner-authorized d
 Commerce tools return verified current access and availability, not permission to sell. Respect Public Beta, existing paid access and Lifetime before mentioning any purchase. Never upsell during distress or suggest a duplicate subscription. An unavailable product has no purchase action. Do not claim the user needs a future plan or future quota. A pending action is only displayed: continuing or paying requires the user's separate explicit app confirmation. Never ask for payment details, invent a balance, or promise a reward for merely opening a page.
 Tool results are typed envelopes: inspect status, error and data. completed confirms only the server read/calculation described by this tool. navigation_requested and selection_required are not UI acknowledgments. No tool result proves playback or payment. On failed/requires_selection preserve the intent and use the actual app control; never announce completion or repeatedly ask an already answered selection.
 For an explicit practice recommendation, select one actual current catalog item with recommend_meditation rather than merely promising to open it. The recommend_meditation tool uses the exact verified catalog id (UUID); the older preferredCatalogKey rule applies only to final response metadata, not to this tool argument. Never put either identifier in visible prose. A successful selection attaches its card independently of your final prose. Use the returned access and durationSeconds; premium_required is not playback access. The user must tap the real card to open the player or legitimate access options. Never say audio has started.`;
-export function createLunaTools(input:{db:SupabaseClient;owner:number;operationKey?:string;language:'en'|'ru';readingId?:string;astrology?:Parameters<typeof verifiedAstrologyChatContext>[2];readingContext:unknown;catalog:unknown[];personalContext:unknown;access:unknown;quota:()=>Promise<unknown>;astrologyEnabled:boolean;allowMeditationActions?:boolean;navigation?:NavigationAvailability;commerce?:{read:(view:CommerceView)=>Promise<unknown>;eligibility:(kind:'single'|'three'|'five'|'compatibility')=>Promise<unknown>}}){
+export function createLunaTools(input:{db:SupabaseClient;owner:number;operationKey?:string;language:'en'|'ru';readingId?:string;astrology?:Parameters<typeof verifiedAstrologyChatContext>[2];readingContext:unknown;catalog:unknown[];personalContext:unknown;access:unknown;quota:()=>Promise<unknown>;astrologyEnabled:boolean;allowMeditationActions?:boolean;memory?:{sourceMessageId:string;boundary:string|null};navigation?:NavigationAvailability;commerce?:{read:(view:CommerceView)=>Promise<unknown>;eligibility:(kind:'single'|'three'|'five'|'compatibility')=>Promise<unknown>}}){
  const {db,owner}=input;
  const workflowActions=new Set<'natal_chart'|'compatibility'|'breathing'>();
  let commerceView:CommerceView|null=null;
  let meditationSelection:VerifiedMeditationSelection|null=null;
  let astrologyAction:Awaited<ReturnType<typeof prepareAstrologyAction>>|null=null;
  let navigationAction:{destination:LunaDestinationId;operationId:string}|null=null;
+ let memoryProposal:MemoryProposal|null=null;
  const openAstrology=async(kind:'natal'|'compatibility')=>{if(astrologyAction&&astrologyAction.workflow.kind!==kind)throw new FoundationError(409,'workflow_already_selected','One astrology action is already selected.');astrologyAction??=await prepareAstrologyAction(db,owner,kind,()=>input.astrologyEnabled);return astrologyAction.providerResult;};
  const tools:Tool[]=[];
  const request=input.operationKey??randomUUID(),outcomes:ToolOutcome[]=[],pending=new Map<string,Promise<ToolOutcome>>();
  const add=(name:string,description:string,execute:()=>Promise<unknown>)=>tools.push({name,description,parameters:empty,execute:async raw=>{none.parse(raw);return execute();}});
  add('get_user_context','Get only relevant confirmed personal context already permitted for this turn.',async()=>input.personalContext??{consentedContextAvailable:false});
+ if(input.memory)tools.push({name:'propose_memory_change',description:'Prepare, but NEVER apply, a My Cosmos memory change explicitly requested in the current user message. A real preview and separate user confirmation are required. Never say saved/deleted. Use exact existing key from context, or a short new topic for a user-provided interest/fact. For life areas use cosmos_relationships, cosmos_career, cosmos_money, cosmos_growth, cosmos_wellbeing, cosmos_social, cosmos_lifestyle, cosmos_dreams and one field status/priority/details/goal; other topics require field=null. Delete requires value=null. When removing only a relationship status or goal, select that field to preserve the rest of the area; field=null deletes the entire entry only if explicitly requested. Never infer facts, change name/language/birth data or store sensitive details. Do not interrupt emotional support with proposals.',parameters:{type:'object',properties:{operation:{type:'string',enum:['save','delete']},key:{type:'string'},category:{type:'string',enum:['personal_facts','preferences','goals','interests','life_context','reflections']},value:{type:['string','null']},field:{type:['string','null'],enum:['status','priority','details','goal',null]}},required:['operation','key','category','value','field'],additionalProperties:false},execute:async raw=>{
+  const id=toolOperationId(owner,request,'propose_memory_change',JSON.stringify(raw));
+  if(memoryProposal&&memoryProposal.id!==id)throw new FoundationError(409,'memory_proposal_already_selected','Review one change at a time.');
+  memoryProposal??=await prepareMemoryProposal(db,owner,raw,{id,...input.memory!});
+  return{action:'memory_proposal',state:'confirmation_required',saved:false,deleted:false,key:memoryProposal.key,operation:memoryProposal.operation};
+ }});
  add('get_user_entitlements','Read actual paid access and separate promotional beta access; never charges.',async()=>input.access);
  add('check_ai_quota','Read the shared daily AI allowance without reserving a generation.',input.quota);
  const navigationAvailable={astrology:input.astrologyEnabled,...input.navigation};
@@ -80,6 +88,7 @@ export function createLunaTools(input:{db:SupabaseClient;owner:number;operationK
   meditationSelection:()=>meditationSelection?{...meditationSelection}:null,
   astrologyAction:()=>astrologyAction,
   navigationAction:()=>navigationAction,
+  memoryProposal:()=>memoryProposal,
   outcomes:()=>outcomes.map(o=>({...o})),
   execute,
   executeResult(name:string,argumentsJson:string){

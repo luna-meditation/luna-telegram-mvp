@@ -1240,6 +1240,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
     let selectedToolMeditationId:string|null=null;
     let selectedAstrologyAction:ReturnType<ReturnType<typeof createLunaTools>['astrologyAction']>=null;
     let navigationAction:ReturnType<ReturnType<typeof createLunaTools>['navigationAction']>=null;
+    let memoryProposal:ReturnType<ReturnType<typeof createLunaTools>['memoryProposal']>=null;
     let commerceView:import('./luna35-commerce-policy.js').CommerceView|null=null;
     let parsed: z.infer<typeof modelResultSchema>;
     const directItem = directActionMeditationId
@@ -1295,11 +1296,12 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
           attempt: 1
         });
         const commerce=luna35Commerce(getLunaUsage);
-        const tools=createLunaTools({navigation:{tarot_daily:env.FEATURE_TAROT_DAILY,tarot_history:env.FEATURE_TAROT_HISTORY,astrology:env.FEATURE_ASTROLOGY,personal_memory:env.FEATURE_PERSONAL_MEMORY},db:supabase,owner:telegramId,operationKey:input.requestId,language:responseLanguage,readingId:input.readingId,astrology:input.astrology??input.chartId,readingContext,catalog:catalogForModel,personalContext:personal,access:{hasPremium:access.hasPremium,hasPaidPremium:access.hasPaidPremium,beta:access.beta,plan:access.plan},quota:()=>getLunaUsage(telegramId),astrologyEnabled:env.FEATURE_ASTROLOGY&&env.LUNA30_ASTROLOGY_AI_ENABLED,allowMeditationActions,commerce:{read:async view=>{const card=await commerce.card(telegramId,view,responseLanguage,resolvedConversationId);return {balance:card.balance,plan:card.membership.kind,usage:card.usage,beta:card.beta,products:card.products,...(view==='shop'?{catalog:card.catalog}:{}),...(view==='earn'?{earning:card.earning}:{}),...(view==='history'?{transactions:card.transactions?.slice(0,5),pendingPayments:card.pendingOrders.map(o=>({id:o.id,product:o.product,state:o.state,stars:o.stars}))}:{}),...(view==='resume'?{pending:card.pending.map(a=>({id:a.id,type:a.action_type,expiresAt:a.expires_at}))}:{})};},eligibility:kind=>commerce.eligibility(telegramId,kind)}});
+        const tools=createLunaTools({...(env.FEATURE_COSMOS_V2&&env.FEATURE_PERSONAL_MEMORY&&personal&&memoryEnabled&&userMessage?.id?{memory:{sourceMessageId:userMessage.id,boundary:memoryBoundaryAtStart??null}}:{}),navigation:{tarot_daily:env.FEATURE_TAROT_DAILY,tarot_history:env.FEATURE_TAROT_HISTORY,astrology:env.FEATURE_ASTROLOGY,personal_memory:env.FEATURE_PERSONAL_MEMORY},db:supabase,owner:telegramId,operationKey:input.requestId,language:responseLanguage,readingId:input.readingId,astrology:input.astrology??input.chartId,readingContext,catalog:catalogForModel,personalContext:personal,access:{hasPremium:access.hasPremium,hasPaidPremium:access.hasPaidPremium,beta:access.beta,plan:access.plan},quota:()=>getLunaUsage(telegramId),astrologyEnabled:env.FEATURE_ASTROLOGY&&env.LUNA30_ASTROLOGY_AI_ENABLED,allowMeditationActions,commerce:{read:async view=>{const card=await commerce.card(telegramId,view,responseLanguage,resolvedConversationId);return {balance:card.balance,plan:card.membership.kind,usage:card.usage,beta:card.beta,products:card.products,...(view==='shop'?{catalog:card.catalog}:{}),...(view==='earn'?{earning:card.earning}:{}),...(view==='history'?{transactions:card.transactions?.slice(0,5),pendingPayments:card.pendingOrders.map(o=>({id:o.id,product:o.product,state:o.state,stars:o.stars}))}:{}),...(view==='resume'?{pending:card.pending.map(a=>({id:a.id,type:a.action_type,expiresAt:a.expires_at}))}:{})};},eligibility:kind=>commerce.eligibility(telegramId,kind)}});
         openAiResponse=env.LUNA32_ENABLED?await runLunaToolTurn({...request,instructions:request.instructions+'\n'+lunaToolInstructions},tools,invoke):await invoke(request);
         workflowActions=tools.workflowActions();
         selectedAstrologyAction=tools.astrologyAction();
         navigationAction=tools.navigationAction();
+        memoryProposal=tools.memoryProposal();
         toolOutcomes=tools.outcomes();
         selectedToolMeditationId=tools.meditationSelection()?.id??null;
         commerceView=tools.commerceView();
@@ -1485,7 +1487,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
       : visibleMessage;
     const attachedMeditationId = recommendedMeditationId;
     const navigationDestination=navigationAction?resolveLunaDestination(navigationAction.destination,{astrology:env.FEATURE_ASTROLOGY,personal_memory:env.FEATURE_PERSONAL_MEMORY,tarot_daily:env.FEATURE_TAROT_DAILY,tarot_history:env.FEATURE_TAROT_HISTORY}):null;
-    const actionMessage=navigationDestination?(responseLanguage==='ru'?`Открой «${navigationDestination.ru}» по кнопке.`:`Use the button to open ${navigationDestination.en}.`):safeVisibleMessage;
+    const actionMessage=memoryProposal?(responseLanguage==='ru'?'Вот предлагаемое изменение. Проверь его и подтверди кнопкой — пока ничего не сохранено и не удалено.':'Here is the proposed change. Review it and confirm with the button; nothing has been saved or deleted yet.'):toolOutcomes.some(o=>o.toolName==='propose_memory_change')?(responseLanguage==='ru'?'Не удалось подготовить это изменение. Открой «Мой космос», чтобы проверить актуальные сведения и приватность. Ничего не сохранено и не удалено.':'This change could not be prepared. Open My Cosmos to review current information and privacy settings. Nothing was saved or deleted.'):navigationDestination?(responseLanguage==='ru'?`Открой «${navigationDestination.ru}» по кнопке.`:`Use the button to open ${navigationDestination.en}.`):safeVisibleMessage;
     const artifact=selectedAstrologyAction?'astrology':readingContext?'tarot':undefined;
     const assistantContent = neutralRussianAddress(readyMeditationCopy(enforcePracticeActionClaims(enforceCardClaimConsistency(actionMessage, responseLanguage, Boolean(attachedMeditationId),artifact),responseLanguage,Boolean(attachedMeditationId)),responseLanguage,Boolean(attachedMeditationId)),responseLanguage,personal,input.message);
     if(hasDanglingConsultationPromise(assistantContent))throw new LunaAiError('incomplete_response','Luna returned an introduction without its promised explanation.',502,true);
@@ -1545,6 +1547,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
       metadata: {
         recommendedMeditationId: attachedMeditationId,
         ...(navigationAction?{navigation:navigationAction}:{}),
+        ...(memoryProposal?{memoryProposal}:{}),
         ...(!selectedAstrologyAction&&(resolvedIntent==='breathing'||workflowActions.includes('breathing'))?{breathing:requestedBreathOptions(input.message)}:{}),
         ...(!selectedAstrologyAction&&workflowActions.length?{workflowActions}:{}),
         ...(commerceView?{commerce:{version:1,view:commerceView,language:responseLanguage,checkedAt:new Date().toISOString()}}:{}),
@@ -1553,7 +1556,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
         ...(input.chartId?{astrologyConsent:{version:1,chartId:input.chartId,...(input.astrology?.secondChartId?{secondChartId:input.astrology.secondChartId}:{})}}:{}),
         ...(input.readingId?{readingId:input.readingId}:{}),
         ...(selectedAstrologyAction?{contextReset:!selectedAstrologyAction.attachment,astrologyWorkflow:selectedAstrologyAction.workflow,...(selectedAstrologyAction.attachment?{astrology:selectedAstrologyAction.attachment}:{}),readingId:undefined,astrologyConsent:undefined}:{}),
-        consultation:{version:1,phase,actions,quickReplies:meaningfulQuickReplies(parsed.quickReplies,[...recent.filter(m=>m.role==='user').map(m=>m.content),...lastAssistantQuickReplies(recent)])},
+        consultation:{version:1,phase,actions:memoryProposal?[]:actions,quickReplies:memoryProposal?[]:meaningfulQuickReplies(parsed.quickReplies,[...recent.filter(m=>m.role==='user').map(m=>m.content),...lastAssistantQuickReplies(recent)])},
         ...(env.FEATURE_AI_CENTRAL_EXPERIENCE?{contextualActions:contextualActionIds(input.message,null)}:{}),
         meditationAction,
         recommendedMeditation,

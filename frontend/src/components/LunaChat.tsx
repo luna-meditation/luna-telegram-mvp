@@ -24,6 +24,7 @@ import { luna2Copy } from '../luna2/copy';
 import {featureFlags} from '../config/featureFlags';
 import {MessageText} from './MessageText';
 import {MemorySaveAction} from '../luna2/PersonalMemoryEditor';
+import {MemoryProposalCard} from '../luna2/MemoryProposalCard';
 import {ChatTarotReading} from '../features/tarot/ChatTarotReading';
 import {ConversationalTarotSetup, type TarotSetupStep} from '../features/tarot/ConversationalTarotSetup';
 import {DreamExplorer} from '../features/dreams/DreamExplorer';
@@ -52,6 +53,7 @@ type LunaChatProps = {
   readingContextId?:string;
   chartContextId?:string|AstrologyChatAttachment;
   cosmosDiscussion?:{area:string;key:string};
+  conversationEntry?:string;
   tarotSetupKey?:number;
   onClearReadingContext?:()=>void;
   registerBackHandler?:(handler:(()=>void)|null)=>void;
@@ -155,7 +157,7 @@ function dateLabel(value: string, language: AppLanguage) {
   return new Intl.DateTimeFormat(language === 'ru' ? 'ru-RU' : 'en-US', { month: 'short', day: 'numeric' }).format(date);
 }
 
-export function LunaChat({ firstName, language, meditations, hasPremium, initData, onOpenMeditation, onTarot, redesigned = false,readingContextId,chartContextId,cosmosDiscussion,tarotSetupKey,onClearReadingContext,registerBackHandler,ambientSound }: LunaChatProps) {
+export function LunaChat({ firstName, language, meditations, hasPremium, initData, onOpenMeditation, onTarot, redesigned = false,readingContextId,chartContextId,cosmosDiscussion,conversationEntry,tarotSetupKey,onClearReadingContext,registerBackHandler,ambientSound }: LunaChatProps) {
   const central=featureFlags.ai_central_experience,en=language==='en';
   const cached=useMemo(()=>initData?sessionChatCache.get(initData):undefined,[initData]);
   const cachedContext=cached?.messages.slice().reverse().find(m=>m.metadata?.contextReset||m.metadata?.astrology||m.metadata?.tarot||m.metadata?.readingId)?.metadata;
@@ -279,6 +281,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
       const next = await refreshConversations();
       if (!alive||epoch!==uiEpoch.current) return;
       if(!next){setLoading(false);return;}
+      if(conversationEntry&&!turnPending.current){await openConversation(conversationEntry);return;}
       const stored = window.localStorage.getItem(activeConversationKey);
       if(!turnPending.current&&activeId&&!readingContextId&&!chartContextId){await openConversation(activeId,true);return;}
       if (!turnPending.current&&!activeId&&!messages.length&&!readingContextId&&!chartContextId&&stored&&/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(stored)) await openConversation(stored);
@@ -288,7 +291,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
       }
     })();
     return () => { alive = false; };
-  }, [openConversation, refreshConversations,readingContextId,chartContextId]);
+  }, [openConversation, refreshConversations,readingContextId,chartContextId,conversationEntry]);
 
   const scrollToLatest = useCallback((smooth = true) => {
     const list = listRef.current;
@@ -561,7 +564,8 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
                 {central&&message.role==='assistant'&&(message.metadata?.workflowActions?.includes('breathing')||message.metadata?.resolvedIntent==='breathing')&&<ChatBreathing language={language} initial={message.metadata?.breathing} registerBackHandler={registerBackHandler}/>}
                 {central&&message.metadata?.workflowActions?.some(a=>a!=='breathing')&&<div className="luna24-context-actions">{message.metadata.workflowActions.filter(a=>a!=='breathing').map(action=><button type="button" key={action} disabled={thinking} onClick={()=>handleAction(action)}>{action==='compatibility'?(en?'Choose two profiles':'Выбрать два профиля'):(en?'Choose a birth profile':'Выбрать данные рождения')}</button>)}</div>}
                 {central&&message.id===visibleMessages[visibleMessages.length-1]?.id&&message.metadata?.tarot?.reading&&message.metadata.tarot.revealed>=(message.metadata.tarot.reading.cards?.length||1)&&<div className="luna24-context-actions luna251-followups" aria-label={en?'Continue this reflection':'Продолжить размышление'}>{(en?[message.metadata.tarot.kind==='single'?'Explore this card':'How do these cards connect?','What does this mean for my situation?','Help me think through my next step']:[message.metadata.tarot.kind==='single'?'Рассмотрим эту карту подробнее':'Как связаны карты расклада?','Что это может значить в моей ситуации?','Помоги обдумать следующий шаг']).map(prompt=><button type="button" key={prompt} disabled={thinking||quotaExhausted||Boolean(failedTurn)} onClick={()=>void submit(prompt,undefined,message.metadata?.tarot?.readingId)}>{prompt}</button>)}</div>}
-                {featureFlags.personal_memory&&!message.metadata?.tarot&&!thinking&&(message.id===visibleMessages.filter(m=>m.role===message.role).slice(-1)[0]?.id)&&<MemorySaveAction key={message.id} language={language} initData={initData} message={message}/>}
+                {featureFlags.cosmos_v2&&featureFlags.personal_memory&&message.metadata?.memoryProposal&&<MemoryProposalCard messageId={message.id} proposal={message.metadata.memoryProposal} language={language} initData={initData} disabled={thinking} onUpdate={proposal=>setMessages(current=>current.map(m=>m.id===message.id?{...m,metadata:{...m.metadata,memoryProposal:proposal}}:m))}/>}
+                {featureFlags.personal_memory&&!message.metadata?.tarot&&!message.metadata?.memoryProposal&&!thinking&&(message.id===visibleMessages.filter(m=>m.role===message.role).slice(-1)[0]?.id)&&<MemorySaveAction key={message.id} language={language} initData={initData} message={message}/>}
                 {recommendation ? <ChatMeditationCard meditation={recommendation} language={language} hasPremium={hasPremium} onOpen={() => onOpenMeditation(recommendation,{messageId:message.id,referenceId:recommendation.id})} /> : null}
               </div>
             </div>

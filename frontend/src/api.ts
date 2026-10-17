@@ -32,6 +32,14 @@ export type PersonalMemory={id:string;category:string;memory_key:string;memory_v
 export type UniverseData={memories:PersonalMemory[];profile:PersonalProfile;identity:{firstName:string;language:string;goals:string[]}|null;memoryEnabled:boolean;contextConsent:boolean};
 export type PersonalMemoryInput={category:PersonalMemoryCategory;key:string;value:string;confirmed:boolean;kind:'fact'|'symbolic';sourceMessageId?:string;revision?:number;sensitiveConsent:boolean};
 export const getUniverse=(initData?:string)=>request<UniverseData>('/api/universe',undefined,initData);
+export type Discovery=import('../../backend/src/luna42-discoveries').Discovery;
+export const getDiscoveries=(initData?:string)=>request<{discoveries:Discovery[]}>('/api/universe/discoveries',undefined,initData);
+export const saveDiscovery=(kind:Discovery['kind'],referenceId:string,title:string,requestId:string,initData?:string)=>request<{discovery:Discovery}>('/api/universe/discoveries',{method:'POST',body:JSON.stringify({kind,referenceId,title,requestId})},initData);
+export const renameDiscovery=(id:string,title:string,expectedRevision:number,requestId:string,initData?:string)=>request<{discovery:Discovery}>(`/api/universe/discoveries/${encodeURIComponent(id)}`,{method:'PATCH',body:JSON.stringify({title,expectedRevision,requestId})},initData);
+export const removeDiscovery=(id:string,initData?:string)=>request<{removed:boolean;sourceDeleted:false}>(`/api/universe/discoveries/${encodeURIComponent(id)}`,{method:'DELETE'},initData);
+export const openDiscovery=(id:string,initData?:string)=>request<{kind:Discovery['kind'];referenceId:string;conversationId?:string}>(`/api/universe/discoveries/${encodeURIComponent(id)}/open`,undefined,initData);
+export type MemoryProposal=import('../../backend/src/luna42-memory-proposal').MemoryProposal;
+export const decideMemoryProposal=(messageId:string,proposalId:string,confirmed:boolean,initData?:string)=>request<{proposal:MemoryProposal}>(`/api/universe/proposals/${encodeURIComponent(messageId)}`,{method:'POST',body:JSON.stringify({proposalId,confirmed})},initData);
 export const transcribeLunaVoice=(wav:Blob,requestId:string,language:AppLanguage,initData?:string)=>request<{text:string;requestId:string;cached:boolean;costMicrousd:number}>(`/api/luna/voice/${requestId}?language=${language}`,{method:'POST',headers:{'Content-Type':'audio/wav'},body:wav},initData);
 export type CosmosOnboardingState={skipped:string[];revision:number;updatedAt:string|null};
 export type MeetLunaState={meet:{version?:1;completed?:string[];skipped?:string[];finishedAt?:string;consentVersion?:string;consentedAt?:string};revision:number;updatedAt:string|null};
@@ -418,6 +426,7 @@ export type LunaMessage = {
     astrologyConsent?:{version:1;chartId:string;secondChartId?:string};
     workflowActions?:Array<'natal_chart'|'compatibility'|'breathing'>;
     readingId?:string;
+    memoryProposal?:MemoryProposal;
     consultation?:{version:1;phase:string;actions:Array<'continue'|'alternative'|'tarot'|'natal_chart'|'compatibility'|'meditation'|'breathing'|'journal'|'history'>;quickReplies?:string[]};
     breathing?:{practiceId:string;minutes:number};
     contextualActions?:Array<'tarot'|'birth_profile'|'journal'|'meditation'>;

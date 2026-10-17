@@ -2,6 +2,7 @@ import {useEffect,useRef,useState} from 'react';
 import {Mic,Square,X,Upload,RotateCcw} from 'lucide-react';
 import {transcribeLunaVoice,type AppLanguage} from '../api';
 import {normalizeVoiceAudio} from './voiceWav';
+import {observeAudioFocus,requestAudioFocus} from '../audioFocus';
 import './voice42.css';
 type VoiceState='idle'|'requesting'|'recording'|'processing'|'ready'|'sending'|'error';
 export function LunaVoiceInput({language,initData,disabled,onTranscript,onBusy}:{language:AppLanguage;initData?:string;disabled:boolean;onTranscript:(text:string)=>void;onBusy:(busy:boolean)=>void}){
@@ -9,11 +10,12 @@ export function LunaVoiceInput({language,initData,disabled,onTranscript,onBusy}:
  const stopTracks=()=>{stream.current?.getTracks().forEach(t=>t.stop());stream.current=null;if(timer.current)clearInterval(timer.current);timer.current=undefined;};
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;generation.current++;cancelled.current=true;if(recorder.current?.state==='recording')recorder.current.stop();stopTracks();};},[]);
  useEffect(()=>{onBusy(['requesting','recording','processing','sending'].includes(state));},[state,onBusy]);
+ useEffect(()=>observeAudioFocus('microphone',()=>{if(recorder.current?.state==='recording'){recorder.current.stop();setError(en?'Recording stopped because another audio activity started. Review it before sending.':'Запись остановлена: началось другое аудио. Проверь её перед отправкой.');}}),[en]);
  useEffect(()=>()=>{if(url)URL.revokeObjectURL(url);},[url]);
  useEffect(()=>{const background=()=>{if(document.hidden&&recorder.current?.state==='recording'){recorder.current.stop();setError(en?'Recording stopped when the app went to the background. Review it before sending.':'Запись остановлена при сворачивании. Проверь её перед отправкой.');}};document.addEventListener('visibilitychange',background);return()=>document.removeEventListener('visibilitychange',background);},[en]);
  function cancel(){generation.current++;cancelled.current=true;if(recorder.current?.state==='recording')recorder.current.stop();stopTracks();recorder.current=null;wav.current=null;setUrl('');setState('idle');setError('');waiting.current=false;}
  async function start(){if(waiting.current||disabled)return;const token=++generation.current,parts:Blob[]=[];waiting.current=true;cancelled.current=false;setState('requesting');setError('');setElapsed(0);wav.current=null;setUrl('');
-  try{if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined')throw new Error('unsupported');const tracks=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,channelCount:1}});if(!mounted.current||cancelled.current||generation.current!==token){tracks.getTracks().forEach(t=>t.stop());return;}stream.current=tracks;window.dispatchEvent(new Event('luna-practice-audio-focus'));document.querySelectorAll('audio,video').forEach(element=>(element as HTMLMediaElement).pause());
+  try{if(!navigator.mediaDevices?.getUserMedia||typeof MediaRecorder==='undefined')throw new Error('unsupported');requestAudioFocus('microphone');const tracks=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,channelCount:1}});if(!mounted.current||cancelled.current||generation.current!==token){tracks.getTracks().forEach(t=>t.stop());return;}stream.current=tracks;requestAudioFocus('microphone');
    const mime=['audio/webm;codecs=opus','audio/mp4','audio/webm'].find(v=>MediaRecorder.isTypeSupported(v)),r=new MediaRecorder(tracks,mime?{mimeType:mime}:undefined);recorder.current=r;operation.current=crypto.randomUUID();
    r.ondataavailable=event=>{if(event.data.size)parts.push(event.data);};
    r.onerror=()=>{if(generation.current!==token)return;generation.current++;stopTracks();if(mounted.current){setState('error');setError(en?'Recording was interrupted. You can try again.':'Запись прервалась. Можно попробовать снова.');}waiting.current=false;};
