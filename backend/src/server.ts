@@ -18,6 +18,8 @@ import {luna30ReferralRouter} from './luna30-referral-router.js';
 import {attributeValidatedReferral,qualifyVerifiedReferral} from './luna30-referrals.js';
 import {luna30AstrologyRouter} from './luna30-astrology-router.js';
 import {luna32Router} from './luna32-routes.js';
+import {luna34Router} from './luna34-router.js';
+import {createLuna34Referrals} from './luna34-referrals.js';
 import {createLuna32Admin} from './luna32-admin.js';
 import { bot, configureTelegramBot, createStarsInvoiceLink, sendStarsInvoice } from './bot.js';
 import {
@@ -337,6 +339,7 @@ app.get('/health', async (req, res) => {
 
 app.use('/api/luna21',rateLimit({max:20,windowMs:60_000}),luna21CommerceRouter);
 app.use('/api/luna30/commerce',rateLimit({max:20,windowMs:60_000}),luna30CommerceRouter);
+app.use('/api/luna34',rateLimit({max:30,windowMs:60_000}),luna34Router);
 app.use('/api/referrals',rateLimit({max:12,windowMs:60_000}),luna30ReferralRouter);
 app.use('/api/astrology',rateLimit({max:30,windowMs:60_000}),luna30AstrologyRouter);
 app.use('/api/luna32',rateLimit({max:30,windowMs:60_000}),luna32Router);
@@ -425,7 +428,8 @@ app.post('/api/users/sync', requireTelegramWebApp, async (req, res, next) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const user = await upsertUser(authReq.telegramUser);
-    if(env.LUNA30_REFERRALS_ENABLED&&authReq.telegramStartParam){try{await attributeValidatedReferral(authReq.telegramUser.telegram_id,authReq.telegramStartParam);}catch(error){logBackendError(error,{endpoint:'Luna referral attribution'});}}
+    if(env.LUNA34_REFERRALS_ENABLED&&authReq.telegramStartParam){try{await createLuna34Referrals(supabase,{enabled:true,botUsername:env.BOT_USERNAME}).attribute(authReq.telegramUser.telegram_id,authReq.telegramStartParam);}catch(error){logBackendError(error,{endpoint:'Luna 3.4 referral attribution'});}}
+    else if(env.LUNA30_REFERRALS_ENABLED&&authReq.telegramStartParam){try{await attributeValidatedReferral(authReq.telegramUser.telegram_id,authReq.telegramStartParam);}catch(error){logBackendError(error,{endpoint:'Luna referral attribution'});}}
     res.json({ user });
   } catch (error) {
     next(error);
@@ -529,7 +533,8 @@ app.post('/api/history/session/heartbeat', requireTelegramWebApp, async (req, re
       String(req.body.session_id ?? ''),
       req.body?.last_position
     );
-    if(env.LUNA30_REFERRAL_REWARDS_ENABLED&&'newlyCompleted' in result&&result.newlyCompleted){try{await qualifyVerifiedReferral(authReq.telegramUser.telegram_id,String(req.body.session_id??''));}catch(error){logBackendError(error,{endpoint:'Luna referral qualification'});}}
+    if(env.LUNA34_REFERRALS_ENABLED&&'newlyCompleted' in result&&result.newlyCompleted){try{await createLuna34Referrals(supabase,{enabled:true,botUsername:env.BOT_USERNAME}).qualify(authReq.telegramUser.telegram_id,'meditation',String(req.body.session_id??''));}catch(error){logBackendError(error,{endpoint:'Luna 3.4 referral qualification'});}}
+    else if(env.LUNA30_REFERRAL_REWARDS_ENABLED&&'newlyCompleted' in result&&result.newlyCompleted){try{await qualifyVerifiedReferral(authReq.telegramUser.telegram_id,String(req.body.session_id??''));}catch(error){logBackendError(error,{endpoint:'Luna referral qualification'});}}
     res.json(result);
   } catch (error) {
     next(error);
@@ -539,7 +544,9 @@ app.post('/api/history/session/heartbeat', requireTelegramWebApp, async (req, re
 app.post('/api/breath-sessions', requireTelegramWebApp, async (req, res, next) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    res.json(await recordBreathSession(authReq.telegramUser.telegram_id, req.body));
+    const result=await recordBreathSession(authReq.telegramUser.telegram_id, req.body);
+    if(env.LUNA34_REFERRALS_ENABLED){try{await createLuna34Referrals(supabase,{enabled:true,botUsername:env.BOT_USERNAME}).qualify(authReq.telegramUser.telegram_id,'breath',String(req.body.session_id??''));}catch(error){logBackendError(error,{endpoint:'Luna 3.4 breath referral qualification'});}}
+    res.json(result);
   } catch (error) {
     logBackendError(error, { req: req as RequestWithId, endpoint: 'POST /api/breath-sessions' });
     next(error);

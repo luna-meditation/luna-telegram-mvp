@@ -144,7 +144,8 @@ test('breath visual respects reduced motion and keeps reward accounting untouche
   assert.match(styles,/@media \(prefers-reduced-motion: reduce\)[\s\S]*luna2-breath-ring.*transform: scale\(\.86\) !important; transition: none/);
   assert.doesNotMatch(src('luna2/BreathingVisual.tsx'),/setInterval|requestAnimationFrame|onComplete|fetch\(/);
   assert.match(app,/Date\.now\(\) - startedAt/);
-  assert.match(app,/onComplete\(mode, durationSeconds, completedBreaths\)/);
+  assert.match(app,/onComplete\(mode, durationSeconds, completedBreaths,value.id\)/);
+  assert.match(app,/startVerifiedBreath/);assert.match(app,/heartbeatVerifiedBreath/);
   assert.match(src('luna2/BreathingVisual.tsx'),/disabled=\{!featureEnabled\}/);
   assert.match(src('luna2/BreathingVisual.tsx'),/<AudioLines size=\{18\}/);
   assert.match(src('luna2/BreathingVisual.tsx'),/<button type="button" disabled><Mic/);

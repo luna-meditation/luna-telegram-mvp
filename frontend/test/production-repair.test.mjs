@@ -17,8 +17,8 @@ test('local calendar dates do not use UTC ISO truncation', () => {
 test('daily check-in is user initiated and reuses the saved mood record', () => {
   assert.match(appSource, /const \[showCheckin, setShowCheckin\] = useState\(false\)/);
   assert.match(appSource, /onCheckinDetails=\{\(\) => setShowCheckin\(true\)\}/);
-  assert.match(appSource, /hideMood=\{Boolean\(wellness\?\.todayCheckin\)\}/);
-  assert.match(appSource, /local_date: todayLocalDate\(\)/);
+  assert.match(appSource, /initialMood=\{wellness\?\.todayCheckin\?\.mood/);assert.match(appSource, /await onSave\(\{mood,local_date:todayLocalDate\(\)\}\)/);
+  assert.match(appSource, /local_date: ?todayLocalDate\(\)/);
 });
 
 test('unverified entitlement cannot expose purchase entry points', () => {

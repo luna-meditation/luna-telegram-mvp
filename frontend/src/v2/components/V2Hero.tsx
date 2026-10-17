@@ -134,7 +134,7 @@ export function V2Hero({
   const selectedMood = activeMood ? visualMoods.find((item) => item.active.includes(activeMood)) : null;
 
   return (
-    <section className={`home-v2-atmosphere ${premiumHome ? 'luna25-hero' : ''} ${premiumHome && moodSaved ? 'is-checked-in' : ''}`} data-checkin-state={moodSaved ? 'saved' : 'pending'}>
+    <section className={`home-v2-atmosphere ${premiumHome ? 'luna25-hero' : ''} ${premiumHome && (moodSaved||moodSaving) ? 'is-checked-in' : ''}`} data-checkin-state={moodSaved ? 'saved' : moodSaving ? 'saving' : 'pending'} aria-busy={moodSaving}>
       <div className="home-v2-atmosphere-art" aria-hidden="true">
         {(Object.entries(homeHeroAssets) as Array<[keyof typeof homeHeroAssets, string]>).filter(([theme])=>theme===resolvedTheme).map(([theme, path]) => failedImages[theme] ? null : (
           <OptimizedImage
@@ -168,7 +168,7 @@ export function V2Hero({
         </div>
       ) : null}
 
-      {premiumHome && moodSaved ? null : !premiumHome && moodSaved && activeMood ? (
+      {premiumHome && (moodSaved||moodSaving) ? null : !premiumHome && moodSaved && activeMood ? (
         <div className="home-v2-mood-saved" aria-label={`${language === 'ru' ? 'Сегодня' : 'Today'}: ${moodLabel(activeMood)}`}>
           <span>{selectedMood ? <MoodGlyph kind={selectedMood.visual} /> : null}</span>
           <span className="home-v2-mood-saved-copy">

@@ -1,0 +1,285 @@
+{
+  "budget": {
+    "id": true,
+    "updated_at": "2026-10-16T14:47:46.492834+00:00",
+    "public_beta": true,
+    "beta_features": [
+      "ai",
+      "tarot",
+      "astrology",
+      "meditations",
+      "breathwork",
+      "dreams"
+    ],
+    "baseline_month": "2026-10-01",
+    "beta_starts_at": "2026-10-16T14:47:46.492834+00:00",
+    "beta_expires_at": "2026-10-31T16:00:00+00:00",
+    "free_daily_limit": null,
+    "generation_enabled": true,
+    "premium_daily_limit": null,
+    "monthly_cap_microusd": 100000000,
+    "cost_baseline_verified": true,
+    "legacy_monthly_cost_microusd": 0
+  },
+  "financial": {
+    "users": {
+      "count": 56,
+      "digest": "a0c218d1824eff2ee355d147dacac3a9"
+    },
+    "ledger": {
+      "count": 0,
+      "digest": null
+    },
+    "gardens": {
+      "count": 54,
+      "digest": "5f2c9f6d2b6d163fb9ee5f0ba5e23d4c"
+    },
+    "periods": {
+      "count": 0,
+      "digest": null
+    },
+    "payments": {
+      "count": 1,
+      "digest": "527bc7db99fb91a5d262b6be345c7535"
+    },
+    "receipts": {
+      "count": 0,
+      "digest": null
+    }
+  },
+  "functions": {
+    "luna21_analytics(integer)": "568c7938f5c88302d9bf7252005dc83a",
+    "luna30_guard_birth_write()": "773db3cd57119439ea01ad5094684741",
+    "luna30_commercial_metrics()": "cd2899fdaf7da92b5d83e43e878a30df",
+    "luna30_project_self_birth()": "c5ee896358b09a235ef9d7af74723882",
+    "luna32_ai_used(bigint,text)": "436f655fbe01e3132798a54853810a5f",
+    "claim_legacy_workspace(uuid)": "6444975ef8a29d0b657e32b9ed5a768e",
+    "luna30_guard_chart_revision()": "e6f23178290f7cace05237ccc42ba093",
+    "luna21_reward(bigint,text,uuid)": "896ca8d4062dd3a9c5674122f35a9ceb",
+    "luna30_invalidate_legacy_birth()": "efb078df60dce32a557f0400a11651f9",
+    "luna30_qualify_referral(bigint,uuid)": "8d5b45fd9d153dc3f7a70abf9ecd2d02",
+    "increment_meditation_play_count(uuid)": "6a480f2cf056b74957748ae7c4bc83e2",
+    "luna30_attribute_referral(bigint,text)": "b78be9b9b4316ad8daffdd16b044ab39",
+    "luna30_invalidate_birth_calculations()": "f6e5e831718bfab29252dc758a6d9e22",
+    "luna30_record_refund(bigint,text,integer)": "ed3050bc6e41d11bb8cb9879aba396e7",
+    "luna30_reserve_usage(bigint,uuid,text,text)": "b01e34498f3288d1d20f7f0812def80d",
+    "reserve_luna24_qa_ai_call(uuid,bigint,uuid)": "756e6c6c470ff562cbd0699629094d88",
+    "luna30_accept_order(bigint,uuid,integer,text)": "129780efcc571b34b41194ee53d90486",
+    "luna30_clear_personal_profile(bigint,boolean)": "5a12f2c334fc9f6f2db7cddae2a6a872",
+    "luna30_settle_usage(bigint,uuid,boolean,uuid)": "0c81e295239a5166c791a41a2bbffa87",
+    "luna30_prepare_order(bigint,uuid,text,integer)": "49fb94fff39f9bf23b573527d7849d62",
+    "settle_luna_tarot_spread(bigint,uuid,text,jsonb)": "f40687cdd8076d64c2e131220309106e",
+    "luna21_buy_seed_reading(bigint,uuid,text,integer)": "eadd5b233f188d50b80f67f9d7975b16",
+    "settle_luna24_qa_ai_call(uuid,bigint,uuid,integer)": "681293a8c29db3c4af98c3c50f1bc737",
+    "reserve_luna_chat_request(bigint,text,integer,uuid)": "4ae2f5e20177ff57678d4e184fd6c2e5",
+    "luna32_finish_ai_operation(bigint,text,uuid,boolean)": "8962f9c31f817c5e8004681553bd83e7",
+    "luna_mutate_garden(bigint,text,text,integer,integer)": "6a7840a5393fe17928df274d325c6923",
+    "luna21_prepare_stars_reading(bigint,uuid,text,integer)": "46f4e53962526025d8688b2eadb3d4df",
+    "luna21_claim_stars_checkout(bigint,uuid,text,integer,text)": "89fa42c7811232addb05c1b2a99e3349",
+    "luna21_fulfill_stars_reading(bigint,uuid,text,text,integer)": "4c246790c82be56807c3c3b31d387f93",
+    "reserve_usage_event(uuid,uuid,uuid,text,integer,text,jsonb)": "01a8b84f60d96e0189c2076df6af2513",
+    "luna21_fulfill_existing_stars(bigint,text,text,integer,text,text)": "6458d4817b78a3077f43c24e656f28bf",
+    "luna30_claim_astrology_report(bigint,uuid,uuid,text,text,text,integer)": "5c2c192dc2b0c1ac883477459e4db57e",
+    "luna30_finish_astrology_report(bigint,text,jsonb,text,integer,integer)": "5f4f1256301365e484793c215657bd9c",
+    "luna32_settle_ai_attempt(bigint,uuid,bigint,integer,integer,integer,text)": "333df3a5ffaabe5d561f082bf291c50e",
+    "reserve_luna_daily_card(bigint,text,text,text,boolean,integer,integer,date)": "3e102c8baf40f419312ad9e3e8d75e5e",
+    "luna32_reserve_ai_attempt(bigint,text,uuid,integer,uuid,text,bigint,integer)": "2d9cd87441e0b4829bfc28cc2095c508",
+    "luna30_fulfill_order(bigint,uuid,text,integer,timestamp with time zone,boolean)": "fa7a9ee0ecc41e93c5d40627ea8e8d06",
+    "reserve_luna_tarot_reading(bigint,uuid,text,text,text,text,text,text,boolean,integer,integer)": "0e0b65aafcebbeed8a87a016a7331098",
+    "reserve_luna_tarot_spread(bigint,uuid,text,text,jsonb,text,text,text,boolean,uuid,boolean,integer,integer)": "63ac67567b78d51c46ef5d8243a97a82"
+  },
+  "projectId": "vkcdtasbdoeilgfucoax",
+  "relations": {
+    "users": "c02515eb01448944fa2036a6cb87be21",
+    "videos": "0a5d5e4eb67af5f1ab1a765c15a3c270",
+    "history": "3b982aa524f84da093345bed944c7a08",
+    "sources": "ad14180974606ad39675fddac8c12a00",
+    "streaks": "da422b22bbeb94a236b5e257097b4aaf",
+    "ai_usage": "c4189f59de4a28f61bf194770ff0f039",
+    "payments": "6758c949699bf058391a7af501cf7892",
+    "progress": "e3201eda2e028df87017ebd6665c4772",
+    "projects": "6ac609816dd02cca827f8998a9580519",
+    "favorites": "c90cb6f7a57044b5a8ed73d969152127",
+    "practices": "0d1dacac8ba132794cf201590c57f2a2",
+    "categories": "bc103cc2e211eaa192378cac62554bbb",
+    "watchlists": "1804b0bc8585773b5fd529a9cb35caa2",
+    "workspaces": "03400157c97db6801ebfdaf0b4f123f8",
+    "adaptations": "6b2000be39e0f98c15f9c52073146175",
+    "ai_messages": "81066c33b60ac772d30ca8232043a0b7",
+    "meditations": "2783e61c58a5c2037a3ff28fc7d1f89a",
+    "search_runs": "110102d32a52c327c3c89ed83301d49d",
+    "achievements": "493858885af5146510c81832601e7e56",
+    "moon_gardens": "ce2ed3d79e92cf493ea1d33b91217577",
+    "usage_ledger": "fae716e685cefa91eccedffd28b6e9cc",
+    "practice_days": "ac9e200e123ed152c0e97ee1d54637bd",
+    "user_memories": "35c5dda07c6be3faed92725a513bb69f",
+    "daily_checkins": "385a40b5d22f67c330a03c9afb9ce8a9",
+    "saved_searches": "5a136fdd40ef0cccab3e3ca1c3492f14",
+    "search_queries": "f98b1469d19b1edf578ff312395a0bb6",
+    "video_analysis": "50fc7e734e4d70d7a7b1e6d81a25117a",
+    "breath_sessions": "0b845becd5765dc4026401fa2f97e6a3",
+    "luna21_settings": "7fa0851b325772b142445b791116469d",
+    "processing_jobs": "a62b25d10a3a1d59edd09ff576d2db29",
+    "account_profiles": "d906df251beec777c9fea2567660ccb8",
+    "ai_chat_requests": "c6ba8e38e5bf7a5efb0ef6773154a969",
+    "ai_conversations": "b9cc595a6eed0119d6076e81d43b199d",
+    "content_variants": "7a24c15d038a0fda3454d8fdf0355069",
+    "luna_daily_cards": "571b4a7e80533f59e937362f9f238eb5",
+    "luna_seed_ledger": "c7ba54ebfed6ccc51cee994c3c1f9310",
+    "support_requests": "0ffe1ef0bd711e7862f4b3c1fdc716e0",
+    "user_preferences": "31d9884292cf07d5e8247b88c560e5e8",
+    "discovered_videos": "f716420e5f2ec0aac0a446a1b1c5ed7d",
+    "playback_sessions": "706c6f29a0e4877b2078970acc33df52",
+    "published_content": "44e6bd789d71e6dbda282fa468ecf2d4",
+    "search_run_videos": "0abb7bbc641ba4ca722c188e570d29ee",
+    "workspace_members": "a1403abe8f89b3b3772edc57b852d5bb",
+    "luna24_qa_ai_calls": "330a02c278836664c1aad51cc15817d3",
+    "luna30_chart_cache": "28e1b51fde34305e7719815d19016716",
+    "luna32_ai_attempts": "77ef2a2733de3ba903f0b42f8462b724",
+    "transcript_sources": "0602dd15e56c963073a4185376ede81a",
+    "adaptation_variants": "ed5df2f2e94efeba1de676da4b2fa371",
+    "luna24_qa_ai_budget": "e7f3dfcb11e44f349099c9113020f838",
+    "luna_reading_orders": "29a0f9a044c62e033b63844ff4cadc1a",
+    "luna_tarot_attempts": "0f86b7b1f91c3adad8f2dd6ff6fba236",
+    "luna_tarot_readings": "d0c5de019fe75712bb117c3c2f689a0c",
+    "reminder_deliveries": "f9729440d40724a133d51d2afd9eca6f",
+    "transcript_versions": "2bfe42de938fcbee2aaf30068378a200",
+    "luna32_ai_operations": "91171d247f7c62f479b7eefc65cde4a6",
+    "luna32_dream_entries": "326290244a5d889199613d75150446f2",
+    "provider_connections": "8c21ff1fb917c09c344aefe638546094",
+    "luna30_astrology_jobs": "f015ce667af5d792b23c3ecbd8f8fecc",
+    "luna30_birth_profiles": "263cd77dd15b41046fdeae048b3820a9",
+    "luna30_referral_codes": "feea526d689445f80e361afeababad43",
+    "luna_garden_purchases": "12ce1ac6d906ee61bb86ed4cbf787d94",
+    "provider_oauth_states": "bb43e07aa65f9e34c73a8e7e88c1f62c",
+    "discovery_source_links": "de5c0df1689b3780fe8f7399fe0a84ad",
+    "luna32_ai_month_totals": "dd156267d256d8e5a817fd808c3f4e47",
+    "luna_personal_profiles": "473c6ccb13078ea54bfa7906e05e1441",
+    "luna_tarot_daily_usage": "6aa0fc4fa6c1bced932e17d23c0ef2de",
+    "video_metric_snapshots": "bc0cf4c9e755bbfe9205b571a0ce8278",
+    "workspace_entitlements": "470f358b763c431fe463b0766cd4cb33",
+    "luna30_release_settings": "f2a9cef214262c5858fd5b0065643c66",
+    "luna32_runtime_settings": "16df5f8f943ea4bc698fe6488ec2ddd9",
+    "luna_tarot_global_usage": "91cf8846a4f5b23ee62a866ddeddebe3",
+    "luna30_astrology_reports": "4701ed99e2db7ba90d94500f9662027a",
+    "luna30_commercial_orders": "2b5f613f5c0fa986fcc903cfe83aa86d",
+    "luna30_usage_reservations": "6a8baf309dcedef1ab4158ec043aa04d",
+    "luna_payment_fulfillments": "9aaa401f3ed83189d17e4239f47e6877",
+    "luna30_commercial_receipts": "a795e67c653f1ea89b4cb9a2d7541652",
+    "luna30_entitlement_periods": "74f0217d0377ec9d51becce375887d78",
+    "luna_premium_reading_usage": "aa7106c2f1f43f50de1ce6775dd11335"
+  },
+  "capturedAt": "2026-10-17T01:44:45.416819+00:00",
+  "modifiedLunaTables": {
+    "luna30_referrals": {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arw/postgres"
+      ],
+      "rls": true,
+      "forced": true,
+      "columns": [
+        [
+          "referee_id",
+          "20",
+          -1,
+          true
+        ],
+        [
+          "referrer_id",
+          "20",
+          -1,
+          true
+        ],
+        [
+          "state",
+          "25",
+          -1,
+          true
+        ],
+        [
+          "source_session_id",
+          "2950",
+          -1,
+          false
+        ],
+        [
+          "created_at",
+          "1184",
+          -1,
+          true
+        ],
+        [
+          "qualified_at",
+          "1184",
+          -1,
+          false
+        ],
+        [
+          "rewarded_at",
+          "1184",
+          -1,
+          false
+        ]
+      ]
+    },
+    "luna_breath_proofs": {
+      "acl": [
+        "postgres=arwdDxtm/postgres",
+        "service_role=arw/postgres"
+      ],
+      "rls": true,
+      "forced": true,
+      "columns": [
+        [
+          "id",
+          "2950",
+          -1,
+          true
+        ],
+        [
+          "telegram_id",
+          "20",
+          -1,
+          true
+        ],
+        [
+          "mode",
+          "25",
+          -1,
+          true
+        ],
+        [
+          "duration_seconds",
+          "23",
+          -1,
+          true
+        ],
+        [
+          "started_at",
+          "1184",
+          -1,
+          true
+        ],
+        [
+          "last_heartbeat_at",
+          "1184",
+          -1,
+          true
+        ],
+        [
+          "verified_seconds",
+          "23",
+          -1,
+          true
+        ],
+        [
+          "completed_at",
+          "1184",
+          -1,
+          false
+        ]
+      ]
+    }
+  }
+}

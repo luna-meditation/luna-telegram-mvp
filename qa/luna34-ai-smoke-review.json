@@ -1,0 +1,299 @@
+{
+  "status": "PASS",
+  "release": "luna34",
+  "stagingUrl": "https://luna-staging-itfl.netlify.app",
+  "stagingDeployId": "6ad2d681129ce740af5b4c3c",
+  "sourceCommit": "2b021064d20b137528ec66252e5b08b3f571a61f",
+  "coreProviderCalls": 4,
+  "coreCostUsd": 0.0050599,
+  "additionalProviderCalls": 2,
+  "additionalCostUsd": 0.0009719,
+  "totalProviderCalls": 6,
+  "totalCostUsd": 0.0060318,
+  "unknownAiSpendUsd": 0,
+  "approval": "owner-2026-10-17-two-calls-usd0.01",
+  "checks": [
+    {
+      "name": "AI generation is disabled before the bounded follow-up",
+      "status": "PASS"
+    },
+    {
+      "name": "real saved Russian Tarot answer reopens intact",
+      "status": "PASS"
+    },
+    {
+      "name": "actual persisted aspect matches all three calculated identity fields independent of JSON property order",
+      "status": "PASS"
+    },
+    {
+      "name": "English interpretation names the actual planets and aspect",
+      "status": "PASS"
+    },
+    {
+      "name": "English response is prose with useful dynamic follow-ups",
+      "status": "PASS"
+    },
+    {
+      "name": "exact cached aspect request succeeds while new generation is disabled",
+      "status": "PASS"
+    },
+    {
+      "name": "reopened English history retains the same selected aspect",
+      "status": "PASS"
+    },
+    {
+      "name": "no unresolved prior provider spend",
+      "status": "PASS"
+    },
+    {
+      "name": "final Russian interpretation uses localized orientation and the owned reading",
+      "status": "PASS"
+    },
+    {
+      "name": "follow-up choices are relevant and not recycled",
+      "status": "PASS"
+    },
+    {
+      "name": "new final answer also reuses its saved response",
+      "status": "PASS"
+    },
+    {
+      "name": "subscriber rights, Seeds and garden are unchanged",
+      "status": "PASS"
+    },
+    {
+      "name": "staging remains closed to new generation",
+      "status": "PASS"
+    },
+    {
+      "name": "previous test cap stopped dispatch without charging a successful user quota",
+      "status": "PASS"
+    },
+    {
+      "name": "new generation is disabled before this finite test",
+      "status": "PASS"
+    },
+    {
+      "name": "ru final real answer reopens while generation is OFF",
+      "status": "PASS"
+    },
+    {
+      "name": "en final real answer reopens while generation is OFF",
+      "status": "PASS"
+    },
+    {
+      "name": "single saved reading reopens for its owner without generation",
+      "status": "PASS"
+    },
+    {
+      "name": "three saved reading reopens for its owner without generation",
+      "status": "PASS"
+    },
+    {
+      "name": "five saved reading reopens for its owner without generation",
+      "status": "PASS"
+    },
+    {
+      "name": "verified provider-backed A01 is saved",
+      "status": "PASS"
+    },
+    {
+      "name": "acknowledgement prevents a repeat celebration",
+      "status": "PASS"
+    },
+    {
+      "name": "a real sleep recommendation detaches the chart without any provider call",
+      "status": "PASS"
+    },
+    {
+      "name": "previous provider usage has no unresolved cost",
+      "status": "PASS"
+    },
+    {
+      "name": "actual read-only tool continuation yields a completed human-readable answer",
+      "status": "PASS"
+    },
+    {
+      "name": "dream context detaches old chart and preserves meaningful prose",
+      "status": "PASS"
+    },
+    {
+      "name": "new English follow-ups stay bounded and useful",
+      "status": "PASS"
+    },
+    {
+      "name": "tool-assisted answer persists; duplicate and history cause zero new requests",
+      "status": "PASS"
+    },
+    {
+      "name": "all new commercial flags remain disabled",
+      "status": "PASS"
+    },
+    {
+      "name": "additional provider cost is known and within the explicit allowance",
+      "status": "PASS"
+    },
+    {
+      "name": "paid rights, balance and garden remain exact",
+      "status": "PASS"
+    },
+    {
+      "name": "staging generation is closed after the test",
+      "status": "PASS"
+    }
+  ],
+  "answers": [
+    {
+      "text": "Позиции трёх карт в сохранённом раскладе: Семёрка жезлов — Суть ситуации (прямая); Мир — Что требует внимания (перевёрнутая); Королева жезлов — Возможное направление (перевёрнутая).\n\nКонкретный небольшой шаг: в первый фокус‑блок недели завершить одну конкретную незакрытую задачу и пометить в календаре короткую 10‑минутную паузу сразу после неё — это физически зафиксирует завершение и защитит восстановление энергии.\n\nВопросы для продолжения:\n1) Какую одну незавершённую задачу ты выберешь для первого фокус‑блока? \n2) Хочешь, чтобы я помог(ла) расписать три простых критериев для делегирования этой задачи?",
+      "language": "ru",
+      "metadata": {
+        "readingId": "67aafbf2-8d77-4359-bdc0-f3953c80cf9e",
+        "safetyState": "none",
+        "consultation": {
+          "phase": "exploring_meaning",
+          "actions": [
+            "continue",
+            "alternative"
+          ],
+          "version": 1,
+          "quickReplies": [
+            "Выбрать задачу для фокус‑блока",
+            "Помочь с критериями делегирования"
+          ]
+        },
+        "pending_state": null,
+        "pending_action": null,
+        "resolvedIntent": "general_chat",
+        "meditationAction": null,
+        "clarificationHash": null,
+        "contextualActions": [
+          "tarot"
+        ],
+        "conversationState": {
+          "currentGoal": null,
+          "currentTopic": "tarot",
+          "currentIntent": "general_chat",
+          "currentMeditationId": null,
+          "currentRecommendationId": null
+        },
+        "recommendedMeditation": null,
+        "recommendedMeditationId": null,
+        "duplicateClarificationBlocked": false
+      },
+      "requestId": "qa34_final_ru_d4c726cf-74ab-4889-9250-9086ee025a5a",
+      "conversationId": "eb50c714-7eb1-4ced-8979-7238fd799ba4"
+    },
+    {
+      "text": "The selected aspect is Sun opposite Jupiter — a Sun–Jupiter opposition. Symbolically, this can show a tension between identity/ego (Sun) and expansion/optimism (Jupiter): you may feel pulled between aiming for personal authenticity and wanting to grow, achieve, or be seen on a larger stage. It can bring confidence and big visions, but also a risk of overreach or feeling inflated when your ambitions clash with a need for grounded self-expression.\n\nAs reflection rather than prediction, consider ways to balance bold goals with honest limits: small, steady steps that honour who you are can prevent burnout while keeping momentum. A useful question to explore: where have you felt the urge to expand (Jupiter) in a way that pulled you away from a truer, quieter expression of yourself (Sun)?",
+      "aspect": {
+        "to": "jupiter",
+        "orb": 3.9990544105930894,
+        "from": "sun",
+        "type": "opposition"
+      },
+      "language": "en",
+      "metadata": {
+        "astrology": {
+          "aspect": {
+            "to": "jupiter",
+            "from": "sun",
+            "type": "opposition"
+          },
+          "chartId": "13c3b137-f6a1-4040-a92e-c0688cbfce66"
+        },
+        "safetyState": "none",
+        "consultation": {
+          "phase": "exploring_meaning",
+          "actions": [
+            "continue",
+            "natal_chart",
+            "compatibility"
+          ],
+          "version": 1,
+          "quickReplies": [
+            "Show other aspects involving the Sun",
+            "How might this affect relationships?"
+          ]
+        },
+        "pending_state": null,
+        "pending_action": null,
+        "resolvedIntent": "general_chat",
+        "astrologyConsent": {
+          "chartId": "13c3b137-f6a1-4040-a92e-c0688cbfce66",
+          "version": 1
+        },
+        "meditationAction": null,
+        "clarificationHash": null,
+        "contextualActions": [
+          "birth_profile",
+          "journal"
+        ],
+        "conversationState": {
+          "currentGoal": null,
+          "currentTopic": "astrology",
+          "currentIntent": "general_chat",
+          "currentMeditationId": null,
+          "currentRecommendationId": null
+        },
+        "recommendedMeditation": null,
+        "recommendedMeditationId": null,
+        "duplicateClarificationBlocked": false
+      },
+      "requestId": "qa34_aspect_0f3e4f45-16e8-44e8-8788-e510630f6e5f",
+      "conversationId": "8228404d-01d8-4d46-8dca-be9fbb4a96d8"
+    },
+    {
+      "text": "You have 94 Luna AI sessions left today. A quiet, unfamiliar library suggests a gentle opening toward new knowledge or parts of yourself you haven’t explored yet. Your curiosity in the dream is the most important detail — it points to a friendly, nonthreatening invitation to learn, rather than fear or pressure. Notice what kind of curiosity you felt: eager, calm, tentative? That tone can guide whether this is about playful discovery or careful, patient investigation in waking life.",
+      "language": "en",
+      "metadata": {
+        "safetyState": "none",
+        "consultation": {
+          "phase": "discovering_intent",
+          "actions": [
+            "continue",
+            "journal",
+            "meditation"
+          ],
+          "version": 1,
+          "quickReplies": [
+            "What might the books represent for me?",
+            "Lead a 2-minute noticing exercise"
+          ]
+        },
+        "contextReset": true,
+        "pending_state": null,
+        "pending_action": null,
+        "resolvedIntent": "general_chat",
+        "meditationAction": null,
+        "clarificationHash": null,
+        "contextualActions": [
+          "birth_profile",
+          "journal"
+        ],
+        "conversationState": {
+          "currentGoal": null,
+          "currentTopic": "self_discovery",
+          "currentIntent": "general_chat",
+          "currentMeditationId": null,
+          "currentRecommendationId": null
+        },
+        "recommendedMeditation": null,
+        "recommendedMeditationId": null,
+        "duplicateClarificationBlocked": false
+      },
+      "requestId": "qa34_tool_success_3f1cf593-2877-4987-8ba7-84464aeb2326",
+      "conversationId": "8228404d-01d8-4d46-8dca-be9fbb4a96d8"
+    }
+  ],
+  "qaReconciliation": {
+    "reason": "The committed four-call QA fetch wrapper asserted before originalFetch: the fifth provider request was never dispatched. Only this exact staging QA attempt is reconciled.",
+    "attemptId": "d011ff3b-ac5c-45ed-a171-2d33c2ed15ac",
+    "sourceBlob": "d998f90e75f01ac87a1c74774a1a1ba9a32a7b84",
+    "verifiedAt": "2026-10-17T02:01:43.42982+00:00",
+    "actualCostMicrousd": 0,
+    "releasedHeldMicrousd": 10007
+  },
+  "productionWrites": 0,
+  "newFinancialGatesEnabled": false,
+  "physicalIphoneOwnerConfirmed": true
+}

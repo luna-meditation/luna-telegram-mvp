@@ -10,6 +10,8 @@ import {saveTarotSpread} from './tarot-spreads.js';
 import {chatTarotInput,chatTarotState,chatTarotHash,drawChatTarot,nextReveal,readingSize,type ChatTarotState} from './luna24-policy.js';
 import {safetyCategory} from './luna-ai-policy.js';
 import {createAstrologyWorkflowService} from './luna33-workflows.js';
+import {createLuna34Progress} from './luna34-progress.js';
+import {createLuna34Referrals} from './luna34-referrals.js';
 const messageFields='id,conversation_id,request_id,role,content,metadata,created_at';
 const fail=(code:string,status=503)=>new FoundationError(status,code,'Your conversation remains saved.');
 async function ownedConversation(user:number,id:string){const {data,error}=await supabase.from('ai_conversations').select('id,title').eq('id',id).eq('telegram_id',user).eq('status','active').maybeSingle();if(error)throw fail('chat_unavailable');if(!data)throw fail('conversation_not_found',404);return data;}
@@ -66,6 +68,12 @@ export async function revealChatTarot(user:number,id:string,body:unknown){
  let next:ChatTarotState;try{next=nextReveal(state,index);}catch{throw fail('reveal_order',409);}
  if(next.revealed>state.revealed){const update=await supabase.from('ai_messages').update({metadata:{...message.metadata,tarot:next}}).eq('id',id).eq('telegram_id',user).contains('metadata',{tarot:{revealed:state.revealed}}).select(messageFields).maybeSingle();if(update.error)throw fail('reveal_save_failed');message=update.data??await ownedMessage(user,id);}
  const current=chatTarotState.parse(message.metadata?.tarot);
+ const evidenceReading=await getTarotReading(user,current.readingId) as StoredReading&{cards?:Array<{cardId:string}>};
+ const selection=current.kind==='single'?[evidenceReading.card_id]:(evidenceReading.cards??[]).map(c=>c.cardId);
+ // The saved reveal CAS, not opening a message or an AI answer, is evidence.
+ const progress=createLuna34Progress(supabase,(owner,id)=>createLuna34Referrals(supabase,{enabled:env.LUNA34_REFERRALS_ENABLED,botUsername:env.BOT_USERNAME}).qualify(owner,'tarot',id));
+ if(selection[index])await progress.record(user,{kind:'reading_reveal',entityId:current.readingId,detail:selection[index]}).catch(()=>undefined);
+ if(current.revealed===readingSize(current.kind))await progress.record(user,{kind:'reading_reveal',entityId:current.readingId,detail:'complete'}).catch(()=>undefined);
  if(current.revealed===readingSize(current.kind)){
   const reading=await getTarotReading(user,current.readingId) as StoredReading&{cards?:Array<{cardId:string;orientation:'upright'|'reversed'}>};
   const base={clientReadingId:reading.client_reading_id,intention:reading.intention,question:reading.question,language:reading.language,generate:true};

@@ -2,6 +2,7 @@ import {TarotImage as OptimizedImage} from './TarotImage';
 import {useEffect,useRef,useState,type Dispatch} from 'react';
 import {History,Sparkles,Trash2} from 'lucide-react';
 import {saveTarotReading,listTarotReadings,deleteTarotReading,type AppLanguage,type TarotReading} from '../../api';
+import {noteCompletedReading} from '../progress/evidence';
 import {featureFlags} from '../../config/featureFlags';
 import {tarotDeck} from './deck';
 import type {TarotSession,TarotAction} from './session';
@@ -18,6 +19,7 @@ export function TarotHistory({language,initData,dispatch}:{language:AppLanguage;
 }
 export function TarotReadingTools({session,language,initData,dispatch,onContinue}:{session:TarotSession;language:AppLanguage;initData?:string;dispatch:Dispatch<TarotAction>;onContinue?:(id:string)=>void}){
  const t=messages[language];const [busy,setBusy]=useState(false),[error,setError]=useState('');const pending=useRef(false);const reading=session.savedReading;
+ useEffect(()=>{if(reading)noteCompletedReading(reading,initData);},[reading?.id,initData]);
  const currentId=session.clientReadingId;
  async function save(generate:boolean){
   if(pending.current||!session.result||!currentId)return;

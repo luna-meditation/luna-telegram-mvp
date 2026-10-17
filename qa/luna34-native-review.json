@@ -1,0 +1,121 @@
+{
+  "status": "PASS",
+  "node": "v22.23.3",
+  "postgres": 17,
+  "checks": [
+    {
+      "name": "migration applies/reapplies; all commercial state and other-app data unchanged",
+      "status": "PASS"
+    },
+    {
+      "name": "all tables force RLS; forged claims cannot bypass grants or direct RPC boundaries",
+      "status": "PASS"
+    },
+    {
+      "name": "first observation creates exactly 50 locked definitions, not fabricated activity or a celebration burst",
+      "status": "PASS"
+    },
+    {
+      "name": "only real completed provider-backed chat turns count; actual production status is completed, not success",
+      "status": "PASS"
+    },
+    {
+      "name": "seeking to the end is rejected; saving an unrevealed reading gives no completion",
+      "status": "PASS"
+    },
+    {
+      "name": "first revealed card is distinct from complete spread; duplicate replay is inert",
+      "status": "PASS"
+    },
+    {
+      "name": "completion unlocks once, retains timestamp and queues only new discoveries; second owner isolated",
+      "status": "PASS"
+    },
+    {
+      "name": "acknowledgement is owner-scoped and serialized with snapshot refresh, with no repeated celebration or timestamp rewrite",
+      "status": "PASS"
+    },
+    {
+      "name": "breathing start identity immutable; concurrent starts cannot multiply verified activity",
+      "status": "PASS"
+    },
+    {
+      "name": "no instant completion, wrong owner denied, heartbeat gaps bounded and pause time excluded",
+      "status": "PASS"
+    },
+    {
+      "name": "parallel breathing completion records exactly once and preserves the existing one-seed reward",
+      "status": "PASS"
+    },
+    {
+      "name": "feature-off rollback preserves progress, user rights, all records and other app",
+      "status": "PASS"
+    },
+    {
+      "name": "commercial migration applies/reapplies, cannot enable checkout without owner/payment gates; disabled quotas inert",
+      "status": "PASS"
+    },
+    {
+      "name": "commercial tables and RPCs reject anon/authenticated even with forged owner/service claims",
+      "status": "PASS"
+    },
+    {
+      "name": "Free calendar-day allowance admits exactly five concurrent ordinary turns and no initial-spread double charge",
+      "status": "PASS"
+    },
+    {
+      "name": "failed generation releases allowance; forged success or mismatched operation cannot charge a user",
+      "status": "PASS"
+    },
+    {
+      "name": "verified success consumes exactly one allowance; a cached retry cannot consume or refund it again",
+      "status": "PASS"
+    },
+    {
+      "name": "paid period has 300 ordinary successes/in-flight turns with no ordinary daily cap, separate 8/4/2 included report buckets",
+      "status": "PASS"
+    },
+    {
+      "name": "annual allocations use monthly anniversaries, agree with application period math; Lifetime keeps prior rights",
+      "status": "PASS"
+    },
+    {
+      "name": "feature-off commercial rollback retains all confirmed rights, financial history and unrelated-app state",
+      "status": "PASS"
+    },
+    {
+      "name": "new lifecycle applies/reapplies without a financial mutation; all new functions remain invoker-only and private",
+      "status": "PASS"
+    },
+    {
+      "name": "future server prices and explicit acceptance; paid monthly allocation is exactly 100, duplicate delivery does not repeat it",
+      "status": "PASS"
+    },
+    {
+      "name": "annual is prepaid: one current monthly allocation, never twelve upfront; accepted payments settle even with new sales closed",
+      "status": "PASS"
+    },
+    {
+      "name": "refund reconciles all accrued annual allocations once; spent Seeds enter review without negative balance or new debt",
+      "status": "PASS"
+    },
+    {
+      "name": "new referral is pinned to a genuinely new account, requires onboarding and real verified activity; rewards OFF means no mint or retro reward",
+      "status": "PASS"
+    },
+    {
+      "name": "all new gates can close without altering Lifetime or another application",
+      "status": "PASS"
+    }
+  ],
+  "legacyChecks": 17,
+  "productionTouched": false,
+  "paidProviderCalls": 0,
+  "fixture": "Production-shaped schema; synthetic data only",
+  "migrationHashes": {
+    "20261016174059_luna34_verified_progress_and_catalog.sql": "6e6ef27983a63d6fbd6c3b3fe14b8a501a7fa2e9b68d7d9414e470beff0a2c07",
+    "20261016175930_luna34_commercial_catalog_and_allowances.sql": "0a908d5ae9efc91ac0f7748f3f8ee89e8697e3a83965f5bb033c50de9bcd6ee9",
+    "20261016182919_luna34_monthly_allocations_and_referral_evidence.sql": "e666e31f46f37a4e8b1bd4a6847aa0449615a3662e8e859bc3704c0c3ac22431",
+    "20261016190335_luna34_allowance_operation_finality.sql": "ce7f4362e7282b37acf347cc204a0011fcdb0e65dd0afc605a21ff428e39bbab"
+  }
+}

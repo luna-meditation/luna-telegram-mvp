@@ -6,7 +6,7 @@ export function publicShareContent(input:ShareCardContent):ShareCardContent {
  if(!['app','tarot','garden','achievement'].includes(input.kind))throw new Error('Unsupported public card');
  const plain=(v:string,max:number)=>v.replace(/[\u0000-\u001f]/g,' ').trim().slice(0,max);
  const image=input.image;
- if(image&&(!/^\/(assets\/(tarot\/cards\/|moon-garden\/)|images\/home\/)[a-zA-Z0-9/_-]+\.(webp|png|jpe?g)$/.test(image)||image.includes('..')))throw new Error('Share artwork must be an existing local Luna asset');
+ if(image&&(!/^\/(assets\/(tarot\/cards\/|moon-garden\/)|images\/(home\/|achievements\/luna34\/))[a-zA-Z0-9/_-]+\.(webp|png|jpe?g)$/.test(image)||image.includes('..')))throw new Error('Share artwork must be an existing local Luna asset');
  return {kind:input.kind,title:plain(input.title,100),subtitle:plain(input.subtitle,220),...(image?{image}:{}),...(input.badge?{badge:plain(input.badge,70)}:{})};
 }
 export async function renderShareCard(input:ShareCardContent,format:ShareFormat):Promise<Blob>{

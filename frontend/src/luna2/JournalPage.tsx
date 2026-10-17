@@ -1,6 +1,6 @@
 import {useEffect,useState} from 'react';
 import {ArrowUpRight,BookOpen,NotebookPen,Sparkles,Smile} from 'lucide-react';
-import {listTarotReadings,type AppLanguage,type Meditation,type PlaybackHistory,type TarotReading,type WellnessSummary} from '../api';
+import {getUniverse,listTarotReadings,type PersonalMemory,type AppLanguage,type Meditation,type PlaybackHistory,type TarotReading,type WellnessSummary} from '../api';
 import {featureFlags} from '../config/featureFlags';
 import {SectionBack} from './ExplorePage';
 import {tarotDeck} from '../features/tarot/deck';
@@ -9,11 +9,14 @@ import {TarotImage as OptimizedImage} from '../features/tarot/TarotImage';
 export function JournalPage({language,history,meditations,wellness,onBack,onOpen,initData,onReading}:{language:AppLanguage;history:PlaybackHistory[];meditations:Meditation[];wellness:WellnessSummary|null;onBack:()=>void;onOpen:(m:Meditation)=>void;initData?:string;onReading:(r:TarotReading)=>void}){
  const en=language==='en';
  const [filter,setFilter]=useState('all'),[readings,setReadings]=useState<TarotReading[]>([]),[next,setNext]=useState<number|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(false);
+ const [reflections,setReflections]=useState<PersonalMemory[]>([]);
+ useEffect(()=>{let active=true;if(featureFlags.personal_memory)void getUniverse(initData).then(result=>{if(active)setReflections(result.memories.filter(m=>m.category==='reflections'&&m.confirmation_status==='confirmed'));}).catch(()=>undefined);return()=>{active=false;};},[initData]);
  useEffect(()=>{let active=true;if(!featureFlags.tarot_history)return;setBusy(true);listTarotReadings(0,initData).then(r=>{if(active){setReadings(r.readings);setNext(r.nextOffset);}}).catch(()=>{if(active)setError(true);}).finally(()=>{if(active)setBusy(false);});return()=>{active=false;};},[initData]);
  async function more(){if(next===null||busy)return;setBusy(true);setError(false);try{const r=await listTarotReadings(next,initData);setReadings(current=>[...current,...r.readings.filter(row=>!current.some(c=>c.id===row.id))]);setNext(r.nextOffset);}catch{setError(true);}finally{setBusy(false);}}
  const moods=en?{calm:'Calm',stressed:'Stressed',tired:'Tired',anxious:'Anxious',focused:'Focused',low_energy:'Low energy'}:{calm:'Спокойствие',stressed:'Напряжение',tired:'Усталость',anxious:'Тревога',focused:'Собранность',low_energy:'Мало энергии'};
  const date=(value:string)=>new Intl.DateTimeFormat(en?'en-US':'ru-RU',{day:'numeric',month:'short',year:'numeric'}).format(new Date(value));
  const entries=[
+ ...reflections.map(memory=>({key:`reflection:${memory.id}`,kind:'reflection',timestamp:memory.created_at,title:memory.memory_key.replace(/_/g,' '),body:memory.memory_value,open:()=>window.dispatchEvent(new Event('luna-open-universe')),card:null})),
  ...history.map(h=>{const m=meditations.find(m=>m.id===h.meditation_id)??h.meditation;return {key:`practice:${h.id}`,kind:'practice',timestamp:h.last_played,title:m?.translations?.[language]?.title||m?.title||(en?'Meditation':'Медитация'),body:`${Math.round((m?.duration??h.last_position)/60)} ${en?'min':'мин'} · ${h.completed?(en?'Completed':'Завершено'):(en?'In progress':'В процессе')}`,open:m?()=>onOpen(m):undefined,card:null};}),
  ...(wellness?.weeklyCheckins??[]).map(c=>({key:`mood:${c.id??c.local_date}`,kind:'mood',timestamp:c.created_at??`${c.local_date}T12:00:00`,title:moods[c.mood],body:en?'Mood check-in':'Отметка настроения',open:undefined,card:null})),
  ...readings.map(r=>{const card=tarotDeck.find(c=>c.id===r.card_id);const label=r.reading_kind==='three'?(en?'3-card reading':'Расклад на 3 карты'):r.reading_kind==='five'?(en?'5-card reading':'Расклад на 5 карт'):r.reading_kind==='daily'?(en?'Card of the day':'Карта дня'):(en?'One-card reflection':'Одна карта');return {key:`tarot:${r.id}`,kind:'tarot',timestamp:r.created_at,title:label,body:r.interpretation?.summary||card?.name[language]||'',open:()=>onReading(r),card};})

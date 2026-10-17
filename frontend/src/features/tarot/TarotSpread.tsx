@@ -12,10 +12,12 @@ import {prepareCardChoices,randomIndex} from './draw';
 import {createSpreadSession,type SpreadAction,type SpreadKind} from './spreadSession';
 import type {TarotSession,TarotAction} from './session';
 import {tarotPositions as positions} from './positions';
+import {noteCompletedReading} from '../progress/evidence';
 export function TarotSpread({kind,language,initData,session,dispatch,onContinue,registerBackHandler}:{kind:SpreadKind;language:AppLanguage;initData?:string;session:TarotSession;dispatch:Dispatch<TarotAction>;onContinue?:(id:string)=>void;registerBackHandler:(handler:(()=>void)|null)=>void}){
  const state=session.spreads?.[kind]??createSpreadSession(kind),size=kind==='three'?3:5,en=language==='en',t=tarotCopy[language];
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[zoom,setZoom]=useState<number|null>(null);const pending=useRef(false),choiceLock=useRef(new Set<number>()),alive=useRef(true);
  const send=(action:SpreadAction)=>dispatch({type:'spread',kind,action});
+ useEffect(()=>{if(state.stage==='interpretation'&&state.reading)noteCompletedReading(state.reading,initData);},[state.stage,state.reading?.id,initData]);
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
  useEffect(()=>{if(state.stage!=='shuffling')return;const timer=window.setTimeout(()=>send({type:'ready'}),matchMedia('(prefers-reduced-motion: reduce)').matches?120:1100);return()=>clearTimeout(timer);},[state.stage]);
  useEffect(()=>{choiceLock.current=new Set(state.selected.map(c=>c.slot));},[state.selected]);
@@ -39,6 +41,6 @@ export function TarotSpread({kind,language,initData,session,dispatch,onContinue,
     {featureFlags.tarot_spreads&&<button className="tarot-text-button" onClick={()=>{choiceLock.current.clear();send({type:'reset'});}}><RotateCcw size={17}/>{t.again}</button>}</>}
   </>}
   {error&&<p className="tarot-error" role="alert">{error}</p>}<p className="tarot-hub-note">{t.disclaimer}</p>
-  {zoomed&&zoomCard&&<TarotDetails card={zoomCard} orientation={zoomed.orientation} language={language} onClose={()=>setZoom(null)} registerBackHandler={registerBackHandler}/>}
+  {zoomed&&zoomCard&&<TarotDetails readingId={state.reading?.id} initData={initData} card={zoomCard} orientation={zoomed.orientation} language={language} onClose={()=>setZoom(null)} registerBackHandler={registerBackHandler}/>}
  </section>;
 }

@@ -22,12 +22,13 @@ test('completed check-in uses a timed hero toast and a compact editable settled 
   assert.match(homeStyles, /background: rgba\(18, 17, 46, 0\.4\)/);
 });
 
-test('Home preserves backend personalization order and masks sound chips only on real overflow', () => {
+test('Home preserves backend personalization order and uses an accessible modal sound sheet instead of overflow chips', () => {
   assert.match(app, /goal\/check-in\/time-aware ranking/);
   assert.match(app, /return stableMeditations\[0\]/);
   assert.match(app, /For your goal/);
-  assert.match(home, /scrollWidth > chooser\.clientWidth/);
-  assert.match(home, /home-v2-sound-chooser-overflow/);
+  assert.match(home, /SoundscapeSheet/);
+  const sheet=readFileSync(resolve(process.cwd(),'src/v2/components/SoundscapeSheet.tsx'),'utf8');
+  assert.match(sheet,/showModal\(\)/);assert.match(sheet,/onCancel=\{onClose\}/);assert.match(sheet,/onTouchEnd/);assert.match(sheet,/aria-pressed=\{active\}/);
 });
 
 test('Home sound chooser keeps compact typography without overriding component font sizes', () => {

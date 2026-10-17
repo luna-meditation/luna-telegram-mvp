@@ -19,6 +19,7 @@ import {validateLuna21Precheckout,fulfillLuna21Payment} from './luna21-commerce.
 import {attributeValidatedReferral} from './luna30-referrals.js';
 import {createLuna30Commerce} from './luna30-commerce.js';
 import {supabase} from './db.js';
+import {FoundationError} from './foundation-error.js';
 
 export const bot = new Telegraf(env.BOT_TOKEN);
 const luna30Commerce=createLuna30Commerce(supabase,env,input=>bot.telegram.callApi('createInvoiceLink',input));
@@ -61,14 +62,10 @@ function mainKeyboard(language: BotLanguage) {
 function plansKeyboard(language: BotLanguage, plan: string) {
   if (plan === 'Lifetime') return Markup.inlineKeyboard([[miniAppButton(language)]]);
   if (plan === 'Monthly') {
-    return Markup.inlineKeyboard([
-      [Markup.button.callback(`Lifetime - ${plans.lifetime.amountStars} Stars`, 'buy_lifetime')],
-      [miniAppButton(language)]
-    ]);
+    return Markup.inlineKeyboard([[miniAppButton(language)]]);
   }
   return Markup.inlineKeyboard([
     [Markup.button.callback(`Annual - ${plans.annual.amountStars} Stars`, 'buy_annual')],
-    [Markup.button.callback(`Lifetime - ${plans.lifetime.amountStars} Stars`, 'buy_lifetime')],
     [miniAppButton(language)]
   ]);
 }
@@ -78,11 +75,11 @@ function plansMessage(language: BotLanguage, plan: string) {
     ? 'Premium навсегда уже активен. Повторная покупка не нужна.'
     : 'Lifetime Premium is already active. No further purchase is needed.';
   if (plan === 'Monthly') return language === 'ru'
-    ? `Premium уже активен. При желании можно перейти на Lifetime за ${plans.lifetime.amountStars} Stars.`
-    : `Premium is active. You can upgrade to Lifetime for ${plans.lifetime.amountStars} Stars.`;
+    ? 'Premium уже активен. Ваши действующие права сохранены.'
+    : 'Premium is active. Your existing access is preserved.';
   return language === 'ru'
-    ? `Выбери доступ Luna:\n\nГод: ${plans.annual.amountStars} Stars на 12 месяцев\nНавсегда: ${plans.lifetime.amountStars} Stars`
-    : `Choose your Luna access:\n\nAnnual: ${plans.annual.amountStars} Stars for 12 months\nLifetime: ${plans.lifetime.amountStars} Stars`;
+    ? `Действующий годовой доступ: ${plans.annual.amountStars} Stars на 12 месяцев. Новые планы готовятся; Lifetime больше не продаётся.`
+    : `Existing annual access: ${plans.annual.amountStars} Stars for 12 months. New plans are being prepared; Lifetime is no longer on sale.`;
 }
 
 function invoicePayload(plan: PlanId, telegramId: number, requestId?: string) {
@@ -103,6 +100,7 @@ async function ensureUser(ctx: Context) {
 }
 
 export async function sendStarsInvoice(chatId: number, telegramId: number, planId: PlanId, requestId?: string) {
+  if(planId==='lifetime')throw new FoundationError(409,'lifetime_not_on_sale','Existing Lifetime access is preserved; new Lifetime sales are closed.');
   const plan = plans[planId];
 
   try {
@@ -136,6 +134,7 @@ export async function sendStarsInvoice(chatId: number, telegramId: number, planI
 const inFlightInvoiceLinks = new Map<string, Promise<string>>();
 
 export async function createStarsInvoiceLink(telegramId: number, planId: PlanId, requestId?: string) {
+  if(planId==='lifetime')throw new FoundationError(409,'lifetime_not_on_sale','Existing Lifetime access is preserved; new Lifetime sales are closed.');
   const key = `${telegramId}:${planId}`;
   const existing = inFlightInvoiceLinks.get(key);
   if (existing) return existing;
@@ -291,6 +290,7 @@ bot.action(/^buy_(annual|lifetime)$/, async (ctx) => {
   await ensureUser(ctx);
   const planId = ctx.match[1];
   if (!isPlanId(planId)) return;
+  if(planId==='lifetime'){await ctx.reply(botLanguage(ctx.from.language_code)==='ru'?'Новые Lifetime-покупки закрыты. Все ранее купленные права сохранены.':'New Lifetime sales are closed. All previously purchased access is preserved.');return;}
   const access = await getUserAccess(ctx.from.id);
   if (!paymentEligibility(access.plan, planId).allowed) {
     const language = botLanguage(ctx.from.language_code);
@@ -319,6 +319,7 @@ bot.on('pre_checkout_query', async (ctx) => {
     if(!validExistingPlanPayment(parsed.plan,ctx.preCheckoutQuery.currency,ctx.preCheckoutQuery.total_amount)){
       await ctx.answerPreCheckoutQuery(false,'Invalid Luna payment amount or currency.');return;
     }
+    if(parsed.plan==='lifetime'){await ctx.answerPreCheckoutQuery(false,'New Lifetime sales are closed. Previously purchased access is preserved.');return;}
     const access = await getUserAccess(ctx.from.id);
     if (!paymentEligibility(access.plan, parsed.plan).allowed) {
       await ctx.answerPreCheckoutQuery(false, access.plan === 'Lifetime' ? 'Lifetime Premium is already active.' : 'Premium access is already active.');
