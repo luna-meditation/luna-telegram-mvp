@@ -858,6 +858,14 @@ export async function updateUserLanguage(language: AppLanguage, initData?: strin
   }, initData);
 }
 
+export const getLanguagePreference=(initData?:string)=>request<import('./localization/languagePreference').LanguagePreference>('/api/profile/language-preference',undefined,initData);
+export const getAdmin40Session=(initData?:string)=>request<import('./admin/types').Admin40Session>('/api/admin/v4/session',undefined,initData);
+export const getAdmin40Overview=(period:{from:string;to:string},initData?:string)=>request<import('./admin/types').Admin40Overview>('/api/admin/v4/overview?'+new URLSearchParams(period),undefined,initData);
+export const getAdmin40Users=(filters:{search:string;page:number;size:number;sort:string;plan:string},initData?:string)=>request<import('./admin/types').Admin40Users>('/api/admin/v4/users?'+new URLSearchParams(Object.fromEntries(Object.entries(filters).map(([k,v])=>[k,String(v)]))),undefined,initData);
+export type MeditationActionOrigin={messageId:string;referenceId:string};
+export const acknowledgeLunaAction=(value:MeditationActionOrigin&{event:'meditation_card_rendered'|'player_opened'|'playback_started'},initData?:string)=>request<{acknowledged:boolean}>('/api/luna/actions/ack',{method:'POST',body:JSON.stringify(value)},initData);
+export const setLanguagePreference=(value:{mode:import('./localization/languagePreference').LanguageMode;expectedRevision:number;requestId:string},initData?:string)=>request<import('./localization/languagePreference').LanguagePreference&{conflict?:boolean}>('/api/profile/language-preference',{method:'PUT',body:JSON.stringify(value)},initData);
+
 export async function updateProfileGoals(goals: string[], initData?: string) {
   return request<{ user: { profile_goals: string[] } }>('/api/profile/goals', {
     method: 'POST',
@@ -906,6 +914,7 @@ export async function removeProfileAvatar(initData?: string) {
 }
 
 export async function checkAdmin(initData?: string) {
+  if(String(import.meta.env.VITE_FEATURE_ADMIN_V4??'').toLowerCase()==='true'){await getAdmin40Session(initData);return{admin:true};}
   return request<{ admin: boolean }>('/api/admin/me', undefined, initData);
 }
 

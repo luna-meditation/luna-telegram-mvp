@@ -1,11 +1,15 @@
 import {OptimizedImage,imageSource} from './design-system/components/OptimizedImage';
 import './luna34.css';
+import {useLanguagePreference} from './localization/useLanguagePreference';
+import type {LanguageMode} from './localization/languagePreference';
+import {admin40Enabled} from './admin/admin40';
 import {ReferralWelcome,ReferralPanel} from './features/membership/ReferralPanel';
 import {parseLaunchDestination} from './navigation/launchDestination';
 import {recordLuna35Launch} from './api';
 import {Luna30FinancePanel} from './components/Luna30FinancePanel';
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 const Luna34OperationsPanel=lazy(()=>import('./components/Luna34OperationsPanel').then(module=>({default:module.Luna34OperationsPanel})));
+const Admin40=lazy(()=>import('./admin/AdminWorkspace'));
 import { createPortal } from 'react-dom';
 import {
   Bot,
@@ -40,6 +44,7 @@ import {
 import {
   createInvoiceLink,
   createPaymentRequestId,
+  acknowledgeLunaAction,
   createMeditation,
   clearLunaConversations,
   clearLunaMemory,
@@ -81,7 +86,6 @@ import {
   isValidTelegramInvoiceUrl,
   updateProfileGoals,
   updateMoonGardenDevState,
-  updateUserLanguage,
   updateMeditation,
   updateAdminUserAccess,
   updateAdminSupportRequestStatus,
@@ -202,7 +206,6 @@ type MantraDefinition = {
 const moods: MoodChip[] = ['Sleep', 'Calm', 'Focus', 'Anxiety', 'Breath', 'Energy'];
 const meditationMoods: Mood[] = ['Calm', 'Stressed', 'Tired', 'Anxious', 'Focused'];
 const libraryCacheKey = 'luna.library.v1';
-const languageStorageKey = 'luna.language.v1';
 const moonGardenVolumeStorageKey = 'luna.moonGarden.volume.v1';
 const moonGardenAmbienceUrl = '/assets/audio/moon-garden/moon-garden-ambience.wav';
 const playerFixVersion = 'pause-seek-isolation-v5';
@@ -1362,27 +1365,6 @@ function formatTime(seconds: number) {
   return `${minutes}:${remaining}`;
 }
 
-function languageFromCode(languageCode?: string | null): AppLanguage {
-  return languageCode?.toLowerCase().startsWith('ru') ? 'ru' : 'en';
-}
-
-function readStoredLanguage(): AppLanguage | null {
-  try {
-    const saved = window.localStorage.getItem(languageStorageKey);
-    return saved === 'en' || saved === 'ru' ? saved : null;
-  } catch {
-    return null;
-  }
-}
-
-function saveStoredLanguage(language: AppLanguage) {
-  try {
-    window.localStorage.setItem(languageStorageKey, language);
-  } catch {
-    // Language persistence is best-effort in restricted browser storage.
-  }
-}
-
 function readMoonGardenVolume() {
   try {
     const saved = Number(window.localStorage.getItem(moonGardenVolumeStorageKey));
@@ -1390,10 +1372,6 @@ function readMoonGardenVolume() {
   } catch {
     return 0.14;
   }
-}
-
-function initialLanguage(user?: TelegramWebAppUser): AppLanguage {
-  return readStoredLanguage() ?? languageFromCode(user?.language_code);
 }
 
 function dayGreeting(language: AppLanguage) {
@@ -1836,7 +1814,10 @@ function App() {
   const [initialAccountCache] = useState(() => readAccountCache(user.id));
   const accountRefreshRef = useRef<Promise<AccessState | void> | null>(null);
   const paymentOperationRef = useRef(false);
-  const [language, setLanguage] = useState<AppLanguage>(() => initialLanguage(user));
+  const playerActionOriginRef=useRef<import('./api').MeditationActionOrigin|null>(null);
+  const confirmPlayerPlayback=useCallback(()=>{const origin=playerActionOriginRef.current;if(origin&&initData)void acknowledgeLunaAction({...origin,event:'playback_started'},initData).catch(()=>undefined);},[initData]);
+  const locale=useLanguagePreference(user.id,user.language_code,initData);
+  const language=locale.language;
   useEffect(()=>{document.documentElement.lang=language;},[language]);
   const [tarotSession, tarotDispatch] = useReducer(reduceTarotSession, undefined, ()=>({...createTarotSession(),...(launchDestination==='daily'?{screen:'daily' as const}:{})}));
   const [aiReadingId,setAiReadingId]=useState<string|undefined>();
@@ -1995,11 +1976,7 @@ function App() {
         setAccessVerified(true);
         setAccountUnavailable(!profileStats);
         setProfile(nextProfile);
-        const savedLanguage = nextProfile?.user?.language_code ?? accessState.user?.language_code;
-        if (savedLanguage === 'en' || savedLanguage === 'ru') {
-          setLanguage(savedLanguage);
-          saveStoredLanguage(savedLanguage);
-        }
+        // Profile/Telegram language is detection data, never a manual preference.
         setHistory(nextHistory);
         favoritesRef.current = nextFavorites;
         setFavorites(nextFavorites);
@@ -2087,6 +2064,7 @@ function App() {
   };
 
   const refreshAdmin = async () => {
+    if(admin40Enabled)return;
     const [meditationList, dashboard, support] = await Promise.all([
       getAdminMeditations(initData),
       getAdminDashboard(initData),
@@ -2293,15 +2271,9 @@ function App() {
     };
   }, [dailyMeditation, stableMeditations]);
 
-  const changeLanguage = (nextLanguage: AppLanguage) => {
-    setLanguage(nextLanguage);
-    saveStoredLanguage(nextLanguage);
+  const changeLanguage = (nextLanguage: LanguageMode) => {
+    locale.choose(nextLanguage);
     telegram?.HapticFeedback?.impactOccurred('light');
-    if (initData) {
-      updateUserLanguage(nextLanguage, initData).catch((error) => {
-        console.info('[Luna language save failed]', error instanceof Error ? error.message : 'Language save failed.');
-      });
-    }
   };
 
   useEffect(() => {
@@ -2318,7 +2290,8 @@ function App() {
     preloadCoverImages([dailyMeditation, ...homeSections.continueListening, ...homeSections.recentlyPlayed, ...homeSections.explore].filter(Boolean) as Meditation[]);
   }, [dailyMeditation, homeSections]);
 
-  const openMeditation = (meditation: Meditation) => {
+  const openMeditation = (meditation: Meditation,origin?:import('./api').MeditationActionOrigin) => {
+    playerActionOriginRef.current=origin??null;
     const locked = meditation.premium && !effectiveHasPremium;
     telegram?.HapticFeedback?.impactOccurred('light');
     if (locked) {
@@ -2333,6 +2306,7 @@ function App() {
     setSelectedMeditation(meditation);
     setPage('player');
   };
+  useEffect(()=>{const origin=playerActionOriginRef.current;if(origin&&page==='player'&&selectedMeditation?.id===origin.referenceId&&initData)void acknowledgeLunaAction({...origin,event:'player_opened'},initData).catch(()=>undefined);},[page,selectedMeditation?.id,initData]);
 
   const openScene = (scene: SceneDefinition) => {
     setSceneMiniHidden(false);setSceneAudioError(false);
@@ -2966,7 +2940,7 @@ function App() {
       <div className="fixed inset-0 luna-bg" />
       <ProgressMilestone owner={user.id} profile={accountLoading||accountUnavailable?null:profile} language={language} initData={initData} allowed={['home','journey','profile','achievements'].includes(page)&&!selectedMeditation&&!selectedMantra&&!selectedScene&&!showCheckin&&!profileNestedActive}/>
       <section ref={appShellRef} data-page={page} className={`app-shell ${page === 'luna' ? 'app-shell-chat' : ''} ${page === 'admin' || (page === 'profile' && profileNestedActive) ? 'app-shell-no-nav' : ''}`}>
-        {page !== 'luna' && !(featureFlags.new_navigation && page==='breathCircle') && <AppHeader statusLabel={(profile?.currentStreak ?? 0) > 0 ? streakLabel(profile?.currentStreak ?? 0, language) : planLabel(access.plan, language)} language={language} languageLabel={copy[language].language} onLanguageChange={changeLanguage} showSeeds={featureFlags.new_navigation} moonSeeds={profile ? availableMoonSeeds(profile) : undefined} onWallet={() => setPage('wallet')} />}
+        {page !== 'luna' && !(admin40Enabled&&page==='admin') && !(featureFlags.new_navigation && page==='breathCircle') && <AppHeader statusLabel={(profile?.currentStreak ?? 0) > 0 ? streakLabel(profile?.currentStreak ?? 0, language) : planLabel(access.plan, language)} language={language} languageLabel={copy[language].language} onLanguageChange={changeLanguage} showSeeds={featureFlags.new_navigation} moonSeeds={profile ? availableMoonSeeds(profile) : undefined} onWallet={() => setPage('wallet')} />}
         {appNotice && <div className="theme-floating fixed left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+12px)] z-50 mx-auto max-w-md rounded-full border border-gold/20 px-4 py-3 text-center text-xs font-semibold text-cream shadow-glow backdrop-blur-xl luna-fade" role="status">{appNotice}</div>}
 
         {page === 'home' && (<>
@@ -3186,6 +3160,9 @@ function App() {
             onRestore={refreshAccessAndPayments}
             onAddHome={addLunaToHomeScreen}
             onLanguageChange={changeLanguage}
+            languageMode={locale.mode}
+            languageSyncPending={locale.pending}
+            languageSyncError={locale.syncError}
             onProfileUpdate={setProfile}
             onGoalsChanged={() => void refreshLibrary()}
             onNestedChange={setProfileNestedActive}
@@ -3228,6 +3205,7 @@ function App() {
             onHome={() => setPage('home')}
             onProgress={() => setPage('progress')}
             onPlaybackStart={pauseMoonGardenAmbience}
+            onPlaybackConfirmed={confirmPlayerPlayback}
             onContinue={() => {
               if (nextMeditation && nextMeditation.id !== selectedMeditation.id) openMeditation(nextMeditation);
               else setPage('library');
@@ -3272,7 +3250,8 @@ function App() {
           />
         )}
 
-        {page === 'admin' && (
+        {page === 'admin' && admin40Enabled && <Suspense fallback={<p role="status">{language==='ru'?'Открываем Luna Admin…':'Opening Luna Admin…'}</p>}><Admin40 key={user.id} initData={initData} language={language} onBack={()=>{window.history.pushState({},'', '/');setPage('home');}}/></Suspense>}
+        {page === 'admin' && !admin40Enabled && (
           <AdminPage
             status={adminStatus}
             categories={categories}
@@ -4103,7 +4082,7 @@ function PlanCard(props: { badge?: string; title: string; price: string; period:
   );
 }
 
-function PlayerPage({ meditation, nextMeditation, favorite, favoritePending, onFavorite, onSave, onHome, onProgress, onPlaybackStart, onPlaybackSessionStart, onPlaybackHeartbeat, onContinue, language }: {
+function PlayerPage({ meditation, nextMeditation, favorite, favoritePending, onFavorite, onSave, onHome, onProgress, onPlaybackStart, onPlaybackConfirmed, onPlaybackSessionStart, onPlaybackHeartbeat, onContinue, language }: {
   meditation: Meditation;
   nextMeditation?: Meditation;
   favorite: boolean;
@@ -4113,6 +4092,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, favoritePending, onF
   onHome: () => void;
   onProgress: () => void;
   onPlaybackStart?: () => void;
+  onPlaybackConfirmed?:()=>void;
   onPlaybackSessionStart?: (meditationId: string) => Promise<string | null>;
   onPlaybackHeartbeat?: (sessionId: string, position: number) => Promise<unknown>;
   onContinue: () => void;
@@ -4358,6 +4338,8 @@ function PlayerPage({ meditation, nextMeditation, favorite, favoritePending, onF
     audio.addEventListener('loadedmetadata', loadedMetadata);
     audio.addEventListener('timeupdate', syncProgress);
     audio.addEventListener('play', played);
+    const playbackConfirmed=()=>onPlaybackConfirmed?.();
+    audio.addEventListener('playing',playbackConfirmed);
     audio.addEventListener('pause', paused);
     audio.addEventListener('ended', ended);
     if (audio.readyState >= 1) loadedMetadata();
@@ -4366,11 +4348,12 @@ function PlayerPage({ meditation, nextMeditation, favorite, favoritePending, onF
       audio.removeEventListener('loadedmetadata', loadedMetadata);
       audio.removeEventListener('timeupdate', syncProgress);
       audio.removeEventListener('play', played);
+      audio.removeEventListener('playing',playbackConfirmed);
       audio.removeEventListener('pause', paused);
       audio.removeEventListener('ended', ended);
       audio.pause();
     };
-  }, [localized.audioUrl, meditation.duration, meditation.id, onPlaybackStart]);
+  }, [localized.audioUrl, meditation.duration, meditation.id, onPlaybackStart,onPlaybackConfirmed]);
 
   useEffect(() => () => {
     const sessionId = playbackSessionRef.current;
@@ -5215,6 +5198,9 @@ function ProfilePage({
   onRestore,
   onAddHome,
   onLanguageChange,
+  languageMode,
+  languageSyncPending,
+  languageSyncError,
   onProfileUpdate,
   onGoalsChanged,
   onNestedChange,
@@ -5245,7 +5231,10 @@ function ProfilePage({
   onAdmin: () => void;
   onRestore: () => AccessState | void | Promise<AccessState | void>;
   onAddHome: () => void;
-  onLanguageChange: (language: AppLanguage) => void;
+  onLanguageChange: (language: LanguageMode) => void;
+  languageMode: LanguageMode;
+  languageSyncPending: boolean;
+  languageSyncError: boolean;
   onProfileUpdate: (profile: ProfileStats | null | ((current: ProfileStats | null) => ProfileStats | null)) => void;
   onGoalsChanged: () => void;
   onNestedChange: (nested: boolean) => void;
@@ -5659,13 +5648,14 @@ function ProfilePage({
     return (
       <ProfileChildScreen title={copy[language].language} onBack={() => setView('settings')} language={language}>
         <section className="luna-surface rounded-[24px] p-2">
-          {(['en', 'ru'] as const).map((item) => (
+          {(['auto', 'en', 'ru'] as const).map((item) => (
             <button key={item} onClick={() => onLanguageChange(item)} className="flex min-h-[50px] w-full items-center justify-between rounded-[16px] px-4 text-left text-sm text-cream">
-              <span>{item === 'en' ? 'English' : 'Русский'}</span>
-              {language === item && <CheckCircle size={16} className="text-gold" />}
+              <span>{item==='auto'?(language==='en'?'Auto · Telegram or device':'Авто · Telegram или устройство'):item === 'en' ? 'English' : 'Русский'}</span>
+              {languageMode === item && <CheckCircle size={16} className="text-gold" />}
             </button>
           ))}
         </section>
+        {(languageSyncPending||languageSyncError)&&<p role="status" className="text-sm text-lavender">{languageSyncError?(language==='en'?'Saved on this device. Account sync will retry when available.':'Сохранено на этом устройстве. Синхронизация аккаунта повторится при подключении.'):(language==='en'?'Saving your preference…':'Сохраняем выбор…')}</p>}
       </ProfileChildScreen>
     );
   }

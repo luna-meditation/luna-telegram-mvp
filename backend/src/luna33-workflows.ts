@@ -21,6 +21,9 @@ export function createAstrologyWorkflowService(db:SupabaseClient,enabled:()=>boo
   if(prior.data){await conversation(owner,id);const w=prior.data.metadata?.astrologyWorkflow;if(!w||w.kind!==input.kind)throw new FoundationError(409,'context_conflict','This action already exists.');if(w.state==='ready'){if(input.firstProfileId&&(w.firstProfileId!==input.firstProfileId||w.secondProfileId!==input.secondProfileId))throw new FoundationError(409,'context_conflict','Start a new comparison to select different profiles.');return{conversationId:id,message:prior.data};}}
   else if(input.conversationId)await conversation(owner,id);
   else{const title=input.kind==='compatibility'?(input.language==='ru'?'Совместимость':'Compatibility'):(input.language==='ru'?'Моя натальная карта':'My natal chart');const r=await db.from('ai_conversations').upsert({id,telegram_id:owner,title,language:input.language},{onConflict:'id',ignoreDuplicates:true});if(r.error)throw fail();await conversation(owner,id);}
+  // An explicit request for "my chart" authorizes the one unambiguous self
+  // profile, not an arbitrary first profile or somebody else's saved data.
+  if(input.kind==='natal'&&!input.firstProfileId){const personal=profiles.filter(p=>p.subject_kind==='self');if(personal.length===1)input.firstProfileId=personal[0].id;}
   const workflow:Record<string,unknown>={version:1,kind:input.kind,state:'selecting'};let attachment:Record<string,string>|null=null;
   if(input.firstProfileId){
    if(!profiles.some(p=>p.id===input.firstProfileId)||input.secondProfileId&&!profiles.some(p=>p.id===input.secondProfileId))throw new FoundationError(404,'birth_profile_not_found','Select one of your saved profiles.');

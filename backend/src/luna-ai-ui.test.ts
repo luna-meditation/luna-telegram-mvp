@@ -61,7 +61,8 @@ test('recommended meditation ids render as one shared in-chat practice card', ()
   assert.match(source, /meditations\.find\(\(item\) => item\.id === recommendationId\)/);
   assert.match(source, /message\.metadata\?\.recommendedMeditation/);
   assert.match(source, /<ChatMeditationCard/);
-  assert.match(source, /onOpen=\{\(\) => onOpenMeditation\(recommendation\)\}/);
+  assert.match(source, /onOpen=\{\(\) => onOpenMeditation\(recommendation,\{messageId:message\.id,referenceId:recommendation\.id\}\)\}/);
+  assert.match(source, /event:'meditation_card_rendered'/);
   assert.match(card, /language === 'ru' \? 'Начать практику' : 'Start practice'/);
   assert.match(card, /language === 'ru' \? 'Бесплатно' : 'Free'/);
   assert.match(card, /formatMeditationDuration/);

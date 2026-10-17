@@ -23,6 +23,7 @@ const envSchema = z.object({
   ALLOW_UNVERIFIED_TELEGRAM_WEBAPP: envBoolean.default(false),
   RUN_MIGRATIONS: envBoolean.default(false),
   LUNA32_ENABLED: envBoolean.default(false),
+  FEATURE_ADMIN_V4: envBoolean.default(false),
   LUNA34_COMMERCIAL_QUOTAS_ENABLED: envBoolean.default(false),
   LUNA34_COMMERCIAL_ENABLED: envBoolean.default(false),
   LUNA34_REFERRALS_ENABLED: envBoolean.default(false),

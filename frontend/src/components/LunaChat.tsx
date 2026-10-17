@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, History, Plus, RotateCcw, Send, Trash2, Pencil, MoreHorizontal } from 'lucide-react';
 import {
   ApiRequestError,
+  acknowledgeLunaAction,
   deleteLunaConversation,
   getLunaConversation,
   getLunaConversations,
@@ -42,7 +43,7 @@ type LunaChatProps = {
   meditations: Meditation[];
   hasPremium: boolean;
   initData?: string;
-  onOpenMeditation: (meditation: Meditation) => void;
+  onOpenMeditation: (meditation: Meditation,origin?:import('../api').MeditationActionOrigin) => void;
   onTarot?:()=>void;
   redesigned?: boolean;
   readingContextId?:string;
@@ -451,14 +452,15 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
       if (message.role !== 'assistant' || renderedCardsRef.current.has(message.id)) return;
       const recommendationId = recommendationIdForMessage(message);
       if (!recommendationId) return;
-      renderedCardsRef.current.add(message.id);
       recordLunaStage('card_render_attempted', { requestId: message.request_id ?? null, meditationId: recommendationId }, initData);
-      const recommendation = meditations.find((item) => item.id === recommendationId);
+      const recommendation = meditations.find((item) => item.id === recommendationId)??message.metadata?.recommendedMeditation;
+      if(recommendation)renderedCardsRef.current.add(message.id);
       recordLunaStage(recommendation ? 'card_render_success' : 'card_render_failed', {
         requestId: message.request_id ?? null,
         meditationId: recommendationId,
         reason: recommendation ? null : 'published meditation was not present in the frontend catalog'
       }, initData);
+      if(recommendation&&initData)void acknowledgeLunaAction({messageId:message.id,referenceId:recommendation.id,event:'meditation_card_rendered'},initData).catch(()=>undefined);
     });
   }, [initData, meditations, visibleMessages]);
 
@@ -552,7 +554,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
                 {central&&message.metadata?.workflowActions?.some(a=>a!=='breathing')&&<div className="luna24-context-actions">{message.metadata.workflowActions.filter(a=>a!=='breathing').map(action=><button type="button" key={action} disabled={thinking} onClick={()=>handleAction(action)}>{action==='compatibility'?(en?'Choose two profiles':'Выбрать два профиля'):(en?'Choose a birth profile':'Выбрать данные рождения')}</button>)}</div>}
                 {central&&message.id===visibleMessages[visibleMessages.length-1]?.id&&message.metadata?.tarot?.reading&&message.metadata.tarot.revealed>=(message.metadata.tarot.reading.cards?.length||1)&&<div className="luna24-context-actions luna251-followups" aria-label={en?'Continue this reflection':'Продолжить размышление'}>{(en?[message.metadata.tarot.kind==='single'?'Explore this card':'How do these cards connect?','What does this mean for my situation?','Help me think through my next step']:[message.metadata.tarot.kind==='single'?'Рассмотрим эту карту подробнее':'Как связаны карты расклада?','Что это может значить в моей ситуации?','Помоги обдумать следующий шаг']).map(prompt=><button type="button" key={prompt} disabled={thinking||quotaExhausted||Boolean(failedTurn)} onClick={()=>void submit(prompt,undefined,message.metadata?.tarot?.readingId)}>{prompt}</button>)}</div>}
                 {featureFlags.personal_memory&&!message.metadata?.tarot&&!thinking&&(message.id===visibleMessages.filter(m=>m.role===message.role).slice(-1)[0]?.id)&&<MemorySaveAction key={message.id} language={language} initData={initData} message={message}/>}
-                {recommendation ? <ChatMeditationCard meditation={recommendation} language={language} hasPremium={hasPremium} onOpen={() => onOpenMeditation(recommendation)} /> : null}
+                {recommendation ? <ChatMeditationCard meditation={recommendation} language={language} hasPremium={hasPremium} onOpen={() => onOpenMeditation(recommendation,{messageId:message.id,referenceId:recommendation.id})} /> : null}
               </div>
             </div>
           );

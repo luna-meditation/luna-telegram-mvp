@@ -1,0 +1,67 @@
+{
+  "status": "PASS",
+  "scope": "P0 language and action telemetry only",
+  "node": "22.23.3",
+  "postgres": "PostgreSQL 17.6 on x86_64-apple-darwin23.6.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.6), 64-bit",
+  "migrations": {
+    "20261017051755_luna40_language_preferences.sql": "dd537fa315cdb5f38c7ae51ae26ef4356ad51611ba3747ad6756ce2e592e6ff8",
+    "20261017052134_luna40_action_observability.sql": "66200e2647fbf568d20276a2fb45273a152726ba25c0012719db4c340b55cba7",
+    "20261017052535_luna40_admin_read_foundation.sql": "2867c52d7faa95fa05939f58c05c02d71dfd9e56d252642f5ca7d41e56c9d25d"
+  },
+  "checks": [
+    {
+      "name": "additive migrations apply/reapply without changing existing users or another application",
+      "status": "PASS"
+    },
+    {
+      "name": "service_role CAS update persists and same request replays without a new revision",
+      "status": "PASS"
+    },
+    {
+      "name": "stale requests conflict rather than overriding explicit language",
+      "status": "PASS"
+    },
+    {
+      "name": "concurrent changes at the same revision allow exactly one winner",
+      "status": "PASS"
+    },
+    {
+      "name": "other account is isolated and invalid input cannot mutate stored choices",
+      "status": "PASS"
+    },
+    {
+      "name": "real attached UI stages persist once and retain the first observation",
+      "status": "PASS"
+    },
+    {
+      "name": "foreign account, unrelated card and invented payment success cannot be acknowledged",
+      "status": "PASS"
+    },
+    {
+      "name": "RLS and direct RPC grants reject anon/authenticated even with forged owner/service claims",
+      "status": "PASS"
+    },
+    {
+      "name": "safe rollback revokes new callers without deleting data; reapply restores access",
+      "status": "PASS"
+    },
+    {
+      "name": "admin overview is server aggregated, unknown costs remain null and private user content is excluded",
+      "status": "PASS"
+    },
+    {
+      "name": "completed and failed user requests differ from provider calls; paid Stars exclude failures and non-XTR payments",
+      "status": "PASS"
+    },
+    {
+      "name": "admin pagination and literal search do not leak a full directory, invalid filters fail closed",
+      "status": "PASS"
+    },
+    {
+      "name": "no role is assigned automatically and database clients cannot invoke admin aggregates",
+      "status": "PASS"
+    }
+  ],
+  "productionTouched": false,
+  "personalDataCopied": false
+}

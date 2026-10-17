@@ -64,6 +64,7 @@ import {messagesAfterContextReset} from './luna31-consultation.js';
 import {stagingAiMeterRecord} from './staging-ai-meter.js';
 import {readLuna32Settings,successfulAiLimit} from './luna32-runtime.js';
 import {createLunaTools,runLunaToolTurn,lunaToolInstructions} from './luna32-tools.js';
+import {recordToolOutcomes,type ToolOutcome} from './luna40-actions.js';
 import {consultationTitle} from './luna33-titles.js';
 import {recordedAstrologyConsent} from './luna33-consent.js';
 import {independentPracticeTopic,astrologyWorkflowIntent} from './luna33-topic.js';
@@ -1223,6 +1224,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
     let openAiResponse: OpenAiResponse = { model: 'luna-runtime-decision-engine', status: 'completed' };
     let extracted: ExtractedOpenAiText | null = null;
     let workflowActions:Array<'natal_chart'|'compatibility'|'breathing'>=[];
+    let toolOutcomes:ToolOutcome[]=[];
     let commerceView:import('./luna35-commerce-policy.js').CommerceView|null=null;
     let parsed: z.infer<typeof modelResultSchema>;
     const directItem = directActionMeditationId
@@ -1277,9 +1279,10 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
           attempt: 1
         });
         const commerce=luna35Commerce(getLunaUsage);
-        const tools=createLunaTools({db:supabase,owner:telegramId,language:responseLanguage,readingId:input.readingId,astrology:input.astrology??input.chartId,readingContext,catalog:catalogForModel,personalContext:personal,access:{hasPaidPremium:access.hasPaidPremium,beta:access.beta,plan:access.plan},quota:()=>getLunaUsage(telegramId),astrologyEnabled:env.FEATURE_ASTROLOGY&&env.LUNA30_ASTROLOGY_AI_ENABLED,commerce:{read:async view=>{const card=await commerce.card(telegramId,view,responseLanguage,resolvedConversationId);return {balance:card.balance,plan:card.membership.kind,usage:card.usage,beta:card.beta,products:card.products,...(view==='shop'?{catalog:card.catalog}:{}),...(view==='earn'?{earning:card.earning}:{}),...(view==='history'?{transactions:card.transactions?.slice(0,5),pendingPayments:card.pendingOrders.map(o=>({id:o.id,product:o.product,state:o.state,stars:o.stars}))}:{}),...(view==='resume'?{pending:card.pending.map(a=>({id:a.id,type:a.action_type,expiresAt:a.expires_at}))}:{})};},eligibility:kind=>commerce.eligibility(telegramId,kind)}});
+        const tools=createLunaTools({db:supabase,owner:telegramId,operationKey:input.requestId,language:responseLanguage,readingId:input.readingId,astrology:input.astrology??input.chartId,readingContext,catalog:catalogForModel,personalContext:personal,access:{hasPaidPremium:access.hasPaidPremium,beta:access.beta,plan:access.plan},quota:()=>getLunaUsage(telegramId),astrologyEnabled:env.FEATURE_ASTROLOGY&&env.LUNA30_ASTROLOGY_AI_ENABLED,commerce:{read:async view=>{const card=await commerce.card(telegramId,view,responseLanguage,resolvedConversationId);return {balance:card.balance,plan:card.membership.kind,usage:card.usage,beta:card.beta,products:card.products,...(view==='shop'?{catalog:card.catalog}:{}),...(view==='earn'?{earning:card.earning}:{}),...(view==='history'?{transactions:card.transactions?.slice(0,5),pendingPayments:card.pendingOrders.map(o=>({id:o.id,product:o.product,state:o.state,stars:o.stars}))}:{}),...(view==='resume'?{pending:card.pending.map(a=>({id:a.id,type:a.action_type,expiresAt:a.expires_at}))}:{})};},eligibility:kind=>commerce.eligibility(telegramId,kind)}});
         openAiResponse=env.LUNA32_ENABLED?await runLunaToolTurn({...request,instructions:request.instructions+'\n'+lunaToolInstructions},tools,invoke):await invoke(request);
         workflowActions=tools.workflowActions();
+        toolOutcomes=tools.outcomes();
         commerceView=tools.commerceView();
         consumedUsage=openAiResponse.usage;
         console.info('[Luna AI model result received]', {
@@ -1545,6 +1548,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
     }).select().single();
     if (assistantError) throw assistantError;
     assistantMessageId = assistant.id;
+    await recordToolOutcomes(supabase,telegramId,assistant.id,toolOutcomes);
     await updateChatRequest(telegramId, input.requestId, {
       status: 'completed', assistant_message_id: assistant.id, recommendation_id: attachedMeditationId,
       completed_at: new Date().toISOString(), error_code: null
