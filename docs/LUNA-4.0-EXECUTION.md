@@ -119,7 +119,8 @@ garden hashes and old function/security hashes match before and after.
 - Native PostgreSQL17:13 PASS. Actual staging database verification PASS.
 - Browser UI:111 PASS, RU/EN, widths360/375/390/393/1440; actual React late-profile
   race and reopening check included. Synthetic browser data is explicitly separate
-  from real staging DB evidence. No physical4.0 iPhone confirmation yet.
+  from real staging DB evidence. Physical foundation-checkpoint iPhone review was
+  subsequently confirmed by the owner (see the publication record below).
 - No paid AI/ElevenLabs calls, no cloud build, no production mutation/deployment.
 - Pre-deployment artifact inspection caught the generic frontend `_redirects`
   taking precedence over staging TOML. The staging-only packager now writes
@@ -142,3 +143,77 @@ administration, CMS publication/versioning/uploads, support, complete analytics 
 settings. Real AI evaluation needs a new owner-approved finite test budget.
 Production needs a fresh encrypted backup including current Luna35 objects and
 verified restore before any migration. Do not publish this partial checkpoint to main.
+
+### Follow-up: Netlify authorization and tool replay safety
+
+- The owner renewed Netlify CLI authorization. CLI status confirms the existing
+  `luna-staging-itfl` link and authenticated Luna team access.
+- New Functions-only variables were rejected by the Netlify API with HTTP403:
+  `Upgrade your Netlify account to set specific scopes`. The owner explicitly
+  approved All scopes for only `FEATURE_ADMIN_V4`, `ADMIN_TELEGRAM_ID`, `COMMIT_SHA`.
+  These were saved and read back only on `luna-staging-itfl`; no tariff or secret
+  changes were made.
+- Provider duplicate tool requests now share one in-flight read and one outcome
+  within a turn. Stable operation IDs canonicalize JSON whitespace/key order;
+  array order and values remain significant. A new turn does not reuse old data.
+- Three additional replay regression tests and backend TypeScript passed. The full
+  backend run reports 423 passed (including one existing optional skipped test),
+  zero failures. Two localhost-listener tests initially hit sandbox EPERM and passed
+  when the local-only suite was rerun with localhost permission.
+  No paid AI calls or production changes were made.
+
+### Existing staging publication — verified foundation checkpoint
+
+Exactly one prebuilt publication, without a cloud build, completed successfully:
+`6ad313000cdd5505ad63f75a`, Ready, published `2026-10-17T06:17:49.769Z` at
+<https://luna-staging-itfl.netlify.app/>. The runtime health and exact served frontend
+asset hash confirm source `92060b6b00a3dc5239c80ebb27e543b7f7acf98c`. This is the
+previously prepared foundation artifact; the follow-up replay-safety change above
+is still local, verified, and not included in this publication.
+
+18 live external smoke checks passed: health, static build identity, real Telegram
+SDK, unsigned/forged Telegram401 denials, legacy-admin/payment/webhook403 denials,
+and no public QA/provider reports. The published shell was opened in the real
+browser at360/375/390/393px: no horizontal overflow or broken loaded images.
+EN switching and persistence after reload passed; RU restored afterwards. Screenshots
+are `/tmp/luna40-staging-home-390-full.jpg` and `/tmp/luna40-staging-home-393-en.jpg`.
+The owner subsequently confirmed on a physical iPhone through
+`@luna_staging_qa_eger_bot`: Russian survives closing/reopening the app,
+Admin Dashboard and Users open, and bottom controls are not obscured. This validates
+the published foundation checkpoint only; no synthetic successful login was used.
+
+Read-only staging SQL confirms `generation_enabled=false`, `public_beta=false`,
+`cost_baseline_verified=false`; existing environment switches and old QA budget
+rows were not changed. No provider request was made. Main production remains Ready
+on the unchanged deploy `6ad2f4ea29b5bc7983e3958e`. The full4.0 program remains
+incomplete and must not be represented as production-release ready.
+
+### Local AI action-reliability follow-up (not deployed)
+
+- Added a strict `recommend_meditation` tool that can select only a real validated
+  published catalog entry. The model now receives actual catalog IDs alongside
+  titles, precise durations and audio language; no audio/storage URLs are sent.
+  The schema follows the fetched [official OpenAI strict-mode contract](https://developers.openai.com/api/docs/guides/function-calling#strict-mode):
+  every input is required and extra arguments, including a forged owner, are denied.
+- A successful server selection binds the existing message/card metadata even if
+  the final model prose omits or contradicts its legacy `meditationAction` field.
+  One turn cannot choose conflicting tracks; duplicates share the same operation.
+  Unknown/unpublished/malformed items cannot become UI actions. Existing effective
+  Premium, paid and Lifetime access is reused, not recalculated or changed.
+- Selection produces a typed meditation reference and honest access state, never
+  claims playback. Common false claims that the audio/player already started are
+  replaced with an accurate user-action instruction; locked cards do not promise
+  free playback. Deterministic recommendations are also included in private tool
+  outcome telemetry. Device acknowledgments remain the separate existing pipeline.
+- Node22 final follow-up: backend437 executed PASS + one existing optional SKIP
+  (the compact reporter reports438 including the skip), frontend224 PASS,
+  both TypeScript checks and frontend lint PASS, backend and optimized real-staging
+  frontend builds PASS. Fifteen new selection/claim tests plus three earlier replay
+  tests cover the added behavior. No new dependency or migration is required.
+- RU/EN misspelling cases use explicitly scripted tool responses. They verify
+  execution/metadata, not live LLM intent accuracy. A finite authorized real-AI
+  evaluation remains necessary. Existing artifact-topic detach logic is preserved;
+  broader semantic topic switching and the rest of the full4.0 program remain open.
+- No additional cloud publication, paid API request, data migration, financial
+  mutation or production change was performed in this follow-up. The iPhone-tested
+  staging stays on `6ad313000cdd5505ad63f75a` / source92060b6.

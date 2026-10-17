@@ -1,0 +1,21 @@
+{
+  "status": "LOCAL_VERIFIED_NOT_DEPLOYED",
+  "releaseReady": false,
+  "branch": "feature/luna-4-0-intelligent-admin",
+  "node": "22.23.3",
+  "scope": ["canonical operation IDs and within-turn replay deduplication", "validated catalog-backed recommendation tool", "server-selected card metadata independent of final model prose", "existing Premium/Lifetime access preserved", "no premature playback/player success claims"],
+  "tests": {
+    "backend": {"passed":437,"failed":0,"skipped":1,"total":438,"compactReporterIncludesSkippedInPassed":true},
+    "frontend": {"passed":224,"failed":0,"skipped":0},
+    "newReplayTests": 3,
+    "newSelectionAndClaimTests": 15,
+    "typescriptBackend": "PASS", "typescriptFrontend": "PASS", "frontendLint": "PASS",
+    "backendBuild": "PASS", "optimizedFrontendBuild": "PASS",
+    "realLlmIntentAccuracy": "NOT_TESTED_SCRIPTED_TOOL_RESPONSES_ONLY"
+  },
+  "iphone": {"ownerConfirmed":true,"scope":"existing published foundation: Russian persistence after reopen, Admin Dashboard/Users, no bottom overlap","stagingDeploy":"6ad313000cdd5505ad63f75a","followUpCodeOnPhone":false},
+  "providerCalls":0,"paidAiCostUsd":0,"additionalCloudDeployments":0,"additionalCloudBuilds":0,
+  "migrations":[],"productionChanged":false,"paymentsBalancesEntitlementsChanged":false,
+  "remaining": ["real finite-budget model evaluation", "broader semantic topic/context transitions", "remaining complete Admin/Companion 4.0 scope and release gates"],
+  "documentation": "https://developers.openai.com/api/docs/guides/function-calling#strict-mode"
+}
