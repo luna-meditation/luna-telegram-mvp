@@ -63,7 +63,7 @@ import {withAiOperation} from './luna32-ai-accounting.js';
 import {messagesAfterContextReset} from './luna31-consultation.js';
 import {stagingAiMeterRecord} from './staging-ai-meter.js';
 import {readLuna32Settings,successfulAiLimit} from './luna32-runtime.js';
-import {createLunaTools,runLunaToolTurn,lunaToolInstructions} from './luna32-tools.js';
+import {createLunaTools,runLunaToolTurn,lunaToolInstructions,sumToolTurnUsage} from './luna32-tools.js';
 import {recordToolOutcomes,toolOutcome,type ToolOutcome} from './luna40-actions.js';
 import {enforcePracticeActionClaims} from './luna40-meditation-selection.js';
 import {consultationTitle} from './luna33-titles.js';
@@ -756,7 +756,7 @@ async function existingCompletedResponse(telegramId: number, requestId: string, 
 }
 
 export function classifyLunaFailure(error: unknown) {
-  if(error instanceof FoundationError)return {code:error.code,retryable:['ai_budget_unavailable','ai_accounting_failed','request_in_progress'].includes(error.code)};
+  if(error instanceof FoundationError)return {code:error.code,retryable:['ai_budget_unavailable','ai_accounting_failed','request_in_progress','tool_execution_failed'].includes(error.code)};
   if (error instanceof LunaAiError) {
     const retryableCodes = new Set(['timeout', 'rate_limit', 'openai_rate_limit', 'malformed_response', 'max_output_tokens', 'temporary_upstream', 'request_in_progress']);
     return { code: error.code, retryable: error.retryable || retryableCodes.has(error.code) };
@@ -1029,6 +1029,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
 
   const startedAt = Date.now();
   let consumedUsage:OpenAiResponse['usage'];
+  let observedToolOutcomes:ToolOutcome[]=[];
   let conversationId = input.conversationId;
   let userMessageId: string | undefined;
   let assistantMessageId: string | undefined;
@@ -1287,17 +1288,17 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
             recent,
             maxOutputTokens: responseTokenBudget
           });
-        const invoke=(requestBody:Record<string,unknown>&{input:unknown[]})=>callOpenAiResponses({
+        const invoke=async(requestBody:Record<string,unknown>&{input:unknown[]})=>{const response=await callOpenAiResponses({
           requestBody,
           signal: controller.signal,
           telegramId,
           requestId: input.requestId,
           conversationId: resolvedConversationId,
           attempt: 1
-        });
+        });consumedUsage=sumToolTurnUsage(consumedUsage,response.usage);return response;};
         const commerce=luna35Commerce(getLunaUsage);
         const tools=createLunaTools({...(env.FEATURE_COSMOS_V2&&env.FEATURE_PERSONAL_MEMORY&&personal&&memoryEnabled&&userMessage?.id?{memory:{sourceMessageId:userMessage.id,boundary:memoryBoundaryAtStart??null}}:{}),navigation:{tarot_daily:env.FEATURE_TAROT_DAILY,tarot_history:env.FEATURE_TAROT_HISTORY,astrology:env.FEATURE_ASTROLOGY,personal_memory:env.FEATURE_PERSONAL_MEMORY},db:supabase,owner:telegramId,operationKey:input.requestId,language:responseLanguage,readingId:input.readingId,astrology:input.astrology??input.chartId,readingContext,catalog:catalogForModel,personalContext:personal,access:{hasPremium:access.hasPremium,hasPaidPremium:access.hasPaidPremium,beta:access.beta,plan:access.plan},quota:()=>getLunaUsage(telegramId),astrologyEnabled:env.FEATURE_ASTROLOGY&&env.LUNA30_ASTROLOGY_AI_ENABLED,allowMeditationActions,commerce:{read:async view=>{const card=await commerce.card(telegramId,view,responseLanguage,resolvedConversationId);return {balance:card.balance,plan:card.membership.kind,usage:card.usage,beta:card.beta,products:card.products,...(view==='shop'?{catalog:card.catalog}:{}),...(view==='earn'?{earning:card.earning}:{}),...(view==='history'?{transactions:card.transactions?.slice(0,5),pendingPayments:card.pendingOrders.map(o=>({id:o.id,product:o.product,state:o.state,stars:o.stars}))}:{}),...(view==='resume'?{pending:card.pending.map(a=>({id:a.id,type:a.action_type,expiresAt:a.expires_at}))}:{})};},eligibility:kind=>commerce.eligibility(telegramId,kind)}});
-        openAiResponse=env.LUNA32_ENABLED?await runLunaToolTurn({...request,instructions:request.instructions+'\n'+lunaToolInstructions},tools,invoke):await invoke(request);
+        try{openAiResponse=env.LUNA32_ENABLED?await runLunaToolTurn({...request,instructions:request.instructions+'\n'+lunaToolInstructions},tools,invoke):await invoke(request);}finally{observedToolOutcomes=tools.outcomes();}
         workflowActions=tools.workflowActions();
         selectedAstrologyAction=tools.astrologyAction();
         navigationAction=tools.navigationAction();
@@ -1305,7 +1306,6 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
         toolOutcomes=tools.outcomes();
         selectedToolMeditationId=tools.meditationSelection()?.id??null;
         commerceView=tools.commerceView();
-        consumedUsage=openAiResponse.usage;
         console.info('[Luna AI model result received]', {
           user: userHash(telegramId),
           requestId: input.requestId,
@@ -1601,7 +1601,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
       requestId: input.requestId,
       status: directItem ? 'completed_runtime_action' : 'completed',
       latencyMs: Date.now() - startedAt,
-      usage: openAiResponse.usage
+      usage: consumedUsage??openAiResponse.usage
     });
     const responsePayload = { conversationId: resolvedConversationId, message: assistant, duplicate: false, remaining: reservation.remaining, resetAt:nextUtcReset(), requestState: 'completed' as const };
     if(openAiResponse.usage?.output_tokens)await recordFunnel(supabase,telegramId,'first_ai_response','first','verified');
@@ -1641,6 +1641,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
     return responsePayload;
   } catch (error) {
     const failure = classifyLunaFailure(error);
+    if(!assistantMessageId&&userMessageId&&observedToolOutcomes.length)await recordToolOutcomes(supabase,telegramId,userMessageId,observedToolOutcomes);
     const errorClass = failure.code;
     const requestState: LunaRequestState = failure.retryable ? 'failed_retryable' : 'failed_non_retryable';
     await saveUsage({ telegramId, conversationId, requestId: input.requestId, status: 'failed', latencyMs: Date.now() - startedAt, errorClass,usage:consumedUsage });
@@ -1652,6 +1653,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
       });
     logBackendError(error, { endpoint: 'POST /api/luna/chat', telegramId, requestId: input.requestId });
     if (error instanceof LunaAiError) throw new LunaAiError(error.code, error.message, error.status, failure.retryable, requestState);
+    if (error instanceof FoundationError) throw new LunaAiError(error.code,error.message,error.status,failure.retryable,requestState);
     if (error instanceof z.ZodError) throw new LunaAiError('permanent_validation', 'Luna returned an invalid response.', 422, false, requestState);
     if (error instanceof Error && error.name === 'AbortError') throw new LunaAiError('timeout', 'Luna response timed out.', 504, true, requestState);
     throw new LunaAiError('unknown', 'Luna could not respond.', 502, true, requestState);

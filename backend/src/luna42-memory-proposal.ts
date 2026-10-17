@@ -4,6 +4,7 @@ import {FoundationError} from './foundation-error.js';
 import {canonicalMemoryKey,containsCredential,potentiallySensitive,personalMemoryCategories} from './personal-memory-policy.js';
 import {cosmosAreas} from './luna41-cosmos-policy.js';
 import {readCosmosDomain,writeCosmosDomain} from './luna42-cosmos-domain.js';
+import {recordExperience} from './luna42-analytics.js';
 
 export const memoryProposalInput=z.object({operation:z.enum(['save','delete']),key:z.string().trim().min(2).max(64).regex(/^[\p{L}\p{N} _-]+$/u),category:z.enum(personalMemoryCategories),value:z.string().trim().max(500).nullable(),field:z.enum(['status','priority','details','goal']).nullable()}).strict();
 export type MemoryProposal={version:1;id:string;operation:'save'|'delete';key:string;category:string;before:string|null;after:string|null;memoryId:string|null;expectedRevision:number;sourceMessageId:string;boundary:string|null;state:'pending'|'applied'|'cancelled';createdAt:string;expiresAt:string};
@@ -47,5 +48,11 @@ export const memoryProposalDecision=z.object({proposalId:z.string().uuid(),confi
 export async function decideMemoryProposal(db:SupabaseClient,owner:number,messageId:string,raw:unknown){
  const input=memoryProposalDecision.parse(raw),result=await db.rpc('luna42_decide_memory_proposal',{p_owner:owner,p_message:messageId,p_proposal:input.proposalId,p_confirm:input.confirmed});
  if(result.error)throw new FoundationError(result.error.code==='P0002'?404:['40001','23514','23505'].includes(result.error.code)?409:503,result.error.code==='P0002'?'memory_proposal_not_found':['40001','23514','23505'].includes(result.error.code)?'memory_proposal_changed':'memory_unavailable','This proposal could not be applied. Reopen My Cosmos to review the latest information.');
- return{proposal:result.data as MemoryProposal};
+ const proposal=result.data as MemoryProposal;
+ if(proposal.state==='applied'){
+  await recordExperience(db,owner,'conversational_edit','',input.proposalId);
+  await recordExperience(db,owner,proposal.operation==='delete'?'memory_deleted':'memory_saved','',input.proposalId);
+  const area=proposal.key.replace(/^cosmos_/,'');if(cosmosAreas.some(item=>item.id===area))await recordExperience(db,owner,'domain_updated',area,input.proposalId);
+ }
+ return{proposal};
 }

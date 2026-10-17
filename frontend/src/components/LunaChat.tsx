@@ -117,6 +117,8 @@ function errorDetails(error: unknown, language: AppLanguage): Omit<FailedTurn, '
     retryable: true, state: 'failed_retryable', resetAt
   };
   if(code==='context_changed')return {message:language==='ru'?'Настройки памяти изменились во время ответа. Старый контекст не сохранён — отправьте новое сообщение.':'Your memory settings changed during this answer. The old context was not saved; send a new message.',retryable:false,state:'failed_non_retryable',resetAt};
+  if(code==='tool_execution_failed')return {message:language==='ru'?'Действие не удалось подтвердить. Запрос сохранён, успешный ответ не засчитан. Можно повторить; Luna не объявит действие выполненным без результата.':'The action could not be verified. Your request is preserved and no successful answer was counted. You can retry; Luna will not claim success without a result.',retryable:true,state:'failed_retryable',resetAt};
+  if(code==='tool_context_required')return {message:language==='ru'?'Для этого действия нужны актуальные данные или выбор в приложении. Открой нужный расклад, профиль или «Мой космос» и проверь сведения. Действие не выполнено, успешный ответ не засчитан.':'This action needs current context or an app selection. Open the relevant reading, profile or My Cosmos to review it. The action was not completed and no successful answer was counted.',retryable:false,state:'failed_non_retryable',resetAt};
   if (code === 'request_in_progress') return {
     message: language === 'ru' ? 'Luna ещё отвечает на это сообщение.' : 'Luna is still responding to this message.',
     retryable: true, state: 'processing', resetAt

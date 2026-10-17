@@ -100,6 +100,13 @@ export function createLunaTools(input:{db:SupabaseClient;owner:number;operationK
  };
 }
 export type ToolResponse={status?:string;output?:Array<{type?:string;name?:string;arguments?:string;call_id?:string;[key:string]:unknown}>;usage?:{input_tokens?:number;output_tokens?:number;total_tokens?:number}};
+/** Sum both provider stages for legacy observability. The authoritative budget
+ * still settles each actual attempt separately, including failed turns. */
+export function sumToolTurnUsage(previous:ToolResponse['usage'],next:ToolResponse['usage']):ToolResponse['usage']{
+ if(!next)return previous;if(!previous)return{...next};
+ const sum=(key:'input_tokens'|'output_tokens'|'total_tokens')=>{const a=previous[key],b=next[key];return Number.isSafeInteger(a)&&Number.isSafeInteger(b)&&a!>=0&&b!>=0?{[key]:a!+b!}:{};};
+ return{...sum('input_tokens'),...sum('output_tokens'),...sum('total_tokens')};
+}
 /** One optional read-only tool continuation, not an automatic paid regeneration. */
 export async function runLunaToolTurn<T extends ToolResponse>(request:Record<string,unknown>&{input:unknown[]},tools:ReturnType<typeof createLunaTools>,invoke:(body:Record<string,unknown>&{input:unknown[]})=>Promise<T>){
  // Stateless Responses must return encrypted reasoning for a faithful tool
@@ -109,7 +116,7 @@ export async function runLunaToolTurn<T extends ToolResponse>(request:Record<str
  const calls=first.output?.filter(v=>v.type==='function_call')??[];
  if(!calls.length||first.status!=='completed')return first;
  if(calls.length>4||calls.some(c=>!c.call_id||!c.name||typeof c.arguments!=='string'))throw new FoundationError(502,'invalid_tool_response','The tool request could not be verified.');
- const output=[];for(const call of calls)output.push({type:'function_call_output',call_id:call.call_id,output:JSON.stringify(await tools.executeResult(call.name!,call.arguments!))});
+ const output=[];for(const call of calls){const result=await tools.executeResult(call.name!,call.arguments!);if(result.status==='failed')throw new FoundationError(result.error?.retryable?503:422,result.error?.retryable?'tool_execution_failed':'tool_context_required','The application action could not be verified. No success was recorded.');output.push({type:'function_call_output',call_id:call.call_id,output:JSON.stringify(result)});}
  const final=await invoke({...request,include,input:[...request.input,...first.output??[],...output],tools:tools.definitions,tool_choice:'none',parallel_tool_calls:false});
  if(final.output?.some(c=>c.type==='function_call'))throw new FoundationError(502,'ai_tool_round_limit','The provider exceeded the tool boundary.');
  return final;

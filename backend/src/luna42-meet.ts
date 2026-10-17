@@ -4,6 +4,7 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import {FoundationError} from './foundation-error.js';
 import {containsCredential,potentiallySensitive} from './personal-memory-policy.js';
 import {meetSteps,meetInterestOptions,meetOptions} from './luna42-meet-config.js';
+import {recordExperience} from './luna42-analytics.js';
 export const meetStepInput=z.object({requestId:z.string().uuid(),expectedRevision:z.number().int().min(0),step:z.enum(meetSteps),skip:z.boolean().default(false),language:z.enum(['en','ru']),answer:z.union([z.string().trim().max(500),z.array(z.string().max(40)).max(9),z.boolean()]).optional(),sensitiveConsent:z.boolean().default(false)}).strict();
 export function meetStepPatch(raw:unknown){
  const v=meetStepInput.parse(raw),profile:Record<string,unknown>={},memory:Record<string,unknown>={};
@@ -19,6 +20,10 @@ export function meetStepPatch(raw:unknown){
 export function createMeetLunaService(db:SupabaseClient){return{
  async get(owner:number){const r=await db.from('luna41_cosmos_onboarding').select('meet_state,revision,updated_at').eq('telegram_id',owner).maybeSingle();if(r.error)throw new FoundationError(503,'meet_unavailable','Your introduction could not load.');return{meet:r.data?.meet_state??{},revision:r.data?.revision??0,updatedAt:r.data?.updated_at??null};},
  async save(owner:number,raw:unknown){const {input:v,profile,memory}=meetStepPatch(raw);if(v.step==='birth'&&v.answer==='connected'){const check=await db.from('luna30_birth_profiles').select('id').eq('telegram_id',owner).eq('subject_kind','self').limit(1).maybeSingle();if(check.error||!check.data)throw new FoundationError(422,'birth_profile_required','Save your own birth profile first.');}
-  const hash=createHash('sha256').update(JSON.stringify({step:v.step,skip:v.skip,profile,memory})).digest('hex');const r=await db.rpc('luna42_save_meet_step',{p_owner:owner,p_request:v.requestId,p_expected:v.expectedRevision,p_step:v.step,p_skip:v.skip,p_hash:hash,p_profile:profile,p_memory:memory});if(r.error||!r.data)throw new FoundationError(r.error?.code==='40001'||r.error?.code==='23514'?409:503,r.error?.code==='40001'?'meet_changed':'meet_unavailable','Your answer could not be saved. Reopen the introduction before continuing.');return r.data;
+  const hash=createHash('sha256').update(JSON.stringify({step:v.step,skip:v.skip,profile,memory})).digest('hex');const r=await db.rpc('luna42_save_meet_step',{p_owner:owner,p_request:v.requestId,p_expected:v.expectedRevision,p_step:v.step,p_skip:v.skip,p_hash:hash,p_profile:profile,p_memory:memory});if(r.error||!r.data)throw new FoundationError(r.error?.code==='40001'||r.error?.code==='23514'?409:503,r.error?.code==='40001'?'meet_changed':'meet_unavailable','Your answer could not be saved. Reopen the introduction before continuing.');
+  await recordExperience(db,owner,v.skip?'step_skipped':'step_completed',v.step,v.requestId);
+  if(r.data.meet?.finishedAt)await recordExperience(db,owner,'onboarding_completed','',v.requestId);
+  if(Object.keys(memory).length)await recordExperience(db,owner,'memory_saved','',v.requestId);
+  return r.data;
  }
 };}

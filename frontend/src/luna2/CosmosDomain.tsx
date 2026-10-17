@@ -1,6 +1,6 @@
-import {useRef,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {ArrowLeft,MessageCircle,Pencil} from 'lucide-react';
-import {writePersonalMemory,removePersonalMemory,type UniverseData,type AppLanguage} from '../api';
+import {writePersonalMemory,removePersonalMemory,observeLunaExperience,type UniverseData,type AppLanguage} from '../api';
 import {cosmosAreas,cosmosMemoryKey} from '../../../backend/src/luna41-cosmos-policy';
 import {readCosmosDomain,writeCosmosDomain} from '../../../backend/src/luna42-cosmos-domain';
 import {domainSuggestions} from '../../../backend/src/luna42-meet-config';
@@ -8,6 +8,8 @@ import './cosmos42.css';
 export function CosmosDomain({data,areaId,language,initData,onChanged,onClose,showBack=false}:{data:UniverseData;areaId:string;language:AppLanguage;initData?:string;onChanged:()=>Promise<void>;onClose:()=>void;showBack?:boolean}){
  const area=cosmosAreas.find(a=>a.id===areaId),en=language==='en',memory=data.memories.find(m=>m.memory_key===cosmosMemoryKey(areaId)&&m.memory_kind==='fact');
  const [editing,setEditing]=useState(!memory),[draft,setDraft]=useState(()=>readCosmosDomain(memory?.memory_value??'')),[busy,setBusy]=useState(false),[error,setError]=useState(''),[sensitive,setSensitive]=useState(memory?.is_sensitive??false),pending=useRef(false);
+ const analyticsSession=useRef(crypto.randomUUID());
+ useEffect(()=>{if(area)void observeLunaExperience({event:'domain_opened',step:area.id,sessionId:analyticsSession.current},initData);},[area,initData]);
  if(!area)return null;
  const title=areaId==='dreams'?(en?'Spirituality & self-discovery':'Духовность и самопознание'):area[language],fields=[['status',en?'Current situation':'Сейчас'],['priority',en?'What matters most':'Что важнее всего'],['details',en?'Anything else you choose to share':'Что ещё хочется рассказать'],['goal',en?'Optional goal':'Необязательная цель']] as const;
  async function save(value=draft){if(pending.current)return;let serialized;try{serialized=writeCosmosDomain(value);}catch{setError(en?'Keep this overview short: up to 500 characters including its field labels. Existing details have not been shortened.':'Краткий обзор должен занимать до 500 знаков вместе с названиями полей. Существующие сведения не сокращены.');return;}pending.current=true;setBusy(true);setError('');try{await writePersonalMemory({category:area!.category,key:cosmosMemoryKey(areaId),value:serialized,confirmed:true,kind:'fact',sensitiveConsent:sensitive,...(memory?{revision:memory.revision}:{})},initData,memory?.id);await onChanged();setEditing(false);}catch{setError(en?'Could not confirm the update. Your draft remains here. Check privacy permission or refresh if this area changed elsewhere.':'Не удалось подтвердить обновление. Черновик остаётся здесь. Проверь согласие или обнови данные, если сфера менялась в другом окне.');}finally{pending.current=false;setBusy(false);}}

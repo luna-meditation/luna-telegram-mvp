@@ -1,5 +1,5 @@
-import {useEffect,useState} from 'react';
-import {getUniverse,removePersonalMemory,setLunaMemoryEnabled,listTarotReadings,type UniverseData,type AppLanguage,type PersonalMemory,type TarotReading} from '../api';
+import {useEffect,useRef,useState} from 'react';
+import {getUniverse,removePersonalMemory,setLunaMemoryEnabled,listTarotReadings,observeLunaExperience,type UniverseData,type AppLanguage,type PersonalMemory,type TarotReading} from '../api';
 import {PersonalizationSettings} from './PersonalizationSettings';
 import {PersonalMemoryEditor} from './PersonalMemoryEditor';
 import {featureFlags} from '../config/featureFlags';
@@ -11,6 +11,8 @@ import {CosmosDomain} from './CosmosDomain';
 import {MyDiscoveries} from './MyDiscoveries';
 export function MyUniverse({language,initData,firstName,onBackChange,onAstrology,onReading,goalOptions=[],startMeet=false}:{language:AppLanguage;initData?:string;firstName:string;onBackChange?:(handler:(()=>boolean)|null)=>void;onAstrology?:()=>void;onReading?:(id:string)=>void;goalOptions?:Array<{id:string;en:string;ru:string}>;startMeet?:boolean}){
  const en=language==='en';
+ const analyticsSession=useRef(crypto.randomUUID());
+ useEffect(()=>{if(featureFlags.cosmos_v2)void observeLunaExperience({event:'cosmos_opened',sessionId:analyticsSession.current},initData);},[initData]);
  const [manageMemory,setManageMemory]=useState(false),central=featureFlags.ai_central_experience;
  const [discoveriesOpen,setDiscoveriesOpen]=useState(false);
  const [onboarding,setOnboarding]=useState<string|true|false>(startMeet);

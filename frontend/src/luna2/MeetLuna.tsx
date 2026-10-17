@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import {Moon,ArrowLeft,X,Check,ChevronRight} from 'lucide-react';
-import {getMeetLuna,saveMeetLuna,type MeetLunaState,type UniverseData,type AppLanguage} from '../api';
+import {getMeetLuna,saveMeetLuna,observeLunaExperience,type MeetLunaState,type UniverseData,type AppLanguage} from '../api';
 import {meetSteps,meetInterestOptions,meetOptions,relevantMeetPriorities} from '../../../backend/src/luna42-meet-config';
 import './meet42.css';
 import {MeetLunaSummary} from './MeetLunaSummary';
@@ -8,6 +8,9 @@ const questions={en:['Hi, I’m Luna. What should I call you?','What would you m
 export function MeetLuna({data,language,initData,onChanged,onClose,onBirth,onPrivacy}:{data:UniverseData;language:AppLanguage;initData?:string;onChanged:()=>Promise<void>;onClose:()=>void;onBirth?:()=>void;onPrivacy:()=>void}){
  const en=language==='en',[state,setState]=useState<MeetLunaState|null>(null),[index,setIndex]=useState(0),[text,setText]=useState(''),[selected,setSelected]=useState<string[]>([]),[more,setMore]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[done,setDone]=useState(false),pending=useRef(false),request=useRef<{key:string;id:string}|null>(null);
  const step=meetSteps[index],name=data.profile.display_name??data.identity?.firstName??'';
+ const analyticsSession=useRef(crypto.randomUUID()),finished=useRef(false);
+ useEffect(()=>{void observeLunaExperience({event:'onboarding_opened',sessionId:analyticsSession.current},initData);return()=>{if(!finished.current)void observeLunaExperience({event:'onboarding_left',sessionId:analyticsSession.current},initData);};},[initData]);
+ useEffect(()=>{finished.current=done;if(state&&!done)void observeLunaExperience({event:'step_opened',step,sessionId:analyticsSession.current},initData);},[state,done,step,initData]);
  useEffect(()=>{let active=true;getMeetLuna(initData).then(s=>{if(!active)return;setState(s);const answered=new Set([...(s.meet.completed??[]),...(s.meet.skipped??[])]),next=meetSteps.findIndex(id=>!answered.has(id));if(next<0)setDone(true);else setIndex(next);}).catch(()=>{if(active)setError(en?'Your introduction could not load. Existing answers are safe.':'Не удалось открыть знакомство. Сохранённые ответы в безопасности.');});return()=>{active=false;};},[initData]);
  function savedInterests(){try{const ids=JSON.parse(data.memories.find(m=>m.memory_key==='meet_interests'&&m.confirmation_status==='confirmed')?.memory_value??'null');if(Array.isArray(ids)&&ids.every(id=>meetInterestOptions.some(o=>o[0]===id)))return ids as string[];}catch{/* Keep the canonical existing interests. */}return data.profile.interests;}
  useEffect(()=>{const key=step==='priority'?'meet_priority':step==='relationships'?'cosmos_relationships':step==='style'?'communication_style':null;setText(step==='name'?data.profile.display_name??'':key?data.memories.find(m=>m.memory_key===key&&m.confirmation_status==='confirmed')?.memory_value??'':'');if(step==='interests')setSelected(savedInterests());setMore(false);setError('');},[index]);

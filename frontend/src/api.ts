@@ -44,6 +44,7 @@ export const transcribeLunaVoice=(wav:Blob,requestId:string,language:AppLanguage
 export type CosmosOnboardingState={skipped:string[];revision:number;updatedAt:string|null};
 export type MeetLunaState={meet:{version?:1;completed?:string[];skipped?:string[];finishedAt?:string;consentVersion?:string;consentedAt?:string};revision:number;updatedAt:string|null};
 export const getMeetLuna=(initData?:string)=>request<MeetLunaState>('/api/universe/meet',undefined,initData);
+export const observeLunaExperience=(input:{event:'onboarding_opened'|'step_opened'|'onboarding_left'|'cosmos_opened'|'domain_opened';sessionId:string;step?:string},initData?:string)=>request<{recorded:boolean}>('/api/universe/experience',{method:'POST',body:JSON.stringify(input)},initData).catch(()=>({recorded:false}));
 export const saveMeetLuna=(input:{requestId:string;expectedRevision:number;step:string;skip?:boolean;language:AppLanguage;answer?:string|string[]|boolean;sensitiveConsent?:boolean},initData?:string)=>request<MeetLunaState>('/api/universe/meet',{method:'PUT',body:JSON.stringify(input)},initData);
 export const getCosmosOnboarding=(initData?:string)=>request<CosmosOnboardingState>('/api/universe/onboarding',undefined,initData);
 export const saveCosmosOnboarding=(input:{skipped:string[];expectedRevision:number;requestId:string},initData?:string)=>request<CosmosOnboardingState>('/api/universe/onboarding',{method:'PUT',body:JSON.stringify(input)},initData);
