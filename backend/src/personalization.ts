@@ -1,7 +1,7 @@
 import {supabase} from './db.js';
 import {env} from './config.js';
 import {eraseOptionalBirthData} from './luna30-privacy.js';
-import {personalProfileSchema,emptyPersonalProfile,type PersonalProfile} from './personalization-policy.js';
+import {personalProfileSchema,emptyPersonalProfile,personalProfileWrite,type PersonalProfile} from './personalization-policy.js';
 import {FoundationError} from './foundation-error.js';
 export {FoundationError} from './foundation-error.js';
 export async function getPersonalProfile(telegramId:number):Promise<PersonalProfile>{
@@ -12,9 +12,9 @@ export async function getPersonalProfile(telegramId:number):Promise<PersonalProf
 }
 export async function savePersonalProfile(telegramId:number,body:unknown){
  const profile=personalProfileSchema.parse(body);
- const {error}=await supabase.from('luna_personal_profiles').upsert({telegram_id:telegramId,...profile,updated_at:new Date().toISOString()},{onConflict:'telegram_id'});
- if(error)throw new FoundationError(503,'personal_profile_unavailable','Could not save your personal profile.');
- return profile;
+ const {data,error}=await supabase.from('luna_personal_profiles').upsert({telegram_id:telegramId,...personalProfileWrite(profile,env.FEATURE_ASTROLOGY),updated_at:new Date().toISOString()},{onConflict:'telegram_id'}).select('display_name,interests,preferences,birth_date,birth_time,birth_place,ai_context_consent').single();
+ if(error||!data)throw new FoundationError(503,'personal_profile_unavailable','Could not confirm your personal profile. Refresh before retrying.');
+ return personalProfileSchema.parse({...data,birth_time:data.birth_time?.slice(0,5)??null});
 }
 export async function deletePersonalProfile(telegramId:number){
  // The optional 3.0 RPC erases both the existing profile and derived birth data

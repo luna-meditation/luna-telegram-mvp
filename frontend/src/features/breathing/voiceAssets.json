@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "provider": "OpenAI",
+  "model": "tts-1",
+  "voice": "nova",
+  "aiGenerated": true,
+  "integrityVerified": true,
+  "deviceAuditionPending": true,
+  "clips": {
+    "en": {
+      "inhale": {
+        "url": "/assets/audio/breathing/voice-v1/en/inhale.wav",
+        "sha256": "55cff416a2f8ba7a0a5bce72f0c7470774f3e684f81af7a9b29fbaf6a126083f",
+        "durationSeconds": 0.4545416666666667,
+        "text": "Inhale."
+      },
+      "inhale_top": {
+        "url": "/assets/audio/breathing/voice-v1/en/inhale_top.wav",
+        "sha256": "0a0db08ad927e17a81c5427d3c7e4d727f776dc2c9fbcfd88dd2087c675d5ad2",
+        "durationSeconds": 0.44316666666666665,
+        "text": "Top up."
+      },
+      "hold": {
+        "url": "/assets/audio/breathing/voice-v1/en/hold.wav",
+        "sha256": "0ed8a217d92d266b07d6a3a5c8f0a3c2c50ce3d3160faa09b858b522d215d02a",
+        "durationSeconds": 0.39770833333333333,
+        "text": "Hold."
+      },
+      "exhale": {
+        "url": "/assets/audio/breathing/voice-v1/en/exhale.wav",
+        "sha256": "31c68db630f2e94e7a209992a72e2cc5b7d6add2418c8d7a5710b0d92c881926",
+        "durationSeconds": 0.44316666666666665,
+        "text": "Exhale."
+      },
+      "pause": {
+        "url": "/assets/audio/breathing/voice-v1/en/pause.wav",
+        "sha256": "ecf5d38b6f1c5bcfc26219aa0fa5afa6df439602ca00355419b4a9a6fe3da35f",
+        "durationSeconds": 0.35229166666666667,
+        "text": "Rest."
+      }
+    },
+    "ru": {
+      "inhale": {
+        "url": "/assets/audio/breathing/voice-v1/ru/inhale.wav",
+        "sha256": "bd0481f06375fdd31fe8cd9c409ce6b48a1fed0b39dc1ea685dc02e5198cd1cf",
+        "durationSeconds": 0.375,
+        "text": "Вдох."
+      },
+      "inhale_top": {
+        "url": "/assets/audio/breathing/voice-v1/ru/inhale_top.wav",
+        "sha256": "881077f07b14249209a3aa5ec0f6d3daf0c4216e084cf6175f05db797927645c",
+        "durationSeconds": 0.43183333333333335,
+        "text": "Довдох."
+      },
+      "hold": {
+        "url": "/assets/audio/breathing/voice-v1/ru/hold.wav",
+        "sha256": "a6710a32695cbac189aa1bf335f1ee867962e099fe04d7d8d4605e1880594316",
+        "durationSeconds": 0.5568333333333333,
+        "text": "Задержка."
+      },
+      "exhale": {
+        "url": "/assets/audio/breathing/voice-v1/ru/exhale.wav",
+        "sha256": "9bc9fc4e9cc7c6aa1c2cafc5f92fc1fe166477f0dc0d1c3326c0f1120acfcb90",
+        "durationSeconds": 0.40908333333333335,
+        "text": "Выдох."
+      },
+      "pause": {
+        "url": "/assets/audio/breathing/voice-v1/ru/pause.wav",
+        "sha256": "bd31783833866bc95b13829eb15d137d7793cd029ea2c13d135409af1e7e1717",
+        "durationSeconds": 0.44316666666666665,
+        "text": "Пауза."
+      }
+    }
+  }
+}

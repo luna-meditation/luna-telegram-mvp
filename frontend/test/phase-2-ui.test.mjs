@@ -148,7 +148,8 @@ test('breath visual respects reduced motion and keeps reward accounting untouche
   assert.match(app,/startVerifiedBreath/);assert.match(app,/heartbeatVerifiedBreath/);
   assert.match(src('luna2/BreathingVisual.tsx'),/disabled=\{!featureEnabled\}/);
   assert.match(src('luna2/BreathingVisual.tsx'),/<AudioLines size=\{18\}/);
-  assert.match(src('luna2/BreathingVisual.tsx'),/<button type="button" disabled><Mic/);
+  assert.match(src('luna2/BreathingVisual.tsx'),/guidedAvailable=false/);
+  assert.match(src('luna2/BreathingVisual.tsx'),/disabled=\{!featureEnabled\|\|!guidedAvailable\}/);
 });
 
 test('EN/RU strings cover every new screen and Light keeps its own blue visual palette', () => {

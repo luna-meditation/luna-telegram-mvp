@@ -10,7 +10,7 @@ test('the personal Luna entry uses the existing chat and optional profile, witho
 test('optional setup retains Skip, does not ask birth details before astrology, and preserves edits across language switches',()=>{
  const setup=readFileSync('src/luna2/PersonalizationSettings.tsx','utf8');
  assert.match(setup,/What should Luna call you/);assert.match(setup,/Preferred language/);assert.match(setup,/What matters to you right now/);
- assert.match(setup,/Skip \/ return to Profile/);assert.match(setup,/featureFlags.astrology\|\|featureFlags.personal_memory/);assert.match(setup,/\},\[initData\]\)/);
+ assert.match(setup,/Skip \/ return to Profile/);assert.match(setup,/!featureFlags.astrology&&featureFlags.personal_memory/);assert.match(setup,/Birth profiles are managed once in Astrology/);assert.match(setup,/\},\[initData\]\)/);
  assert.match(setup,/Birth details are excluded/);assert.doesNotMatch(setup,/telegram_id:/);
 });
 test('Luna 2.0 production profile checks exact SQL review hashes; the old profile stays default',()=>{
@@ -20,7 +20,7 @@ test('Luna 2.0 production profile checks exact SQL review hashes; the old profil
 test('Luna 2.3 memory release is explicit, backup-gated and cannot enable unfinished paid features',()=>{
  const script=readFileSync('scripts/build-production.mjs','utf8');
  assert.match(script,/\['luna23','luna24','luna25','luna251','luna30','luna31','luna32','luna33','luna34'\]\.includes\(capabilityProfile\)\?\['PERSONAL_MEMORY'\]/);
- assert.match(script,/capabilityProfile=\['luna35','luna40'\]\.includes\(profile\)\?'luna34':profile/);
+ assert.match(script,/capabilityProfile=\['luna35','luna40','luna41'\]\.includes\(profile\)\?'luna34':profile/);
  assert.match(script,/if\(profile==='luna40'\)verifyLuna40ReleaseEvidence/);
  assert.match(script,/if\(profile==='luna35'\)verifyLuna35ReleaseEvidence/);
  assert.match(script,/review\.backupRestorePasses,2/);

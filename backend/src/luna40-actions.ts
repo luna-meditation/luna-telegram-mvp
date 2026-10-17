@@ -2,6 +2,7 @@ import {createHash} from 'node:crypto';
 import {z} from 'zod';
 import type {SupabaseClient} from '@supabase/supabase-js';
 import {FoundationError} from './foundation-error.js';
+import {lunaDestinations} from './luna41-navigation.js';
 export type ToolOutcome={version:1;operationId:string;toolName:string;status:'completed'|'requires_selection'|'failed';resultReference:{kind:string;id:string}|null;uiState:'not_requested'|'selection_required'|'navigation_requested';data:unknown;error:{code:string;retryable:boolean}|null;latencyMs:number};
 function canonicalArguments(args:string){
  if(args.length>2000)return args;
@@ -14,10 +15,21 @@ export function toolOutcome(input:{owner:number;request:string;name:string;args:
  const value=input.data as {error?:string;requiresSelection?:boolean;requiresTwoSelectedCharts?:boolean;action?:string;meditationId?:unknown}|null;
  const code=typeof value?.error==='string'&&/^[a-z_]{3,80}$/.test(value.error)?value.error:null;
  const selection=Boolean(value?.requiresSelection||value?.requiresTwoSelectedCharts||value?.action==='natal_chart'&&input.name==='get_birth_profiles');
- const navigation=value?.action==='breathing'||value?.action==='natal_chart'&&!selection||value?.action==='compatibility'&&!selection;
+ const navigation=value?.action==='navigation'||value?.action==='breathing'||value?.action==='natal_chart'&&!selection||value?.action==='compatibility'&&!selection;
  const meditation=input.name==='recommend_meditation'&&value?.action==='meditation_card'?z.string().uuid().safeParse(value.meditationId):null;
  return {version:1,operationId:toolOperationId(input.owner,input.request,input.name,input.args),toolName:input.name,status:code?'failed':selection?'requires_selection':'completed',resultReference:code?null:meditation?.success?{kind:'meditation',id:meditation.data}:input.name==='get_tarot_reading'&&input.readingId?{kind:'tarot_reading',id:input.readingId}:['get_natal_chart','calculate_compatibility'].includes(input.name)&&input.chartId&&!selection?{kind:'natal_chart',id:input.chartId}:null,uiState:code?'not_requested':selection?'selection_required':navigation?'navigation_requested':'not_requested',data:input.data,error:code?{code,retryable:!['context_not_selected','invalid_tool_arguments','reading_not_found','meditation_unavailable','meditation_already_selected'].includes(code)}:null,latencyMs:Math.max(0,Math.min(600000,Math.round(input.latencyMs)))};
 }
-export const uiAckInput=z.object({messageId:z.string().uuid(),event:z.enum(['meditation_card_rendered','player_opened','playback_started']),referenceId:z.string().uuid()}).strict();
-export async function acknowledgeUi(db:SupabaseClient,owner:number,body:unknown){const input=uiAckInput.parse(body);const result=await db.rpc('luna40_acknowledge_ui',{p_owner:owner,p_message:input.messageId,p_event:input.event,p_reference:input.referenceId});if(result.error)throw new FoundationError(503,'action_ack_unavailable','The action status could not be synchronized.');if(result.data!==true)throw new FoundationError(404,'action_not_found','This action is not attached to your conversation.');return{acknowledged:true,source:'client_observed',rewardGranted:false};}
+export const uiAckInput=z.union([
+ z.object({messageId:z.string().uuid(),event:z.enum(['meditation_card_rendered','player_opened','playback_started']),referenceId:z.string().uuid()}).strict(),
+ z.object({messageId:z.string().uuid(),event:z.literal('screen_opened'),referenceId:z.string().uuid(),destination:z.string().refine(value=>lunaDestinations.some(item=>item.id===value))}).strict()
+]);
+export async function acknowledgeUi(db:SupabaseClient,owner:number,body:unknown){
+ const input=uiAckInput.parse(body);
+ const result=input.event==='screen_opened'
+  ?await db.rpc('luna41_acknowledge_navigation',{p_owner:owner,p_message:input.messageId,p_operation:input.referenceId,p_destination:input.destination})
+  :await db.rpc('luna40_acknowledge_ui',{p_owner:owner,p_message:input.messageId,p_event:input.event,p_reference:input.referenceId});
+ if(result.error)throw new FoundationError(503,'action_ack_unavailable','The action status could not be synchronized.');
+ if(result.data!==true)throw new FoundationError(404,'action_not_found','This action is not attached to your conversation.');
+ return{acknowledged:true,source:'client_observed',rewardGranted:false};
+}
 export async function recordToolOutcomes(db:SupabaseClient,owner:number,messageId:string,outcomes:ToolOutcome[]){if(!outcomes.length)return;const rows=outcomes.slice(0,4).map(o=>({telegram_id:owner,message_id:messageId,operation_id:o.operationId,tool_name:o.toolName,status:o.status,ui_state:o.uiState,latency_ms:o.latencyMs,error_code:o.error?.code??null}));try{const result=await db.from('luna40_tool_executions').upsert(rows,{onConflict:'telegram_id,operation_id',ignoreDuplicates:true});if(result.error)console.warn('[Luna action telemetry unavailable]',{code:'tool_telemetry_unavailable'});}catch{console.warn('[Luna action telemetry unavailable]',{code:'tool_telemetry_unavailable'});}}

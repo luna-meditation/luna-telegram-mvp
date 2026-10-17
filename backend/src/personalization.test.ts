@@ -1,4 +1,4 @@
-import{test}from'node:test';import assert from'node:assert/strict';import{personalProfileSchema,emptyPersonalProfile,permittedPersonalContext}from'./personalization-policy.js';
+import{test}from'node:test';import assert from'node:assert/strict';import{personalProfileSchema,emptyPersonalProfile,permittedPersonalContext,personalProfileWrite}from'./personalization-policy.js';
 test('personal profile is optional, bounded and cannot select another owner',()=>{
  assert.deepEqual(personalProfileSchema.parse(emptyPersonalProfile),emptyPersonalProfile);
  for(const patch of [{telegram_id:1},{display_name:'x'.repeat(61)},{preferences:'x'.repeat(501)},{birth_date:'2024-02-31'},{birth_time:'25:30'},{interests:['unknown']}])assert.equal(personalProfileSchema.safeParse({...emptyPersonalProfile,...patch}).success,false);
@@ -14,3 +14,4 @@ test('optional name preserves Telegram identity and enters AI only with consent'
  const named=personalProfileSchema.parse({...emptyPersonalProfile,display_name:'  Alex  '});assert.equal(named.display_name,'Alex');assert.equal(permittedPersonalContext(named),null);
  assert.equal(permittedPersonalContext({...named,ai_context_consent:true})?.displayName,'Alex');
 });
+test('saving preferences cannot overwrite stale canonical birth projections',()=>{const profile={...emptyPersonalProfile,display_name:'Alex',birth_date:'2000-01-01',birth_time:'12:30',birth_place:'Older projection'};const value=personalProfileWrite(profile,true);assert.equal(value.display_name,'Alex');for(const key of ['birth_date','birth_time','birth_place'])assert.equal(key in value,false);assert.deepEqual(personalProfileWrite(profile,false),profile);});

@@ -14,5 +14,5 @@ test('new mode request uses bounded conversation context without legacy personal
  Object.assign(process.env,{BOT_TOKEN:'test',BOT_USERNAME:'test',MINI_APP_URL:'https://example.com',SUPABASE_URL:'https://example.supabase.co',SUPABASE_SERVICE_ROLE_KEY:'test-only',FEATURE_AI_MODES:'true'});
  const {buildLunaOpenAiRequest}=await import('./luna-ai.js');
  const request=buildLunaOpenAiRequest({language:'ru',catalog:Array.from({length:30},(_,i)=>({id:String(i)})),context:{memories:[{memory_value:'PRIVATE-LEGACY-DATA'}],profile:{birth_date:'PRIVATE-BIRTH-DATE'},modeContext:{mode:'companion',personalContext:null}},recent:Array.from({length:20},()=>({role:'user',content:'x'.repeat(10000)}))});
- assert.equal(request.input.length,8);assert.ok(request.input.every(item=>item.content.length<=2000));assert.doesNotMatch(request.instructions,/PRIVATE-LEGACY-DATA|PRIVATE-BIRTH-DATE/);assert.match(request.instructions,/General Companion/);assert.equal(request.store,false);
+ assert.equal(request.input.length,8);assert.ok(request.input.every(item=>item.content.length<=2000));assert.doesNotMatch(request.instructions,/PRIVATE-LEGACY-DATA|PRIVATE-BIRTH-DATE/);assert.match(request.instructions,/one conversation, not separate restrictive modes/);assert.equal(request.store,false);
 });

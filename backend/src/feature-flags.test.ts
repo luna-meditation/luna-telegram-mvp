@@ -13,9 +13,11 @@ test('every Luna 2.0 backend feature remains disabled by default in Phase 1', ()
     moon_seeds_wallet_v2: false,
     moon_seeds_purchases: false,
     breathwork_audio: false,
+    breathwork_guided: false,
     garden_atomic: false,
     personalization: false,
     personal_memory: false,
+    cosmos_v2: false,
     ai_modes: false,
     tarot_history: false,
     tarot_ai: false

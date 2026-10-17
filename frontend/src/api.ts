@@ -32,6 +32,9 @@ export type PersonalMemory={id:string;category:string;memory_key:string;memory_v
 export type UniverseData={memories:PersonalMemory[];profile:PersonalProfile;identity:{firstName:string;language:string;goals:string[]}|null;memoryEnabled:boolean;contextConsent:boolean};
 export type PersonalMemoryInput={category:PersonalMemoryCategory;key:string;value:string;confirmed:boolean;kind:'fact'|'symbolic';sourceMessageId?:string;revision?:number;sensitiveConsent:boolean};
 export const getUniverse=(initData?:string)=>request<UniverseData>('/api/universe',undefined,initData);
+export type CosmosOnboardingState={skipped:string[];revision:number;updatedAt:string|null};
+export const getCosmosOnboarding=(initData?:string)=>request<CosmosOnboardingState>('/api/universe/onboarding',undefined,initData);
+export const saveCosmosOnboarding=(input:{skipped:string[];expectedRevision:number;requestId:string},initData?:string)=>request<CosmosOnboardingState>('/api/universe/onboarding',{method:'PUT',body:JSON.stringify(input)},initData);
 export const writePersonalMemory=(input:PersonalMemoryInput,initData?:string,id?:string)=>request<PersonalMemory>(`/api/universe/memories${id?'/'+id:''}`,{method:id?'PATCH':'POST',body:JSON.stringify(input)},initData);
 export const removePersonalMemory=(initData?:string,id?:string)=>request<{ok:boolean}>(`/api/universe/memories${id?'/'+id:''}`,{method:'DELETE'},initData);
 export const getPersonalProfile=(initData?:string)=>request<PersonalProfile>('/api/personalization',undefined,initData);
@@ -403,6 +406,7 @@ export type LunaMessage = {
   role: 'user' | 'assistant';
   content: string;
   metadata?: {
+    navigation?:{destination:import('../../backend/src/luna41-navigation').LunaDestinationId;operationId?:string};
     commerce?:{version:1;view:import('../../backend/src/luna35-commerce-policy').CommerceView;language:AppLanguage;checkedAt:string};
     contextReset?:boolean;
     astrology?:AstrologyChatAttachment;
@@ -867,6 +871,7 @@ export const getAdmin40Overview=(period:{from:string;to:string},initData?:string
 export const getAdmin40Users=(filters:{search:string;page:number;size:number;sort:string;plan:string},initData?:string)=>request<import('./admin/types').Admin40Users>('/api/admin/v4/users?'+new URLSearchParams(Object.fromEntries(Object.entries(filters).map(([k,v])=>[k,String(v)]))),undefined,initData);
 export type MeditationActionOrigin={messageId:string;referenceId:string};
 export const acknowledgeLunaAction=(value:MeditationActionOrigin&{event:'meditation_card_rendered'|'player_opened'|'playback_started'},initData?:string)=>request<{acknowledged:boolean}>('/api/luna/actions/ack',{method:'POST',body:JSON.stringify(value)},initData);
+export const acknowledgeLunaNavigation=(value:{messageId:string;referenceId:string;destination:string;event:'screen_opened'},initData?:string)=>request<{acknowledged:boolean}>('/api/luna/actions/ack',{method:'POST',body:JSON.stringify(value)},initData);
 export const setLanguagePreference=(value:{mode:import('./localization/languagePreference').LanguageMode;expectedRevision:number;requestId:string},initData?:string)=>request<import('./localization/languagePreference').LanguagePreference&{conflict?:boolean}>('/api/profile/language-preference',{method:'PUT',body:JSON.stringify(value)},initData);
 
 export async function updateProfileGoals(goals: string[], initData?: string) {

@@ -6,7 +6,7 @@ import AstrologyPage from './AstrologyPage';
 import CelestialCalendar from './CelestialCalendar';
 
 type Section='home'|'natal'|'compatibility'|'calendar'|'path'|'profiles';
-export default function AstrologyHub(props:{language:AppLanguage;initData?:string;onBack:()=>void;registerBackHandler?:(handler:(()=>void)|null)=>void;initialSection?:'natal'|'compatibility'}){
+export default function AstrologyHub(props:{language:AppLanguage;initData?:string;onBack:()=>void;registerBackHandler?:(handler:(()=>void)|null)=>void;initialSection?:'natal'|'compatibility'|'profiles'}){
  const {language,initData,onBack,registerBackHandler}=props,en=language==='en',root=useRef<HTMLDivElement>(null);
  const [section,setSection]=useState<Section>(props.initialSection??'home'),[subject,setSubject]=useState<'self'|'other'|undefined>();
  const [profiles,setProfiles]=useState<BirthProfile[]|null>(null),[profilesError,setProfilesError]=useState(false),[retry,setRetry]=useState(0);

@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url';
 assert.equal(process.versions.node.split('.')[0], '22', 'Use Node.js 22');
 const frontend = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const tarotPreview = process.argv.includes('--tarot');
-const luna40Preview=process.argv.includes('--luna40');
+const luna41Preview=process.argv.includes('--luna41');
+const luna40Preview=luna41Preview||process.argv.includes('--luna40');
 const luna34Preview=luna40Preview||process.argv.includes('--luna34');
 const luna33Preview=luna34Preview||process.argv.includes('--luna33');
 const luna32Preview=luna33Preview||process.argv.includes('--luna32');
@@ -23,8 +24,11 @@ const productionFlags=process.argv.includes('--production-flags');
 const refinementPreview=process.argv.includes('--refinement')||luna21Preview;
 const legacyPreview = process.argv.includes('--legacy');
 assert.ok(!(tarotPreview&&legacyPreview),'Choose either Tarot or legacy preview');
-const outputDirectory = luna40Preview?'dist-staging':luna34Preview?'dist-luna34-preview':luna33Preview?'dist-luna33-preview':luna32Preview?'dist-luna32-preview':luna31Preview?'dist-luna31-preview':evolutionPreview?'dist-luna30-preview':centralPreview?'dist-luna24-preview':memoryPreview?'dist-memory-preview':productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
+const outputDirectory = luna41Preview?'dist-luna41-preview':luna40Preview?'dist-staging':luna34Preview?'dist-luna34-preview':luna33Preview?'dist-luna33-preview':luna32Preview?'dist-luna32-preview':luna31Preview?'dist-luna31-preview':evolutionPreview?'dist-luna30-preview':centralPreview?'dist-luna24-preview':memoryPreview?'dist-memory-preview':productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
 const output = resolve(frontend, outputDirectory);
+process.env.VITE_FEATURE_COSMOS_V2=luna41Preview?'true':'false';
+process.env.VITE_FEATURE_ADMIN_V4=luna40Preview?'true':'false';
+process.env.VITE_FEATURE_BREATHWORK_GUIDED=luna41Preview?'true':'false';
 const flagNames = ['AI_CENTRAL_EXPERIENCE','PERSONAL_MEMORY','NEW_NAVIGATION','TAROT_DAILY','TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI','DAILY_CARD_V2','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2'];
 if(!process.argv.includes('--serve-only')){
 const build = spawn(process.execPath,[resolve(frontend,'node_modules/vite/bin/vite.js'),'build','--outDir',outputDirectory],{
@@ -55,6 +59,7 @@ const emptyPersonal={interests:[],preferences:'',birth_date:null,birth_time:null
 const centralConversations=new Map();
 const previewDeck=centralPreview?JSON.parse(await readFile(resolve(frontend,'src/features/tarot/manifest.json'),'utf8')).cards:[];
 const previewMemories=new Map();let previewMemoryEnabled=true;
+let cosmosState={skipped:[],revision:0,updatedAt:null};
 if(refinementPreview)profile.gardenAtomicReady=true;
 if(refinementPreview)profile.journeyStatus={id:'adept',rank:2,earned:true,eligibleRank:2,next:{id:'guardian',rank:3,progressPercent:75,remaining:[{key:'completedMeditations',current:10,target:20,remaining:10}]}};
 if(astrology){profile.journeyV3=astrology.buildLuna30Progress({meaningfulDays:12,meditations:10,breathwork:4,tarot:3,reflections:9,conversations:5},2);const items=astrology.buildAchievementItems({completedMeditations:10,completedBreathSessions:4,completed:14,minutesListened:100,currentStreak:5,longestStreak:10,checkinsCount:9,hasPremiumAccess:true,gardenLevel:3,hasMorningPractice:true,hasEveningPractice:true,practiceDays:12,completedWeeks:1,perfectWeeks:1,categoryCounts:{calm:5},tarotReadings:3,dailyCards:2,aiConversations:5},[]);profile.achievements={items,unlocked:items.filter(i=>i.unlocked).length,total:items.length};}
@@ -101,6 +106,9 @@ const server=createServer(async(req,res)=>{
        return json({code:'not_found'},404);
       }
       if(luna32Preview&&url.pathname.startsWith('/api/luna32/dreams')){const id=url.pathname.split('/')[4];if(req.method==='GET')return json({dreams:[...dreamEntries.values()],nextOffset:null});if(req.method==='DELETE'){dreamEntries.delete(id);return json({ok:true});}if(!body.saveConsent)return json({code:'consent_required'},400);const old=id?dreamEntries.get(id):[...dreamEntries.values()].find(e=>e.client_id===body.clientId);if(old&&req.method==='POST')return json(old);const entry={id:id??randomUUID(),client_id:body.clientId,title:body.title,description:body.description,language:body.language,dream_date:body.date,created_at:old?.created_at??new Date().toISOString(),updated_at:new Date().toISOString()};dreamEntries.set(entry.id,entry);return json(entry);}
+      if(luna41Preview&&url.pathname==='/api/universe/onboarding'){
+       if(req.method==='PUT'){if(body.expectedRevision!==cosmosState.revision)return json({code:'cosmos_changed'},409);cosmosState={skipped:body.skipped??[],revision:cosmosState.revision+1,updatedAt:new Date().toISOString()};}return json(cosmosState);
+      }
       if(memoryPreview&&url.pathname==='/api/universe')return json({memories:[...previewMemories.values()],profile:personal,identity:{firstName:user.first_name,language:user.language_code,goals:user.profile_goals},memoryEnabled:previewMemoryEnabled,contextConsent:personal.ai_context_consent});
       if(memoryPreview&&url.pathname.startsWith('/api/universe/memories')){
         const id=url.pathname.split('/')[4],old=id?previewMemories.get(id):null;

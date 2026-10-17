@@ -30,7 +30,7 @@ export default function TarotPage({language,onBack,session,dispatch,registerBack
  const descriptions={intention:t.intentionBody,shuffling:t.shufflingBody,choose:t.chooseBody,reveal:t.revealBody,interpretation:t.reflectionBody};
  const closeZoom=useCallback(()=>setZoom(false),[]);
  useEffect(()=>{
-  if(session.screen!=='single'||zoom)return;
+  if(!['single','history'].includes(session.screen??'')||zoom)return;
   registerBackHandler(()=>dispatch({type:'screen',value:'hub'}));
   return ()=>registerBackHandler(null);
  },[session.screen,zoom,dispatch,registerBackHandler]);
@@ -56,6 +56,7 @@ export default function TarotPage({language,onBack,session,dispatch,registerBack
  function reset(){setZoom(false);setError(false);selectionLocked.current=false;shuffleLocked.current=false;dispatch({type:'reset'});}
  const reading=card&&session.result?buildTarotInterpretation(card.meaning[language][session.result.orientation],session.intention,language):null;
  const coverProps={attempt:coverAttempt,onError:()=>setCoverFailed(true)};
+ if(session.screen==='history'&&featureFlags.tarot_history)return <div className="luna2-page tarot-page"><SectionBack language={language} onBack={()=>dispatch({type:'screen',value:'hub'})}/><header className="luna2-page-heading"><h1>{language==='en'?'Reading history':'История раскладов'}</h1></header><TarotHistory language={language} initData={initData} dispatch={dispatch} initiallyOpen/></div>;
  if(session.screen==='daily'&&luna21Flags.daily_card_v2)return <div className="luna2-page tarot-page"><DailyTarot language={language} initData={initData} session={session} dispatch={dispatch} registerBackHandler={registerBackHandler} onContinue={onContinue}/></div>;
  if((session.screen==='three'||session.screen==='five')&&(featureFlags.tarot_spreads||session.spreads?.[session.screen]?.reading))return <div className="luna2-page tarot-page"><TarotSpread kind={session.screen} language={language} initData={initData} session={session} dispatch={dispatch} registerBackHandler={registerBackHandler} onContinue={onContinue}/></div>;
  if((!session.screen&&session.stage==='intention')||session.screen==='hub')return <div className="luna2-page tarot-page"><SectionBack language={language} onBack={onBack}/><TarotHub language={language} onOpen={value=>dispatch({type:'screen',value})}/>{featureFlags.tarot_history&&<TarotHistory language={language} initData={initData} dispatch={dispatch}/>}</div>;

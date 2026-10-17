@@ -46,8 +46,11 @@ export function safeAssistantProse(raw:string,language:'en'|'ru'){
  const text=raw.replace(/\\r\\n|\\n/g,'\n').trim();
  if(!text||/^[\[{]/.test(text)||/^```\s*json\b/i.test(text)||/"(?:message|detectedIntent|memoryCandidates)"\s*:/.test(text))throw new Error('invalid_serialized_answer');
  if(/[\uac00-\ud7af\u1100-\u11ff]/u.test(text))throw new Error('unexpected_response_language');
- const latin=(text.match(/[a-z]/gi)??[]).length,cyrillic=(text.match(/[а-яё]/gi)??[]).length;
- if(language==='ru'&&latin>45&&cyrillic===0||language==='en'&&cyrillic>45&&latin===0)throw new Error('unexpected_response_language');
+ // Canonical product names or a short greeting must not mask a reply in the
+ // wrong language. Exclude explicit quotations and URLs, not the user's name.
+ const prose=text.replace(/https?:\/\/\S+|`[^`]*`|«[^»]*»|“[^”]*”|"[^"\n]*"/g,'');
+ const latin=(prose.match(/[a-z]/gi)??[]).length,cyrillic=(prose.match(/[а-яё]/gi)??[]).length;
+ if(language==='ru'&&latin>45&&latin>cyrillic*3||language==='en'&&cyrillic>45&&cyrillic>latin*3)throw new Error('unexpected_response_language');
  return text;
 }
 export const consultationRuntimeInstructions = `LUNA_CONSULTATION_V3_1

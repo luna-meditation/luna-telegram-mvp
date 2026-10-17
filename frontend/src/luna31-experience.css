@@ -38,3 +38,4 @@
 .progress-v4-achievements-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.progress-v4-achievements-list .progress-v4-achievement{padding:13px;min-width:0}.progress-v4-achievements-list h4{font-size:15px;line-height:1.4;-webkit-line-clamp:unset;overflow:visible}.progress-v4-achievements-list .progress-v4-achievement-copy>span,.progress-v4-achievements-list small{font-size:13px;line-height:1.4}
 @media(max-height:780px){.luna2-breath-visual{height:270px}.luna2-breath-visual .luna30-tap-hint{top:calc(50% + 113px)}.luna2-breath-halo{width:224px}.luna2-breath-ring{width:204px;height:204px}.luna2-breath .luna2-audio-modes{padding:9px}.luna2-breath .breath-circle-visual{padding-top:4px}}
 @media(prefers-reduced-motion:reduce){.luna31-practice-sheet,.luna2-breath-ring,.luna31-milestone{transition:none!important;animation:none!important}}
+.luna2-breath-visual .luna30-tap-hint{top:auto;bottom:4px}

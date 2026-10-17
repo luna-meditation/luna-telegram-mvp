@@ -13,8 +13,8 @@ export const lunaProductCapabilities: LunaProductCapabilities = {
   canOpenPlayerFromCard: true,
   canStartPlaybackDirectly: false,
   hasLibraryTab: true,
-  hasSupportPage: false,
-  hasSettingsPage: false,
+  hasSupportPage: true,
+  hasSettingsPage: true,
   hasAboutPage: false
 };
 
