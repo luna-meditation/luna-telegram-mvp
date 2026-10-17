@@ -24,6 +24,12 @@ const options={bundle:true,packages:'bundle',format:'esm',platform:'node',target
 await build({...options,entryPoints:[source+'/backend/staging/functions/luna-staging.mjs'],outfile:functions+'/luna-staging.mjs'});
 let authFile=null,expiresAt=null;
 let evaluationAuthFile=null;
+let voiceAuthFile=null;
+if(process.env.LUNA41_VOICE_APPROVED==='synthetic_audio_usd0.05'){
+ assert.ok(luna41);const nonce=randomBytes(32).toString('hex'),authSha256=createHash('sha256').update(nonce).digest('hex'),voiceExpiresAt=new Date(Date.now()+8*60*60000).toISOString();
+ for(const readOnly of [false,true]){const name=readOnly?'luna41-voice-status':'luna41-voice-background';await build({...options,stdin:{contents:`import {run} from '${source}/backend/test/luna41-staging-voice.mjs';export default async function(request,context){return run(request,context,${JSON.stringify({authSha256,expiresAt:voiceExpiresAt,sourceCommit:commit,readOnly})});}${readOnly?'':'export const config={background:true};'}`,resolveDir:source,sourcefile:name+'.mjs'},outfile:functions+'/'+name+'.mjs'});}
+ voiceAuthFile=directory+'/luna41-voice-command-private.json';await writeFile(voiceAuthFile,JSON.stringify({nonce,expiresAt:voiceExpiresAt}),{mode:0o600,flag:'wx'});
+}
 if(process.env.LUNA41_EVALUATION_APPROVED==='400_calls_2_usd'){
  assert.ok(luna41,'Evaluation belongs only to the Luna 4.1 staging artifact');
  const nonce=randomBytes(32).toString('hex'),authSha256=createHash('sha256').update(nonce).digest('hex');expiresAt=new Date(Date.now()+8*60*60000).toISOString();
@@ -36,5 +42,5 @@ if(process.env.LUNA40_SMOKE_APPROVED==='owner-4-calls-usd0.03'){
  authFile=directory+'/qa-command-private.json';await writeFile(authFile,JSON.stringify({nonce,expiresAt}),{mode:0o600,flag:'wx'});
 }
 const staging=await readFile(source+'/staging/netlify.toml','utf8');await writeFile(directory+'/netlify.toml','[build]\n publish="public"\n[functions]\n directory="functions"\n node_bundler="esbuild"\n'+staging.slice(staging.indexOf('[[headers]]')));
-await writeFile(process.env.LUNA_STAGING_ARTIFACT_LOCATION??'/tmp/luna40-staging-location.json',JSON.stringify({directory,functions,sourceCommit:commit,authFile,evaluationAuthFile,expiresAt}),{mode:0o600});
-console.log(JSON.stringify({status:'PACKAGED_NOT_DEPLOYED',directory,sourceCommit:commit,functions:['luna-staging',...(authFile?['luna40-qa-background']:[]),...(evaluationAuthFile?['luna41-qa-background','luna41-qa-status']:[])],secretsEmbedded:false}));
+await writeFile(process.env.LUNA_STAGING_ARTIFACT_LOCATION??'/tmp/luna40-staging-location.json',JSON.stringify({directory,functions,sourceCommit:commit,authFile,evaluationAuthFile,voiceAuthFile,expiresAt}),{mode:0o600});
+console.log(JSON.stringify({status:'PACKAGED_NOT_DEPLOYED',directory,sourceCommit:commit,functions:['luna-staging',...(authFile?['luna40-qa-background']:[]),...(evaluationAuthFile?['luna41-qa-background','luna41-qa-status']:[]),...(voiceAuthFile?['luna41-voice-background','luna41-voice-status']:[])],secretsEmbedded:false}));

@@ -20,3 +20,4 @@
 .admin40-backdrop{height:var(--app-viewport-height,100dvh);overscroll-behavior:contain}
 .admin40-drawer{height:100%;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch}
 @media(max-width:1000px){.admin40-records{max-height:none;overflow:visible;overscroll-behavior:auto}}
+.admin40-record-card{border:1px solid var(--admin-border);border-radius:16px;padding:14px;background:#11172b}.admin40-record-summary{margin:0}.admin40-record-summary dd{margin:0;overflow-wrap:anywhere}.admin40-record-summary dt{color:var(--admin-muted)}.admin41-diagnostics{margin-top:10px;border-top:1px solid var(--admin-border)}.admin41-diagnostics summary{min-height:44px;display:flex;align-items:center;color:var(--admin-gold);cursor:pointer;font-size:14px}.admin41-diagnostics .admin40-record-field{font-size:13px}.admin40-avatar{position:relative;overflow:hidden}.admin40-avatar img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}

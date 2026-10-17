@@ -12,6 +12,7 @@ export const backendFeatureFlags: BackendFeatureFlags = Object.freeze({
   garden_atomic: env.FEATURE_GARDEN_ATOMIC,
   personalization: env.FEATURE_PERSONALIZATION,
   personal_memory: env.FEATURE_PERSONAL_MEMORY,
+  cosmos_v2: env.FEATURE_COSMOS_V2,
   ai_modes: env.FEATURE_AI_MODES,
   tarot_history: env.FEATURE_TAROT_HISTORY,
   tarot_ai: env.FEATURE_TAROT_AI

@@ -16,3 +16,10 @@ export function permittedPersonalContext(profile:PersonalProfile|null){
  if(!profile?.ai_context_consent)return null;
  return {displayName:profile.display_name,interests:profile.interests,preferences:profile.preferences.slice(0,500),...(profile.confirmed_memories?.length?{confirmedMemories:profile.confirmed_memories}:{}),...(profile.saved_reflections?.length?{symbolicReflections:profile.saved_reflections}:{})};
 }
+/** A hidden/stale legacy birth projection must never overwrite the canonical
+ * profile when the user edits unrelated preferences in another window. */
+export function personalProfileWrite(profile:PersonalProfile,preserveCanonicalBirth:boolean){
+ if(!preserveCanonicalBirth)return profile;
+ const {birth_date:_date,birth_time:_time,birth_place:_place,...preferences}=profile;
+ void _date;void _time;void _place;return preferences;
+}

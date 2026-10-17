@@ -16,6 +16,7 @@ test('every Luna 2.0 backend feature remains disabled by default in Phase 1', ()
     garden_atomic: false,
     personalization: false,
     personal_memory: false,
+    cosmos_v2: false,
     ai_modes: false,
     tarot_history: false,
     tarot_ai: false

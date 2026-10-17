@@ -3,6 +3,7 @@ import './luna34.css';
 import {useLanguagePreference} from './localization/useLanguagePreference';
 import type {LanguageMode} from './localization/languagePreference';
 import {resolveLunaDestination} from '../../backend/src/luna41-navigation';
+import {useDestinationObservation} from './navigation/useDestinationObservation';
 import {admin40Enabled} from './admin/admin40';
 import {ReferralWelcome,ReferralPanel} from './features/membership/ReferralPanel';
 import {parseLaunchDestination} from './navigation/launchDestination';
@@ -1884,6 +1885,7 @@ function App() {
   const [profile, setProfile] = useState<ProfileStats | null>(() => initialAccountCache?.profile ?? null);
   const [profileNestedActive, setProfileNestedActive] = useState(false);
   const [profileEntry, setProfileEntry] = useState<ProfileSettingsView>(launchDestination==='invite'?'invite':'main');
+  useDestinationObservation(initData);
   useEffect(()=>{const open=(event:Event)=>{const destination=resolveLunaDestination((event as CustomEvent).detail?.destination,featureFlags);if(!destination)return;if(destination.page==='profile'){setProfileEntry('profileView' in destination?destination.profileView:'main');navigatePrimary('profile');return;}if(destination.page==='astrology')setAstrologyEntry('astrologySection' in destination?destination.astrologySection:undefined);if('tarotScreen' in destination)tarotDispatch({type:'screen',value:destination.tarotScreen});if(destination.id==='daily')tarotDispatch({type:'screen',value:'daily'});setPage(destination.page);};window.addEventListener('luna-open-destination',open);return()=>window.removeEventListener('luna-open-destination',open);},[setPage,navigatePrimary]);
   useEffect(()=>{if(!featureFlags.ai_central_experience)return;const activity=()=>setPage('activity'),astrology=(event:Event)=>{const value=(event as CustomEvent).detail?.section;setAstrologyEntry(value==='natal'||value==='compatibility'?value:undefined);setPage('astrology');};window.addEventListener('luna-open-activity',activity);window.addEventListener('luna-open-astrology',astrology);return()=>{window.removeEventListener('luna-open-activity',activity);window.removeEventListener('luna-open-astrology',astrology);};},[setPage]);
   useEffect(()=>{const open=()=>{if(!featureFlags.personal_memory)return;setProfileEntry('universe');navigatePrimary('profile');};window.addEventListener('luna-open-universe',open);return()=>window.removeEventListener('luna-open-universe',open);},[navigatePrimary]);
@@ -3541,7 +3543,7 @@ function ProgressPage({
 
 function PageSkeleton({ rows = 4 }: { rows?: number }) {
   return (
-    <div className="luna-page space-y-4" aria-busy="true" aria-label="Loading">
+    <div className="luna-page space-y-4" data-page-loading="true" aria-busy="true" aria-label="Loading">
       <div className="flex items-center gap-3"><BrandLogo size={38} eager /><div className="h-9 w-2/3 animate-pulse rounded-2xl bg-white/[0.08]" /></div>
       <div className="h-56 animate-pulse rounded-[30px] bg-white/[0.07]" />
       <div className="grid grid-cols-2 gap-3">
@@ -5250,6 +5252,7 @@ function ProfilePage({
 }) {
   const [view, setView] = useState<ProfileSettingsView>(initialView);
   useEffect(()=>{setView(initialView);},[initialView]);
+  useEffect(()=>{const shell=document.querySelector<HTMLElement>('.app-shell[data-page="profile"]');if(shell)shell.dataset.profileView=view;return()=>{if(shell)delete shell.dataset.profileView;};},[view]);
   const universeBackRef = useRef<(()=>boolean)|null>(null);
   const [statusProgressionOpen, setStatusProgressionOpen] = useState(false);
   const [avatarActionsOpen, setAvatarActionsOpen] = useState(false);

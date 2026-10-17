@@ -70,7 +70,7 @@ export function messageClaimsMeditationCard(message: string) {
   return cardClaimPatterns.some((pattern) => pattern.test(message));
 }
 
-export function enforceCardClaimConsistency(message: string, language: LunaLanguage, hasRecommendation: boolean, availableArtifact?: 'astrology') {
+export function enforceCardClaimConsistency(message: string, language: LunaLanguage, hasRecommendation: boolean, availableArtifact?: 'astrology'|'tarot') {
   // This scope comes only from an executed, authorized tool, never model prose.
   // A real chart/profile card must not be mistaken for an absent meditation card.
   if (availableArtifact === 'astrology') {
@@ -79,6 +79,9 @@ export function enforceCardClaimConsistency(message: string, language: LunaLangu
       ? 'Карточка астрологии готова. Продолжи с помощью её действий — данные рождения остаются в защищённой форме.'
       : 'Your astrology card is ready. Use its actions to continue; birth details stay in the secure form.';
   }
+  // A verified Tarot attachment is not an absent meditation. Do not replace a
+  // valid reading explanation with the unrelated legacy meditation fallback.
+  if(availableArtifact==='tarot'&&!/meditat|медитац|\bplayer\b|плеер/i.test(message))return message;
   if (hasRecommendation || !messageClaimsMeditationCard(message)) return message;
   return language === 'ru'
     ? 'Я могу помочь подобрать медитацию, когда пойму, что тебе сейчас нужнее всего.'

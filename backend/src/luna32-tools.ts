@@ -24,7 +24,7 @@ export function createLunaTools(input:{db:SupabaseClient;owner:number;operationK
  let commerceView:CommerceView|null=null;
  let meditationSelection:VerifiedMeditationSelection|null=null;
  let astrologyAction:Awaited<ReturnType<typeof prepareAstrologyAction>>|null=null;
- let navigationAction:{destination:LunaDestinationId}|null=null;
+ let navigationAction:{destination:LunaDestinationId;operationId:string}|null=null;
  const openAstrology=async(kind:'natal'|'compatibility')=>{if(astrologyAction&&astrologyAction.workflow.kind!==kind)throw new FoundationError(409,'workflow_already_selected','One astrology action is already selected.');astrologyAction??=await prepareAstrologyAction(db,owner,kind,()=>input.astrologyEnabled);return astrologyAction.providerResult;};
  const tools:Tool[]=[];
  const request=input.operationKey??randomUUID(),outcomes:ToolOutcome[]=[],pending=new Map<string,Promise<ToolOutcome>>();
@@ -34,7 +34,13 @@ export function createLunaTools(input:{db:SupabaseClient;owner:number;operationK
  add('check_ai_quota','Read the shared daily AI allowance without reserving a generation.',input.quota);
  const navigationAvailable={astrology:input.astrologyEnabled,...input.navigation};
  add('get_app_destinations','List currently available application destinations. No admin destinations, URLs, private reports or purchase authority.',async()=>({destinations:availableLunaDestinations(input.language,navigationAvailable)}));
- tools.push({name:'navigate_app',description:'Prepare a real localized Open action for an available Luna destination. This does not prove the screen opened or authorize any purchase. Use an exact allowed destination enum ID; the optional destination-list tool is not a prerequisite.',parameters:{type:'object',properties:{destination:{type:'string',enum:availableLunaDestinations(input.language,navigationAvailable).map(d=>d.id)}},required:['destination'],additionalProperties:false},execute:async raw=>{const {destination}=z.object({destination:z.string().max(30)}).strict().parse(raw),item=resolveLunaDestination(destination,navigationAvailable);if(!item)throw new FoundationError(404,'destination_unavailable','This destination is not available.');if(navigationAction&&navigationAction.destination!==item.id)throw new FoundationError(409,'navigation_already_selected','One destination is already selected.');navigationAction={destination:item.id};return {action:'navigation',destination:item.id,title:item[input.language],state:'navigation_requested',screenOpened:false};}});
+ tools.push({name:'navigate_app',description:'Prepare a real localized Open action for an available Luna destination. This does not prove the screen opened or authorize any purchase. Use an exact allowed destination enum ID; the optional destination-list tool is not a prerequisite.',parameters:{type:'object',properties:{destination:{type:'string',enum:availableLunaDestinations(input.language,navigationAvailable).map(d=>d.id)}},required:['destination'],additionalProperties:false},execute:async raw=>{
+  const {destination}=z.object({destination:z.string().max(30)}).strict().parse(raw),item=resolveLunaDestination(destination,navigationAvailable);
+  if(!item)throw new FoundationError(404,'destination_unavailable','This destination is not available.');
+  if(navigationAction&&navigationAction.destination!==item.id)throw new FoundationError(409,'navigation_already_selected','One destination is already selected.');
+  navigationAction={destination:item.id,operationId:toolOperationId(owner,request,'navigate_app',JSON.stringify({destination:item.id}))};
+  return {action:'navigation',destination:item.id,title:item[input.language],state:'navigation_requested',screenOpened:false};
+ }});
  if(input.commerce){
   const read=(view:CommerceView)=>async()=>{commerceView=view;return input.commerce!.read(view);};
   add('get_wallet_balance','Read the authenticated current Moon Seeds balance. Never invent or charge a balance.',read('wallet'));

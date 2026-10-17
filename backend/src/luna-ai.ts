@@ -6,7 +6,8 @@ import { logBackendError } from './error-logging.js';
 import { buildLunaSystemPrompt, detectedIntents, recommendationGoals } from './luna/prompts/index.js';
 import {requestLunaResponse} from './luna/ai-provider.js';
 import {lunaModeSchema,boundedModeContext,attachmentGrounding} from './luna/modes.js';
-import {attachmentMode,automaticConversationInstructions} from './luna41-conversation.js';
+import {attachmentMode,automaticConversationInstructions,readyMeditationCopy} from './luna41-conversation.js';
+import {resolveLunaDestination} from './luna41-navigation.js';
 import {verifiedAstrologyChatContext} from './luna30-astrology-chat-context.js';
 import {FoundationError} from './personalization.js';
 import {getAiPersonalProfile,getMemoryContextBoundary,advanceMemoryContextBoundary} from './personal-memory.js';
@@ -1483,7 +1484,10 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
       ? repeatedClarificationFallback(responseLanguage)
       : visibleMessage;
     const attachedMeditationId = recommendedMeditationId;
-    const assistantContent = neutralRussianAddress(enforcePracticeActionClaims(enforceCardClaimConsistency(safeVisibleMessage, responseLanguage, Boolean(attachedMeditationId),selectedAstrologyAction?'astrology':undefined),responseLanguage,Boolean(attachedMeditationId)),responseLanguage,personal,input.message);
+    const navigationDestination=navigationAction?resolveLunaDestination(navigationAction.destination,{astrology:env.FEATURE_ASTROLOGY,personal_memory:env.FEATURE_PERSONAL_MEMORY,tarot_daily:env.FEATURE_TAROT_DAILY,tarot_history:env.FEATURE_TAROT_HISTORY}):null;
+    const actionMessage=navigationDestination?(responseLanguage==='ru'?`Открой «${navigationDestination.ru}» по кнопке.`:`Use the button to open ${navigationDestination.en}.`):safeVisibleMessage;
+    const artifact=selectedAstrologyAction?'astrology':readingContext?'tarot':undefined;
+    const assistantContent = neutralRussianAddress(readyMeditationCopy(enforcePracticeActionClaims(enforceCardClaimConsistency(actionMessage, responseLanguage, Boolean(attachedMeditationId),artifact),responseLanguage,Boolean(attachedMeditationId)),responseLanguage,Boolean(attachedMeditationId)),responseLanguage,personal,input.message);
     if(hasDanglingConsultationPromise(assistantContent))throw new LunaAiError('incomplete_response','Luna returned an introduction without its promised explanation.',502,true);
     if (!assistantContent) throw new LunaAiError('malformed_response', 'Luna returned no safe visible message.', 502);
     if (hasInternalDataLeak(assistantContent)) {

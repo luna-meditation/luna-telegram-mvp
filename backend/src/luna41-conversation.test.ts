@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {attachmentMode,automaticConversationInstructions} from './luna41-conversation.js';
+import {attachmentMode,automaticConversationInstructions,readyMeditationCopy} from './luna41-conversation.js';
 import {createLunaTools} from './luna32-tools.js';
 import {readFileSync} from 'node:fs';
 test('legacy mode metadata cannot establish an attachment scope',()=>{for(const mode of ['tarot','astrology','dream','meditation'])assert.equal(attachmentMode({...{mode}}),undefined);});
@@ -9,3 +9,5 @@ test('one conversation exposes real meditation actions even with a Tarot attachm
  assert.ok(tools.definitions.some(t=>t.name==='recommend_meditation'));assert.ok(tools.definitions.some(t=>t.name==='get_tarot_reading'));
 });
 test('ordinary runtime no longer disables tools based on a manual mode',()=>{const source=readFileSync(new URL('./luna-ai.ts',import.meta.url),'utf8');assert.match(source,/const allowMeditationActions = true/);assert.doesNotMatch(source,/input\.mode&&!env\.FEATURE_AI_MODES/);assert.match(automaticConversationInstructions,/never a restriction/);});
+test('a real card removes only redundant preparation confirmations, not safety or useful questions',()=>{assert.equal(readyMeditationCopy('A short practice for focus. Would you like me to prepare it for you?','en',true),'A short practice for focus.');assert.equal(readyMeditationCopy('Это короткая практика. Если хочешь попробовать, дай знать!','ru',true),'Это короткая практика.');assert.equal(readyMeditationCopy('Stop if uncomfortable. What would help you next?','en',true),'Stop if uncomfortable. What would help you next?');assert.equal(readyMeditationCopy('Would you like me to prepare it?','en',false),'Would you like me to prepare it?');});
+test('action-copy cleanup preserves comfortable paragraph formatting and symbolic reading context',async()=>{assert.equal(readyMeditationCopy('First point.\n\nSecond point.','en',true),'First point.\n\nSecond point.');const {enforceCardClaimConsistency}=await import('./luna-ai-policy.js');assert.equal(enforceCardClaimConsistency('The reversed card here suggests a pause.','en',false,'tarot'),'The reversed card here suggests a pause.');assert.doesNotMatch(enforceCardClaimConsistency('I am showing the meditation card.','en',false,'tarot'),/showing the meditation/);});

@@ -4,7 +4,8 @@
   "postgres": "PostgreSQL 17.6 on x86_64-apple-darwin23.6.0, compiled by Apple clang version 16.0.0 (clang-1600.0.26.6), 64-bit",
   "migrations": {
     "20261017103831_luna41_cosmos_onboarding_state.sql": "01b6937882dc381c11454e0848aa27b3e60e6dc36d5808af80c4c28eb23124cb",
-    "20261017104405_luna41_preserve_chart_history_on_edit.sql": "0f5974bdb8f72aaae358f9acadaa58a9b165652f6c787d46afdce3e2a4501119"
+    "20261017104405_luna41_preserve_chart_history_on_edit.sql": "0f5974bdb8f72aaae358f9acadaa58a9b165652f6c787d46afdce3e2a4501119",
+    "20261017114215_luna41_navigation_observation.sql": "3477f041279e7245e09bb914885e2219a80c8d815983b7f313edc6edcd09b5c4"
   },
   "checks": [
     {
@@ -24,11 +25,23 @@
       "status": "PASS"
     },
     {
+      "name": "navigation observations bind owner, actual saved message, operation and destination; retries are idempotent",
+      "status": "PASS"
+    },
+    {
+      "name": "clients cannot forge observations via direct RPC or table writes even with fabricated claims",
+      "status": "PASS"
+    },
+    {
       "name": "editing birth details increments revision without deleting historical charts/reports",
       "status": "PASS"
     },
     {
       "name": "stale insert is rejected while new revision has a separate deterministic cache record",
+      "status": "PASS"
+    },
+    {
+      "name": "preference-only upsert preserves canonical birth data and historical chart/report records",
       "status": "PASS"
     },
     {
