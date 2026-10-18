@@ -12,7 +12,7 @@ export default function AstrologyHub(props:{language:AppLanguage;initData?:strin
  const editorial=useEditorialEntries();
  const [section,setSection]=useState<Section>(props.initialSection??'home'),[subject,setSubject]=useState<'self'|'other'|undefined>();
  const [profiles,setProfiles]=useState<BirthProfile[]|null>(null),[profilesError,setProfilesError]=useState(false),[retry,setRetry]=useState(0);
- useEffect(()=>{if(props.initialSection)setSection(props.initialSection);},[props.initialSection]);
+ useEffect(()=>{setSection(props.initialSection??'home');},[props.initialSection]);
  useEffect(()=>{if(section!=='home'&&section!=='calendar')return;registerBackHandler?.(section==='calendar'?()=>setSection('home'):null);return()=>registerBackHandler?.(null);},[section,registerBackHandler]);
  useEffect(()=>{root.current?.scrollIntoView({block:'start',behavior:'auto'});},[section]);
  useEffect(()=>{if(section!=='home')return;let active=true;setProfilesError(false);getBirthProfiles(initData).then(r=>{if(active)setProfiles(r.profiles);}).catch(()=>{if(active){setProfiles(null);setProfilesError(true);}});return()=>{active=false;};},[section,initData,retry]);

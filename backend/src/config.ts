@@ -87,7 +87,7 @@ const envSchema = z.object({
   LUNA30_MONTHLY_QUOTAS_ENABLED: envBoolean.default(false),
   OPENAI_API_KEY: z.string().min(1).optional(),
   AI_CHAT_MODEL: z.string().min(1).default('gpt-5-mini'),
-  AI_PROMPT_VERSION: z.enum(['luna43','intelligence-v1']).default('luna43'),
+  AI_PROMPT_VERSION: z.enum(['luna43','intelligence-v1','intelligence-v3']).default('luna43'),
   AI_CHAT_ENABLED: envBoolean.default(false),
   AI_MEMORY_ENABLED: envBoolean.default(true),
   AI_MAX_MESSAGES_PER_DAY: z.coerce.number().int().positive().default(8),

@@ -17,6 +17,10 @@ export function requestedSpread(message:string):IntelligenceSpread|null{
  * model tools; these patterns are not the sole language-understanding layer. */
 export function resolveIntelligenceCommand(message:string,active?:{type:string;kind?:IntelligenceSpread}):IntelligenceCommand|null{
  const text=message.normalize('NFKC').replace(/[’‘]/g,"'").replace(/\s+/g,' ').trim();
+ // An observable engine limitation is answered by the server, not delegated
+ // to prose that may offer unsupported rectification or alternative houses.
+ const missingBirthTime=/\bwithout\s+(?:(?:an?|the|exact|known)\s+){0,3}birth\s+time\b|\bbirth\s+time\s+(?:is\s+)?(?:unknown|missing|not known)\b|\b(?:don'?t|do not) know (?:my |the )?birth time\b|(?:без|нет|не знаю).{0,25}врем\S*.{0,15}рожд|врем\S*.{0,15}рожд\S*.{0,20}(?:неизвест|не знаю|не указан)/iu.test(text);
+ if(missingBirthTime&&/\b(?:houses?|ascendant)\b|(?<!\p{L})(?:дом(?:а|ов|ы|ах)?|асцендент\p{L}*)(?!\p{L})/iu.test(text))return{action:'capability.unavailable',input:{capability:'unknown_birth_time'},reason:'verified_birth_time_limitation'};
  const requested=text.replace(/(?:не хочу|не надо|не нужно|без|do not|don'?t want|not)\s+(?:таро|расклад\S*|tarot|(?:a )?reading)[^,.;!?]*(?:[,.;!?]|$)/giu,' ');
  // A named calculated system takes precedence over the ambiguous word "карта".
  // Opening a report is distinct from interpreting an already active one.

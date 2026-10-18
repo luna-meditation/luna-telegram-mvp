@@ -1,5 +1,6 @@
-// Package only the existing isolated QA site. No deployment or test worker.
-import {readFile,writeFile,cp,mkdir,mkdtemp,realpath} from 'node:fs/promises';
+// Package only the existing isolated QA site; paid test workers require a
+// separate finite owner-approved opt-in below. This script never deploys.
+import {readFile,writeFile,cp,mkdir,mkdtemp,realpath,readdir} from 'node:fs/promises';
 import {createRequire} from 'node:module';import {dirname,resolve} from 'node:path';import {fileURLToPath} from 'node:url';import {execFileSync} from 'node:child_process';import assert from 'node:assert/strict';
 import {createHash,randomBytes} from 'node:crypto';
 assert.equal(process.versions.node.split('.')[0],'22');
@@ -8,8 +9,8 @@ assert.equal(process.env.LUNA_STAGING_SOURCE_COMMIT,commit,'Commit verified sour
 execFileSync('git',['diff','--exit-code','HEAD','--','backend/src','backend/scripts','backend/test','frontend/src','frontend/scripts','frontend/index.html','supabase/migrations'],{cwd:source});
 const {build}=await import(createRequire(await realpath(source+'/frontend/node_modules/vite/package.json')).resolve('esbuild'));
 const luna43=process.env.LUNA43_STAGING_RELEASE==='true',luna42=luna43||process.env.LUNA42_STAGING_RELEASE==='true',luna41=luna42||process.env.LUNA41_STAGING_RELEASE==='true';
-const intelligence2=process.env.LUNA_INTELLIGENCE2_STAGING_RELEASE==='true';
-const intelligence=intelligence2||process.env.LUNA_INTELLIGENCE_STAGING_RELEASE==='true';
+const intelligence3=process.env.LUNA_INTELLIGENCE3_STAGING_RELEASE==='true',intelligence2=process.env.LUNA_INTELLIGENCE2_STAGING_RELEASE==='true';
+const intelligence=intelligence3||intelligence2||process.env.LUNA_INTELLIGENCE_STAGING_RELEASE==='true';
 const directory=await mkdtemp(luna43?'/tmp/luna43-staging.':luna41?'/tmp/luna41-staging.':'/tmp/luna40-staging.'),functions=directory+'/functions';await mkdir(functions);await mkdir(directory+'/.netlify');await cp(source+'/frontend/dist-staging',directory+'/public',{recursive:true});
 const index=await readFile(directory+'/public/index.html','utf8');assert.ok(!/offline-local-qa|window\.Telegram\?\?=/.test(index));
 // Published _redirects runs before TOML. Replace the app's generic SPA fallback
@@ -32,10 +33,12 @@ let actionAuthFile=null;
 let transcriptionAuthFile=null;
 let integrationAuthFile=null,integrationGrantId=null;
 if(intelligence){
- assert.equal(process.env.LUNA_INTELLIGENCE_QA_APPROVED,intelligence2?'60_responses_combined_usd0.50':'180_responses_combined_usd1');
+ assert.equal(process.env.LUNA_INTELLIGENCE_QA_APPROVED,intelligence3?'90_responses_8_stt_combined_usd0.75':intelligence2?'60_responses_combined_usd0.50':'180_responses_combined_usd1');
  assert.ok(!luna43&&!luna42&&!luna41,'Do not bundle historical paid workers with Intelligence');
  const nonce=randomBytes(32).toString('hex'),authSha256=createHash('sha256').update(nonce).digest('hex');expiresAt=new Date(Date.now()+8*3600000).toISOString();
- for(const readOnly of [false,true]){const name=readOnly?'luna-intelligence-status':'luna-intelligence-background';await build({...options,stdin:{contents:`import {run} from '${source}/backend/test/luna-intelligence-staging.mjs';export default async function(request,context){return run(request,context,${JSON.stringify({authSha256,expiresAt,sourceCommit:commit,readOnly,...(intelligence2?{program:'intelligence2'}:{})})});}${readOnly?'':'export const config={background:true};'}`,resolveDir:source,sourcefile:name+'.mjs'},outfile:functions+'/'+name+'.mjs'});}
+ const samples=intelligence3?JSON.parse(await readFile(process.env.LUNA3_VOICE_SAMPLES,'utf8')):[];
+ if(intelligence3){assert.equal(samples.length,5);for(const sample of samples)assert.equal(createHash('sha256').update(Buffer.from(sample.base64,'base64')).digest('hex'),sample.sha256);}
+ for(const readOnly of [false,true]){const name=readOnly?'luna-intelligence-status':'luna-intelligence-background';await build({...options,stdin:{contents:`import {run} from '${source}/backend/test/luna-intelligence-staging.mjs';export default async function(request,context){return run(request,context,${JSON.stringify({authSha256,expiresAt,sourceCommit:commit,readOnly,...(intelligence3?{program:'intelligence3',samples:readOnly?[]:samples}:intelligence2?{program:'intelligence2'}:{})})});}${readOnly?'':'export const config={background:true};'}`,resolveDir:source,sourcefile:name+'.mjs'},outfile:functions+'/'+name+'.mjs'});}
  authFile=directory+'/luna-intelligence-command-private.json';await writeFile(authFile,JSON.stringify({nonce,expiresAt}),{mode:0o600,flag:'wx'});
 }
 if(luna43){
@@ -105,4 +108,4 @@ if(process.env.LUNA40_SMOKE_APPROVED==='owner-4-calls-usd0.03'){
 }
 const staging=await readFile(source+'/staging/netlify.toml','utf8');await writeFile(directory+'/netlify.toml','[build]\n publish="public"\n[functions]\n directory="functions"\n node_bundler="esbuild"\n'+staging.slice(staging.indexOf('[[headers]]')));
 await writeFile(process.env.LUNA_STAGING_ARTIFACT_LOCATION??'/tmp/luna40-staging-location.json',JSON.stringify({directory,functions,sourceCommit:commit,authFile,evaluationAuthFile,voiceAuthFile,actionAuthFile,transcriptionAuthFile,integrationAuthFile,integrationGrantId,expiresAt}),{mode:0o600});
-console.log(JSON.stringify({status:'PACKAGED_NOT_DEPLOYED',directory,sourceCommit:commit,functions:['luna-staging',...(authFile?['luna40-qa-background']:[]),...(evaluationAuthFile?['luna41-qa-background','luna41-qa-status']:[]),...(voiceAuthFile?['luna41-voice-background','luna41-voice-status']:[]),...(actionAuthFile?['luna41-action-background','luna41-action-status']:[]),...(transcriptionAuthFile?['luna42-transcription-background','luna42-transcription-status']:[])],secretsEmbedded:false}));
+console.log(JSON.stringify({status:'PACKAGED_NOT_DEPLOYED',directory,sourceCommit:commit,siteId:'a634a7fc-1ecb-47fa-8b43-edd81a7e3694',functions:(await readdir(functions)).filter(file=>file.endsWith('.mjs')).map(file=>file.slice(0,-4)).sort(),secretsEmbedded:false}));

@@ -1,23 +1,28 @@
-import { ArrowUpRight, Flame, Flower2, NotebookPen, Sprout } from 'lucide-react';
+import { ArrowUpRight, ChevronRight, Flame, Flower2, NotebookPen, Sprout, Orbit, Crown, Users, Settings, type LucideIcon } from 'lucide-react';
 import type { AppLanguage, ProfileStats } from '../api';
 import { luna2Copy } from './copy';
 import { SectionBack } from './ExplorePage';
 
-export function ProfileOverview({ language, profile, onWallet, onJourney, onActivity, onAchievements }: {
+export function ProfileOverview({ language, profile, onWallet, onJourney, onActivity, onAchievements, onCosmos, onMembership, onInvite, onSettings }: {
   language: AppLanguage; profile: ProfileStats | null; onWallet: () => void; onJourney: () => void; onGarden: () => void; onActivity: () => void; onAchievements: () => void;
+  onCosmos?:()=>void;onMembership?:()=>void;onInvite?:()=>void;onSettings?:()=>void;
 }) {
   const t = luna2Copy[language];
   const seeds = profile ? (profile.moonSeedsAvailable ?? profile.moonSeeds ?? 0) : '—';
-  return <section className="luna2-profile-overview" aria-label={t.journey}>
+  const en=language==='en';
+  const rows:Array<{id:string;icon:LucideIcon;title:string;description?:string;action:()=>void}>=[];
+  if(onCosmos)rows.push({id:'cosmos',icon:Orbit,title:en?'My Universe':'Мой космос',description:en?'Your story, discoveries and memory':'Твоя история, открытия и память',action:onCosmos});
+  if(onMembership)rows.push({id:'membership',icon:Crown,title:en?'Membership & Moon Seeds':'Подписка и Moon Seeds',action:onMembership});
+  rows.push({id:'journal',icon:NotebookPen,title:en?'My journal':'Мой дневник',action:onActivity},{id:'journey',icon:Flame,title:en?'Achievements & journey':'Достижения и путь',action:onJourney});
+  if(onInvite)rows.push({id:'invite',icon:Users,title:en?'Invite friends':'Пригласить друзей',action:onInvite});
+  if(onSettings)rows.push({id:'settings',icon:Settings,title:en?'Settings':'Настройки',action:onSettings});
+  return <section className="luna2-profile-overview luna-design3-profile" aria-label={en?'Your Luna':'Твоя Luna'}>
     <div className="premium-profile-stats">
       <button onClick={onWallet}><strong>{seeds}</strong><small>Moon Seeds</small></button>
-      <button onClick={onJourney}><strong>{profile?.currentWeek?.activeDays??'—'}</strong><small>{language==='en'?'Active days · week':'Активных дней · неделя'}</small></button>
+      <button onClick={onJourney}><strong>{profile?.currentStreak??'—'}</strong><small>{en?'Day streak':'Дней подряд'}</small></button>
       <button onClick={onAchievements}><strong>{profile?.achievements?.unlocked??'—'}</strong><small>{t.achievements}</small></button>
     </div>
-    <div className="premium-profile-links">
-      <button type="button" className="premium-profile-link luna2-activity-entry" onClick={onActivity}><NotebookPen size={23}/><span><strong>{language==='en'?'My journal':'Мой дневник'}</strong><small>{t.activityBody}</small></span><ArrowUpRight size={18}/></button>
-      <button type="button" className="premium-profile-link luna2-journey-entry" onClick={onJourney}><Flame size={23}/><span><strong>{language==='en'?'Achievements & journey':'Достижения и путь'}</strong><small>{t.streak}: {profile?.currentStreak??'—'} {t.days}</small></span><ArrowUpRight size={18}/></button>
-    </div>
+    <nav className="luna-design3-profile-links" aria-label={en?'Profile destinations':'Разделы профиля'}>{rows.map(({id,icon:Icon,title,description,action})=><button type="button" key={id} data-profile-destination={id} className={`luna-design3-profile-row ${id==='cosmos'?'is-primary':''}`} onClick={action}><span className="luna-design3-row-icon"><Icon size={22}/></span><span><strong>{title}</strong>{description&&<small>{description}</small>}</span><ChevronRight size={18}/></button>)}</nav>
   </section>;
 }
 
