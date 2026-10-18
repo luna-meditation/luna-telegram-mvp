@@ -1,8 +1,10 @@
 import {OptimizedImage,imageSource} from './design-system/components/OptimizedImage';
+import {observeAudioFocus,requestAudioFocus} from './audioFocus';
 import './luna34.css';
 import {useLanguagePreference} from './localization/useLanguagePreference';
 import type {LanguageMode} from './localization/languagePreference';
 import {resolveLunaDestination} from '../../backend/src/luna41-navigation';
+import {cosmosAreas} from '../../backend/src/luna41-cosmos-policy';
 import {useDestinationObservation} from './navigation/useDestinationObservation';
 import {admin40Enabled} from './admin/admin40';
 import {ReferralWelcome,ReferralPanel} from './features/membership/ReferralPanel';
@@ -144,6 +146,8 @@ import { useAppRouteState } from './navigation/useAppRouteState';
 import { createTarotSession, reduceTarotSession } from './features/tarot/session';
 import { formatMeditationDuration } from './utils/duration';
 import { breathCycleSeconds, breathPhaseAt, breathPhaseLabel, breathPractices, type BreathPracticeId } from './features/breathing/practices';
+import {useEditorialLoader} from './editorial';
+import {useBreathPractices} from './features/breathing/editorialPractices';
 import { HomeV2 } from './v2/pages/HomeV2';
 import { ExplorePage, FeaturePreview, SectionBack, type ExploreCategory } from './luna2/ExplorePage';
 import { ProfileOverview } from './luna2/ProfileOverview';
@@ -1805,6 +1809,7 @@ function App() {
   const runtimeDiagnostics = useRuntimeDiagnostics();
   const user = telegram?.initDataUnsafe.user ?? fallbackUser;
   const initData = telegram?.initData;
+  useEditorialLoader(initData);
   useEffect(()=>{if(initData)void recordLuna35Launch(initData).catch(()=>undefined);},[initData]);
   const launchStartParam = miniAppStartParam();
   const launchDestination=parseLaunchDestination(launchStartParam).destination;
@@ -1825,6 +1830,8 @@ function App() {
   const [tarotSession, tarotDispatch] = useReducer(reduceTarotSession, undefined, ()=>({...createTarotSession(),...(launchDestination==='daily'?{screen:'daily' as const}:{})}));
   const [aiReadingId,setAiReadingId]=useState<string|undefined>();
   const [aiChartId,setAiChartId]=useState<string|import('./api').AstrologyChatAttachment|undefined>();
+  const [cosmosDiscussion,setCosmosDiscussion]=useState<{area:string;key:string}|undefined>();
+  const [conversationEntry,setConversationEntry]=useState<string|undefined>();
   const [astrologyEntry,setAstrologyEntry]=useState<'natal'|'compatibility'|'profiles'|undefined>(launchDestination==='natal'||launchDestination==='compatibility'?launchDestination:undefined);
   useEffect(()=>{const discuss=(event:Event)=>{const detail=(event as CustomEvent).detail,id=detail?.chartId;if(!featureFlags.astrology||typeof id!=='string'||!/^[-a-f0-9]{36}$/.test(id))return;setAiReadingId(undefined);setAiChartId(detail);};window.addEventListener('luna-discuss-chart',discuss);return()=>window.removeEventListener('luna-discuss-chart',discuss);},[]);
   const [tarotSetupKey,setTarotSetupKey]=useState(0);
@@ -1884,11 +1891,13 @@ function App() {
   const [access, setAccess] = useState<AccessState>(() => initialAccountCache?.access ?? { hasPremium: false, plan: 'Free' });
   const [profile, setProfile] = useState<ProfileStats | null>(() => initialAccountCache?.profile ?? null);
   const [profileNestedActive, setProfileNestedActive] = useState(false);
-  const [profileEntry, setProfileEntry] = useState<ProfileSettingsView>(launchDestination==='invite'?'invite':'main');
+  const [profileEntry, setProfileEntry] = useState<ProfileSettingsView>(launchDestination==='invite'?'invite':launchDestination==='meet'?'meet':launchDestination==='cosmos'?'universe':'main');
   useDestinationObservation(initData);
   useEffect(()=>{const open=(event:Event)=>{const destination=resolveLunaDestination((event as CustomEvent).detail?.destination,featureFlags);if(!destination)return;if(destination.page==='profile'){setProfileEntry('profileView' in destination?destination.profileView:'main');navigatePrimary('profile');return;}if(destination.page==='astrology')setAstrologyEntry('astrologySection' in destination?destination.astrologySection:undefined);if('tarotScreen' in destination)tarotDispatch({type:'screen',value:destination.tarotScreen});if(destination.id==='daily')tarotDispatch({type:'screen',value:'daily'});setPage(destination.page);};window.addEventListener('luna-open-destination',open);return()=>window.removeEventListener('luna-open-destination',open);},[setPage,navigatePrimary]);
   useEffect(()=>{if(!featureFlags.ai_central_experience)return;const activity=()=>setPage('activity'),astrology=(event:Event)=>{const value=(event as CustomEvent).detail?.section;setAstrologyEntry(value==='natal'||value==='compatibility'?value:undefined);setPage('astrology');};window.addEventListener('luna-open-activity',activity);window.addEventListener('luna-open-astrology',astrology);return()=>{window.removeEventListener('luna-open-activity',activity);window.removeEventListener('luna-open-astrology',astrology);};},[setPage]);
   useEffect(()=>{const open=()=>{if(!featureFlags.personal_memory)return;setProfileEntry('universe');navigatePrimary('profile');};window.addEventListener('luna-open-universe',open);return()=>window.removeEventListener('luna-open-universe',open);},[navigatePrimary]);
+  useEffect(()=>{const discuss=(event:Event)=>{const area=(event as CustomEvent).detail?.area;if(!featureFlags.cosmos_v2||!cosmosAreas.some(item=>item.id===area))return;setAiReadingId(undefined);setAiChartId(undefined);setCosmosDiscussion({area,key:crypto.randomUUID()});navigatePrimary('luna');};window.addEventListener('luna-discuss-cosmos',discuss);return()=>window.removeEventListener('luna-discuss-cosmos',discuss);},[navigatePrimary]);
+  useEffect(()=>{const open=(event:Event)=>{const id=(event as CustomEvent).detail?.id;if(!featureFlags.cosmos_v2||typeof id!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(id))return;setAiReadingId(undefined);setAiChartId(undefined);setCosmosDiscussion(undefined);setConversationEntry(id);navigatePrimary('luna');};window.addEventListener('luna-open-conversation',open);return()=>window.removeEventListener('luna-open-conversation',open);},[navigatePrimary]);
   const [personalDisplayName, setPersonalDisplayName] = useState<string|null>(null);
   useEffect(()=>{if(page!=='profile')setProfileEntry('main');},[page]);
   useEffect(()=>{
@@ -2337,6 +2346,7 @@ function App() {
         audio.volume = sceneVolume;
       }
       if (shouldContinuePlaying && audio) {
+        requestAudioFocus('soundscape',audio);
         void audio.play().then(() => setScenePlaying(true)).catch(() => setScenePlaying(false));
       }
     }
@@ -2389,6 +2399,7 @@ function App() {
     audio.volume = sceneVolume;
 
     if (audio.paused) {
+      requestAudioFocus('soundscape',audio);
       try{setSceneAudioError(false);await audio.play();setScenePlaying(true);}catch{setScenePlaying(false);setSceneAudioError(true);}
       return;
     }
@@ -2489,6 +2500,7 @@ function App() {
     audio.volume = moonGardenVolume;
 
     if (audio.paused) {
+      requestAudioFocus('garden-ambience',audio);
       sceneAudioRef.current?.pause();
       setScenePlaying(false);
       setMoonGardenAmbienceError(false);
@@ -2530,7 +2542,7 @@ function App() {
   };
 
   const [breathLaunch,setBreathLaunch]=useState<{practiceId:BreathPracticeId;minutes:number;key:number}|null>(null);
-  useEffect(()=>{const pause=()=>{sceneAudioRef.current?.pause();setScenePlaying(false);moonGardenAudioRef.current?.pause();setMoonGardenAmbiencePlaying(false);};window.addEventListener('luna-practice-audio-focus',pause);return()=>window.removeEventListener('luna-practice-audio-focus',pause);},[]);
+  useEffect(()=>{const scene=observeAudioFocus('soundscape',()=>{sceneAudioRef.current?.pause();setScenePlaying(false);}),garden=observeAudioFocus('garden-ambience',()=>{moonGardenAudioRef.current?.pause();setMoonGardenAmbiencePlaying(false);});return()=>{scene();garden();};},[]);
   const openBreathCircle = () => {
     setBreathLaunch(null);
     telegram?.HapticFeedback?.impactOccurred('light');
@@ -3042,9 +3054,11 @@ function App() {
             onTarot={featureFlags.new_navigation&&featureFlags.tarot_daily?()=>setPage('tarot'):undefined}
             readingContextId={aiReadingId}
             chartContextId={aiChartId}
+            cosmosDiscussion={cosmosDiscussion}
+            conversationEntry={conversationEntry}
             tarotSetupKey={tarotSetupKey}
             registerBackHandler={registerTarotBackHandler}
-            onClearReadingContext={()=>{setAiReadingId(undefined);setAiChartId(undefined);}}
+            onClearReadingContext={()=>{setAiReadingId(undefined);setAiChartId(undefined);setCosmosDiscussion(undefined);setConversationEntry(undefined);}}
           />
         </Suspense>)}
 
@@ -3455,6 +3469,8 @@ function LunaPage({
   onTarot,
   readingContextId,
   chartContextId,
+  cosmosDiscussion,
+  conversationEntry,
   tarotSetupKey,
   onClearReadingContext,
   registerBackHandler
@@ -3469,6 +3485,8 @@ function LunaPage({
   onTarot?:()=>void;
   readingContextId?:string;
   chartContextId?:string|import('./api').AstrologyChatAttachment;
+  cosmosDiscussion?:{area:string;key:string};
+  conversationEntry?:string;
   tarotSetupKey?:number;
   onClearReadingContext?:()=>void;
   registerBackHandler?:(handler:(()=>void)|null)=>void;
@@ -3487,6 +3505,8 @@ function LunaPage({
       redesigned={featureFlags.new_navigation}
       readingContextId={readingContextId}
       chartContextId={chartContextId}
+      cosmosDiscussion={cosmosDiscussion}
+      conversationEntry={conversationEntry}
       tarotSetupKey={tarotSetupKey}
       onClearReadingContext={onClearReadingContext}
       registerBackHandler={registerBackHandler}
@@ -4289,6 +4309,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, favoritePending, onF
       syncProgress();
     };
     const played = () => {
+      requestAudioFocus('meditation',audio);
       onPlaybackStart?.();
       void ensurePlaybackSession();
       setPlaying(true);
@@ -4547,13 +4568,19 @@ function BreathCirclePage({
   const [savingError, setSavingError] = useState('');
   const startedAtRef = useRef<number | null>(launch?Date.now():null);
   const [sessionStarted, setSessionStarted] = useState(Boolean(launch));
-  const breathAudio=useBreathAudio(redesigned&&featureFlags.breathwork_audio,language,featureFlags.breathwork_guided);
-  useEffect(()=>{if(launch)breathAudio.start();},[]);
+  const breathAudio=useBreathAudio(redesigned&&featureFlags.breathwork_audio,language,featureFlags.breathwork_guided,()=>setRunning(false));
   useEffect(()=>{if(!running)breathAudio.pause();},[running]);
   const durationSeconds = minutes * 60;
-  const practice = breathPractices.find((item) => item.id === mode) ?? breathPractices[0];
+  const currentPractices=useBreathPractices();
+  const selectedPractice=currentPractices.find(item=>item.id===mode)??currentPractices[0];
+  // An editor publishing while this screen is open cannot change an active
+  // session's timing. Pause/resume uses the same snapshot until reset.
+  const practiceSnapshot=useRef(selectedPractice);
+  if(!sessionStarted)practiceSnapshot.current=selectedPractice;
+  const practice=practiceSnapshot.current;
+  useEffect(()=>{if(launch)breathAudio.start(practice);},[]);
   const phase = breathPhaseAt(practice, elapsed);
-  useEffect(()=>{breathAudio.cue(mode,elapsed,running);},[mode,elapsed,running,language,breathAudio.mode]);
+  useEffect(()=>{breathAudio.cue(practice,elapsed,running);},[practice,elapsed,running,language,breathAudio.mode]);
   const hasStarted = (redesigned ? sessionStarted : elapsed > 0) && !done;
   const proof=useRef<{clientId:string;promise?:Promise<{id:string}>;previous?:Promise<unknown>}>({clientId:crypto.randomUUID()});
   const ensureProof=()=>{const current=proof.current;return current.promise??(current.promise=Promise.resolve(current.previous).then(()=>startVerifiedBreath(current.clientId,mode,durationSeconds,initData)));};
@@ -4565,7 +4592,6 @@ function BreathCirclePage({
     const beat=(active:boolean)=>void session.then(value=>heartbeatVerifiedBreath(value.id,active,initData)).catch(()=>{if(alive)setSavingError(copy[language].breathSaveError);});
     beat(true);const timer=window.setInterval(()=>beat(true),5000);
     const hidden=()=>{if(document.visibilityState==='hidden')setRunning(false);};document.addEventListener('visibilitychange',hidden);
-    window.dispatchEvent(new Event('luna-practice-audio-focus'));
     return()=>{alive=false;window.clearInterval(timer);document.removeEventListener('visibilitychange',hidden);beat(false);};
   },[running,mode,durationSeconds,initData]);
 
@@ -4588,7 +4614,7 @@ function BreathCirclePage({
 
   const startOrResume = () => {
     if(done||!sessionStarted)resetProof();
-    breathAudio.start();
+    breathAudio.start(practice);
     const resumeElapsed = done ? 0 : elapsed;
     setSavingError('');
     setDone(false);
@@ -4607,6 +4633,7 @@ function BreathCirclePage({
     setSavingError('');
     startedAtRef.current = null;
     setSessionStarted(false);
+    breathAudio.reset();
   };
 
   return (
@@ -4643,13 +4670,13 @@ function BreathCirclePage({
         </div>
       </section>
 
-      {redesigned && <BreathAudioModes language={language} featureEnabled={featureFlags.breathwork_audio} guidedAvailable={featureFlags.breathwork_guided} mode={breathAudio.mode} onMode={mode=>breathAudio.setMode(mode,running)} volume={breathAudio.volume} onVolume={breathAudio.setVolume} muted={breathAudio.muted} onMute={()=>breathAudio.setMuted(value=>!value)} error={breathAudio.error}/>}
+      {redesigned && <BreathAudioModes language={language} featureEnabled={featureFlags.breathwork_audio} guidedAvailable={featureFlags.breathwork_guided} mode={breathAudio.mode} onMode={mode=>breathAudio.setMode(mode,running)} volume={breathAudio.volume} onVolume={breathAudio.setVolume} voiceVolume={breathAudio.voiceVolume} onVoiceVolume={breathAudio.setVoiceVolume} muted={breathAudio.muted} onMute={()=>breathAudio.setMuted(value=>!value)} error={breathAudio.error}/>}
 
       <section className="breath-circle-controls">
         {redesigned?<PracticePicker value={mode} onChange={setMode} disabled={running||hasStarted} language={language} registerBackHandler={registerBackHandler}/>:<label className="breath-practice-select">
           <span>{language === 'en' ? 'Practice' : 'Практика'}</span>
           <select value={mode} onChange={(event) => setMode(event.currentTarget.value as BreathMode)} disabled={running || hasStarted} aria-label={language === 'en' ? 'Breathing practice' : 'Дыхательная практика'}>
-            {breathPractices.map((item) => <option key={item.id} value={item.id}>{item.name[language]} — {item.timing[language]}</option>)}
+            {currentPractices.map((item) => <option key={item.id} value={item.id}>{item.name[language]} — {item.timing[language]}</option>)}
           </select>
         </label>}
         <details className="breath-practice-guide">
@@ -5132,7 +5159,7 @@ function resizeAvatarImage(file: File) {
   });
 }
 
-type ProfileSettingsView = 'main' | 'settings' | 'appearance' | 'goals' | 'notifications' | 'language' | 'subscription' | 'privacy' | 'privacy-policy' | 'support' | 'terms' | 'disclaimer' | 'personalization' | 'universe' | 'invite';
+type ProfileSettingsView = 'main' | 'settings' | 'appearance' | 'goals' | 'notifications' | 'language' | 'subscription' | 'privacy' | 'privacy-policy' | 'support' | 'terms' | 'disclaimer' | 'personalization' | 'universe' | 'meet' | 'invite';
 type RestoreState = 'idle' | 'loading' | 'success' | 'empty' | 'error';
 
 const APP_VERSION = import.meta.env.VITE_APP_VERSION ?? '0.1.0';
@@ -5292,7 +5319,7 @@ function ProfilePage({
       else if (avatarActionsOpen) setAvatarActionsOpen(false);
       else if (statusProgressionOpen) setStatusProgressionOpen(false);
       else if(['privacy-policy','terms','disclaimer'].includes(view))setView('privacy');
-      else if(view==='universe'&&universeBackRef.current?.())return;
+      else if((view==='universe'||view==='meet')&&universeBackRef.current?.())return;
       else setView(view==='settings'||view==='subscription'||view==='universe'||view==='invite'||(view==='personalization'&&initialView==='personalization')?'main':'settings');
     };
 
@@ -5481,7 +5508,7 @@ function ProfilePage({
       <ProfileSettingsRow icon={CreditCard} title={language==='en'?'Manage subscription':'Управление подпиской'} value={localizedPlanStatus} onClick={()=>setView('subscription')}/>
     </section>
   </ProfileChildScreen>;
-  if (view === 'universe'&&featureFlags.personal_memory) return <ProfileChildScreen title={language==='en'?'My Universe':'Мой космос'} onBack={()=>{if(!universeBackRef.current?.())setView('main');}} language={language}><MyUniverse language={language} initData={initData} firstName={firstName} onAstrology={onAstrology} onReading={onReading} goalOptions={profileGoalOptions} onBackChange={handler=>{universeBackRef.current=handler;}}/></ProfileChildScreen>;
+  if ((view === 'universe'||view==='meet')&&featureFlags.personal_memory) return <ProfileChildScreen title={language==='en'?'My Universe':'Мой космос'} onBack={()=>{if(!universeBackRef.current?.())setView('main');}} language={language}><MyUniverse key={view} startMeet={view==='meet'} language={language} initData={initData} firstName={firstName} onAstrology={onAstrology} onReading={onReading} goalOptions={profileGoalOptions} onBackChange={handler=>{universeBackRef.current=handler;}}/></ProfileChildScreen>;
   if (view === 'personalization') return <ProfileChildScreen title={language==='en'?'Personal Luna profile':'Личный профиль Luna'} onBack={()=>setView(initialView==='personalization'?'main':'settings')} language={language}><PersonalizationSettings language={language} firstName={firstName} initData={initData} onLanguageChange={onLanguageChange} onClose={()=>setView(initialView==='personalization'?'main':'settings')}/></ProfileChildScreen>;
 
 

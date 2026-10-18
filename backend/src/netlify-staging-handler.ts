@@ -11,10 +11,10 @@ let adapter: ReturnType<typeof serverless> | undefined;
 const runtimeKeys = [
   'BOT_TOKEN','BOT_USERNAME','MINI_APP_URL','FRONTEND_ORIGIN',
   'SUPABASE_URL','SUPABASE_SERVICE_ROLE_KEY','OPENAI_API_KEY',
-  'STAGING_MODE','STAGING_HOST','STAGING_SETUP_QA_BOT','STAGING_SUPABASE_PROJECT_REF','STAGING_TELEGRAM_IDS',
+  'STAGING_MODE','STAGING_HOST','STAGING_SETUP_QA_BOT','STAGING_SUPABASE_PROJECT_REF','STAGING_TELEGRAM_IDS','STAGING_VOICE_QA_GRANT_ID',
   'RUN_MIGRATIONS','ALLOW_UNVERIFIED_TELEGRAM_WEBAPP','REMINDER_SCHEDULER_ENABLED',
   'FEATURE_GARDEN_ATOMIC','FEATURE_PERSONALIZATION','FEATURE_PERSONAL_MEMORY','FEATURE_AI_MODES',
-  'FEATURE_ADMIN_V4','FEATURE_ADMIN_V4_MUTATIONS','FEATURE_COSMOS_V2',
+  'FEATURE_ADMIN_V4','FEATURE_ADMIN_V4_MUTATIONS','FEATURE_COSMOS_V2','FEATURE_AI_VOICE_INPUT',
   'FEATURE_AI_CENTRAL_EXPERIENCE','FEATURE_TAROT_SPREAD_AI_QA',
   'STAGING_TAROT_AI_QA_OWNER_ID','STAGING_TAROT_AI_QA_GRANT_ID',
   'FEATURE_TAROT_HISTORY','FEATURE_TAROT_AI','FEATURE_DAILY_CARD_V2','FEATURE_ECONOMY_REWARDS_V2',
@@ -73,7 +73,7 @@ export async function netlifyStagingHandler(request: Request, context: StagingCo
   if (path !== '/health' && path !== '/api' && !path.startsWith('/api/') && !path.startsWith('/telegram/')) {
     return Response.json({code:'not_found'},{status:404,headers:{'Cache-Control':'private, no-store'}});
   }
-  const body = await boundedBody(request,path==='/api/admin/v4/media'?4*1024*1024:128*1024);
+  const body = await boundedBody(request,path==='/api/admin/v4/media'?4*1024*1024:/^\/api\/luna\/voice\/[a-f0-9-]{36}$/.test(path)?1450*1024:128*1024);
   if (!body) return Response.json({code:'request_too_large'},{status:413});
   if (!adapter) {
     try {

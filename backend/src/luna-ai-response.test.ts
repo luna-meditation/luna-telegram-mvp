@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {FoundationError} from './foundation-error.js';
 
 process.env.BOT_TOKEN = 'test-bot-token';
 process.env.BOT_USERNAME = 'luna_test_bot';
@@ -23,6 +24,8 @@ test('classifies retryable and permanent request failures', () => {
   assert.deepEqual(classifyLunaFailure(new LunaAiError('timeout', 'timeout', 504)), { code: 'timeout', retryable: true });
   assert.deepEqual(classifyLunaFailure(new LunaAiError('openai_auth', 'auth', 502)), { code: 'openai_auth', retryable: false });
   assert.deepEqual(classifyLunaFailure(new LunaAiError('quota_exhausted', 'limit', 429)), { code: 'quota_exhausted', retryable: false });
+  assert.deepEqual(classifyLunaFailure(new FoundationError(503,'tool_execution_failed','Failed read')), {code:'tool_execution_failed',retryable:true});
+  assert.deepEqual(classifyLunaFailure(new FoundationError(422,'tool_context_required','Choose context')), {code:'tool_context_required',retryable:false});
 });
 
 test('extracts Responses API output_text', () => {

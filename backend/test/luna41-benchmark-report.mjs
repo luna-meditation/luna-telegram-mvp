@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';import {readFile,writeFile} from 'node:f
 import {createLunaTools} from '../src/luna32-tools.ts';import {luna41EvalCases} from './luna41-eval-cases.mjs';
 import {safeAssistantProse} from '../src/luna31-consultation.ts';
 const source=process.env.LUNA41_BENCHMARK_OUT??'/tmp/luna41-benchmark',row=JSON.parse(await readFile(source+'/results.json','utf8')),result=row.result;
-assert.ok(result.providerCalls<=400&&result.spentMicrousd+result.heldMicrousd<=2000000);assert.equal(new Set(result.results.map(r=>r.caseId+':'+r.model)).size,result.results.length);
+assert.ok(result.providerCalls<=(result.dataset==='luna42-100-paired-provider-decisions'?300:400)&&result.spentMicrousd+result.heldMicrousd<=2000000);assert.equal(new Set(result.results.map(r=>r.caseId+':'+r.model)).size,result.results.length);
 const definitions=createLunaTools({db:{},owner:40001,operationKey:'offline-analysis',language:'en',readingContext:null,catalog:[],personalContext:null,access:{},quota:async()=>({}),astrologyEnabled:true,navigation:{personal_memory:true,tarot_daily:true},commerce:{read:async()=>({}),eligibility:async()=>({})}}).definitions;
 function matches(value,schema){
  if(schema.type==='object')return value!==null&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).every(k=>Object.hasOwn(schema.properties,k))&&schema.required.every(k=>Object.hasOwn(value,k))&&Object.entries(value).every(([key,item])=>matches(item,schema.properties[key]));
@@ -15,8 +15,8 @@ const models=result.availability.map(({model})=>{
  const all=result.results.filter(r=>r.model===model),completed=all.filter(r=>r.status==='completed'),calls=completed.flatMap(r=>r.calledTools),latency=completed.map(r=>r.latencyMs);
  const valid=calls.filter(c=>{try{const d=definitions.find(d=>d.name===c.name);return d&&matches(JSON.parse(c.arguments),d.parameters);}catch{return false;}});
  let structured=0,proseRejected=0;for(const r of completed.filter(r=>r.answer)){let text=r.answer;try{const value=JSON.parse(r.answer);if(typeof value.message==='string'||typeof value.reply==='string'){structured++;text=value.message??value.reply;}}catch{/* Plain text is kept as an observed format. */}try{safeAssistantProse(text,r.language);}catch{proseRejected++;}}
- return{model,providerAttempts:all.length,completedResponses:completed.length,providerPolicyDeclines:all.filter(r=>r.status==='provider_policy_blocked').length,
-  pairedCasesObserved:new Set(all.map(r=>r.caseId)).size,knownUsageCostMicrousd:completed.reduce((a,r)=>a+r.costMicrousd,0),unsettledCostHoldMicrousd:all.reduce((a,r)=>a+(r.costUnknownHoldMicrousd??0),0),
+ return{model,providerAttempts:all.length,completedResponses:completed.length,providerPolicyDeclines:all.filter(r=>['provider_policy_blocked','terminal_policy_decline'].includes(r.status)).length,
+  pairedCasesObserved:new Set(all.map(r=>r.caseId)).size,knownUsageCostMicrousd:completed.reduce((a,r)=>a+r.costMicrousd,0),unsettledCostHoldMicrousd:all.reduce((a,r)=>a+(r.costUnknownHoldMicrousd??r.heldMicrousd??0),0)+(result.activeCall?.model===model?result.activeCall.ceiling:0),
   inputTokens:completed.reduce((a,r)=>a+r.inputTokens,0),cachedInputTokens:completed.reduce((a,r)=>a+r.cachedInputTokens,0),cacheWriteTokens:completed.reduce((a,r)=>a+r.cacheWriteTokens,0),outputTokens:completed.reduce((a,r)=>a+r.outputTokens,0),
   medianFirstDecisionLatencyMs:percentile(latency,.5),p95FirstDecisionLatencyMs:percentile(latency,.95),toolCalls:calls.length,validToolArguments:valid.length,invalidToolArguments:calls.length-valid.length,
   strictExpectedSelectionMatches:completed.filter(r=>r.toolSelectionMatch).length,strictExpectedSelectionDenominator:completed.length,textResponses:completed.filter(r=>r.answer).length,observedStructuredTextResponses:structured,

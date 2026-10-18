@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url';
 assert.equal(process.versions.node.split('.')[0], '22', 'Use Node.js 22');
 const frontend = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const tarotPreview = process.argv.includes('--tarot');
-const luna41Preview=process.argv.includes('--luna41');
+const luna42Preview=process.argv.includes('--luna42');
+const luna41Preview=luna42Preview||process.argv.includes('--luna41');
 const luna40Preview=luna41Preview||process.argv.includes('--luna40');
 const luna34Preview=luna40Preview||process.argv.includes('--luna34');
 const luna33Preview=luna34Preview||process.argv.includes('--luna33');
@@ -24,9 +25,10 @@ const productionFlags=process.argv.includes('--production-flags');
 const refinementPreview=process.argv.includes('--refinement')||luna21Preview;
 const legacyPreview = process.argv.includes('--legacy');
 assert.ok(!(tarotPreview&&legacyPreview),'Choose either Tarot or legacy preview');
-const outputDirectory = luna41Preview?'dist-luna41-preview':luna40Preview?'dist-staging':luna34Preview?'dist-luna34-preview':luna33Preview?'dist-luna33-preview':luna32Preview?'dist-luna32-preview':luna31Preview?'dist-luna31-preview':evolutionPreview?'dist-luna30-preview':centralPreview?'dist-luna24-preview':memoryPreview?'dist-memory-preview':productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
+const outputDirectory = luna42Preview?'dist-luna42-preview':luna41Preview?'dist-luna41-preview':luna40Preview?'dist-staging':luna34Preview?'dist-luna34-preview':luna33Preview?'dist-luna33-preview':luna32Preview?'dist-luna32-preview':luna31Preview?'dist-luna31-preview':evolutionPreview?'dist-luna30-preview':centralPreview?'dist-luna24-preview':memoryPreview?'dist-memory-preview':productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
 const output = resolve(frontend, outputDirectory);
 process.env.VITE_FEATURE_COSMOS_V2=luna41Preview?'true':'false';
+process.env.VITE_FEATURE_AI_VOICE_INPUT=luna42Preview?'true':'false';
 process.env.VITE_FEATURE_ADMIN_V4=luna40Preview?'true':'false';
 process.env.VITE_FEATURE_BREATHWORK_GUIDED=luna41Preview?'true':'false';
 const flagNames = ['AI_CENTRAL_EXPERIENCE','PERSONAL_MEMORY','NEW_NAVIGATION','TAROT_DAILY','TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI','DAILY_CARD_V2','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2'];
@@ -49,6 +51,10 @@ const astrology=evolutionPreview?{
  ...(luna34Preview?{...await import('../../backend/dist/luna34-achievements.js'),...await import('../../backend/dist/luna34-commercial-catalog.js'),...await import('../../backend/dist/luna34-conversation.js')}: {})
 }:null;
 const birthProfiles=new Map(),birthCharts=new Map(),dreamEntries=new Map();
+const meetPatch=luna42Preview?(await import('../../backend/dist/luna42-meet.js')).meetStepPatch:null;
+const reflection=luna42Preview?(await import('../../backend/dist/luna40-compatibility.js')).compatibilityReflection:null;
+const buildMemoryProposal=luna42Preview?(await import('../../backend/dist/luna42-memory-proposal.js')).buildMemoryProposal:null;
+let meetState={meet:{},revision:0,updatedAt:null};
 const date = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const monday=new Date();monday.setDate(monday.getDate()-((monday.getDay()+6)%7));
 const meditation={id:'00000000-0000-4000-8000-000000000001',title:'A quiet return',subtitle:'Come back to the present moment',description:'Offline QA practice. The audio is a silent local fixture, not a production meditation.',category:'calm',duration:180,cover_image:'/images/home/hero-night.png',audio_file:'/preview-audio.wav',premium:false,published:true,mood:'Calm',play_count:24,created_at:new Date().toISOString(),translations:{ru:{title:'Тихое возвращение',subtitle:'Вернись в настоящий момент',description:'Локальная QA-практика. Аудио — тестовая тишина, не production-медитация.'}}};
@@ -59,6 +65,7 @@ const emptyPersonal={interests:[],preferences:'',birth_date:null,birth_time:null
 const centralConversations=new Map();
 const previewDeck=centralPreview?JSON.parse(await readFile(resolve(frontend,'src/features/tarot/manifest.json'),'utf8')).cards:[];
 const previewMemories=new Map();let previewMemoryEnabled=true;
+const previewDiscoveries=new Map();
 let cosmosState={skipped:[],revision:0,updatedAt:null};
 if(refinementPreview)profile.gardenAtomicReady=true;
 if(refinementPreview)profile.journeyStatus={id:'adept',rank:2,earned:true,eligibleRank:2,next:{id:'guardian',rank:3,progressPercent:75,remaining:[{key:'completedMeditations',current:10,target:20,remaining:10}]}};
@@ -74,6 +81,7 @@ const server=createServer(async(req,res)=>{
   const json=(data,status=200)=>{res.writeHead(status,{'content-type':'application/json','cache-control':'no-store','x-luna-preview':'synthetic-local-only'});res.end(JSON.stringify(data));};
   try {
     if(url.pathname.startsWith('/api/')){
+      if(luna42Preview&&url.pathname.startsWith('/api/luna/voice/'))return json({code:'offline_provider_disabled',localFixtureOnly:true},503);
       let body={};if(req.method!=='GET'){let input='';for await(const part of req){input+=part;if(input.length>20000)return json({error:'Preview input too large'},413);}if(input)body=JSON.parse(input);}
       if(luna34Preview&&url.pathname.startsWith('/api/luna34/')){
        if(url.pathname==='/api/luna34/membership')return json({catalog:astrology.luna34CommercialCatalog,membership:astrology.resolveMembership({lifetime:true}),commercialEnabled:false,quotasEnabled:false,balance:123,earned:345,transactions:[],purchases:[],newPurchases:[],usage:{limit:40,remaining:38,resetAt:new Date(new Date().setUTCHours(24,0,0,0)).toISOString()},beta:{active:true,expiresAt:'2026-11-01T00:00:00Z'}});
@@ -85,7 +93,7 @@ const server=createServer(async(req,res)=>{
        if(url.pathname==='/api/luna34/progress/acknowledge')return json({acknowledged:true,localFixtureOnly:true});
        return json({code:'offline_action_unavailable'},404);
       }
-      if(luna32Preview&&url.pathname==='/api/luna32/local-reset'&&req.method==='POST'){checkin=null;if(body.resetAstrology===true){birthProfiles.clear();birthCharts.clear();}return json({ok:true,localFixtureOnly:true});}
+      if(luna32Preview&&url.pathname==='/api/luna32/local-reset'&&req.method==='POST'){checkin=null;if(body.resetAstrology===true){birthProfiles.clear();birthCharts.clear();}if(luna42Preview&&body.resetMeet===true){meetState={meet:{},revision:0,updatedAt:null};previewMemories.clear();previewDiscoveries.clear();personal={...emptyPersonal};previewMemoryEnabled=false;}return json({ok:true,localFixtureOnly:true});}
       if(astrology&&url.pathname.startsWith('/api/astrology/')){
        if(luna32Preview&&url.pathname==='/api/astrology/calendar')return json(astrology.calculateCelestialMonth(url.searchParams.get('month')));
        if(url.pathname==='/api/astrology/locations')return json({locations:astrology.searchBirthLocations(url.searchParams.get('q')??'')});
@@ -102,14 +110,43 @@ const server=createServer(async(req,res)=>{
        }
        if(url.pathname.startsWith('/api/astrology/profiles/')&&req.method==='DELETE'){birthProfiles.delete(id);for(const[key,c]of birthCharts)if(c.profile_id===id)birthCharts.delete(key);return json({ok:true});}
        if(url.pathname.endsWith('/chart')){const p=birthProfiles.get(id);if(!p)return json({code:'birth_profile_not_found'},404);let chart=[...birthCharts.values()].find(c=>c.profile_id===id&&c.profile_revision===p.revision);const cached=Boolean(chart);if(!chart){chart={id:randomUUID(),profile_id:id,profile_revision:p.revision,calculation:astrology.calculateNatalChart({date:p.birth_date,time:p.birth_time,location:p.location}),created_at:new Date().toISOString()};birthCharts.set(chart.id,chart);}return json({chart,cached});}
-       if(url.pathname==='/api/astrology/compatibility'){const first=birthCharts.get(body.firstChartId),second=birthCharts.get(body.secondChartId);if(!first||!second)return json({code:'chart_not_found'},404);return json({firstChartId:first.id,secondChartId:second.id,...astrology.calculateSynastry(first.calculation,second.calculation)});}
+       if(url.pathname==='/api/astrology/compatibility'){const first=birthCharts.get(body.firstChartId),second=birthCharts.get(body.secondChartId);if(!first||!second)return json({code:'chart_not_found'},404);const comparison=astrology.calculateSynastry(first.calculation,second.calculation);return json({firstChartId:first.id,secondChartId:second.id,...comparison,...(reflection&&body.relationship?{reflection:reflection(comparison,body.relationship)}:{})});}
        return json({code:'not_found'},404);
       }
       if(luna32Preview&&url.pathname.startsWith('/api/luna32/dreams')){const id=url.pathname.split('/')[4];if(req.method==='GET')return json({dreams:[...dreamEntries.values()],nextOffset:null});if(req.method==='DELETE'){dreamEntries.delete(id);return json({ok:true});}if(!body.saveConsent)return json({code:'consent_required'},400);const old=id?dreamEntries.get(id):[...dreamEntries.values()].find(e=>e.client_id===body.clientId);if(old&&req.method==='POST')return json(old);const entry={id:id??randomUUID(),client_id:body.clientId,title:body.title,description:body.description,language:body.language,dream_date:body.date,created_at:old?.created_at??new Date().toISOString(),updated_at:new Date().toISOString()};dreamEntries.set(entry.id,entry);return json(entry);}
+      if(luna42Preview&&url.pathname==='/api/universe/meet'){
+       if(req.method==='PUT'){
+        if(body.expectedRevision!==meetState.revision)return json({code:'meet_changed'},409);
+        let patch;try{patch=meetPatch(body);}catch{return json({code:'invalid_meet_answer'},422);}
+        const {input,profile:change,memory}=patch;personal={...personal,...change};if(typeof change.ai_context_consent==='boolean')previewMemoryEnabled=change.ai_context_consent;
+        if(memory.key){const old=[...previewMemories.values()].find(m=>m.memory_key===memory.key),now=new Date().toISOString(),id=old?.id??randomUUID();previewMemories.set(id,{...old,id,category:memory.category,memory_key:memory.key,memory_value:memory.value,confirmation_status:'confirmed',memory_kind:'fact',is_sensitive:memory.sensitive,source_type:'user_entered',revision:(old?.revision??0)+1,created_at:old?.created_at??now,updated_at:now,confirmed_at:now});}
+        const completed=(meetState.meet.completed??[]).filter(s=>s!==input.step),skipped=(meetState.meet.skipped??[]).filter(s=>s!==input.step);(input.skip?skipped:completed).push(input.step);meetState={meet:{version:1,completed,skipped,...(completed.length+skipped.length===7?{finishedAt:new Date().toISOString()}:{})},revision:meetState.revision+1,updatedAt:new Date().toISOString()};
+       }return json(meetState);
+      }
       if(luna41Preview&&url.pathname==='/api/universe/onboarding'){
        if(req.method==='PUT'){if(body.expectedRevision!==cosmosState.revision)return json({code:'cosmos_changed'},409);cosmosState={skipped:body.skipped??[],revision:cosmosState.revision+1,updatedAt:new Date().toISOString()};}return json(cosmosState);
       }
       if(memoryPreview&&url.pathname==='/api/universe')return json({memories:[...previewMemories.values()],profile:personal,identity:{firstName:user.first_name,language:user.language_code,goals:user.profile_goals},memoryEnabled:previewMemoryEnabled,contextConsent:personal.ai_context_consent});
+      if(luna42Preview&&url.pathname==='/api/luna42/local-proposal'){
+       const id=randomUUID(),sourceId=randomUUID(),messageId=randomUUID(),old=[...previewMemories.values()].find(m=>m.memory_key===body.key);let proposal;
+       try{proposal=buildMemoryProposal(body,{id:randomUUID(),sourceMessageId:sourceId,boundary:null,existing:old??null});}catch{return json({code:'invalid_local_proposal'},422);}
+       centralConversations.set(id,{id,title:'LOCAL QA — confirmation UI fixture',messages:[{id:sourceId,role:'user',content:'LOCAL QA — review this synthetic memory change',created_at:new Date().toISOString()},{id:messageId,role:'assistant',content:'LOCAL QA — no provider request. Please review and confirm.',created_at:new Date().toISOString(),metadata:{memoryProposal:proposal}}],created_at:new Date().toISOString(),updated_at:new Date().toISOString()});return json({conversationId:id});
+      }
+      if(luna42Preview&&url.pathname.startsWith('/api/universe/proposals/')){
+       const message=[...centralConversations.values()].flatMap(c=>c.messages).find(m=>m.id===url.pathname.split('/')[4]),p=message?.metadata?.memoryProposal;
+       if(!p||p.id!==body.proposalId)return json({code:'not_found'},404);if(p.state!=='pending')return p.state===(body.confirmed?'applied':'cancelled')?json({proposal:p}):json({code:'changed'},409);
+       if(body.confirmed){const old=p.memoryId?previewMemories.get(p.memoryId):null;if((old?.revision??0)!==p.expectedRevision)return json({code:'changed'},409);if(p.operation==='delete')previewMemories.delete(p.memoryId);else{const now=new Date().toISOString(),id=p.memoryId??randomUUID();previewMemories.set(id,{id,category:p.category,memory_key:p.key,memory_value:p.after,revision:p.expectedRevision+1,confirmation_status:'confirmed',memory_kind:p.category==='reflections'?'symbolic':'fact',is_sensitive:false,source_type:'user_message',source_message_id:p.sourceMessageId,created_at:old?.created_at??now,updated_at:now,confirmed_at:now});}}
+       p.state=body.confirmed?'applied':'cancelled';return json({proposal:p});
+      }
+      if(luna42Preview&&url.pathname.startsWith('/api/universe/discoveries')){
+       const id=url.pathname.split('/')[4],old=previewDiscoveries.get(id);
+       if(req.method==='GET'&&!id)return json({discoveries:[...previewDiscoveries.values()]});
+       if(req.method==='POST'){let exists=body.kind==='tarot'?[...readings.values()].some(r=>r.id===body.referenceId):body.kind==='astrology'?[...centralConversations.values()].some(c=>c.messages.some(m=>m.id===body.referenceId&&m.metadata?.astrologyWorkflow?.state==='ready')):previewMemories.get(body.referenceId)?.memory_kind==='symbolic';if(!exists)return json({code:'source_not_found'},404);const prior=[...previewDiscoveries.values()].find(d=>d.kind===body.kind&&d.reference_id===body.referenceId);if(prior)return json({discovery:prior});const now=new Date().toISOString(),discovery={id:randomUUID(),kind:body.kind,reference_id:body.referenceId,title:body.title,revision:1,created_at:now,updated_at:now};previewDiscoveries.set(discovery.id,discovery);return json({discovery});}
+       if(!old)return req.method==='DELETE'?json({removed:true,sourceDeleted:false}):json({code:'not_found'},404);
+       if(req.method==='PATCH'){if(old.revision!==body.expectedRevision)return json({code:'changed'},409);Object.assign(old,{title:body.title,revision:old.revision+1,updated_at:new Date().toISOString()});return json({discovery:old});}
+       if(req.method==='DELETE'){previewDiscoveries.delete(id);return json({removed:true,sourceDeleted:false});}
+       const conversation=[...centralConversations.values()].find(c=>c.messages.some(m=>m.id===old.reference_id));return json({kind:old.kind,referenceId:old.reference_id,...(conversation?{conversationId:conversation.id}:{})});
+      }
       if(memoryPreview&&url.pathname.startsWith('/api/universe/memories')){
         const id=url.pathname.split('/')[4],old=id?previewMemories.get(id):null;
         if(req.method==='DELETE'){if(id)previewMemories.delete(id);else previewMemories.clear();return json({ok:true});}
@@ -163,7 +200,7 @@ const server=createServer(async(req,res)=>{
           const previous=[...centralConversations.values()].find(c=>c.messages.some(m=>m.id===body.requestId)),id=previous?.id??body.conversationId??body.requestId;
           let c=centralConversations.get(id);if(!c){c={id,title:body.kind==='compatibility'?'Compatibility · local QA':'Natal chart · local QA',language:body.language,status:'active',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),last_message_at:new Date().toISOString(),messages:[]};centralConversations.set(id,c);}
           let message=c.messages.find(m=>m.id===body.requestId);if(message?.metadata?.astrologyWorkflow?.state==='ready')return json({conversationId:id,message});
-          let w={version:1,kind:body.kind,state:'selecting'},attachment=null;
+          let w={version:1,kind:body.kind,state:'selecting',...(body.relationship?{relationship:body.relationship}:{})},attachment=null;
           if(body.firstProfileId){const chartFor=pid=>{const p=birthProfiles.get(pid);if(!p)throw Error('Local QA profile missing');let chart=[...birthCharts.values()].find(c=>c.profile_id===pid&&c.profile_revision===p.revision);if(!chart){chart={id:randomUUID(),profile_id:pid,profile_revision:p.revision,calculation:astrology.calculateNatalChart({date:p.birth_date,time:p.birth_time,location:p.location}),created_at:new Date().toISOString()};birthCharts.set(chart.id,chart);}return chart;};const first=chartFor(body.firstProfileId),second=body.secondProfileId?chartFor(body.secondProfileId):null;w={...w,state:'ready',firstProfileId:body.firstProfileId,secondProfileId:body.secondProfileId,firstChartId:first.id,secondChartId:second?.id};attachment={chartId:first.id,...(second?{secondChartId:second.id}:{})};}
           const data={id:body.requestId,conversation_id:id,role:'assistant',content:'OFFLINE QA — real local astronomy engine; persistence is only an in-process fixture.',created_at:new Date().toISOString(),metadata:{astrologyWorkflow:w,...(attachment?{astrology:attachment}:{})}};
           if(message)Object.assign(message,data);else{message=data;c.messages.push(message);}return json({conversationId:id,message});

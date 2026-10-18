@@ -1,0 +1,184 @@
+{
+  "status": "PASS",
+  "release": "luna42",
+  "releaseScope": "verified-core-dictation-cms-personalization",
+  "fullSpecificationComplete": false,
+  "sourceCommit": "97bcb63053f902b19d8b83ea96d41d32076209b4",
+  "stagingSourceCommit": "149d8042d4ab99bb819efb23d3feb6958a292ab5",
+  "stagingDeploymentId": "6ad41aecbe62eb687b9371c9",
+  "baseCommit": "083bd167e32b4850ffb99dcc745371a3705e3b28",
+  "projectId": "vkcdtasbdoeilgfucoax",
+  "stagingProjectId": "funvzpmpbgazsisehiru",
+  "backupCapturedAt": "2026-10-18T00:44:50.061595+00:00",
+  "backupRestorePasses": 2,
+  "backupTables": 76,
+  "backupFunctions": 70,
+  "backupRows": 2028,
+  "backupMediaObjects": 28,
+  "backupMediaBytes": 239528218,
+  "backupMediaIntegrity": "PASS",
+  "frontendTestsStatus": "PASS",
+  "backendTestsStatus": "PASS",
+  "typeChecks": "PASS",
+  "lint": "PASS",
+  "mobileStatus": "PASS",
+  "stagingPersistence": "PASS",
+  "realTelegramAuth": "PASS",
+  "aiSmokeStatus": "PASS",
+  "cmsHttpStatus": "PASS",
+  "voiceHttpStatus": "PASS",
+  "savedReplayStatus": "PASS",
+  "productionRecoveryMigrationReview": "PASS",
+  "frontendTests": 248,
+  "backendTests": 593,
+  "backendOptionalSkipped": 1,
+  "nativeDatabaseChecks": 40,
+  "mobileCases": 34,
+  "stagingPersistenceChecks": 21,
+  "cmsKinds": 7,
+  "voiceLanguages": 2,
+  "savedResultsProviderCalls": 0,
+  "modelBenchmarkCalls": 300,
+  "aiProviderCalls": 304,
+  "transcriptionCalls": 5,
+  "aiCostUsd": 0.290297,
+  "latestAiSmokeCostUsd": 0.002239,
+  "latestVoiceCostUsd": 0.000264,
+  "unknownAiSpendUsd": 0,
+  "productionModel": "gpt-5-mini",
+  "approvedAiCapUsd": 100,
+  "monetizationEnabled": false,
+  "newCommercialQuotasEnabled": false,
+  "financialAdminMutationsEnabled": false,
+  "guidedBreathEnabled": false,
+  "modelSwitchEnabled": false,
+  "voiceInputEnabled": true,
+  "realStarsTransactions": 0,
+  "balancesAndPaidRightsPreserved": true,
+  "aiBudgetBaselinePreserved": true,
+  "unrelatedObjectsUnchanged": true,
+  "migrationStatus": "verified-production",
+  "criticalBlockers": [],
+  "knownLimitations": [
+    "Voice is dictation to an editable draft, not stored playable voice messages; iPhone Telegram microphone capture/permission still needs physical acceptance.",
+    "Guided breathing remains disabled pending physical audio audition; existing silent and ambient modes are preserved.",
+    "The existing product is Dark-only; both operating-system color preferences were tested, not a separate Light theme.",
+    "The 300-call benchmark measures first decisions, not full-flow or human-quality scores; no production model switch.",
+    "Old blocked security-hardening migration remains out of this release; only six reviewed additive 4.2 migrations applied.",
+    "New voice recordings for CMS require independently verified cue manifests; no unverified upload is advertised as a working guide."
+  ],
+  "physicalMicrophoneVerified": false,
+  "productionVerification": {
+    "cap": 100000000,
+    "garden": "03b4f1296dce0b2612b1860c140f86da",
+    "newView": [
+      "security_invoker=true"
+    ],
+    "payments": "527bc7db99fb91a5d262b6be345c7535",
+    "newTables": [
+      {
+        "rls": true,
+        "anon": false,
+        "name": "luna42_discoveries",
+        "force": true,
+        "service": true,
+        "authenticated": false
+      },
+      {
+        "rls": true,
+        "anon": false,
+        "name": "luna42_experience_events",
+        "force": true,
+        "service": true,
+        "authenticated": false
+      },
+      {
+        "rls": true,
+        "anon": false,
+        "name": "luna42_voice_requests",
+        "force": true,
+        "service": true,
+        "authenticated": false
+      }
+    ],
+    "generation": true,
+    "paidRights": "d915fbf82333c141d36f5dba7e001cbe",
+    "newFunctions": [
+      {
+        "anon": false,
+        "name": "luna42_decide_memory_proposal",
+        "definer": false,
+        "service": true,
+        "authenticated": false
+      },
+      {
+        "anon": false,
+        "name": "luna42_experience_report",
+        "definer": false,
+        "service": true,
+        "authenticated": false
+      },
+      {
+        "anon": false,
+        "name": "luna42_record_experience",
+        "definer": false,
+        "service": true,
+        "authenticated": false
+      },
+      {
+        "anon": false,
+        "name": "luna42_rename_discovery",
+        "definer": false,
+        "service": true,
+        "authenticated": false
+      },
+      {
+        "anon": false,
+        "name": "luna42_reserve_voice",
+        "definer": false,
+        "service": true,
+        "authenticated": false
+      },
+      {
+        "anon": false,
+        "name": "luna42_save_discovery",
+        "definer": false,
+        "service": true,
+        "authenticated": false
+      },
+      {
+        "anon": false,
+        "name": "luna42_save_editorial",
+        "definer": false,
+        "service": true,
+        "authenticated": false
+      },
+      {
+        "anon": false,
+        "name": "luna42_save_meet_step",
+        "definer": false,
+        "service": true,
+        "authenticated": false
+      },
+      {
+        "anon": false,
+        "name": "luna42_settle_voice",
+        "definer": false,
+        "service": true,
+        "authenticated": false
+      }
+    ],
+    "policiesHash": "a8616612e024e801d23c8d638feb8946",
+    "functionsHash": "436ed67b462d705f8f59809a7cb60c0b",
+    "tableSecurityHash": "a2b64a38e1f4de399b5993ee2988d77a"
+  },
+  "sourceDigest": "80dbed9e31557a5300ae12b60ababb23f02391abfe01b457b85ee09fa7382c9d",
+  "migrationHashes": {
+    "20261017140319_luna42_meet_luna_atomic_progress.sql": "c8bffefa71752ca47e985bcf1b7d94ef4dab95fee718847f1eb8c0dece33ce32",
+    "20261017141409_luna42_private_voice_budget.sql": "13d7f6ee61881fa7665e8c3a7f84c1b2c0867818675fa383f23270b451575002",
+    "20261017152246_luna42_confirmed_chat_memory.sql": "0891e5a5e221204e348c03f85f8a09d700db12410bf8c5dada23341c346555dc",
+    "20261017153104_luna42_private_discoveries.sql": "72bb9877739f9558cb674c65ccab05fc4304bba952349fec25d1684644f282ba",
+    "20261017162333_luna42_private_experience_analytics.sql": "2113708f905205eb030f9c8e4546cf691f6b02eefba98bbb4b530710c07a4630",
+    "20261018002128_luna42_editorial_publication.sql": "b9eb9f00ac7fb0b77133dbe0e6d04386f7f3e181c6c4968c8ccfc3353a079388"
+  }
+}

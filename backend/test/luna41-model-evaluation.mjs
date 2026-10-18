@@ -12,7 +12,7 @@ try{
  if(process.argv.includes('--foundation')){const row=await invoke('foundation');console.log(JSON.stringify(row.foundation));if(row.foundation?.state!=='completed')process.exitCode=1;process.exit();}
  let row=await status();if(row.state==='not_started'||!row.result?.availability)row=await invoke('inventory');
  console.log(JSON.stringify({availability:row.result?.availability,providerCalls:row.result?.providerCalls??0}));if(process.argv.includes('--check-models'))process.exit(0);
- assert.equal(process.env.LUNA41_BENCHMARK_APPROVED,'400_calls_2_usd');
+ assert.ok(process.env.LUNA41_BENCHMARK_APPROVED==='400_calls_2_usd'||process.env.LUNA42_BENCHMARK_APPROVED==='300_calls_2_usd');
  while(row.state==='paused'&&row.result?.status==='IN_PROGRESS'){
   row=await invoke('batch');console.log(JSON.stringify({state:row.state,status:row.result?.status,providerCalls:row.result?.providerCalls,spentUsd:(row.result?.spentMicrousd??0)/1e6,heldUsd:(row.result?.heldMicrousd??0)/1e6}));
  }

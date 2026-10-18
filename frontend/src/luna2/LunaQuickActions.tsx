@@ -6,6 +6,7 @@ import {featureFlags} from '../config/featureFlags';
 export function LunaQuickActions({ language, onPrompt, onTarot,onDream,onAstrology, disabled = false }: { language: AppLanguage; onPrompt: (prompt: string) => void; onTarot?:()=>void;onDream?:()=>void;onAstrology?:(kind:'natal'|'compatibility')=>void; disabled?: boolean }) {
   const t = luna2Copy[language];
   const actions = [
+    ...(featureFlags.cosmos_v2?[{id:'meet',title:language==='en'?'Meet Luna':'Познакомиться с Луной',Icon:Moon,prompt:null}]:[]),
     { id: 'feelings', title: language==='en'?'Talk':'Поговорить', Icon: Heart, prompt: t.feelingsPrompt },
     { id: 'tarot', title: t.tarotReading, Icon: Sparkles, prompt: null },
     { id: 'astrology', title: featureFlags.ai_central_experience?(language==='en'?'Natal chart':'Натальная карта'):t.birthChart, Icon: Stars, prompt: null },
@@ -15,7 +16,7 @@ export function LunaQuickActions({ language, onPrompt, onTarot,onDream,onAstrolo
   ];
   return <div className="luna2-ai-actions" aria-label={t.ideas}>{actions.map(({ id, title, Icon, prompt }) => {
     const openTarot=id==='tarot'?onTarot:undefined;
-    const openAction=openTarot??(id==='dream'?onDream:undefined)??(['astrology','compatibility'].includes(id)&&featureFlags.ai_central_experience?()=>onAstrology?onAstrology(id==='compatibility'?'compatibility':'natal'):window.dispatchEvent(new CustomEvent('luna-open-astrology',{detail:{section:id==='compatibility'?'compatibility':'natal'}})):undefined);
+    const openAction=openTarot??(id==='meet'?()=>window.dispatchEvent(new CustomEvent('luna-open-destination',{detail:{destination:'meet'}})):undefined)??(id==='dream'?onDream:undefined)??(['astrology','compatibility'].includes(id)&&featureFlags.ai_central_experience?()=>onAstrology?onAstrology(id==='compatibility'?'compatibility':'natal'):window.dispatchEvent(new CustomEvent('luna-open-astrology',{detail:{section:id==='compatibility'?'compatibility':'natal'}})):undefined);
     return <button type="button" key={id} data-action={id} disabled={disabled || (!prompt&&!openAction)} onClick={() => openAction?openAction():prompt&&onPrompt(prompt)}>
       <Icon size={20} /><span>{title}</span>{!prompt&&!openAction ? <small>{t.soon}</small> : null}
     </button>;

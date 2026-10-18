@@ -8,7 +8,7 @@ export const luna35BotCopy={
 } as const;
 export function welcomeKeyboard(username:string,language:BotLanguage,start=''){
  const copy=luna35BotCopy[language],launch=parseLaunchDestination(start);
- return {inline_keyboard:[[{text:copy.open,url:miniAppLink(username,launch.destination,launch.referral??undefined)}],[{text:copy.tarot,url:miniAppLink(username,'daily',launch.referral??undefined)},{text:copy.astrology,url:miniAppLink(username,'astrology',launch.referral??undefined)}]]};
+ return {inline_keyboard:[[{text:language==='ru'?'✨ Познакомиться с Луной':'✨ Meet Luna',url:miniAppLink(username,'meet',launch.referral??undefined)}],[{text:copy.open,url:miniAppLink(username,launch.destination,launch.referral??undefined)}],[{text:copy.tarot,url:miniAppLink(username,'daily',launch.referral??undefined)},{text:copy.astrology,url:miniAppLink(username,'astrology',launch.referral??undefined)}]]};
 }
 export function botCommands(language:BotLanguage){const ru=language==='ru';return [
  {command:'start',description:ru?'Знакомство с Luna':'Welcome to Luna'},

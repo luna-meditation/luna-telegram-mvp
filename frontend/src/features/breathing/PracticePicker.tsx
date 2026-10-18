@@ -1,9 +1,11 @@
 import {useEffect,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import {ChevronDown,Check,X} from 'lucide-react';
-import {breathPractices,type BreathPracticeId} from './practices';
+import type {BreathPracticeId} from './practices';
+import {useBreathPractices} from './editorialPractices';
 import type {AppLanguage} from '../../api';
 export function PracticePicker({value,onChange,disabled,language,registerBackHandler}:{value:BreathPracticeId;onChange:(id:BreathPracticeId)=>void;disabled:boolean;language:AppLanguage;registerBackHandler?:(handler:(()=>void)|null)=>void}){
+ const breathPractices=useBreathPractices();
  const [open,setOpen]=useState(false),dialog=useRef<HTMLDialogElement>(null),trigger=useRef<HTMLButtonElement>(null),en=language==='en';
  const selected=breathPractices.find(p=>p.id===value)!;
  useEffect(()=>{if(!open)return;dialog.current?.showModal();registerBackHandler?.(()=>setOpen(false));return()=>{dialog.current?.close();registerBackHandler?.(null);trigger.current?.focus({preventScroll:true});};},[open,registerBackHandler]);

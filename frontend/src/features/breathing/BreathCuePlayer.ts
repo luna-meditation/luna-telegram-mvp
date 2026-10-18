@@ -1,8 +1,8 @@
 import voiceAssets from './voiceAssets.json';
 import {breathCueAt} from './voiceCatalog';
 import type {AppLanguage} from '../../api';
-import type {BreathPhaseKind} from './practices';
-type CueAssets=typeof voiceAssets.clips.en;
+import type {BreathPhaseKind,BreathPractice} from './practices';
+import type {EditorialBody} from '../../../../backend/src/luna42-editorial-contract';
 
 /** No independent interval/clock: each cue comes from the actual session's
  * elapsed-time phase. Missed boundaries are skipped, never played late. */
@@ -17,7 +17,7 @@ export class BreathCuePlayer{
  private running=false;
  private closed=false;
  private abort=new AbortController();
- constructor(private onError:()=>void){}
+ constructor(private onError:()=>void,private clips:NonNullable<EditorialBody['voiceCues']>=voiceAssets.clips){}
  private fail=()=>{if(this.closed)return;this.pause();this.onError();};
  prepare(language:AppLanguage){
   if(this.closed)return;
@@ -28,7 +28,7 @@ export class BreathCuePlayer{
    // Called by an explicit mode/start tap, before awaiting network work.
    void this.context.resume().catch(this.fail);
    if(!this.loading.has(language)){
-    const context=this.context,assets=voiceAssets.clips[language] as CueAssets;
+    const context=this.context,assets=this.clips[language];
     const pending=Promise.all(Object.entries(assets).map(async([phase,asset])=>{
      const response=await fetch(asset.url,{cache:'force-cache',signal:this.abort.signal});if(!response.ok)throw Error('cue_missing');
      const bytes=await response.arrayBuffer();if(bytes.byteLength>100000)throw Error('cue_too_large');
@@ -41,7 +41,7 @@ export class BreathCuePlayer{
   }catch{this.fail();}
  }
  start(language:AppLanguage){this.lastCue=null;this.running=true;this.prepare(language);}
- cue(practiceId:string,language:AppLanguage,elapsed:number){
+ cue(practiceId:string|BreathPractice,language:AppLanguage,elapsed:number){
   if(!this.running||this.closed||!this.context||!this.ready.has(language))return;
   const cue=breathCueAt(practiceId,elapsed);if(!cue||this.lastCue===language+':'+cue.key)return;
   const buffer=this.buffers.get(language+':'+cue.phase);if(!buffer)return;

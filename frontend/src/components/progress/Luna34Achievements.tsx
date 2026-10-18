@@ -1,3 +1,4 @@
+import {useEditorialEntries} from '../../editorial';
 import {useEffect,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import {Check,ChevronRight,LockKeyhole,X} from 'lucide-react';
@@ -8,7 +9,8 @@ import type {ProgressAchievement} from './ProgressExperience';
 import './luna34-achievements.css';
 
 export function Luna34Achievements({items:allItems,language,initiallyOpen=false,onClose,registerBackHandler}:{items:ProgressAchievement[];language:AppLanguage;initiallyOpen?:boolean;onClose?:()=>void;registerBackHandler?:(handler:(()=>void)|null)=>void}){
- const en=language==='en',items=allItems.filter(i=>luna34AchievementIds.has(i.id)),archive=allItems.filter(i=>!luna34AchievementIds.has(i.id));
+ const editorial=useEditorialEntries();
+ const en=language==='en',items=allItems.filter(i=>luna34AchievementIds.has(i.id)).map(i=>{const e=editorial.find(e=>e.kind==='achievement'&&e.key===i.id);return e?{...i,title:e.body.title[language],description:e.body.description[language],art:e.body.image??i.art}:i;}),archive=allItems.filter(i=>!luna34AchievementIds.has(i.id));
  const total=luna34AchievementIds.size;
  const [open,setOpen]=useState(initiallyOpen),[category,setCategory]=useState('all'),[filter,setFilter]=useState('all'),[selected,setSelected]=useState<ProgressAchievement|null>(null),dialog=useRef<HTMLDialogElement>(null),detail=useRef<HTMLDialogElement>(null);
  const close=()=>{setOpen(false);onClose?.();};
@@ -18,7 +20,7 @@ export function Luna34Achievements({items:allItems,language,initiallyOpen=false,
  const unlocked=items.filter(i=>i.unlocked),sorted=[...items].sort((a,b)=>Number(b.unlocked)-Number(a.unlocked)||String(b.unlockedAt??'').localeCompare(String(a.unlockedAt??''))||(b.progress??0)-(a.progress??0));
  const visible=(category==='legacy'?archive:sorted).filter(i=>(category==='all'||category==='legacy'||i.category===category)&&(filter==='all'||filter==='unlocked'&&i.unlocked||filter==='locked'&&!i.unlocked||filter==='progress'&&!i.unlocked&&(i.progress??0)>0));
  const tile=(item:ProgressAchievement)=><button type="button" key={item.id} className={`luna34-achievement-tile ${item.unlocked?'is-unlocked':'is-locked'}`} onClick={()=>setSelected(item)} aria-label={`${item.title}. ${item.unlocked?(en?'Unlocked':'Открыто'):`${item.current??0} / ${item.target??1}`}`}>
-  <span className="luna34-achievement-art">{item.art?<img src={item.art.replace('.webp','-small.webp')} srcSet={`${item.art.replace('.webp','-small.webp')} 192w, ${item.art.replace('.webp','-grid.webp')} 384w, ${item.art} 768w`} sizes="(max-width: 500px) calc((100vw - 62px) / 3), 120px" width="512" height="512" alt="" loading="lazy" decoding="async"/>:<span aria-hidden="true">✧</span>}<i>{item.unlocked?<Check size={12}/>:<LockKeyhole size={12}/>}</i></span>
+  <span className="luna34-achievement-art">{item.art?<img src={item.art} sizes="(max-width: 500px) calc((100vw - 62px) / 3), 120px" width="512" height="512" alt="" loading="lazy" decoding="async"/>:<span aria-hidden="true">✧</span>}<i>{item.unlocked?<Check size={12}/>:<LockKeyhole size={12}/>}</i></span>
   <strong>{item.title}</strong><small>{item.unlocked?(en?'Unlocked':'Открыто'):`${item.current??0} / ${item.target??1}`}</small>
  </button>;
  return <section className="luna34-achievements" data-testid="luna34-achievements"><header><div><small>LUNA JOURNEY</small><h2>{en?'Your discoveries':'Ваши открытия'}</h2></div><span>{unlocked.length} / {total}</span></header>

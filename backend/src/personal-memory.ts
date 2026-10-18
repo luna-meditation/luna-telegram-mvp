@@ -33,7 +33,7 @@ export async function writePersonalMemory(owner:number,body:unknown,id?:string){
  const query=id?supabase.from('user_memories').update(row).eq('telegram_id',owner).eq('id',id).eq('revision',input.revision!):supabase.from('user_memories').insert({...row,telegram_id:owner});
  const {data,error}=await query.select(fields).maybeSingle();if(error?.code==='23505')throw new FoundationError(409,'memory_conflict','This memory exists.');if(error)throw new FoundationError(503,'memory_unavailable','Could not save memory.');if(!data)throw new FoundationError(409,'memory_changed','This memory was removed or changed. Refresh and try again.');return data as PersonalMemory;
 }
-export async function removePersonalMemory(owner:number,id?:string){await advanceMemoryContextBoundary(owner);let query=supabase.from('user_memories').delete().eq('telegram_id',owner);if(id)query=query.eq('id',id);const {error}=await query;if(error)throw new FoundationError(503,'memory_unavailable','Could not delete memory.');}
+export async function removePersonalMemory(owner:number,id?:string){await advanceMemoryContextBoundary(owner);let query=supabase.from('user_memories').delete().eq('telegram_id',owner);if(id)query=query.eq('id',id);const {data,error}=await query.select('id');if(error)throw new FoundationError(503,'memory_unavailable','Could not delete memory.');return{deleted:data?.length??0};}
 export async function getAiPersonalProfile(owner:number,query=''){
  const savedProfile=await getPersonalProfile(owner);
  const profile=env.FEATURE_PERSONAL_MEMORY?{...savedProfile,preferences:potentiallySensitive(savedProfile.preferences)?'':savedProfile.preferences}:savedProfile;

@@ -60,7 +60,7 @@ export function fallbackPage(page: AppPage, newNavigation: boolean): AppPage {
 
 export function pageFromStartParam(startParam: string, newNavigation = false): AppPage {
   const launch=parseLaunchDestination(startParam);
-  const destinations:Record<string,AppPage>={daily:'tarot',natal:'astrology',compatibility:'astrology',membership:'pricing',seeds:'wallet',invite:'profile'};
+  const destinations:Record<string,AppPage>={daily:'tarot',natal:'astrology',compatibility:'astrology',membership:'pricing',seeds:'wallet',invite:'profile',meet:'profile',cosmos:'profile'};
   if(newNavigation&&destinations[launch.destination])return destinations[launch.destination];
   if(launch.referral)return pageFromStartParam(launch.destination,newNavigation);
   const normalized = startParam.trim().toLowerCase();

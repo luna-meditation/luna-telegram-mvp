@@ -1,0 +1,10 @@
+# Luna 4.2 — final staging feedback
+
+- My Universe hero: `frontend/public/assets/luna42/my-universe-hero.webp`, 1200×800, 52,162 bytes. New original artwork, generated with the built-in image tool and optimized to WebP. Text and buttons remain real components. Scoped dark-ink-on-gold CTA styling fixes the inherited gold-on-gold contrast bug.
+- Final image prompt: “Premium celestial landscape for Luna My Universe: midnight navy, soft violet, restrained pink and warm gold; a luminous crescent over distant mountains and a tranquil lake on the right, delicate stars and constellation arcs, quiet dark negative space on the left for real UI. Sophisticated atmospheric painterly-photographic depth. No text, interface, people, logos or watermarks.”
+- Voice is explicitly **dictation**, not a stored audio-message feature. Recording and cancel/stop controls stay inside the composer. Explicit Stop transcribes to an editable draft; sending to chat remains a separate action. The recording limit/background interruption never uploads automatically. Native audio controls and floating review windows were removed. The operating-system microphone permission prompt is unavoidable.
+- Cancel/unmount/permission races retain generation-token isolation; retries preserve the same WAV/request ID. No new provider, payment, reward or subscription logic.
+- CMS stale-version conflicts now use `PT409`, not serialization SQLSTATE `40001`; PostgREST otherwise retries the deliberate conflict and eventually emits 503. The change affects only the new editorial function. Existing financial RPCs and unrelated applications remain unchanged.
+- Automated mobile checks cover 360/375/390/393 widths, RU/EN, both OS color preferences under the existing Dark-only product policy. Real microphone behavior in iPhone Telegram still requires a physical-device check; a browser test is not evidence for that permission/capture path.
+
+Production publication is gated on real staging CMS/voice/tool checks and the final encrypted-backup restoration review. No new commercial mechanism is enabled by these changes.

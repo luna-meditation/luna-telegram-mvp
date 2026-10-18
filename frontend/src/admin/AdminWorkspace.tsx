@@ -4,6 +4,7 @@ import {admin40Navigation,adminPeriod,formatAdminMetric,type Admin40Section} fro
 import {AdminContent,AdminSupport,AdminRuntime,AdminUserDetails,AdminOperationalAnalytics} from './AdminOperations';
 import type {Admin40Session,Admin40Overview,Admin40Users,Admin40User} from './types';
 import {AdminLanguageContext} from './AdminRecordList';
+import {AdminExperience} from './AdminExperience';
 import {AdminSectionCard,AdminStatCard,AdminChartCard,AdminEmptyState,AdminErrorState,AdminLoadingState} from './AdminPrimitives';import './admin40.css';
 
 export default function AdminWorkspace({initData,language,onBack}:{initData?:string;language:AppLanguage;onBack:()=>void}){
@@ -30,6 +31,7 @@ function Overview({initData,language,section}:{initData?:string;language:AppLang
  return <><div className="admin40-filter"><label>{en?'Reporting period':'Отчётный период'}<select value={days} onChange={e=>setDays(Number(e.target.value))}>{[[1,en?'Today':'Сегодня'],[7,en?'7 days':'7 дней'],[30,en?'30 days':'30 дней'],[90,en?'90 days':'90 дней'],[0,en?'Custom range':'Свой период']].map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><span>UTC · {en?'cache up to 60s':'кеш до 60 с'}</span><button type="button" disabled={busy} onClick={()=>setReload(v=>v+1)} aria-label={en?'Refresh':'Обновить'}><RefreshCw size={18}/></button></div>{days===0&&<div className="admin40-custom-range"><label>{en?'From':'С'}<input type="date" value={custom.from} onChange={e=>setCustom(v=>({...v,from:e.target.value}))}/></label><label>{en?'Through':'По'}<input type="date" value={custom.to} min={custom.from} onChange={e=>setCustom(v=>({...v,to:e.target.value}))}/></label></div>}
  {error&&<AdminErrorState body={en?'Metrics could not be loaded. Missing data is not reported as zero.':'Метрики не загрузились. Отсутствие данных не обозначается нулём.'} retry={()=>setReload(v=>v+1)} label={en?'Retry':'Повторить'}/>}{busy&&<p role="status" className="admin40-refresh">{en?'Refreshing verified source records…':'Обновляем подтверждённые записи…'}</p>}
  {range&&data&&section!=='dashboard'&&<AdminOperationalAnalytics initData={initData} language={language} section={section} period={range}/>}
+ {range&&section==='analytics'&&<AdminExperience initData={initData} language={language} period={range}/>}
  {data&&<div aria-busy={busy}><p className="admin40-period">{data.from.slice(0,10)} — {new Date(Date.parse(data.to)-1).toISOString().slice(0,10)} · UTC</p><div className="admin40-stats">
  <AdminStatCard label={en?'Registered users':'Зарегистрировано'} value={format(data.users.total)} note={`${en?'New in period':'Новых за период'}: ${format(data.users.registered)}`}/>
  <AdminStatCard label={en?'Tracked active · 1 / 7 / 30 days':'Учтённые активные · 1 / 7 / 30 дней'} value={`${format(data.users.active1d)} / ${format(data.users.active7d)} / ${format(data.users.active30d)}`} note={en?'Recorded practices and chat, not all app opens':'Записанные практики и чат, не все открытия'}/>

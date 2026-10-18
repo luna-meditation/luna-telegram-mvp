@@ -1,0 +1,40 @@
+{
+  "status": "TRANSCRIPTS_COLLECTED_AWAITING_REVIEW",
+  "sourceCommit": "3ed2bae887fcbd53d2926c5d02867f61929efb5d",
+  "providerCalls": 3,
+  "usageBasedCostUsd": 0.000402,
+  "unsettledHoldUsd": 0,
+  "results": [
+    {
+      "text": "Luna, please recommend a short meditation for focus.",
+      "expected": "Luna, please recommend a short meditation for focus.",
+      "language": "en",
+      "latencyMs": 2437,
+      "costMicrousd": 117,
+      "reopenCached": true,
+      "duplicateProviderCalls": 0
+    },
+    {
+      "text": "Луна, подбери короткую медитацию для фокуса.",
+      "expected": "Луна, подбери короткую медитацию для фокуса.",
+      "language": "ru",
+      "latencyMs": 1152,
+      "costMicrousd": 142,
+      "reopenCached": true,
+      "duplicateProviderCalls": 0
+    },
+    {
+      "text": "Луна открой Moon Garden, а затем дыхательную практику.",
+      "expected": "Луна, открой Moon Garden, а затем дыхательную практику.",
+      "language": "mixed",
+      "latencyMs": 2453,
+      "costMicrousd": 143,
+      "reopenCached": true,
+      "duplicateProviderCalls": 0
+    }
+  ],
+  "applicationBudgetRpcVerified": false,
+  "physicalMicrophoneVerified": false,
+  "productionChanged": false,
+  "budgetAdapter": "isolated-synthetic-run-ledger"
+}

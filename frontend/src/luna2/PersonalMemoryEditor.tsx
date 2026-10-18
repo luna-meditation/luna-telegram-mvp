@@ -1,5 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import {writePersonalMemory,type AppLanguage,type PersonalMemory,type PersonalMemoryInput,type PersonalMemoryCategory} from '../api';
+import {SaveDiscoveryButton} from './MyDiscoveries';
 export const memoryCategoryLabels={en:{personal_facts:'Personal facts',preferences:'Preferences',goals:'Goals',interests:'Interests',birth_information:'Birth information',life_context:'Confirmed life context',reflections:'Saved reflections'},ru:{personal_facts:'Личные факты',preferences:'Предпочтения',goals:'Цели',interests:'Интересы',birth_information:'Данные рождения',life_context:'Жизненный контекст',reflections:'Сохранённые мысли'}};
 export function PersonalMemoryEditor({language,initData,memory,source,onDone,onCancel}:{language:AppLanguage;initData?:string;memory?:PersonalMemory;source?:{id:string;content:string;role:string};onDone:()=>void;onCancel:()=>void}){
  const en=language==='en',labels=memoryCategoryLabels[language];
@@ -18,6 +19,7 @@ export function PersonalMemoryEditor({language,initData,memory,source,onDone,onC
   <label className="universe-check"><input type="checkbox" checked={data.sensitiveConsent} onChange={e=>setData({...data,sensitiveConsent:e.target.checked,confirmed:false})}/><span>{en?'If this contains sensitive information, I explicitly choose to store it. Sensitive entries are excluded from AI retrieval. Never store passwords or secrets.':'Если здесь есть чувствительные сведения, я отдельно разрешаю их хранение. Такие записи исключены из AI-контекста. Не сохраняй пароли и секреты.'}</span></label>
   <div className="universe-actions"><button className="luna-button-primary" type="submit">{busy?(en?'Saving…':'Сохранение…'):data.confirmed?(en?'Confirm and save':'Подтвердить и сохранить'):(en?'Save draft':'Сохранить черновик')}</button><button type="button" onClick={onCancel}>{en?'Cancel':'Отмена'}</button></div>
   {error&&<p role="alert">{error}</p>}
+  {memory?.category==='reflections'&&memory.memory_kind==='symbolic'&&<SaveDiscoveryButton kind="reflection" referenceId={memory.id} title={memory.memory_key.split('_').join(' ')} language={language} initData={initData}/>}
  </fieldset></form>;
 }
 export function MemorySaveAction({language,initData,message}:{language:AppLanguage;initData?:string;message:{id:string;content:string;role:string}}){const [open,setOpen]=useState(false),[saved,setSaved]=useState(false);return <div className="memory-save-action">{saved?<small role="status">{language==='en'?'Saved in My Universe':'Сохранено в «Моём космосе»'}</small>:open?<PersonalMemoryEditor language={language} initData={initData} source={message} onDone={()=>{setOpen(false);setSaved(true);}} onCancel={()=>setOpen(false)}/>:<button type="button" onClick={()=>setOpen(true)}>{language==='en'?(message.role==='user'?'Remember something from this':'Save this reflection'):(message.role==='user'?'Запомнить важное из этого':'Сохранить размышление')}</button>}</div>;}

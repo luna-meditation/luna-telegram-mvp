@@ -14,3 +14,4 @@ mkdirSync(new URL('../dist/',import.meta.url),{recursive:true});writeFileSync(de
 // Bundle the public licensed city snapshot for standalone Railway / Functions builds.
 mkdirSync(new URL('../dist/data/',import.meta.url),{recursive:true});
 for(const filename of ['geonames-cities15000.json.gz','geonames-attribution.json'])copyFileSync(new URL('../data/'+filename,import.meta.url),new URL('../dist/data/'+filename,import.meta.url));
+for(const filename of ['luna42-editorial-baseline.json','luna42-editorial-assets.json'])copyFileSync(new URL('../src/'+filename,import.meta.url),new URL('../dist/'+filename,import.meta.url));

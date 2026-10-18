@@ -12,7 +12,7 @@ test('navigation observation uses a dedicated owner-bound RPC and rejects unknow
  assert.equal(uiAckInput.safeParse(value).success,true);
  for(const destination of ['admin','https://evil.invalid','../profile'])assert.equal(uiAckInput.safeParse({...value,destination}).success,false);
  assert.equal(uiAckInput.safeParse({...value,event:'playback_started'}).success,false);
- let name='',args:Record<string,unknown>|undefined;const db={rpc:async(n:string,a:Record<string,unknown>)=>{name=n;args=a;return{data:true,error:null};}} as unknown as SupabaseClient;
- const r=await acknowledgeUi(db,40001,value);assert.equal(name,'luna41_acknowledge_navigation');assert.equal(args?.p_owner,40001);assert.equal(args?.p_destination,'cosmos');assert.equal(r.rewardGranted,false);
+ const calls:Array<{name:string;args:Record<string,unknown>}>=[];const db={rpc:async(name:string,args:Record<string,unknown>)=>{calls.push({name,args});return{data:true,error:null};}} as unknown as SupabaseClient;
+ const r=await acknowledgeUi(db,40001,value);assert.equal(calls[0].name,'luna41_acknowledge_navigation');assert.equal(calls[0].args.p_owner,40001);assert.equal(calls[0].args.p_destination,'cosmos');assert.equal(r.rewardGranted,false);assert.equal(calls[1].name,'luna42_record_experience');assert.equal(calls[1].args.p_owner,40001);
 });
 test('persistent tool analytics contain no tool data, prompt, question or personal facts',async()=>{let rows:unknown;const db={from:()=>({upsert:async(value:unknown)=>{rows=value;return{error:null};}})} as unknown as SupabaseClient;await recordToolOutcomes(db,40001,input.chartId,[toolOutcome({...input,data:{privateQuestion:'never save this',birth_date:'1990-01-01',memory:'sensitive'}})]);assert.doesNotMatch(JSON.stringify(rows),/privateQuestion|never save|birth_date|sensitive/);assert.match(JSON.stringify(rows),/get_natal_chart/);});
