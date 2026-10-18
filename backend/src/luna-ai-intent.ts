@@ -72,7 +72,7 @@ function shortGoal(message: string): LunaConversationGoal | null {
 
 function nonMeditationIntent(message: string): LunaRuntimeIntent | null {
   if (/\b(?:journal|journaling|write this down|reflection note)\b|(?:дневник|записать мысли|рефлекси)/i.test(message)) return 'journal';
-  if (/\b(?:premium|subscription|payment|stars|plan)\b|(?:премиум|подписк|оплат|звёзд|звезд|тариф)/i.test(message)) return 'premium';
+  if (/\b(?:premium|subscription|payment|stars)\b|\b(?:pricing|subscription|paid|membership)\s+plans?\b|\bplans?\s+(?:price|cost|subscription)\b|(?:премиум|подписк|оплат|звёзд|звезд|тариф)/i.test(message)) return 'premium';
   if (/\b(?:relationship|partner|boyfriend|girlfriend|husband|wife|dating|breakup)\b|(?:отношен|партнёр|партнер|муж|жена|расставан|свидан)/i.test(message)) return 'relationship';
   if (/\b(?:science|research|evidence|study|neuroscience|how does .* work)\b|(?:наук|исследован|доказатель|нейро|как .* работает)/i.test(message)) return 'science';
   return null;

@@ -1564,7 +1564,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
         ...(input.readingId?{readingId:input.readingId}:{}),
         ...(selectedAstrologyAction?{contextReset:!selectedAstrologyAction.attachment,astrologyWorkflow:selectedAstrologyAction.workflow,...(selectedAstrologyAction.attachment?{astrology:selectedAstrologyAction.attachment}:{}),readingId:undefined,astrologyConsent:undefined}:{}),
         consultation:{version:1,phase,actions:memoryProposal?[]:actions,quickReplies:memoryProposal?[]:meaningfulQuickReplies(parsed.quickReplies,[...recent.filter(m=>m.role==='user').map(m=>m.content),...lastAssistantQuickReplies(recent)])},
-        ...(env.FEATURE_AI_CENTRAL_EXPERIENCE?{contextualActions:contextualActionIds(input.message,null)}:{}),
+        ...(env.FEATURE_AI_CENTRAL_EXPERIENCE?{contextualActions:chartContext?['birth_profile']:readingContext?['tarot']:contextualActionIds(input.message,null)}:{}),
         meditationAction,
         recommendedMeditation,
         safetyState: 'none',

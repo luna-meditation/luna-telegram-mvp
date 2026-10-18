@@ -51,4 +51,27 @@ Current provider documentation (2026-10-18): gpt-5-mini standard $0.25 / $0.025 
 5. Staging RLS/financial idempotency and full automated/mobile regressions; fresh encrypted Luna-only backup with two verified isolated restores before production DDL/activation.
 6. Final mobile acceptance and one coordinated release. No legacy deploy restoration; fix forward.
 
-No 4.3 paid AI calls have run. New staging test budget requested separately; prior 4.2 allowances are exhausted. No real Stars purchase will be initiated without payer confirmation. The app cannot prove a real iPhone microphone flow from desktop screenshots.
+## Owner decisions after the baseline audit
+
+New sales are explicitly approved at 500 Stars / 7 days, 1000 / 30 days, 5000 / 365 days and 10000 / Lifetime. They are prepaid, without automatic renewal. The old 499/750/2499 receipt-validation definitions stay unchanged. An active old Lifetime must never be replaced or sold again.
+
+The owner approved 20 additional successful standard AI replies for 50 Seeds and one grounded personal analysis for 100 Seeds. Both use the existing wallet/ledger and audited Admin catalog revision. The monthly 300-reply model and new ordinary earning rules remain OFF: current daily quotas and rewards are preserved.
+
+New staging QA is bounded by one durable envelope: at most 40 Responses calls and 8 synthetic transcriptions, combined $0.50. Already saved results and the same budget are reused after corrections, not reset. No real Stars payment is approved or performed by automation.
+
+## Implemented and independently checked
+
+- PCM16 mono 16 kHz AudioWorklet capture, permission/cancellation/background cleanup, bounded recording, inline review and explicit text sending. No audio-message storage or voice call is advertised.
+- Pre-provider silence/DC/click/clipping checks and no app-vocabulary transcription bias. Manual inspection caught a poor Russian synthetic transcript that the first weak assertion missed; the final run must verify actual expected RU/EN words, not merely nonempty text.
+- Selected artifact versus historical attachment separation, complete expandable prose, bounded contextual memory, current real tools and persisted conversation results. Ordinary day planning is not a subscription intent; chart follow-ups cannot offer old Tarot context.
+- Optional Meet Luna in the actual composer, canonical confirmed-field reuse, conversational domains, optional birth-data editing and Settings memory controls. No inferred Telegram name is silently stored as a confirmed personal fact.
+- Profile/Journey hierarchy, two library tabs, collapsed filters, readable mood labels and breathing guidance without changes to phase/reward algorithms. The current approved product is Dark-only; system Light preference is tested but is not called a separate Light theme.
+- New Premium rights use the existing entitlement periods; a new Lifetime period is infinite without rewriting `users.lifetime_access`. Verified receipt/refund/idempotency tests preserve historical rights.
+- Two narrowly scoped 4.3 migrations reviewed on a fresh restored production schema: only nine existing Luna functions change; all original ACLs, other function bodies and original-column row checksums remain exact. Five new functions are invoker-only/private. Another application's objects are excluded from writes.
+- Fresh encrypted backup: 79 tables, 79 functions, one security-invoker editorial view, two isolated complete restores and 28 verified encrypted media objects. Managed paid backup/PITR resources were not provisioned.
+
+## Explicit remaining product boundaries
+
+The existing calculated compatibility and entitled/Public Beta AI scenarios remain available. A separate paid compatibility report continuation is not yet wired: the old server deliberately returns `direct_purchase_unavailable` before a debit. It must not be advertised or activated as a functioning paid product. There is no approved individual meditation-unlock product; existing Premium library access is preserved. These individual gaps must not be disguised by enabling unused flags or blocking the otherwise verified store.
+
+A real iPhone microphone/permission/keyboard audition is separate from desktop PCM capture and real synthetic provider tests. Additional live Stars purchase/refund approval belongs to the payer. Final readiness depends on the source-bound release evidence, not this historical audit alone.

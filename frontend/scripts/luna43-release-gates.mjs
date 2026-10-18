@@ -27,7 +27,9 @@ export function verifyLuna43ReleaseEvidence(r,root){
  assert.deepEqual(r.newStarsPrices,{weekly:500,monthly:1000,annual:5000,lifetime:10000});
  assert.deepEqual(r.newSeedPrices,{aiMessages:{seeds:50,quantity:20},deepAnalysis:{seeds:100}});
  assert.equal(r.realTelegramInvoices,'PASS');assert.equal(r.realStarsTransactions,0);
- for(const key of ['monetizationEnabled','financialAdminMutationsEnabled','voiceInputEnabled','balancesAndPaidRightsPreserved','aiBudgetBaselinePreserved','unrelatedObjectsUnchanged','legacyReceiptsPreserved','prepaidNewSubscriptions'])assert.equal(r[key],true,key);
+ // Publish the new UI before opening checkout: old clients must not display
+ // outdated renewal terms during the coordinated backend/frontend rollout.
+ for(const key of ['monetizationApproved','financialAdminMutationsApproved','backendStagingVerified','checkoutClosedForCoordinatedPublish','voiceInputEnabled','balancesAndPaidRightsPreserved','aiBudgetBaselinePreserved','unrelatedObjectsUnchanged','legacyReceiptsPreserved','prepaidNewSubscriptions'])assert.equal(r[key],true,key);
  for(const key of ['newCommercialQuotasEnabled','newRewardRulesEnabled','guidedBreathEnabled','modelSwitchEnabled'])assert.equal(r[key],false,key);
  assert.equal(r.migrationStatus,'verified-production');assert.deepEqual(r.criticalBlockers,[]);
  assert.ok(r.knownLimitations?.length>0);assert.match(r.stagingSourceCommit,/^[a-f0-9]{40}$/);assert.match(r.stagingDeploymentId,/^[a-f0-9]{24}$/);

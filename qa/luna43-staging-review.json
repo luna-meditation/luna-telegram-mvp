@@ -1,0 +1,797 @@
+{
+  "status": "PASS",
+  "stagingProjectId": "funvzpmpbgazsisehiru",
+  "sourceCommit": "d84fd4d739ec0d114eaa5df34df8c790b16c4c38",
+  "deploymentId": "6ad448e155cef4ddc59df850",
+  "checks": [
+    {
+      "name": "staging is closed before finite run",
+      "status": "PASS"
+    },
+    {
+      "name": "no missing/forged/foreign Telegram access to new purchases",
+      "status": "PASS"
+    },
+    {
+      "name": "signed QA Admin read /api/admin/v4/overview",
+      "status": "PASS"
+    },
+    {
+      "name": "signed QA Admin read /api/admin/v4/users",
+      "status": "PASS"
+    },
+    {
+      "name": "signed QA Admin read /api/admin/v4/content",
+      "status": "PASS"
+    },
+    {
+      "name": "signed QA Admin read /api/admin/v4/runtime",
+      "status": "PASS"
+    },
+    {
+      "name": "signed QA Admin read /api/admin/v4/audit",
+      "status": "PASS"
+    },
+    {
+      "name": "signed QA Admin read /api/admin/v4/roles",
+      "status": "PASS"
+    },
+    {
+      "name": "current production model exists",
+      "status": "PASS"
+    },
+    {
+      "name": "no unaccounted staging hold",
+      "status": "PASS"
+    },
+    {
+      "name": "staging wallet configuration is ready",
+      "status": "PASS"
+    },
+    {
+      "name": "only relevant confirmed memory is retrieved",
+      "status": "PASS"
+    },
+    {
+      "name": "focus real saved/reopened/replayed answer",
+      "status": "PASS"
+    },
+    {
+      "name": "focus typo yields a real playable meditation",
+      "status": "PASS"
+    },
+    {
+      "name": "recommendation is not false playback",
+      "status": "PASS"
+    },
+    {
+      "name": "single actual cards persist without repeat generation",
+      "status": "PASS"
+    },
+    {
+      "name": "single provider interpretation saved",
+      "status": "PASS"
+    },
+    {
+      "name": "three actual cards persist without repeat generation",
+      "status": "PASS"
+    },
+    {
+      "name": "three provider interpretation saved",
+      "status": "PASS"
+    },
+    {
+      "name": "five actual cards persist without repeat generation",
+      "status": "PASS"
+    },
+    {
+      "name": "five provider interpretation saved",
+      "status": "PASS"
+    },
+    {
+      "name": "tarot_followup real saved/reopened/replayed answer",
+      "status": "PASS"
+    },
+    {
+      "name": "topic_switch real saved/reopened/replayed answer",
+      "status": "PASS"
+    },
+    {
+      "name": "old Tarot detaches on a real topic switch",
+      "status": "PASS"
+    },
+    {
+      "name": "ordinary day planning is not a subscription intent",
+      "status": "PASS"
+    },
+    {
+      "name": "one own profile opens calculated chart without redundant selection",
+      "status": "PASS"
+    },
+    {
+      "name": "natal_followup real saved/reopened/replayed answer",
+      "status": "PASS"
+    },
+    {
+      "name": "natal answer uses selected calculated chart",
+      "status": "PASS"
+    },
+    {
+      "name": "natal follow-up does not suggest old Tarot",
+      "status": "PASS"
+    },
+    {
+      "name": "real staging package debits and grants exactly once",
+      "status": "PASS"
+    },
+    {
+      "name": "grounded personal analysis saved and free to reopen",
+      "status": "PASS"
+    },
+    {
+      "name": "only authorized test Seeds used",
+      "status": "PASS"
+    },
+    {
+      "name": "real Telegram invoice premium_week",
+      "status": "PASS"
+    },
+    {
+      "name": "real Telegram invoice premium_lifetime",
+      "status": "PASS"
+    },
+    {
+      "name": "unbiased en transcript/replay",
+      "status": "PASS"
+    },
+    {
+      "name": "actual en words are intelligible",
+      "status": "PASS"
+    },
+    {
+      "name": "unbiased ru transcript/replay",
+      "status": "PASS"
+    },
+    {
+      "name": "actual ru words are intelligible",
+      "status": "PASS"
+    },
+    {
+      "name": "all provider costs known and inside approved envelope",
+      "status": "PASS"
+    }
+  ],
+  "providerCalls": 21,
+  "transcriptionCalls": 4,
+  "spentMicrousd": 45214,
+  "heldMicrousd": 0,
+  "approvedMicrousd": 500000,
+  "calls": [
+    {
+      "type": "response",
+      "model": "gpt-5-mini",
+      "tools": [],
+      "status": "completed",
+      "ceiling": 9127,
+      "inputTokens": 4108,
+      "costMicrousd": 1443,
+      "outputTokens": 208
+    },
+    {
+      "type": "response",
+      "model": "gpt-5-mini",
+      "tools": [],
+      "status": "completed",
+      "ceiling": 8943,
+      "inputTokens": 3987,
+      "costMicrousd": 1301,
+      "outputTokens": 152
+    },
+    {
+      "type": "response",
+      "model": "gpt-4o-mini",
+      "tools": [],
+      "status": "completed",
+      "ceiling": 4512,
+      "inputTokens": 4108,
+      "costMicrousd": 699,
+      "outputTokens": 138
+    },
+    {
+      "type": "response",
+      "model": "gpt-4o-mini",
+      "tools": [],
+      "status": "completed",
+      "ceiling": 4401,
+      "inputTokens": 3987,
+      "costMicrousd": 680,
+      "outputTokens": 135
+    },
+    {
+      "type": "response",
+      "model": "gpt-4.1",
+      "tools": [],
+      "status": "completed",
+      "ceiling": 60140,
+      "inputTokens": 4108,
+      "costMicrousd": 9608,
+      "outputTokens": 174
+    },
+    {
+      "type": "response",
+      "model": "gpt-4.1",
+      "tools": [],
+      "status": "completed",
+      "ceiling": 58670,
+      "inputTokens": 3987,
+      "costMicrousd": 10022,
+      "outputTokens": 256
+    },
+    {
+      "type": "response",
+      "model": "gpt-5-mini",
+      "tools": [],
+      "status": "completed",
+      "ceiling": 3927,
+      "inputTokens": 1191,
+      "costMicrousd": 820,
+      "outputTokens": 261
+    },
+    {
+      "type": "response",
+      "model": "gpt-5-mini",
+      "tools": [],
+      "status": "completed",
+      "ceiling": 6575,
+      "inputTokens": 1392,
+      "costMicrousd": 1454,
+      "outputTokens": 553
+    },
+    {
+      "type": "response",
+      "model": "gpt-5-mini",
+      "tools": [],
+      "status": "completed",
+      "ceiling": 8049,
+      "inputTokens": 1317,
+      "costMicrousd": 1438,
+      "outputTokens": 554
+    },
+    {
+      "type": "response",
+      "model": "gpt-5-mini",
+      "tools": [],
+      "status": "completed",
+      "ceiling": 15424,
+      "inputTokens": 7596,
+      "costMicrousd": 2379,
+      "outputTokens": 240
+    },
+    {
+      "type": "response",
+      "model": "gpt-5-mini",
+      "tools": [],
+      "status": "completed",
+      "ceiling": 13828,
+      "inputTokens": 6575,
+      "costMicrousd": 2090,
+      "outputTokens": 223
+    },
+    {
+      "type": "response",
+      "model": "gpt-5-mini",
+      "tools": [
+        "get_user_context"
+      ],
+      "status": "completed",
+      "ceiling": 14510,
+      "inputTokens": 7216,
+      "costMicrousd": 1229,
+      "outputTokens": 29
+    },
+    {
+      "type": "response",
+      "model": "gpt-5-mini",
+      "tools": [],
+      "status": "completed",
+      "ceiling": 15123,
+      "inputTokens": 7351,
+      "costMicrousd": 760,
+      "outputTokens": 253
+    },
+    {
+      "type": "response",
+      "model": "gpt-5-mini",
+      "tools": [],
+      "status": "completed",
+      "ceiling": 6127,
+      "inputTokens": 876,
+      "costMicrousd": 1453,
+      "outputTokens": 617
+    },
+    {
+      "type": "transcription",
+      "model": "gpt-4o-mini-transcribe",
+      "tools": [],
+      "status": "transcribed",
+      "ceiling": 20000,
+      "inputTokens": 28,
+      "costMicrousd": 100,
+      "outputTokens": 13
+    },
+    {
+      "type": "transcription",
+      "model": "gpt-4o-mini-transcribe",
+      "tools": [],
+      "status": "transcribed",
+      "ceiling": 20000,
+      "inputTokens": 26,
+      "costMicrousd": 138,
+      "outputTokens": 21
+    },
+    {
+      "type": "response",
+      "model": "gpt-5-mini",
+      "tools": [],
+      "status": "completed",
+      "ceiling": 3923,
+      "inputTokens": 1186,
+      "costMicrousd": 865,
+      "outputTokens": 284
+    },
+    {
+      "type": "response",
+      "model": "gpt-5-mini",
+      "tools": [],
+      "status": "completed",
+      "ceiling": 6564,
+      "inputTokens": 1384,
+      "costMicrousd": 1352,
+      "outputTokens": 503
+    },
+    {
+      "type": "response",
+      "model": "gpt-5-mini",
+      "tools": [],
+      "status": "completed",
+      "ceiling": 8049,
+      "inputTokens": 1315,
+      "costMicrousd": 1415,
+      "outputTokens": 543
+    },
+    {
+      "type": "response",
+      "model": "gpt-5-mini",
+      "tools": [],
+      "status": "completed",
+      "ceiling": 15973,
+      "inputTokens": 7969,
+      "costMicrousd": 1769,
+      "outputTokens": 205
+    },
+    {
+      "type": "response",
+      "model": "gpt-5-mini",
+      "tools": [],
+      "status": "completed",
+      "ceiling": 13825,
+      "inputTokens": 6574,
+      "costMicrousd": 1372,
+      "outputTokens": 181
+    },
+    {
+      "type": "response",
+      "model": "gpt-5-mini",
+      "tools": [],
+      "status": "completed",
+      "ceiling": 14510,
+      "inputTokens": 7216,
+      "costMicrousd": 873,
+      "outputTokens": 312
+    },
+    {
+      "type": "response",
+      "model": "gpt-5-mini",
+      "tools": [],
+      "status": "completed",
+      "ceiling": 6127,
+      "inputTokens": 876,
+      "costMicrousd": 1683,
+      "outputTokens": 732
+    },
+    {
+      "type": "transcription",
+      "model": "gpt-4o-mini-transcribe",
+      "tools": [],
+      "status": "transcribed",
+      "ceiling": 20000,
+      "inputTokens": 45,
+      "costMicrousd": 122,
+      "outputTokens": 13
+    },
+    {
+      "type": "transcription",
+      "model": "gpt-4o-mini-transcribe",
+      "tools": [],
+      "status": "transcribed",
+      "ceiling": 20000,
+      "inputTokens": 47,
+      "costMicrousd": 149,
+      "outputTokens": 18
+    }
+  ],
+  "benchmarks": [
+    {
+      "id": "gpt-5-mini:ru",
+      "text": "Понимаю — хочется сделать реальный прогресс за полчаса. Давай сконцентрируемся на одном конкретном, выполнимом шаге, который действительно движит прототип вперёд. Нужна небольшая уточняющая деталь: на каком этапе прототип сейчас — идея/макет (wireframe), минимальная рабочая версия (MVP) или тестирование с пользователями?",
+      "model": "gpt-5-mini",
+      "status": "PASS",
+      "language": "ru",
+      "wordCount": 40
+    },
+    {
+      "id": "gpt-5-mini:en",
+      "text": "You’ve got 30 minutes — nice. Quick question: do you want a step that moves the prototype forward (code/demo), or one that helps test it with people (prep for volunteers)?",
+      "model": "gpt-5-mini",
+      "status": "PASS",
+      "language": "en",
+      "wordCount": 30
+    },
+    {
+      "id": "gpt-4o-mini:ru",
+      "text": "Вы можете сосредоточиться на создании минимально жизнеспособного продукта (MVP). Например, начните с определения ключевой функции, которую вы хотите протестировать. Напишите краткое описание этой функции и подумайте, как вы можете её реализовать в ближайшие моменты. Это поможет вам сфокусироваться и эффективно использовать время.",
+      "model": "gpt-4o-mini",
+      "status": "PASS",
+      "language": "ru",
+      "wordCount": 42
+    },
+    {
+      "id": "gpt-4o-mini:en",
+      "text": "Consider drafting a quick outline of your prototype's key features or goals. This will clarify your vision and guide your next steps in development. Try to focus on the most critical aspects that will create value for your users. \n\nIf you want, I can help you brainstorm specific features or improvements based on your current design!",
+      "model": "gpt-4o-mini",
+      "status": "PASS",
+      "language": "en",
+      "wordCount": 56
+    },
+    {
+      "id": "gpt-4.1:ru",
+      "text": "Поняла, что важно использовать время эффективно. Подумай, какое одно действие за полчаса даст ощущение продвижения: например, реализовать простейший функционал, проверить важную гипотезу или собрать быструю обратную связь от одного добровольца. Если не хочется тратить время на выбор, начни с самой важной или самой легкой задачи — главное, чтобы был результат, который можно показать или протестировать.",
+      "model": "gpt-4.1",
+      "status": "PASS",
+      "language": "ru",
+      "wordCount": 55
+    },
+    {
+      "id": "gpt-4.1:en",
+      "text": "Great, Alex. With just half an hour available for your prototype, let’s identify a focused step you can realistically accomplish. Consider these options:\n\n1. **Sketch a Core Flow**: Quickly outline (on paper or digitally) the main interaction or flow you want to test with your volunteers. Even a rough diagram can clarify your next moves.\n\n2. **Write Key Copy**: Draft the main text or prompts users will see at a crucial point—like onboarding, a core action, or feedback moment. Concise, clear wording often shapes user experience.\n\n3. **Build a Minimal UI Element**: Pick one component (like a main button, welcome screen, or input form) and get a basic version working. Don't worry about perfection—just the basics.\n\nIf you tell me your most pressing blocker or which piece feels hazy, I can help you narrow it down even more.",
+      "model": "gpt-4.1",
+      "status": "PASS",
+      "language": "en",
+      "wordCount": 138
+    }
+  ],
+  "voice": [
+    {
+      "text": "Luna, please recommend a short meditation for focus.",
+      "status": "PASS",
+      "adapter": "isolated finite QA; normal voice RPC independently native-reviewed",
+      "language": "en",
+      "cachedReplay": true,
+      "costMicrousd": 122
+    },
+    {
+      "text": "Луна, подбери короткую медитацию для фокуса.",
+      "status": "PASS",
+      "adapter": "isolated finite QA; normal voice RPC independently native-reviewed",
+      "language": "ru",
+      "cachedReplay": true,
+      "costMicrousd": 149
+    }
+  ],
+  "voiceRevision": 2,
+  "protectedQaStatePreserved": true,
+  "syntheticOwnerCleaned": true,
+  "productionTouched": false,
+  "realStarsPayments": 0,
+  "topicSwitch": {
+    "text": "Try a 10-minute “Tomorrow Map” tonight: list your top 3 priorities for tomorrow (work, home, personal), pick one concrete first step for each, and decide when you’ll start the first task. Keep it visible (phone note or sticky). That single short plan makes mornings less fuzzy and keeps the day focused.",
+    "metadata": {
+      "safetyState": "none",
+      "consultation": {
+        "phase": "greeting",
+        "actions": [
+          "continue"
+        ],
+        "version": 1,
+        "quickReplies": [
+          "Make my Tomorrow Map now",
+          "Show a template",
+          "Give another tip"
+        ]
+      },
+      "contextReset": true,
+      "pending_state": null,
+      "pending_action": null,
+      "resolvedIntent": "general_chat",
+      "meditationAction": null,
+      "clarificationHash": null,
+      "contextualActions": [],
+      "conversationState": {
+        "currentGoal": null,
+        "currentTopic": null,
+        "currentIntent": "general_chat",
+        "currentMeditationId": null,
+        "currentRecommendationId": null
+      },
+      "recommendedMeditation": null,
+      "recommendedMeditationId": null,
+      "duplicateClarificationBlocked": false
+    }
+  },
+  "natalFollowup": {
+    "text": "Mercury in this chart is in Capricorn (1.89°). Briefly: Mercury in Capricorn thinks and communicates with structure and practicality. It prefers clear plans, concise language, and ideas that can be applied or realized. There’s a focus on responsibility, long-term thinking, and cautious logic rather than impulsive mental leaps.\n\nKey notes from the calculated context:\n- Placement: Mercury in Capricorn — methodical, businesslike, organized thinking.\n- Aspect: Mercury forms a sextile to Mars (orb ~3.93°) — quickened mental energy and effective decision-making; ideas can be put into action with steady initiative.\n\nPractical reflection: When you need to explain something or make a plan, favor simple, concrete steps and a calm tone — that plays to Mercury’s strengths here.",
+    "metadata": {
+      "astrology": {
+        "chartId": "3801a0d6-7754-4dbe-8bff-f6fb7ec0d440"
+      },
+      "safetyState": "none",
+      "consultation": {
+        "phase": "presenting_results",
+        "actions": [
+          "continue"
+        ],
+        "version": 1,
+        "quickReplies": [
+          "How can I use this in communication?",
+          "Tell me Mercury and Moon together",
+          "That makes sense, thanks"
+        ]
+      },
+      "pending_state": null,
+      "pending_action": null,
+      "resolvedIntent": "general_chat",
+      "astrologyConsent": {
+        "chartId": "3801a0d6-7754-4dbe-8bff-f6fb7ec0d440",
+        "version": 1
+      },
+      "meditationAction": null,
+      "clarificationHash": null,
+      "contextualActions": [
+        "birth_profile"
+      ],
+      "conversationState": {
+        "currentGoal": null,
+        "currentTopic": "astrology",
+        "currentIntent": "general_chat",
+        "currentMeditationId": null,
+        "currentRecommendationId": null
+      },
+      "recommendedMeditation": null,
+      "recommendedMeditationId": null,
+      "duplicateClarificationBlocked": false
+    }
+  },
+  "tarotFollowup": {
+    "text": "Сделай минимальную рабочую версию одной ключевой функции и покажи её двум добровольцам в 10–15‑минутном сценарии тестирования. Проси их выполнить одну задачу, наблюдай, где они застревают, и запиши одно конкретное исправление для следующего шага.",
+    "metadata": {
+      "readingId": "f8783d1a-6815-40b1-8354-282689412f43",
+      "safetyState": "none",
+      "consultation": {
+        "phase": "presenting_results",
+        "actions": [
+          "continue"
+        ],
+        "version": 1,
+        "quickReplies": [
+          "Сделаю так — что тестировать первым?",
+          "Помоги составить сценарий теста",
+          "Хочу другой практический шаг"
+        ]
+      },
+      "pending_state": null,
+      "pending_action": null,
+      "resolvedIntent": "general_chat",
+      "meditationAction": null,
+      "clarificationHash": null,
+      "contextualActions": [
+        "tarot"
+      ],
+      "conversationState": {
+        "currentGoal": "focus",
+        "currentTopic": "tarot",
+        "currentIntent": "general_chat",
+        "currentMeditationId": null,
+        "currentRecommendationId": null
+      },
+      "recommendedMeditation": null,
+      "recommendedMeditationId": null,
+      "duplicateClarificationBlocked": false
+    }
+  },
+  "tarotSingle": {
+    "status": "PASS",
+    "language": "en",
+    "readingId": "60b0f310-4ee2-4ed4-b1ec-91b560ad889d",
+    "interpretation": {
+      "cards": [
+        {
+          "cardId": "judgement",
+          "detail": "Consider a single-feature clickable prototype or a short guided session that isolates the core value.",
+          "position": "Main perspective",
+          "application": "Choose a prototype that directly answers your main hypothesis and produces measurable feedback from two volunteers.",
+          "orientation": "upright",
+          "positionMeaning": "Upright here emphasizes calling and clear evaluation as the guiding lens for the project."
+        }
+      ],
+      "actions": [
+        "Build a one-feature clickable prototype or 5–10 minute guided session and test it with two volunteers within one week."
+      ],
+      "overall": "The reading links decisive assessment with immediate testing: make the simplest possible artifact that forces a real yes/no answer from users.",
+      "summary": "Judgement upright asks you to review recent learnings and choose a prototype step that clearly tests the core assumption. For your career question, that means picking the smallest deliverable that will show whether the idea actually helps users—something you can finish quickly and expose to two volunteers. The card highlights clarity, honest evaluation and a willingness to act on feedback rather than perfection. Treat this step as an experiment with pass/fail criteria, not a polished product.",
+      "version": 2,
+      "question": "Which single assumption about the prototype will you aim to prove or disprove in that test?",
+      "continuation": null
+    }
+  },
+  "tarotThree": {
+    "status": "PASS",
+    "language": "ru",
+    "readingId": "f8783d1a-6815-40b1-8354-282689412f43",
+    "interpretation": {
+      "cards": [
+        {
+          "cardId": "three-of-swords",
+          "detail": "Может указывать на эмоциональное сопротивление при показе продукта другим.",
+          "position": "Суть ситуации",
+          "application": "Перед прототипом важно принять и зафиксировать, что не сработало ранее.",
+          "orientation": "upright",
+          "positionMeaning": "Указывает на необходимость честного признания боли или потери в проекте."
+        },
+        {
+          "cardId": "the-hermit",
+          "detail": "Реверс может указывать на страх показать недоработку или искать подтверждение в вакууме.",
+          "position": "Что требует внимания",
+          "application": "Проверь, не изолируешь ли ты себя от возможных тестировщиков и их критики.",
+          "orientation": "reversed",
+          "positionMeaning": "Показывает, что уединение перестаёт быть исцеляющим и мешает обратной связи."
+        },
+        {
+          "cardId": "knight-of-cups",
+          "detail": "Реверс предлагает проверить реализм обещаний перед показом добровольцам.",
+          "position": "Возможное направление",
+          "application": "Сфокусируйся на конкретных шагах, превращающих концепт в работающий мини-прототип.",
+          "orientation": "reversed",
+          "positionMeaning": "Предупреждает: красивая идея без действий останется лишь идеей."
+        }
+      ],
+      "actions": [
+        "Создать минимальную рабочую версию функции и показать её двум добровольцам в формате 10–15 минутного сценария."
+      ],
+      "overall": "Контраст между честным признанием проблем и опасностью уединения подчёркивает: нужна открытая, но очень простая проверка идеи.",
+      "summary": "Ситуация говорит о ясной эмоциональной боли или разочаровании, которые нужно признать прежде чем двигаться дальше; уединение может помогать, но сейчас оно искажает обратную связь; предлагаемый путь — романтичная идея прототипа требует конкретных шагов и проверки, иначе она останется мечтой. Главный урок: сначала обработай неудобные факты и вернись с простым, осязаемым минимальным тестом, который можно показать двум добровольцам и получить честную реакцию.",
+      "version": 2,
+      "question": "Какая одна ключевая функция должна работать в мини-прототипе для честной обратной связи?",
+      "continuation": null
+    }
+  },
+  "tarotFive": {
+    "status": "PASS",
+    "language": "en",
+    "readingId": "bb71ee88-10ac-413e-bff6-09bfb173b760",
+    "interpretation": {
+      "cards": [
+        {
+          "cardId": "the-chariot",
+          "detail": "Signals readiness to push past hesitation with a structured plan.",
+          "position": "The heart of the question",
+          "application": "Choose one clear prototype goal to channel your energy toward.",
+          "orientation": "upright",
+          "positionMeaning": "Focus and disciplined direction applied to the central issue."
+        },
+        {
+          "cardId": "seven-of-cups",
+          "detail": "Warns against spending time on fantasies without concrete steps.",
+          "position": "Hidden influences",
+          "application": "List and eliminate options until one testable idea remains.",
+          "orientation": "upright",
+          "positionMeaning": "Many attractive possibilities are clouding a single choice."
+        },
+        {
+          "cardId": "two-of-cups",
+          "detail": "May indicate assumptions about commitment that need explicit conversation.",
+          "position": "Obstacles",
+          "application": "Clarify roles and deliverables with your volunteers before testing.",
+          "orientation": "reversed",
+          "positionMeaning": "Partnerships or expectations feel misaligned or unclear."
+        },
+        {
+          "cardId": "queen-of-wands",
+          "detail": "Suggests practicing a concise vulnerable pitch to build trust.",
+          "position": "Opportunities",
+          "application": "Own uncertainties when recruiting feedback—that honesty invites useful critique.",
+          "orientation": "reversed",
+          "positionMeaning": "Confidence exists but is muffled by fear of showing gaps."
+        },
+        {
+          "cardId": "page-of-wands",
+          "detail": "A short pilot lowers stakes and reveals what to improve quickly.",
+          "position": "A conscious next step",
+          "application": "Design a small, time-boxed experiment rather than a full feature build.",
+          "orientation": "reversed",
+          "positionMeaning": "Enthusiasm is present but needs a modest, contained expression."
+        }
+      ],
+      "actions": [
+        "Create a one-page experiment brief: objective, success metric, volunteer roles, 1-week timeline."
+      ],
+      "overall": "Decisive direction plus narrowed options and clear volunteer agreements will turn momentum into actionable learning without overcommitting.",
+      "summary": "You have will and focus ready (The Chariot) but many options distract you (Seven of Cups); the main blockage is uneven collaboration or expectations (Two of Cups reversed). Reclaim practical confidence without masking uncertainty (Queen of Wands reversed) and run a modest, low-risk trial rather than a big launch (Page of Wands reversed). Together this says: pick one clear direction, narrow to the most testable idea, set explicit roles with your two volunteers, and frame the prototype as an experiment you’ll iterate from. The contrast between decisive drive and scattered choices is the key—use structure to convert momentum into a single, testable prototype.",
+      "version": 2,
+      "question": "Which single metric will show this prototype is worth further development?",
+      "continuation": null
+    }
+  },
+  "deepAnalysis": {
+    "usage": {
+      "model": "gpt-5-mini-2025-08-07",
+      "costUsd": 0.001683
+    },
+    "sources": [
+      {
+        "id": "confirmed_0",
+        "kind": "confirmed",
+        "label": "prototype_goal"
+      },
+      {
+        "id": "natal",
+        "kind": "calculated_symbolic",
+        "label": "Рассчитанная натальная карта"
+      }
+    ],
+    "summary": "Короткая практичная рефлексия о том, как продвинуть небольшой полезный прототип к тестированию с двумя добровольцами, опираясь на подтверждённую цель и символические указания натальной карты.",
+    "version": 1,
+    "language": "ru",
+    "question": "Какой один пользовательский сценарий вы считаете самым критичным для проверки работоспособности прототипа первым?",
+    "sections": [
+      {
+        "basis": [
+          "confirmed_0",
+          "natal"
+        ],
+        "title": "Паттерн: целеустремлённость и прагматизм",
+        "insight": "Ваша заявленная цель — создать маленький полезный прототип и проверить его на двух добровольцах — звучит сфокусировано и прагматично. Символически это резонирует с устойчивой, дисциплинированной энергией, которая поддерживает доведение небольшого проекта до рабочего состояния без распыления на лишние опции."
+      },
+      {
+        "basis": [
+          "natal",
+          "confirmed_0"
+        ],
+        "title": "Напряжение: желание расширять vs необходимость упрощать",
+        "insight": "Есть символическое напряжение между стимулом экспериментировать и добавлять новизну и потребностью держать продукт простым. Это видно как выбор между добавить ещё одну фичу (искушение) и сознательно ограничивать объём работы ради теста с пользователями."
+      },
+      {
+        "basis": [
+          "confirmed_0",
+          "natal"
+        ],
+        "title": "Сила: коммуникация и тестирование в малом масштабе",
+        "insight": "Подчёркнута способность быстро общаться идеи и получать раннюю обратную связь — это сильная сторона для прототипа. Практический пример: подготовить 1–2 ключевых сценария использования и попросить двух добровольцев пройти их, фиксируя только критические замечания."
+      },
+      {
+        "basis": [
+          "confirmed_0",
+          "natal"
+        ],
+        "title": "Выбор: критерии «достаточности» для MVP",
+        "insight": "Конкретный выбор, который поможет не распыляться — установить 3 чётких критерия успеха для прототипа (например: выполняет X, вменяемо стабилен Y, может получить первичную обратную связь Z). Если прототип не отвечает хотя бы двум критериям, улучшения — только минимальные и направленные."
+      }
+    ],
+    "takeaway": "Сфокусируйтесь на 1–2 ключевых функциях, заранее определите 3 критерия успеха для теста и подготовьте короткие сценарии для двух добровольцев; все остальные идеи поместите в «список пожеланий» для следующего шага.",
+    "limitations": "Я опираюсь только на вашу подтверждённую цель и на символическую интерпретацию расчёта натальной карты. Символические данные — не подтверждённые факты о поведении; карты не указывают точные шаги реализации. Если нужны конкретные шаги по UX, стеку или плану тестирования, дайте дополнительные технические детали."
+  },
+  "limitations": [
+    "Real synthetic provider calls; not a physical iPhone microphone capture.",
+    "Voice service used the isolated finite QA DB adapter; normal auth/RPC boundaries tested independently.",
+    "Early nonempty Russian transcript assertion was insufficient; stricter expected-word validation passed after the generic verbatim-language cue. All earlier call costs remain included."
+  ]
+}

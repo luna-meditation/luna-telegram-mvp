@@ -3,6 +3,8 @@ import {usesConsultation,luna43ConversationInstructions} from './luna43-conversa
 import {artifactScopedIntent} from './luna31-consultation.js';
 import {constrainLunaResponse} from './luna-ai-quality.js';
 import {readFileSync} from 'node:fs';
+import {resolveLunaIntent} from './luna-ai-intent.js';
+import {normalizeConversationState} from './luna-ai-state.js';
 test('new topics do not inherit saved Tarot or astrology; genuine follow-ups still do',()=>{
  for(const kind of ['tarot','astrology'] as const){for(const text of ['Help me plan my week','Как поменять язык?','Buy more Moon Seeds','Что приготовить на ужин?','Recommend a focus meditation'])assert.equal(usesConsultation(text,kind),false,text);for(const text of ['Tell me more','А как это связано с работой?','Расскажи подробнее'])assert.equal(usesConsultation(text,kind),true,text);assert.equal(usesConsultation('What would this mean for my work?',kind,true),true);}
  assert.equal(usesConsultation('Explain Mercury in my chart','tarot'),false);assert.equal(usesConsultation('Что означает перевёрнутая карта?','tarot'),true);assert.equal(usesConsultation('Let’s do another Tarot spread','astrology'),false);
@@ -14,4 +16,10 @@ test('spread reservation uses the shared successful-answer quota rather than an 
  assert.match(spread,/p_daily_limit:env\.LUNA32_ENABLED\?500:/);
  assert.match(spread,/return withAiOperation\(supabase,telegramId,'tarot:'/);
  assert.match(spread,/p_global_limit:env\.TAROT_AI_GLOBAL_DAILY_LIMIT/);
+});
+test('planning a day is not a Premium purchase; explicit subscription language still is',()=>{
+ const classify=(message:string)=>resolveLunaIntent({message,state:normalizeConversationState(null),pendingState:null,catalog:[]}).intent;
+ for(const text of ['Help me plan tomorrow','I need a plan for my prototype','План на завтра','How can I plan my week?'])assert.equal(classify(text),'general_chat',text);
+ for(const text of ['Premium plan prices','subscription plan','Which paid plan costs less?','Какой тариф Premium?'])assert.equal(classify(text),'premium',text);
+ const source=readFileSync('src/luna-ai.ts','utf8');assert.match(source,/contextualActions:chartContext\?\['birth_profile'\]:readingContext\?\['tarot'\]/);
 });
