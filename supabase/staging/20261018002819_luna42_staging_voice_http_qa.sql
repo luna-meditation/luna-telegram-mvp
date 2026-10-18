@@ -8,7 +8,7 @@ returns jsonb language plpgsql security invoker set search_path='' as $$
 declare ledger public.luna30_qa_report_runs;prior public.luna42_voice_requests;v jsonb;
 begin
  if p_owner is distinct from 158467796::bigint or p_request is null or p_grant is null or p_hash is null or p_hash!~'^[a-f0-9]{64}$' or p_language is null or p_language not in('en','ru') or p_duration is null or p_duration not between 250 and 45000 then return jsonb_build_object('status','denied');end if;
- select * into ledger from public.luna30_qa_report_runs where run_name='luna42-voice-http-20261018-v1' for update;
+ select * into ledger from public.luna30_qa_report_runs where run_name='luna42-voice-http-20261018-v2' for update;
  v:=ledger.result;
  if v is null or v->>'grantId'<>p_grant::text or (v->>'qaOwner')::bigint<>p_owner then return jsonb_build_object('status','denied');end if;
  select * into prior from public.luna42_voice_requests where telegram_id=p_owner and request_id=p_request;
@@ -29,7 +29,7 @@ returns boolean language plpgsql security invoker set search_path='' as $$
 declare ledger public.luna30_qa_report_runs;prior public.luna42_voice_requests;v jsonb;
 begin
  if p_owner is distinct from 158467796::bigint or p_grant is null or p_request is null or p_cost<0 or p_input<0 or p_output<0 or p_latency<0 or p_text is not null and char_length(p_text)>2000 or p_cost is not null and(p_input is null or p_output is null) then return false;end if;
- select * into ledger from public.luna30_qa_report_runs where run_name='luna42-voice-http-20261018-v1' for update;v:=ledger.result;
+ select * into ledger from public.luna30_qa_report_runs where run_name='luna42-voice-http-20261018-v2' for update;v:=ledger.result;
  if v is null or v->>'grantId'<>p_grant::text or (v->>'qaOwner')::bigint<>p_owner or not(v->'requestIds'?p_request::text) then return false;end if;
  select * into prior from public.luna42_voice_requests where telegram_id=p_owner and request_id=p_request and state='reserved' for update;if not found then return false;end if;
  update public.luna42_voice_requests set state=case when p_cost is null then 'unknown' when p_text is null or p_text='' then 'failed' else 'ready' end,transcript=p_text,actual_cost_microusd=p_cost,input_tokens=p_input,output_tokens=p_output,latency_ms=p_latency where telegram_id=p_owner and request_id=p_request;
