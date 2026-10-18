@@ -6,13 +6,14 @@
   NODE_VERSION = "22"
   PNPM_VERSION = "9.15.0"
 
-# Luna 4.3 verified commercial release; build requires current source-bound evidence.
+# Verified Luna Intelligence release; build requires current source-bound evidence.
 [context.production]
   command = "pnpm --filter @luna/frontend build:production"
 
 [context.production.environment]
-  LUNA_RELEASE_PROFILE = "luna43"
-  LUNA_RELEASE_DB_REVIEW = "../qa/luna43-release-review.json"
+  LUNA_RELEASE_PROFILE = "intelligence"
+  LUNA_RELEASE_DB_REVIEW = "../qa/luna-intelligence-release-review.json"
+  VITE_FEATURE_LUNA_INTELLIGENCE = "true"
   VITE_FEATURE_ADMIN_V4 = "true"
   VITE_FEATURE_COSMOS_V2 = "true"
   VITE_FEATURE_AI_VOICE_INPUT = "true"

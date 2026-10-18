@@ -1,12 +1,19 @@
 import {createHash,randomInt} from 'node:crypto';
 import {z} from 'zod';
 import {tarotCatalog} from './tarot-policy.js';
-export const chatTarotInput=z.object({clientReadingId:z.string().uuid(),conversationId:z.string().uuid().optional(),kind:z.enum(['single','three','five']),intention:z.enum(['general','love','career','growth']),question:z.string().trim().max(240),language:z.enum(['en','ru']),orderId:z.string().uuid().optional()}).strict();
+import {validatedIntelligenceAttachments} from './luna-intelligence-contract.js';
+export const chatChoiceSlots=z.array(z.number().int().min(0).max(8)).min(1).max(5).refine(v=>new Set(v).size===v.length);
+export const chatTarotInput=z.object({clientReadingId:z.string().uuid(),conversationId:z.string().uuid().optional(),kind:z.enum(['single','three','five']),intention:z.enum(['general','love','career','growth']),question:z.string().trim().max(240),language:z.enum(['en','ru']),orderId:z.string().uuid().optional(),actionMessageId:z.string().uuid().optional(),choiceSlots:chatChoiceSlots.optional()}).strict().superRefine((v,c)=>{if(v.choiceSlots&&v.choiceSlots.length!==(v.kind==='single'?1:v.kind==='three'?3:5))c.addIssue({code:'custom',message:'Select the complete spread once.'});if(v.actionMessageId&&!v.conversationId)c.addIssue({code:'custom',message:'Keep the original conversation.'});});
 export type ChatTarotInput=z.infer<typeof chatTarotInput>;
 export type ChatTarotState={readingId:string;clientReadingId:string;kind:ChatTarotInput['kind'];revealed:number;requestHash:string};
 export const chatTarotState=z.object({readingId:z.string().uuid(),clientReadingId:z.string().uuid(),kind:z.enum(['single','three','five']),revealed:z.number().int().min(0).max(5),requestHash:z.string().length(64)}).strict();
 export const readingSize=(kind:ChatTarotInput['kind'])=>kind==='single'?1:kind==='three'?3:5;
-export function chatTarotHash(input:ChatTarotInput){return createHash('sha256').update(JSON.stringify({kind:input.kind,intention:input.intention,question:input.question,language:input.language})).digest('hex');}
+export function chatTarotHash(input:ChatTarotInput){return createHash('sha256').update(JSON.stringify({kind:input.kind,intention:input.intention,question:input.question,language:input.language,...(input.actionMessageId?{actionMessageId:input.actionMessageId}:{}),...(input.choiceSlots?{choiceSlots:input.choiceSlots}:{})})).digest('hex');}
+export function validChatTarotOrigin(source:{conversation_id?:unknown;metadata?:unknown},input:{clientReadingId:string;conversationId?:string;kind:string}){
+ const metadata=source.metadata as {intelligence?:{attachments?:unknown}}|undefined;
+ const action=validatedIntelligenceAttachments(metadata?.intelligence?.attachments).find(a=>a.type==='tarot_reading');
+ return Boolean(action?.type==='tarot_reading'&&action.payload.stage==='choose'&&action.payload.clientReadingId===input.clientReadingId&&(!action.payload.kind||action.payload.kind===input.kind)&&(!input.conversationId||source.conversation_id===input.conversationId));
+}
 export function drawChatTarot(kind:ChatTarotInput['kind'],random:(max:number)=>number=randomInt){
  const pool=tarotCatalog.map(c=>c.id),cards=[];
  for(let i=0;i<readingSize(kind);i++){const index=random(pool.length);if(!Number.isInteger(index)||index<0||index>=pool.length)throw new Error('Invalid secure draw');cards.push({cardId:pool.splice(index,1)[0],orientation:random(2)===0?'upright' as const:'reversed' as const});}

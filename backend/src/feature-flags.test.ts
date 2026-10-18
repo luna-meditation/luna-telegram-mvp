@@ -20,7 +20,8 @@ test('every Luna 2.0 backend feature remains disabled by default in Phase 1', ()
     cosmos_v2: false,
     ai_modes: false,
     tarot_history: false,
-    tarot_ai: false
+    tarot_ai: false,
+    luna_intelligence: false
   });
   const versionSource = readFileSync(resolve(process.cwd(), 'src/version.ts'), 'utf8');
   assert.match(versionSource, /featureFlags: backendFeatureFlags/);

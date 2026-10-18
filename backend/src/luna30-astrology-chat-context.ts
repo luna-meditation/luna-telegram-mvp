@@ -4,6 +4,7 @@ import {symbolicChartFacts,astrologyReportSchema} from './luna30-astrology-repor
 import {calculateSynastry,type NatalCalculation} from './luna30-astrology-engine.js';
 import {astrologyAttachmentSchema,type AstrologyAttachment} from './luna31-consultation.js';
 import {compatibilityReflection} from './luna40-compatibility.js';
+import {intelligenceReference} from './luna-intelligence-context.js';
 export async function verifiedAstrologyChatContext(db:SupabaseClient,owner:number,input:string|AstrologyAttachment){
  const attachment=astrologyAttachmentSchema.parse(typeof input==='string'?{chartId:input}:input);
  const gate=await db.from('luna30_release_settings').select('astrology_enabled,astrology_ai_enabled').eq('id',true).single();
@@ -25,5 +26,5 @@ export async function verifiedAstrologyChatContext(db:SupabaseClient,owner:numbe
  if(attachment.comparisonId){const saved=await db.from('ai_messages').select('metadata').eq('telegram_id',owner).eq('id',attachment.comparisonId).eq('role','assistant').maybeSingle();const snapshot=saved.data?.metadata?.astrologyWorkflow?.compatibilitySnapshot;
   if(saved.error||!snapshot||snapshot.firstChartId!==first.id||snapshot.secondChartId!==second?.id||snapshot.reflection?.relationship!==attachment.relationship)throw new FoundationError(404,'report_not_found','Reopen your saved comparison.');reflection=snapshot.reflection;
  }
- return {first:compact(first.calculation),...(second&&synastry?{second:compact(second.calculation),synastry:{...synastry,aspects:synastry.aspects.sort((a,b)=>a.orb-b.orb).slice(0,5)}}:{}),relationship:attachment.relationship??null,relationshipClarificationRequired:Boolean(second&&!attachment.relationship),compatibilityReflection:reflection,comparisonId:attachment.comparisonId??null,selectedPlanet:attachment.planet??null,selectedAspect:selectedAspect??null,savedReport:report};
+ return {reference:intelligenceReference({astrology:attachment}),calculationVersion:(first.calculation as {engineVersion?:string}).engineVersion??'astronomy-engine',first:compact(first.calculation),...(second&&synastry?{second:compact(second.calculation),synastry:{...synastry,aspects:synastry.aspects.sort((a,b)=>a.orb-b.orb).slice(0,5)}}:{}),relationship:attachment.relationship??null,relationshipClarificationRequired:Boolean(second&&!attachment.relationship),compatibilityReflection:reflection,comparisonId:attachment.comparisonId??null,selectedPlanet:attachment.planet??null,selectedAspect:selectedAspect??null,savedReport:report};
 }

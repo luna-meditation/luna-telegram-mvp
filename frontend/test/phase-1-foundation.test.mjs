@@ -38,6 +38,7 @@ test('all Luna 2.0 feature flags are disabled unless explicitly enabled', () => 
     cosmos_v2: false,
     ai_voice_input:false,
     ai_central_experience: false,
+    luna_intelligence:false,
     ai_modes: false,
     tarot_history: false,
     tarot_ai: false

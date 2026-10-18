@@ -12,6 +12,7 @@ export const featureFlagKeys = [
   'cosmos_v2',
   'ai_voice_input',
   'ai_central_experience',
+  'luna_intelligence',
   'ai_modes',
   'tarot_history',
   'tarot_ai'
@@ -34,6 +35,7 @@ export const featureFlagEnvironment: Record<FeatureFlagKey, string> = {
   cosmos_v2: 'VITE_FEATURE_COSMOS_V2',
   ai_voice_input:'VITE_FEATURE_AI_VOICE_INPUT',
   ai_central_experience: 'VITE_FEATURE_AI_CENTRAL_EXPERIENCE',
+  luna_intelligence: 'VITE_FEATURE_LUNA_INTELLIGENCE',
   ai_modes: 'VITE_FEATURE_AI_MODES',
   tarot_history: 'VITE_FEATURE_TAROT_HISTORY',
   tarot_ai: 'VITE_FEATURE_TAROT_AI'

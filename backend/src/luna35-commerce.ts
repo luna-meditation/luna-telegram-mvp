@@ -8,6 +8,7 @@ import {betaEntitlement,readLuna32Settings,successfulAiLimit} from './luna32-run
 import {commerceText,pendingActionInput,actionEligibility,type CommerceView,type CommerceFacts} from './luna35-commerce-policy.js';
 import type {createLuna30Commerce} from './luna30-commerce.js';
 import {playbackRewardDecision} from './playback-security.js';
+import {validChatTarotOrigin} from './luna24-policy.js';
 const fail=()=>new FoundationError(503,'commerce_unavailable','Your current access and balance remain unchanged.');
 const hash=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
 // Preserve the existing chat API's opaque request IDs, including older clients.
@@ -32,8 +33,11 @@ export function createLuna35Commerce(db:SupabaseClient,config:Config,payments:Pi
   return {facts,products,planAllowances:{freeDaily:successfulAiLimit(settings,false,{free:config.AI_MAX_MESSAGES_PER_DAY??quota.limit,premium:config.AI_PREMIUM_MAX_MESSAGES_PER_DAY??quota.limit}),premiumDaily:successfulAiLimit(settings,true,{free:config.AI_MAX_MESSAGES_PER_DAY??quota.limit,premium:config.AI_PREMIUM_MAX_MESSAGES_PER_DAY??quota.limit})},catalog:membership.catalog,membership:membership.membership,usage:quota,beta,balance:membership.balance,earning,transactions:membership.transactions,purchases:membership.purchases,newPurchases:membership.newPurchases,pendingOrders:orders.data??[]};
  }
  async function pending(owner:number,conversationId?:string){let q=db.from('luna35_pending_actions').select('id,conversation_id,action_type,parameters,language,state,expires_at,created_at').eq('telegram_id',owner).in('state',['pending','resuming']).gt('expires_at',new Date().toISOString()).order('created_at',{ascending:false}).limit(3);if(conversationId)q=q.eq('conversation_id',conversationId);const r=await q;if(r.error)throw fail();return r.data??[];}
- async function verifyContext(owner:number,action:z.infer<typeof pendingActionInput>['action']){
-  if(action.type==='tarot')return;
+ async function verifyContext(owner:number,action:z.infer<typeof pendingActionInput>['action'],pendingId?:string,conversationId?:string){
+  if(action.type==='tarot'){
+   if(action.actionMessageId){const r=await db.from('ai_messages').select('conversation_id,metadata').eq('telegram_id',owner).eq('id',action.actionMessageId).maybeSingle();if(r.error)throw fail();if(!r.data||!pendingId||!validChatTarotOrigin(r.data,{clientReadingId:pendingId,conversationId,kind:action.kind}))throw new FoundationError(404,'action_not_found','Open your original saved action.');}
+   return;
+  }
   const ids=action.type==='compatibility'?[action.chartId,action.secondChartId]:[action.chartId];
   if(new Set(ids).size!==ids.length)throw new FoundationError(422,'different_charts_required','Select two different charts.');
   const r=await db.from('luna30_chart_cache').select('id,profile_id').eq('telegram_id',owner).in('id',ids);if(r.error)throw fail();if(r.data?.length!==ids.length||new Set(r.data.map(c=>c.profile_id)).size!==ids.length)throw new FoundationError(404,'chart_not_found','Select your saved chart again.');
@@ -49,13 +53,13 @@ export function createLuna35Commerce(db:SupabaseClient,config:Config,payments:Pi
    const r=await db.rpc('luna35_save_commerce_turn',{p_owner:owner,p_request:request,p_hash:hash(input),p_conversation:input.conversationId??null,p_language:input.language,p_text:input.message,p_content:card.content,p_card:data});
    if(r.error||!r.data)throw fail();return {...r.data,requestState:'completed' as const,...card.usage};
   },
-  async savePending(owner:number,raw:unknown){const input=pendingActionInput.parse(raw);await verifyContext(owner,input.action);const conversation=await db.from('ai_conversations').upsert({id:input.conversationId,telegram_id:owner,language:input.language,title:input.language==='ru'?'Сохранённое действие':'Your saved action'},{onConflict:'id',ignoreDuplicates:true});if(conversation.error)throw fail();const r=await db.rpc('luna35_save_pending_action',{p_owner:owner,p_id:input.id,p_conversation:input.conversationId,p_type:input.action.type,p_parameters:input.action,p_language:input.language,p_hash:hash(input)});if(r.error||!r.data)throw fail();return r.data;},
+  async savePending(owner:number,raw:unknown){const input=pendingActionInput.parse(raw);await verifyContext(owner,input.action,input.id,input.conversationId);const conversation=await db.from('ai_conversations').upsert({id:input.conversationId,telegram_id:owner,language:input.language,title:input.language==='ru'?'Сохранённое действие':'Your saved action'},{onConflict:'id',ignoreDuplicates:true});if(conversation.error)throw fail();const r=await db.rpc('luna35_save_pending_action',{p_owner:owner,p_id:input.id,p_conversation:input.conversationId,p_type:input.action.type,p_parameters:input.action,p_language:input.language,p_hash:hash(input)});if(r.error||!r.data)throw fail();return r.data;},
   async resume(owner:number,id:string,execute:(action:z.infer<typeof pendingActionInput>['action'],identity:{id:string;conversationId:string;language:'en'|'ru';seedCost:number},prior:unknown)=>Promise<{message:{id:string};conversationId:string}>,expectedSeeds?:number){
    z.string().uuid().parse(id);const lease=randomUUID(),r=await db.rpc('luna35_claim_pending_action',{p_owner:owner,p_id:id,p_lease:lease});if(r.error||!r.data)throw fail();
    const status=r.data.status;if(!['claimed','completed'].includes(status))throw new FoundationError(status==='not_found'?404:409,'pending_action_'+status,status==='expired'?'The saved action expired. Start a new one; nothing was charged.':'This saved action cannot be resumed right now.');
    const row=r.data.action,input=pendingActionInput.parse({id:row.id,conversationId:row.conversation_id,language:row.language,action:row.parameters});
    try{
-    await verifyContext(owner,input.action);
+    await verifyContext(owner,input.action,input.id,input.conversationId);
     let seedCost=0;
     if(status!=='completed'&&input.action.type!=='natal'){const eligible=await this.eligibility(owner,input.action.type==='tarot'?input.action.kind:'compatibility');if(!eligible.allowed)throw new FoundationError(402,'insufficient_seeds','Your action remains saved. No Moon Seeds were charged.');seedCost=eligible.required;if(seedCost>0&&expectedSeeds!==seedCost)throw new FoundationError(409,'price_confirmation_required','Confirm the current Moon Seeds price before continuing.');}
     const result=await execute(input.action,{id,conversationId:input.conversationId,language:input.language,seedCost},status==='completed'?row.result:null);

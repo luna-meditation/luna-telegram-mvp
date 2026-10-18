@@ -78,8 +78,6 @@ import {
   removeProfileAvatar,
   saveDailyCheckin,
   saveBreathSession,
-  startVerifiedBreath,
-  heartbeatVerifiedBreath,
   saveHistory,
   startPlaybackSession,
   setFavorite,
@@ -146,20 +144,17 @@ import {
 import { useAppRouteState } from './navigation/useAppRouteState';
 import { createTarotSession, reduceTarotSession } from './features/tarot/session';
 import { formatMeditationDuration } from './utils/duration';
-import { breathCycleSeconds, breathPhaseAt, breathPhaseLabel, breathPractices, type BreathPracticeId } from './features/breathing/practices';
+import { breathPractices, type BreathPracticeId } from './features/breathing/practices';
+import {BreathPracticeSession} from './features/breathing/BreathPracticeSession';
 import {useEditorialLoader} from './editorial';
-import {useBreathPractices} from './features/breathing/editorialPractices';
 import { HomeV2 } from './v2/pages/HomeV2';
 import { ExplorePage, FeaturePreview, SectionBack, type ExploreCategory } from './luna2/ExplorePage';
 import { ProfileOverview } from './luna2/ProfileOverview';
 import {BetaNotice} from './luna2/BetaNotice';
 import { MyUniverse } from './luna2/MyUniverse';
-import { BreathAudioModes, BreathingVisual } from './luna2/BreathingVisual';
-import {PracticePicker} from './features/breathing/PracticePicker';
 import {luna34Achievements} from '../../backend/src/luna34-achievements';
 import {MembershipPage} from './features/membership/MembershipPage';
 import {ProgressMilestone} from './components/progress/ProgressMilestone';
-import {useBreathAudio} from './features/breathing/useBreathAudio';
 import {LunaShareButton} from './features/sharing/LunaShareButton';
 import { luna2Copy } from './luna2/copy';
 import './luna2/luna2.css';
@@ -3053,6 +3048,7 @@ function App() {
             initData={initData}
             onOpenMeditation={openMeditation}
             ambientSound={selectedScene?{title:selectedScene.title[language],playing:scenePlaying,onToggle:()=>void toggleScenePlayback(),onStop:stopSoundscape}:undefined}
+            onBreathComplete={completeBreathCircle}
             onTarot={featureFlags.new_navigation&&featureFlags.tarot_daily?()=>setPage('tarot'):undefined}
             readingContextId={aiReadingId}
             chartContextId={aiChartId}
@@ -3469,6 +3465,7 @@ function LunaPage({
   initData,
   onOpenMeditation,
   onTarot,
+  onBreathComplete,
   readingContextId,
   chartContextId,
   cosmosDiscussion,
@@ -3486,6 +3483,7 @@ function LunaPage({
   initData?: string;
   onOpenMeditation: (meditation: Meditation) => void;
   onTarot?:()=>void;
+  onBreathComplete:React.ComponentProps<typeof BreathPracticeSession>['onComplete'];
   readingContextId?:string;
   chartContextId?:string|import('./api').AstrologyChatAttachment;
   cosmosDiscussion?:{area:string;key:string};
@@ -3506,6 +3504,7 @@ function LunaPage({
       initData={initData}
       onOpenMeditation={onOpenMeditation}
       onTarot={onTarot}
+      onBreathComplete={onBreathComplete}
       redesigned={featureFlags.new_navigation}
       readingContextId={readingContextId}
       chartContextId={chartContextId}
@@ -4492,7 +4491,7 @@ function PlayerPage({ meditation, nextMeditation, favorite, favoritePending, onF
           <IconButton label={copy[language].rewind15} onClick={() => {
             seekTo((audioRef.current?.currentTime ?? position) - 15);
           }}><SkipBack /></IconButton>
-          <button onClick={() => {
+          <button type="button" aria-label={playing?(language==='ru'?'Пауза медитации':'Pause meditation'):(language==='ru'?'Воспроизвести медитацию':'Play meditation')} aria-pressed={playing} onClick={() => {
             if (!audioRef.current) return;
             if (audioRef.current.paused) void audioRef.current.play();
             else pausePlayback();
@@ -4548,183 +4547,9 @@ function IconButton({ label, children, onClick }: { label: string; children: Rea
   return <button aria-label={label} onClick={onClick} className="luna-icon-button">{children}</button>;
 }
 
-function BreathCirclePage({
-  initData,
-  launch,
-  onComplete,
-  onClose,
-  language,
-  redesigned = false,
-  registerBackHandler
-}: {
-  initData?:string;
-  launch?:{practiceId:BreathPracticeId;minutes:number}|null;
-  onComplete: (mode: BreathMode, durationSeconds: number, breathCount: number,sessionId?:string) => Promise<void>;
-  onClose: () => void;
-  language: AppLanguage;
-  redesigned?: boolean;
-  registerBackHandler?:(handler:(()=>void)|null)=>void;
-}) {
-  const [mode, setMode] = useState<BreathMode>(launch?.practiceId??'calm');
-  const [minutes, setMinutes] = useState(launch?.minutes??1);
-  const [running, setRunning] = useState(Boolean(launch));
-  const [elapsed, setElapsed] = useState(0);
-  const [done, setDone] = useState(false);
-  const [savingError, setSavingError] = useState('');
-  const startedAtRef = useRef<number | null>(launch?Date.now():null);
-  const [sessionStarted, setSessionStarted] = useState(Boolean(launch));
-  const breathAudio=useBreathAudio(redesigned&&featureFlags.breathwork_audio,language,featureFlags.breathwork_guided,()=>setRunning(false));
-  useEffect(()=>{if(!running)breathAudio.pause();},[running]);
-  const durationSeconds = minutes * 60;
-  const currentPractices=useBreathPractices();
-  const selectedPractice=currentPractices.find(item=>item.id===mode)??currentPractices[0];
-  // An editor publishing while this screen is open cannot change an active
-  // session's timing. Pause/resume uses the same snapshot until reset.
-  const practiceSnapshot=useRef(selectedPractice);
-  if(!sessionStarted)practiceSnapshot.current=selectedPractice;
-  const practice=practiceSnapshot.current;
-  useEffect(()=>{if(launch)breathAudio.start(practice);},[]);
-  const phase = breathPhaseAt(practice, elapsed);
-  useEffect(()=>{breathAudio.cue(practice,elapsed,running);},[practice,elapsed,running,language,breathAudio.mode]);
-  const hasStarted = (redesigned ? sessionStarted : elapsed > 0) && !done;
-  const proof=useRef<{clientId:string;promise?:Promise<{id:string}>;previous?:Promise<unknown>}>({clientId:crypto.randomUUID()});
-  const ensureProof=()=>{const current=proof.current;return current.promise??(current.promise=Promise.resolve(current.previous).then(()=>startVerifiedBreath(current.clientId,mode,durationSeconds,initData)));};
-  const resetProof=()=>{const current=proof.current;proof.current={clientId:crypto.randomUUID(),previous:current.promise?current.promise.then(value=>heartbeatVerifiedBreath(value.id,false,initData)).catch(()=>undefined):current.previous};};
-  useEffect(()=>{
-    if(!running)return;
-    let alive=true;
-    const session=ensureProof();
-    const beat=(active:boolean)=>void session.then(value=>heartbeatVerifiedBreath(value.id,active,initData)).catch(()=>{if(alive)setSavingError(copy[language].breathSaveError);});
-    beat(true);const timer=window.setInterval(()=>beat(true),5000);
-    const hidden=()=>{if(document.visibilityState==='hidden')setRunning(false);};document.addEventListener('visibilitychange',hidden);
-    return()=>{alive=false;window.clearInterval(timer);document.removeEventListener('visibilitychange',hidden);beat(false);};
-  },[running,mode,durationSeconds,initData]);
-
-  useEffect(() => {
-    if (!running) return;
-    const timer = window.setInterval(() => {
-      const startedAt = startedAtRef.current ?? Date.now() - elapsed * 1000;
-      const nextElapsed = Math.min(durationSeconds, (Date.now() - startedAt) / 1000);
-      setElapsed(nextElapsed);
-      if (nextElapsed >= durationSeconds) {
-        window.clearInterval(timer);
-        setRunning(false);
-        setDone(true);
-        const completedBreaths = Math.max(1, Math.floor(durationSeconds / breathCycleSeconds(practice)));
-        void ensureProof().then(value=>onComplete(mode, durationSeconds, completedBreaths,value.id)).catch(() => setSavingError(copy[language].breathSaveError));
-      }
-    }, 200);
-    return () => window.clearInterval(timer);
-  }, [durationSeconds, language, mode, onComplete, practice, running]);
-
-  const startOrResume = () => {
-    if(done||!sessionStarted)resetProof();
-    breathAudio.start(practice);
-    const resumeElapsed = done ? 0 : elapsed;
-    setSavingError('');
-    setDone(false);
-    setElapsed(resumeElapsed);
-    startedAtRef.current = Date.now() - resumeElapsed * 1000;
-    setSessionStarted(true);
-    setRunning(true);
-    if (redesigned) window.scrollTo({ top: 0, behavior: 'auto' });
-  };
-
-  const restart = () => {
-    resetProof();
-    setRunning(false);
-    setDone(false);
-    setElapsed(0);
-    setSavingError('');
-    startedAtRef.current = null;
-    setSessionStarted(false);
-    breathAudio.reset();
-  };
-
-  return (
-    <div className={`breath-circle-page luna-fade ${redesigned ? 'luna2-breath' : ''} ${redesigned && (running || hasStarted) ? 'is-practicing' : ''}`}>
-      <div className="breath-circle-header">
-        <div>
-          <p className="text-xs uppercase tracking-[0.18em] text-gold">{copy[language].categoryBreath}</p>
-          <h2 className="type-page-title">{copy[language].breathCircle}</h2>
-          <p>{language === 'en' ? 'Follow one quiet phase at a time.' : 'Следуй за одной спокойной фазой за раз.'}</p>
-        </div>
-        <button onClick={onClose} className="grid h-11 w-11 place-items-center rounded-full bg-surface text-cream" aria-label={copy[language].close}>
-          <X size={18} />
-        </button>
-      </div>
-
-      <section className="breath-circle-visual" aria-live={redesigned ? undefined : 'polite'}>
-        {redesigned ? <BreathingVisual practice={practice} phase={phase} active={hasStarted || running} done={done} minutes={minutes} language={language} running={running} onToggle={running?()=>setRunning(false):startOrResume} /> : (
-        <div className={`breath-circle-orbit ${running ? 'is-running' : ''}`} data-phase={hasStarted || running ? phase.kind : 'ready'}>
-          <div
-            className={`breath-circle-core ${running ? 'is-running' : ''}`}
-            style={{ transform: `scale(${hasStarted || running ? phase.scale : 0.9})` }}
-          >
-            <div>
-              <p className="breath-circle-phase">{hasStarted || running ? breathPhaseLabel(phase.kind, language) : (language === 'en' ? 'Ready' : 'Готово')}</p>
-              <p className="breath-circle-count">{hasStarted || running ? phase.remaining : `${minutes} ${language === 'en' ? 'min' : 'мин'}`}</p>
-            </div>
-          </div>
-        </div>
-        )}
-        <div className="breath-circle-session-meta">
-          <strong>{practice.name[language]}</strong>
-          <span>{practice.timing[language]}</span>
-          <small>{running || hasStarted ? `${language === 'en' ? 'Session' : 'Сессия'} · ${formatTime(Math.max(0, durationSeconds - elapsed))}` : practice.description[language]}</small>
-        </div>
-      </section>
-
-      {redesigned && <BreathAudioModes language={language} featureEnabled={featureFlags.breathwork_audio} guidedAvailable={featureFlags.breathwork_guided} mode={breathAudio.mode} onMode={mode=>breathAudio.setMode(mode,running)} volume={breathAudio.volume} onVolume={breathAudio.setVolume} voiceVolume={breathAudio.voiceVolume} onVoiceVolume={breathAudio.setVoiceVolume} muted={breathAudio.muted} onMute={()=>breathAudio.setMuted(value=>!value)} error={breathAudio.error}/>}
-
-      <section className="breath-circle-controls">
-        {redesigned?<PracticePicker value={mode} onChange={setMode} disabled={running||hasStarted} language={language} registerBackHandler={registerBackHandler}/>:<label className="breath-practice-select">
-          <span>{language === 'en' ? 'Practice' : 'Практика'}</span>
-          <select value={mode} onChange={(event) => setMode(event.currentTarget.value as BreathMode)} disabled={running || hasStarted} aria-label={language === 'en' ? 'Breathing practice' : 'Дыхательная практика'}>
-            {currentPractices.map((item) => <option key={item.id} value={item.id}>{item.name[language]} — {item.timing[language]}</option>)}
-          </select>
-        </label>}
-        <details className="breath-practice-guide">
-          <summary>{language === 'en' ? 'How to practice' : 'Как выполнять'}</summary>
-          <p>{practice.guide[language]}</p>
-        </details>
-        <details className="breath-practice-guide"><summary>{language==='en'?'Why this practice':'Для чего эта практика'}</summary><p>{practice.description[language]} {language==='en'?'Choose a comfortable rhythm; this is a wellbeing practice, not medical treatment.':'Выбирай комфортный ритм. Это практика для самочувствия, а не лечение.'}</p></details>
-        <div className="breath-duration-options" role="group" aria-label={language === 'en' ? 'Session duration' : 'Длительность сессии'}>
-          {[1, 3, 5, 10].map((item) => (
-            <button key={item} onClick={() => setMinutes(item)} disabled={running || hasStarted} aria-pressed={minutes === item}>
-              {item} {language === 'en' ? 'min' : 'мин'}
-            </button>
-          ))}
-        </div>
-      </section>
-
-      {done ? (
-        <div className="rounded-[24px] border border-gold/20 bg-gold/10 p-4 text-center">
-          <CheckCircle className="mx-auto text-gold" />
-          <h3 className="type-section-title mt-2">{copy[language].breathComplete}</h3>
-          <p className="mt-2 text-sm text-cream/75">
-            {text(language, 'calmBreathsComplete', { count: Math.max(1, Math.floor(durationSeconds / breathCycleSeconds(practice))) })}
-          </p>
-          {savingError && <p className="mt-2 text-xs text-gold">{savingError}</p>}
-        </div>
-      ) : null}
-
-      <div className="breath-circle-actions">
-        {redesigned && done && <button type="button" onClick={onClose} className="breath-circle-primary">{language==='ru'?'Завершить':'Finish'}</button>}
-        {(hasStarted || done) && <button type="button" onClick={restart} className="breath-circle-restart">{language === 'en' ? 'Restart' : 'Сначала'}</button>}
-        {!redesigned && <button
-          type="button"
-          onClick={running ? () => setRunning(false) : startOrResume}
-          className="breath-circle-primary"
-          aria-label={running ? (language === 'en' ? 'Pause breathing practice' : 'Пауза дыхательной практики') : undefined}
-        >
-          {running ? (language === 'en' ? 'Pause' : 'Пауза') : hasStarted ? (language === 'en' ? 'Resume' : 'Продолжить') : done ? (language === 'en' ? 'Start again' : 'Начать снова') : copy[language].startBreathing}
-        </button>}
-      </div>
-    </div>
-  );
+function BreathCirclePage(props:React.ComponentProps<typeof BreathPracticeSession>){
+  return <BreathPracticeSession {...props}/>;
 }
-
 function MoonGardenScene({
   profile,
   language,
