@@ -3712,7 +3712,8 @@ function MeditationCard({ meditation, locked, showPopular, favoritePending = fal
       meditation={meditation}
       title={localized.title}
       description={localized.description}
-      metadata={`${translateCategory(meditation.category, language)} · ${formatMeditationDuration(meditation.duration, language)}${!localized.hasSelectedLanguageAudio ? ` · ${copy[language].availableInEnglish}` : ''}`}
+      metadata={`${translateCategory(meditation.category, language)} · ${formatMeditationDuration(meditation.duration, language)} · ${language==='ru'?'Аудио':'Audio'}: ${language==='ru'&&localized.hasSelectedLanguageAudio?'RU':'EN'}`}
+      language={language}
       locked={locked}
       favorite={Boolean(meditation.favorite)}
       favoritePending={favoritePending}
@@ -5702,14 +5703,14 @@ function ProfilePage({
       {avatarMessage && <p className="rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-2 text-xs text-lavender" role="status">{avatarMessage}</p>}
       {avatarBusy && <div className="h-1 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gold transition-all" style={{ width: `${Math.max(8, avatarProgress)}%` }} /></div>}
 
-      {featureFlags.personal_memory&&<button className="universe-profile-entry" onClick={()=>setView('universe')}><span aria-hidden="true">✧</span><span><strong>{language==='en'?'My Universe':'Мой космос'}</strong><small>{language==='en'?'Your portrait, discoveries and confirmed memory':'Твой портрет, открытия и подтверждённая память'}</small></span><ChevronRight size={20}/></button>}
+      {!showJourneyEntry&&featureFlags.personal_memory&&<button className="universe-profile-entry" onClick={()=>setView('universe')}><span aria-hidden="true">✧</span><span><strong>{language==='en'?'My Universe':'Мой космос'}</strong><small>{language==='en'?'Your portrait, discoveries and confirmed memory':'Твой портрет, открытия и подтверждённая память'}</small></span><ChevronRight size={20}/></button>}
 
-      <section className="luna-surface rounded-[26px] p-2">
+      {!showJourneyEntry&&<section className="luna-surface rounded-[26px] p-2">
         <ProfileSettingsRow icon={CreditCard} title={language === 'en' ? 'Membership & Moon Seeds' : 'Подписка и Moon Seeds'} value={localizedPlanStatus} onClick={() => setView('subscription')} />
         <ProfileSettingsRow icon={Gift} title={language==='en'?'Invite a friend':'Пригласить друга'} value="" onClick={()=>setView('invite')}/>
-      </section>
-      {showJourneyEntry && <ProfileOverview language={language} profile={profile} onWallet={onWallet} onJourney={onJourney} onGarden={onGarden} onActivity={onActivity} onAchievements={onAchievements} />}
-      <section className="luna-surface rounded-[22px] p-2"><ProfileSettingsRow icon={Settings} title={language==='en'?'Settings':'Настройки'} value={languageLabel} onClick={()=>setView('settings')}/></section>
+      </section>}
+      {showJourneyEntry && <ProfileOverview language={language} profile={profile} onWallet={onWallet} onJourney={onJourney} onGarden={onGarden} onActivity={onActivity} onAchievements={onAchievements} onCosmos={featureFlags.personal_memory?()=>setView('universe'):undefined} onMembership={()=>setView('subscription')} onInvite={()=>setView('invite')} onSettings={()=>setView('settings')}/>}
+      {!showJourneyEntry&&<section className="luna-surface rounded-[22px] p-2"><ProfileSettingsRow icon={Settings} title={language==='en'?'Settings':'Настройки'} value={languageLabel} onClick={()=>setView('settings')}/></section>}
 
       <section className="luna-surface profile-secondary-action rounded-[22px] p-2">
         <ProfileSettingsRow icon={Upload} title={copy[language].addHomeTitle} value={homeScreenMessage || ''} onClick={onAddHome} />

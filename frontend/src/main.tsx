@@ -9,6 +9,7 @@ import './luna251-conversation.css';
 import './luna30-experience.css';
 import './luna31-experience.css';
 import './luna32-experience.css';
+import './luna-design3.css';
 import {AmbientSky} from './design-system/components/AmbientSky';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

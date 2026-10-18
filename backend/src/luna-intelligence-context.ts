@@ -36,7 +36,10 @@ export async function retrieveIntelligenceContext(db:SupabaseClient,owner:number
  const sources:RetrievedContext['sources']=[];
  for(const row of candidates){
   // A privacy edit invalidates summaries/snippets from before that boundary.
-  if(options.privacyBoundary&&row.updatedAt<options.privacyBoundary)continue;
+  // Current, explicitly selected journal rows were just owner-filtered for
+  // active/confirmed/non-sensitive status. A privacy cutoff invalidates old
+  // conversation snippets, not another still-authorized saved journal note.
+  if(kind==='history'&&options.privacyBoundary&&row.updatedAt<options.privacyBoundary)continue;
   if(kind==='journal'){sources.push({type:'saved_reflection',...row,text:row.text.slice(0,450)});continue;}
   // Read only short owner-authored messages from a matched conversation. Never
   // feed an old assistant inference back as a confirmed fact or a fresh task.

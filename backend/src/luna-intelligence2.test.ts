@@ -8,6 +8,11 @@ import {verifiedNumerologyContext,namedTransitFacts} from './luna-intelligence-p
 import {createLunaTools,runLunaToolTurn} from './luna32-tools.js';
 import {calculateNatalChart,calculateCurrentTransits} from './luna30-astrology-engine.js';
 import {artifactScopedRecent,assertGroundedAstrologyProse,assertGroundedNumerologyProse} from './luna-intelligence-grounding.js';
+test('unknown-time calculated charts cannot acquire invented planet-in-house assertions',()=>{
+ const context={first:{subject:{label:'Synthetic',kind:'self'},placements:{sun:'Capricorn',mercury:'Capricorn'},ascendant:null,aspects:[]}};
+ for(const text of ['Солнце в 3-м доме','Mercury in the 10th house','Sun is in the 1st house'])assert.throws(()=>assertGroundedAstrologyProse(text,context),/ungrounded_chart_house/);
+ for(const text of ['Без времени рождения дома не определены.','We cannot calculate houses from this chart.','Меркурий в Козероге.'])assert.doesNotThrow(()=>assertGroundedAstrologyProse(text,context));
+});
 Object.assign(process.env,{BOT_TOKEN:'local-test',BOT_USERNAME:'local_test_bot',MINI_APP_URL:'https://example.com',SUPABASE_URL:'https://example.supabase.co',SUPABASE_SERVICE_ROLE_KEY:'local-test'});
 const {buildDeepAnalysisRequest,deepContextHash}=await import('./luna43-seed-products.js');
 
@@ -29,6 +34,9 @@ test('verified chart labels and technical facts cannot be replaced with invented
  assert.doesNotThrow(()=>assertGroundedAstrologyProse('Солнце в Весах',context,undefined,{current:[{id:'sun',sign:6}],aspects:[]}));
  assert.doesNotThrow(()=>assertGroundedAstrologyProse('Меркурий в Козероге, Марс в оппозиции к Солнцу',context));
  assert.throws(()=>assertGroundedAstrologyProse('Mercury opposite Sun',context));
+ const pair={...context,synastry:{aspects:[{from:'moon',to:'saturn',type:'square'},{from:'moon',to:'uranus',type:'sextile'},{from:'saturn',to:'mercury',type:'square'}]}};
+ assert.doesNotThrow(()=>assertGroundedAstrologyProse('Квадрат Луны A к Сатурну B может быть темой для размышления.',pair));
+ for(const prose of ['Квадрат Луны A к Сатурну/меркурию B и к Урану даёт риск недопонимания.','Квадрат Луны A к Урану B.','Square Moon A to Mercury B.','Трины и секстили (например, Юпитер к Солнцу/Марсу и трин Венеры с Сатурном) дают ресурс.','Трин Луны к Сатурну.'])assert.throws(()=>assertGroundedAstrologyProse(prose,pair),/ungrounded_chart_aspect/);
 });
 test('changing the selected artifact withholds old assistant inferences but does not erase saved history',()=>{
  const messages=[{role:'assistant',metadata:{readingId:'reading'}},{role:'user',content:'different chart'},{role:'assistant',metadata:{astrology:{chartId:'a',secondChartId:'b'}}},{role:'user',content:'Explain Mercury'}];

@@ -26,5 +26,12 @@ export async function verifiedAstrologyChatContext(db:SupabaseClient,owner:numbe
  if(attachment.comparisonId){const saved=await db.from('ai_messages').select('metadata').eq('telegram_id',owner).eq('id',attachment.comparisonId).eq('role','assistant').maybeSingle();const snapshot=saved.data?.metadata?.astrologyWorkflow?.compatibilitySnapshot;
   if(saved.error||!snapshot||snapshot.firstChartId!==first.id||snapshot.secondChartId!==second?.id||snapshot.reflection?.relationship!==attachment.relationship)throw new FoundationError(404,'report_not_found','Reopen your saved comparison.');reflection=snapshot.reflection;
  }
- return {reference:intelligenceReference({astrology:attachment}),calculationVersion:(first.calculation as {engineVersion?:string}).engineVersion??'astronomy-engine',first:compact(first.calculation,first.subject),...(second&&synastry?{second:compact(second.calculation,second.subject),synastry:{...synastry,aspects:synastry.aspects.sort((a,b)=>a.orb-b.orb).slice(0,5)}}:{}),relationship:attachment.relationship??null,relationshipClarificationRequired:Boolean(second&&!attachment.relationship),compatibilityReflection:reflection,comparisonId:attachment.comparisonId??null,selectedPlanet:attachment.planet??null,selectedAspect:selectedAspect??null,savedReport:report};
+ return focusedCompatibilityEvidence({reference:intelligenceReference({astrology:attachment}),calculationVersion:(first.calculation as {engineVersion?:string}).engineVersion??'astronomy-engine',first:compact(first.calculation,first.subject),...(second&&synastry?{second:compact(second.calculation,second.subject),synastry:{...synastry,aspects:synastry.aspects.sort((a,b)=>a.orb-b.orb).slice(0,5)}}:{}),relationship:attachment.relationship??null,relationshipClarificationRequired:Boolean(second&&!attachment.relationship),compatibilityReflection:reflection,comparisonId:attachment.comparisonId??null,selectedPlanet:attachment.planet??null,selectedAspect:selectedAspect??null,savedReport:report});
+}
+/** A compatibility answer has one explicit source of angular links. Natal
+ * aspects and repeated dimension lists previously leaked into pair prose.
+ * Keep names, placements, IDs, scores and uncertainty, never recalculate data. */
+export function focusedCompatibilityEvidence<T extends {first:{aspects:unknown[]};second?:{aspects:unknown[]};compatibilityReflection?:{dimensions:Array<{evidence:unknown[]}>}|null}>(context:T):T{
+ if(!context.second)return context;
+ return{...context,first:{...context.first,aspects:[]},second:{...context.second,aspects:[]},...(context.compatibilityReflection?{compatibilityReflection:{...context.compatibilityReflection,dimensions:context.compatibilityReflection.dimensions.map(row=>({...row,evidence:[]}))}}:{})};
 }

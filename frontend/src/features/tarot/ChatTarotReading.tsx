@@ -6,6 +6,7 @@ import {TarotDetails} from './TarotDetails';
 import {TarotAiInterpretation} from './TarotAiInterpretation';
 import {tarotPositions} from './positions';
 import {LunaShareButton} from '../sharing/LunaShareButton';
+import {publicTarotTakeaway} from './publicTakeaway';
 import {SaveDiscoveryButton} from '../../luna2/MyDiscoveries';
 import './tarot.css';
 
@@ -31,7 +32,7 @@ export const ChatTarotReading=memo(function ChatTarotReading({message,language,i
   {complete&&reading.status==='ready'?<TarotAiInterpretation reading={reading} language={language}/>:complete&&<div className="luna24-local-meaning"><p>{reading.status==='processing'?(en?'Luna is preparing your saved interpretation. Reopen the conversation in a moment.':'Luna готовит сохранённую интерпретацию. Открой разговор чуть позже.'):(en?'Traditional meanings · AI is unavailable or limited. No Moon Seeds charged.':'Традиционные значения · AI недоступен или достигнут лимит. Moon Seeds не списаны.')}</p>{cards.map(c=>{const card=tarotDeck.find(v=>v.id===c.cardId);return card?<details key={card.id}><summary>{card.name[language]}</summary><p>{card.meaning[language][c.orientation]}</p></details>:null;})}</div>}
   {error&&<p role="alert">{error}</p>}<small>{en?'Symbolic reflection, not a prediction.':'Символическое размышление, не предсказание.'}</small>
   {complete&&<SaveDiscoveryButton kind="tarot" referenceId={reading.id} title={reading.question||(en?'Tarot reflection':'Размышление с Таро')} language={language} initData={initData}/>}
-  {complete&&<LunaShareButton language={language} registerBackHandler={registerBackHandler} content={{kind:'tarot',reference:reading.id,tarot:cards.flatMap(c=>{const card=tarotDeck.find(d=>d.id===c.cardId);return card?[{image:card.image,title:card.name[language],orientation:c.orientation}]:[];}),title:count===1?(tarotDeck.find(c=>c.id===cards[0].cardId)?.name[language]??'Luna Tarot'):(en?`${count} cards · a moment of reflection`:`${count} ${count===3?'карты':'карт'} · момент размышления`),subtitle:en?'A symbolic perspective, not a prediction.':'Символический взгляд, не предсказание.',image:tarotDeck.find(c=>c.id===cards[0].cardId)?.image,badge:count===1?(cards[0].orientation==='reversed'?(en?'Reversed':'Перевёрнутая'):(en?'Upright':'Прямая')):undefined}}/>}
+  {complete&&<LunaShareButton language={language} registerBackHandler={registerBackHandler} content={{kind:'tarot',reference:reading.id,tarot:cards.flatMap(c=>{const card=tarotDeck.find(d=>d.id===c.cardId);return card?[{image:card.image,title:card.name[language],orientation:c.orientation}]:[];}),title:count===1?(tarotDeck.find(c=>c.id===cards[0].cardId)?.name[language]??'Luna Tarot'):(en?`${count} cards · a moment of reflection`:`${count} ${count===3?'карты':'карт'} · момент размышления`),subtitle:publicTarotTakeaway(cards,tarotDeck,language),image:tarotDeck.find(c=>c.id===cards[0].cardId)?.image,badge:en?'Symbolic reflection · not a prediction':'Символическое размышление · не предсказание'}}/>}
   {selected&&selectedCard&&zoom!==null&&<TarotDetails readingId={reading.id} initData={initData} card={selectedCard} orientation={selected.orientation} position={`${zoom+1}. ${tarotPositions[language][count===1?'single':count===3?'three':'five'][zoom]}`} language={language} onClose={closeViewer} registerBackHandler={registerBackHandler??(()=>{})}/>}
  </section>;
 });

@@ -15,6 +15,7 @@ type MeditationCardProps = {
   premiumLabel: string;
   popularLabel?: string;
   resumeLabel?: string;
+  language?:'en'|'ru';
   onOpen: () => void;
   onFavorite?: () => void;
   variant?: 'row' | 'tile';
@@ -33,6 +34,7 @@ export function MeditationCard({
   premiumLabel,
   popularLabel,
   resumeLabel,
+  language='en',
   onOpen,
   onFavorite,
   variant = 'row'
@@ -71,7 +73,7 @@ export function MeditationCard({
         ) : null}
       </button>
       {onFavorite ? (
-        <button type="button" onClick={onFavorite} disabled={favoritePending} aria-busy={favoritePending} className="meditation-card-favorite" aria-label={favorite ? `Remove ${title} from favorites` : `Add ${title} to favorites`} aria-pressed={favorite}>
+        <button type="button" onClick={onFavorite} disabled={favoritePending} aria-busy={favoritePending} className="meditation-card-favorite" aria-label={language==='ru'?(favorite?`Убрать «${title}» из избранного`:`Добавить «${title}» в избранное`):(favorite ? `Remove ${title} from favorites` : `Add ${title} to favorites`)} aria-pressed={favorite}>
           <Heart size={17} className={favorite ? 'is-favorite' : ''} aria-hidden="true" />
         </button>
       ) : null}

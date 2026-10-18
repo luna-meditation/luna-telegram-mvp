@@ -23,6 +23,14 @@ const norm=(text:string)=>text.normalize('NFKC').toLocaleLowerCase().replace(/ё
 const planet=(text:string)=>Object.entries(planetAliases).find(([stem])=>norm(text).startsWith(stem))?.[1];
 export function assertGroundedAstrologyProse(text:string,context:GroundedChartContext,preferredName?:string,transits?:{current:Array<{id:string;sign:number}>;aspects:Array<{transiting:string;natal:string;type:string}>}|null){
  const charts=[context.first,...context.second?[context.second]:[]],names=charts.map(c=>norm(c.subject.label));if(preferredName)names.push(norm(preferredName));
+ // A missing ascendant means the supplied calculation has no usable house
+ // framework. Reject explicit planet-in-house assertions before persistence.
+ const houseClaims=new RegExp(`(?<!\\p{L})(${planetPattern})(?!\\p{L})[ \\t]*(?:(?:is[ \\t]+)?in[ \\t]+(?:the[ \\t]+)?|в[ \\t]+)(?:[1-9]|1[0-2])(?:st|nd|rd|th|-?[а-яё]{1,3})?[ \\t]*(?:house|дом\\p{L}*)`,'giu');
+ for(const match of text.matchAll(houseClaims)){
+  const prefix=text.slice(Math.max(0,(match.index??0)-160),match.index).split(/[.!?\n]/u).at(-1)??'';
+  const scope=/second profile|втор(?:ой|ого) профил/iu.test(prefix)&&context.second?[context.second]:/first profile|перв(?:ый|ого) профил/iu.test(prefix)?[context.first]:charts;
+  if(scope.every(chart=>chart.ascendant===null))throw new Error('ungrounded_chart_house');
+ }
  // Explicit identity assignments are not allowed to introduce aliases that
  // never came from an owner-verified profile (including slash-separated names).
  for(const match of text.matchAll(/(?:первый профиль|второй профиль|профиль|имя|зовут|first profile|second profile|named|name is)\s*(?:—|–|:|is|это)?\s*([\p{Lu}][\p{L}\p{N}'’/-]*(?:[ /][\p{Lu}][\p{L}\p{N}'’/-]*)?)/gu)){
@@ -38,16 +46,28 @@ export function assertGroundedAstrologyProse(text:string,context:GroundedChartCo
   const transitPlacement=transits?.current.some(p=>p.id===body&&signs[p.sign]===sign);
   if(!scope.some(c=>(body==='ascendant'?c.ascendant:c.placements[body])?.split(/[ /]/).includes(sign))&&!transitPlacement)throw new Error('ungrounded_chart_placement');
  }
- const aspectNames:Record<string,string>={conjunction:'conjunction',conjunct:'conjunction',соедин:'conjunction',sextile:'sextile',секстил:'sextile',square:'square',квадрат:'square',trine:'trine',тригон:'trine',opposition:'opposition',opposite:'opposition',оппозиц:'opposition'};
+ const aspectNames:Record<string,string>={conjunction:'conjunction',conjunct:'conjunction',соедин:'conjunction',sextile:'sextile',секстил:'sextile',square:'square',квадрат:'square',trine:'trine',трин:'trine',тригон:'trine',opposition:'opposition',opposite:'opposition',оппозиц:'opposition'};
+ const aspectPattern=Object.keys(aspectNames).map(x=>x+'\\p{L}*').join('|');
+ if(context.second)for(const sentence of text.split(/[.!?\n]/u))if(new RegExp(aspectPattern,'iu').test(sentence)&&new RegExp(`(?:${planetPattern})[ \\t]*/[ \\t]*(?:${planetPattern})`,'iu').test(sentence))throw new Error('ungrounded_chart_aspect');
  // Only an explicit adjacent relation. An arbitrary text span can incorrectly
  // bind the previous placement to an aspect in the next clause/list item.
  const link='[ \\t]*(?:(?:is|in|в|находится|образует)[ \\t]+)?[—–:-]?[ \\t]*';
  const target='[ \\t]*(?:(?:to|with|к|с|натальн\\p{L}*)[ \\t]+){0,2}[—–:-]?[ \\t]*';
- const aspects=new RegExp(`(?<!\\p{L})(${planetPattern})(?!\\p{L})${link}(${Object.keys(aspectNames).map(x=>x+'\\p{L}*').join('|')})${target}(${planetPattern})(?!\\p{L})`,'giu');
+ const aspects=new RegExp(`(?<!\\p{L})(${planetPattern})(?!\\p{L})${link}(${aspectPattern})${target}(${planetPattern})(?!\\p{L})`,'giu');
  const evidence=[...(context.second?context.synastry?.aspects??[]:context.first.aspects),...transits?.aspects.map(a=>({from:a.transiting,to:a.natal,type:a.type}))??[]];
  for(const match of text.matchAll(aspects)){
   const from=planet(match[1]),to=planet(match[3]),type=Object.entries(aspectNames).find(([k])=>norm(match[2]).startsWith(k))?.[1];
   if(!evidence.some(a=>a.type===type&&(a.from===from&&a.to===to||a.from===to&&a.to===from)))throw new Error('ungrounded_chart_aspect');
+ }
+ // Russian prose frequently puts the aspect first ("квадрат Луны A к
+ // Сатурну B"). Validate coordinated targets separately: a valid Moon/Saturn
+ // square does not establish a Moon/Mercury square after a slash or "and".
+ const marker='(?:[ \\t]+[AB])?',preposed=new RegExp(`(?<!\\p{L})(${aspectPattern})[ \\t]+(${planetPattern})(?!\\p{L})${marker}[ \\t]+(?:к|с|и|to|with|between)[ \\t]+(${planetPattern})(?!\\p{L})${marker}`,'giu');
+ for(const match of text.matchAll(preposed)){
+  const type=Object.entries(aspectNames).find(([key])=>norm(match[1]).startsWith(key))?.[1],from=planet(match[2]),targets=[planet(match[3])];
+  const tail=text.slice((match.index??0)+match[0].length).split(/[.!?;\n]/u)[0]??'',continuation=new RegExp(`^(?:[ \\t]*(?:/|(?:и|and)[ \\t]+(?:к[ \\t]+)?|,[ \\t]*(?:и[ \\t]+)?(?:к[ \\t]+)?)[ \\t]*(${planetPattern})(?!\\p{L})${marker})`,'iu');
+  let rest=tail;for(let extra=continuation.exec(rest);extra;extra=continuation.exec(rest)){targets.push(planet(extra[1]));rest=rest.slice(extra[0].length);}
+  if(targets.some(to=>!evidence.some(a=>a.type===type&&(a.from===from&&a.to===to||a.from===to&&a.to===from))))throw new Error('ungrounded_chart_aspect');
  }
 }
 /** Different attached results may remain visible in history, but their old
