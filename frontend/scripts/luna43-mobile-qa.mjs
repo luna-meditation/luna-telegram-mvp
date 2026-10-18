@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {pathToFileURL} from 'node:url';
-const origin='http://127.0.0.1:56143',out='/tmp/luna43-mobile';await mkdir(out,{recursive:true});
+const origin=process.env.LUNA_INTELLIGENCE_PREVIEW_ORIGIN??'http://127.0.0.1:56143',out=process.env.LUNA_MOBILE_QA_OUTPUT??'/tmp/luna43-mobile';await mkdir(out,{recursive:true});
 const {chromium}=await import(pathToFileURL(process.env.PHASE2_PLAYWRIGHT_MODULE).href);
 const browser=await chromium.launch({headless:true,executablePath:process.env.PHASE2_CHROME_BIN,args:['--use-fake-device-for-media-stream','--use-fake-ui-for-media-stream','--use-file-for-fake-audio-capture=/tmp/luna41-voice-qa/en-sample.wav']}),results=[];
 try{for(const language of ['en','ru'])for(const theme of ['dark','light'])for(const [width,height]of [[360,800],[375,812],[390,844],[393,852]]){

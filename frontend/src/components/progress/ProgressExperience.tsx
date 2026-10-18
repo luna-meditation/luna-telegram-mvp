@@ -125,6 +125,12 @@ export function JourneyStatusHero({ profile, language, onOpen }: { profile: Prof
   );
 }
 
+export function WeeklyRhythmStrip({week,language}:{week:ProfileStats['currentWeek'];language:AppLanguage}){
+  if(!week?.days.length)return null;
+  const t=progressCopy[language];
+  return <div className="progress-v4-week-dots" aria-label={t.activeThisWeek}>{week.days.map(day=><div key={day.key} title={`${localDayLabel(day.key,language,true)}: ${day.minutes} ${t.min}`}><span>{localDayLabel(day.key,language).slice(0,2)}</span><i aria-label={`${localDayLabel(day.key,language,true)} · ${day.state==='completed'?(language==='ru'?'активный день':'active day'):day.state==='freeze_used'?(language==='ru'?'сохранено заморозкой':'freeze used'):(language==='ru'?'без подтверждённой активности':'no verified activity')}`} className={`progress-v4-week-dot progress-v4-week-dot-${day.state} ${day.isCurrent?'is-current-day':''} ${day.hasVerifiedPractice?'has-practice':day.hasCheckin?'has-checkin':''}`}>{day.state==='completed'?<Check size={13}/>:day.state==='freeze_used'?<Snowflake size={11}/>:null}</i></div>)}</div>;
+}
+
 function CurrentRhythmHero({ profile, language }: { profile: ProfileStats | null; language: AppLanguage }) {
   const t = progressCopy[language];
   const week = profile?.currentWeek;
@@ -166,16 +172,7 @@ function CurrentRhythmHero({ profile, language }: { profile: ProfileStats | null
           </div>
         </div>
 
-        <div className="progress-v4-week-dots" aria-label={t.activeThisWeek}>
-          {week.days.map((day) => (
-            <div key={day.key} title={`${localDayLabel(day.key, language, true)}: ${day.minutes} ${t.min}`}>
-              <span>{localDayLabel(day.key, language).slice(0, 2)}</span>
-              <i className={`progress-v4-week-dot progress-v4-week-dot-${day.state} ${day.isCurrent ? 'is-current-day' : ''} ${day.hasVerifiedPractice ? 'has-practice' : day.hasCheckin ? 'has-checkin' : ''}`}>
-                {day.state === 'completed' ? <Check size={13} /> : day.state === 'freeze_used' ? <Snowflake size={11} /> : null}
-              </i>
-            </div>
-          ))}
-        </div>
+        <WeeklyRhythmStrip week={week} language={language}/>
         <div className="progress-v4-rhythm-footer">
           <div className="progress-v4-seed-reward">
             <Sprout size={15} aria-hidden="true" />

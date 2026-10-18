@@ -22,5 +22,7 @@ export function parseLuna43Catalog(value:unknown):Luna43Catalog{
  if(canonical(base)!==canonical(expected))throw new Error('catalog_review_required');
  return{...luna43CommercialCatalog,seedProducts};
 }
-export const seedPurchaseSchema=z.object({requestId:z.string().uuid(),product:z.enum(['ai_messages','deep_analysis']),expectedSeeds:z.number().int().positive(),catalogRevision:z.number().int().nonnegative(),confirmed:z.literal(true),language:z.enum(['en','ru']),question:z.string().trim().max(500).optional(),chartId:z.string().uuid().optional(),personalContextConsent:z.literal(true).optional()}).strict();
+import {deepAnalysisTopics} from './luna-intelligence-deep-topics.js';
+export {deepAnalysisTopics,deepTopicLabels} from './luna-intelligence-deep-topics.js';
+export const seedPurchaseSchema=z.object({requestId:z.string().uuid(),product:z.enum(['ai_messages','deep_analysis']),expectedSeeds:z.number().int().positive(),catalogRevision:z.number().int().nonnegative(),confirmed:z.literal(true),language:z.enum(['en','ru']),topic:z.enum(deepAnalysisTopics).optional(),question:z.string().trim().max(500).optional(),chartId:z.string().uuid().optional(),personalContextConsent:z.literal(true).optional()}).strict();
 export const deepAnalysisResultSchema=z.object({version:z.literal(1),summary:z.string().trim().min(30).max(900),sections:z.array(z.object({title:z.string().trim().min(2).max(90),insight:z.string().trim().min(20).max(1800),basis:z.array(z.string().trim().min(1).max(80)).min(1).max(6)}).strict()).min(2).max(5),takeaway:z.string().trim().min(10).max(600),question:z.string().trim().min(5).max(300),limitations:z.string().trim().min(10).max(500)}).strict();

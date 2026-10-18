@@ -35,6 +35,15 @@ export function calculateNatalChart(raw:z.infer<typeof birthCalculationInput>){
  return {...chart,houseSystem:'whole-sign' as const,uncertainPlanets,warnings,approximatePlanets:!exact};
 }
 export type NatalCalculation=ReturnType<typeof calculateNatalChart>;
+/** Point-in-time transits to a verified natal chart. Not an event prediction,
+ * aspect-peak search or a substitute for an unknown birth time. */
+export function calculateCurrentTransits(natal:NatalCalculation,at:string){
+ const instant=new Date(at);if(!Number.isFinite(instant.getTime())||instant.getUTCFullYear()<1800||instant.getUTCFullYear()>2100)throw new Error('Unsupported transit instant.');
+ const current=planetsAt(instant),excluded=new Set(natal.timePrecision==='unknown'?['moon',...natal.uncertainPlanets.map(p=>p.id)]:[]);
+ const aspects:Array<{transiting:string;natal:string;type:string;orb:number}>=[];
+ for(const moving of current)for(const birth of natal.planets){if(excluded.has(birth.id))continue;const aspect=aspectBetween(moving.longitude,birth.longitude);if(aspect)aspects.push({transiting:moving.id,natal:birth.id,...aspect});}
+ return{engine:astrologyEngineMetadata,at:instant.toISOString(),scope:'transit_to_selected_natal_snapshot' as const,current:current.map(p=>({...p,sign:zodiacSign(p.longitude)})),aspects:aspects.sort((a,b)=>a.orb-b.orb).slice(0,12),excludedNatalPlanets:[...excluded],housesIncluded:false,predictiveClaim:false,birthTimePrecision:natal.timePrecision};
+}
 /** Geocentric, UTC astronomical facts only. No natal data or AI request. */
 export function calculateCelestialMonth(month:string){
  if(!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)||Number(month.slice(0,4))<1800||Number(month.slice(0,4))>2100)throw new Error('Unsupported calendar month.');

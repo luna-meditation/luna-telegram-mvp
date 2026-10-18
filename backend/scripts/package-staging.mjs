@@ -8,7 +8,8 @@ assert.equal(process.env.LUNA_STAGING_SOURCE_COMMIT,commit,'Commit verified sour
 execFileSync('git',['diff','--exit-code','HEAD','--','backend/src','backend/scripts','backend/test','frontend/src','frontend/scripts','frontend/index.html','supabase/migrations'],{cwd:source});
 const {build}=await import(createRequire(await realpath(source+'/frontend/node_modules/vite/package.json')).resolve('esbuild'));
 const luna43=process.env.LUNA43_STAGING_RELEASE==='true',luna42=luna43||process.env.LUNA42_STAGING_RELEASE==='true',luna41=luna42||process.env.LUNA41_STAGING_RELEASE==='true';
-const intelligence=process.env.LUNA_INTELLIGENCE_STAGING_RELEASE==='true';
+const intelligence2=process.env.LUNA_INTELLIGENCE2_STAGING_RELEASE==='true';
+const intelligence=intelligence2||process.env.LUNA_INTELLIGENCE_STAGING_RELEASE==='true';
 const directory=await mkdtemp(luna43?'/tmp/luna43-staging.':luna41?'/tmp/luna41-staging.':'/tmp/luna40-staging.'),functions=directory+'/functions';await mkdir(functions);await mkdir(directory+'/.netlify');await cp(source+'/frontend/dist-staging',directory+'/public',{recursive:true});
 const index=await readFile(directory+'/public/index.html','utf8');assert.ok(!/offline-local-qa|window\.Telegram\?\?=/.test(index));
 // Published _redirects runs before TOML. Replace the app's generic SPA fallback
@@ -31,9 +32,10 @@ let actionAuthFile=null;
 let transcriptionAuthFile=null;
 let integrationAuthFile=null,integrationGrantId=null;
 if(intelligence){
- assert.equal(process.env.LUNA_INTELLIGENCE_QA_APPROVED,'180_responses_combined_usd1');
+ assert.equal(process.env.LUNA_INTELLIGENCE_QA_APPROVED,intelligence2?'60_responses_combined_usd0.50':'180_responses_combined_usd1');
+ assert.ok(!luna43&&!luna42&&!luna41,'Do not bundle historical paid workers with Intelligence');
  const nonce=randomBytes(32).toString('hex'),authSha256=createHash('sha256').update(nonce).digest('hex');expiresAt=new Date(Date.now()+8*3600000).toISOString();
- for(const readOnly of [false,true]){const name=readOnly?'luna-intelligence-status':'luna-intelligence-background';await build({...options,stdin:{contents:`import {run} from '${source}/backend/test/luna-intelligence-staging.mjs';export default async function(request,context){return run(request,context,${JSON.stringify({authSha256,expiresAt,sourceCommit:commit,readOnly})});}${readOnly?'':'export const config={background:true};'}`,resolveDir:source,sourcefile:name+'.mjs'},outfile:functions+'/'+name+'.mjs'});}
+ for(const readOnly of [false,true]){const name=readOnly?'luna-intelligence-status':'luna-intelligence-background';await build({...options,stdin:{contents:`import {run} from '${source}/backend/test/luna-intelligence-staging.mjs';export default async function(request,context){return run(request,context,${JSON.stringify({authSha256,expiresAt,sourceCommit:commit,readOnly,...(intelligence2?{program:'intelligence2'}:{})})});}${readOnly?'':'export const config={background:true};'}`,resolveDir:source,sourcefile:name+'.mjs'},outfile:functions+'/'+name+'.mjs'});}
  authFile=directory+'/luna-intelligence-command-private.json';await writeFile(authFile,JSON.stringify({nonce,expiresAt}),{mode:0o600,flag:'wx'});
 }
 if(luna43){

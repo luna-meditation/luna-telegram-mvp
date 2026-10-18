@@ -10,11 +10,11 @@ export const personalProfileSchema=z.object({
  birth_place:optionalText(120),
  ai_context_consent:z.boolean()
 }).strict();
-export type PersonalProfile=z.infer<typeof personalProfileSchema>&{confirmed_memories?:Array<{category:string;key:string;value:string;updatedAt?:string}>;saved_reflections?:Array<{label:'symbolic_reflection';value:string}>};
+export type PersonalProfile=z.infer<typeof personalProfileSchema>&{confirmed_memories?:Array<{category:string;key:string;value:string;updatedAt?:string;id?:string;source?:string;createdAt?:string}>;saved_reflections?:Array<{label:'symbolic_reflection';value:string;id?:string;updatedAt?:string;source?:string}>};
 export const emptyPersonalProfile:PersonalProfile={display_name:null,interests:[],preferences:'',birth_date:null,birth_time:null,birth_place:null,ai_context_consent:false};
 export function permittedPersonalContext(profile:PersonalProfile|null){
  if(!profile?.ai_context_consent)return null;
- return {displayName:profile.display_name,interests:profile.interests,preferences:profile.preferences.slice(0,500),...(profile.confirmed_memories?.length?{confirmedMemories:profile.confirmed_memories}:{}),...(profile.saved_reflections?.length?{symbolicReflections:profile.saved_reflections}:{})};
+ return {displayName:profile.display_name,interests:profile.interests,preferences:profile.preferences.slice(0,500),...(profile.confirmed_memories?.length?{confirmedMemories:profile.confirmed_memories.slice(0,6).map(m=>({...m,confirmation:'confirmed' as const}))}:{}),...(profile.saved_reflections?.length?{symbolicReflections:profile.saved_reflections.slice(0,2)}:{})};
 }
 /** A hidden/stale legacy birth projection must never overwrite the canonical
  * profile when the user edits unrelated preferences in another window. */

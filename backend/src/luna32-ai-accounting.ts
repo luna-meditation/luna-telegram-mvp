@@ -36,7 +36,7 @@ export function guardedProviderTransport(transport:(body:unknown,signal:AbortSig
  return async(body:unknown,signal:AbortSignal)=>{
   if(process.env.LUNA32_ENABLED!=='true')return transport(body,signal);
   const op=operationContext.getStore();if(!op)throw new FoundationError(503,'ai_accounting_context_missing','This AI action is unavailable.');
-  const ceiling=providerCostCeiling(body);if(op.calls>=2)throw new FoundationError(503,'ai_tool_round_limit','This turn reached its bounded tool limit.');
+  const ceiling=providerCostCeiling(body);const maxCalls=op.key.startsWith('chat:')&&process.env.FEATURE_LUNA_INTELLIGENCE==='true'?3:2;if(op.calls>=maxCalls)throw new FoundationError(503,'ai_tool_round_limit','This turn reached its bounded tool limit.');
   const id=randomUUID(),index=op.calls+1;
   const args={p_owner:op.owner,p_operation:op.key,p_lease:op.lease,p_call:index,p_attempt:id,p_model:(body as {model:string}).model,p_ceiling:ceiling,p_limit:op.limit};
   const reserve=await (op.adminQuota&&!op.commercial?op.db.rpc('luna40_reserve_ai_attempt',args):op.db.rpc('luna32_reserve_ai_attempt',args));

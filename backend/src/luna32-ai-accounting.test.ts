@@ -23,3 +23,14 @@ test('metered provider stream remains readable by chat and reports exactly once'
   assert.equal(provider,1);assert.equal(calls.filter(c=>c.name==='luna32_settle_ai_attempt').length,1);assert.equal(calls.at(-1)?.args.p_success,true);
  }
 }));
+test('Intelligence third chat attempt is metered; fourth and non-chat third are blocked',()=>enabled(async()=>{
+ const previous=process.env.FEATURE_LUNA_INTELLIGENCE;process.env.FEATURE_LUNA_INTELLIGENCE='true';
+ try{const {withAiOperation,guardedProviderTransport}=await import('./luna32-ai-accounting.js');
+ for(const [key,maximum] of [['chat:intelligence',3],['report:ordinary',2]] as const){
+  const {db,calls}=fixture();let provider=0;
+  const transport=guardedProviderTransport(async()=>{provider++;return Response.json({model:'gpt-5-mini-2025-08-07',service_tier:'default',status:'completed',usage:{input_tokens:100,output_tokens:80}});});
+  await withAiOperation(db,32001,key,async()=>{for(let i=0;i<maximum;i++)await transport(body,AbortSignal.timeout(1000));await assert.rejects(transport(body,AbortSignal.timeout(1000)),/bounded tool limit/);});
+  assert.equal(provider,maximum);assert.equal(calls.filter(c=>c.name==='luna32_settle_ai_attempt').length,maximum);assert.equal(calls.filter(c=>c.name==='luna32_finish_ai_operation').length,1);
+ }
+ }finally{if(previous===undefined)delete process.env.FEATURE_LUNA_INTELLIGENCE;else process.env.FEATURE_LUNA_INTELLIGENCE=previous;}
+}));

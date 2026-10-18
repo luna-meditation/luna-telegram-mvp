@@ -45,14 +45,16 @@ test('a deterministic catalog card without a provider request releases the legac
  assert.match(backend,/completed_runtime_action/);
 });
 
-test('each chat turn has no hidden paid regeneration; 3.2 permits one bounded tool continuation', () => {
+test('each chat turn has no hidden paid regeneration; Intelligence permits at most two bounded tool rounds', () => {
   assert.doesNotMatch(backend, /attempt: [23]/);
   assert.equal((backend.match(/await callOpenAiResponses\(/g)??[]).length,1);
   assert.match(backend,/consumedUsage=sumToolTurnUsage\(consumedUsage,response.usage\)/);
   const tools=readFileSync(resolve(process.cwd(),'src/luna32-tools.ts'),'utf8');
-  assert.equal((tools.match(/await invoke\(/g)??[]).length,2);
-  assert.match(tools,/tool_choice:'none'/);
-  assert.match(tools,/first.status!=='completed'/);
+  assert.equal((tools.match(/await invoke\(/g)??[]).length,1);
+  assert.match(tools,/maxToolRounds\?:1\|2/);
+  assert.match(tools,/round<=maxRounds/);
+  assert.match(tools,/round===maxRounds\|\|finish\?'none':'auto'/);
+  assert.match(tools,/result.status!=='completed'/);
   const usageWrites = backend.match(/await saveUsage\(/g) ?? [];
   assert.equal(usageWrites.length >= 2, true);
   assert.doesNotMatch(backend.slice(backend.indexOf("if (shouldRetryOpenAiResponse"), backend.indexOf("if (!extracted)")), /saveUsage/);

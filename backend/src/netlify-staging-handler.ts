@@ -1,4 +1,5 @@
 import serverless from 'serverless-http';
+import {isFiniteAiMutation} from './staging-policy.js';
 
 const stagingSiteId = 'a634a7fc-1ecb-47fa-8b43-edd81a7e3694';
 declare const Netlify: {env: {get(name:string):string|undefined}} | undefined;
@@ -90,9 +91,9 @@ export async function netlifyStagingHandler(request: Request, context: StagingCo
   // Keep public QA API generations closed for its whole window (including an
   // interrupted worker). The worker calls owner-bound services directly with
   // synthetic identities. Production never imports this adapter.
-  if(request.method==='POST'&&process.env.FEATURE_LUNA_INTELLIGENCE==='true'&&(/^\/api\/luna\/(?:messages|chat|voice)/.test(path)||/^\/api\/(?:tarot|astrology)\/.+(?:generate|interpret|reveal|report)/.test(path)||/^\/api\/luna43\/.+generate/.test(path))){
-    const {supabase}=await import('./db.js');const window=await supabase.from('luna30_qa_report_runs').select('result').eq('run_name','luna-intelligence-1-0-20261018-v1').maybeSingle();
-    if(window.error||window.data?.result?.providerWindowOpen)return Response.json({code:'qa_validation_in_progress'},{status:503,headers:{'Cache-Control':'private, no-store'}});
+  if(process.env.FEATURE_LUNA_INTELLIGENCE==='true'&&isFiniteAiMutation(request.method,path)){
+    const {supabase}=await import('./db.js');const window=await supabase.from('luna30_qa_report_runs').select('result').in('run_name',['luna-intelligence-1-0-20261018-v1','luna-intelligence-2-0-20261018-v1']);
+    if(window.error||window.data?.some(row=>row.result?.providerWindowOpen))return Response.json({code:'qa_validation_in_progress'},{status:503,headers:{'Cache-Control':'private, no-store'}});
   }
   const query: Record<string,string[]> = {};
   for (const [key,value] of url.searchParams) (query[key] ??= []).push(value);

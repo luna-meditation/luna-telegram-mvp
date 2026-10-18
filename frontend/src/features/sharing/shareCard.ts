@@ -2,15 +2,16 @@ import type {EditorialBody} from '../../../../backend/src/luna42-editorial-contr
 export type ShareFormat='story'|'square'|'portrait';
 export const shareSizes={story:[1080,1920],square:[1080,1080],portrait:[1080,1350]} as const;
 // Deliberately not a Reading, Profile or Conversation object. No private fields.
-export type ShareCardContent={kind:'app'|'tarot'|'garden'|'achievement'|'natal'|'compatibility';title:string;subtitle:string;image?:string;badge?:string;celestial?:{names:string[];highlights:string[]};reference?:string;secondReference?:string};
+export type ShareCardContent={kind:'app'|'tarot'|'garden'|'achievement'|'natal'|'compatibility';title:string;subtitle:string;image?:string;badge?:string;tarot?:Array<{image:string;title:string;orientation:'upright'|'reversed'}>;celestial?:{names:string[];highlights:string[]};reference?:string;secondReference?:string};
 export function publicShareContent(input:ShareCardContent,approvedArtwork:readonly string[]=[]):ShareCardContent {
  if(!['app','tarot','garden','achievement','natal','compatibility'].includes(input.kind))throw new Error('Unsupported public card');
  const plain=(v:string,max:number)=>v.replace(/[\u0000-\u001f]/g,' ').trim().slice(0,max);
  const image=input.image;
  if(image&&(!/^\/(assets\/(tarot\/cards\/|moon-garden\/)|images\/(home\/|achievements\/luna34\/))[a-zA-Z0-9/_-]+\.(webp|png|jpe?g)$/.test(image)&&!approvedArtwork.includes(image)||image.includes('..')))throw new Error('Share artwork must be an existing local or server-verified published Luna asset');
  const celestial=input.celestial?{names:input.celestial.names.slice(0,2).map(value=>plain(value,32)),highlights:input.celestial.highlights.slice(0,3).map(value=>plain(value,65))}:undefined;
+ const tarot=input.tarot?.map(card=>{if(input.kind!=='tarot'||![1,3,5].includes(input.tarot!.length)||!['upright','reversed'].includes(card.orientation))throw new Error('Invalid spread');const safe=publicShareContent({kind:'tarot',title:card.title,subtitle:'',image:card.image},approvedArtwork);return{image:safe.image!,title:plain(card.title,60),orientation:card.orientation};});
  // References authenticate export evidence only; never serialize them into the public image.
- return {kind:input.kind,title:plain(input.title,100),subtitle:plain(input.subtitle,220),...(image?{image}:{}),...(input.badge?{badge:plain(input.badge,70)}:{}),...(celestial?{celestial}:{})};
+ return {kind:input.kind,title:plain(input.title,100),subtitle:plain(input.subtitle,220),...(image?{image}:{}),...(input.badge?{badge:plain(input.badge,70)}:{}),...(celestial?{celestial}:{}),...(tarot?{tarot}:{})};
 }
 export async function renderShareCard(input:ShareCardContent,format:ShareFormat,language:'en'|'ru'='en',editorial?:Pick<EditorialBody,'title'|'description'>,approvedArtwork:readonly string[]=[]):Promise<Blob>{
  const content=publicShareContent(input,approvedArtwork),[width,height]=shareSizes[format],canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
@@ -31,7 +32,13 @@ export async function renderShareCard(input:ShareCardContent,format:ShareFormat,
   if(content.celestial?.names.length){ctx.fillStyle='#e6cee9';textY=wrap(content.celestial.names.join(' · '),textY,35,width-170,1)+15;}
   if(content.celestial?.highlights.length){ctx.fillStyle='#e8ce9b';textY=wrap(content.celestial.highlights.join(' · '),textY,29,width-170,2)+15;}
  }
- if(content.image){const img=new Image();img.crossOrigin='anonymous';img.decoding='async';await new Promise<void>((resolve,reject)=>{img.onload=()=>resolve();img.onerror=()=>reject(new Error('Artwork could not load'));img.src=content.image!;});const boxH=height-(format==='square'?510:570),boxW=width-190,ratio=Math.min(boxW/img.naturalWidth,boxH/img.naturalHeight),w=img.naturalWidth*ratio,h=img.naturalHeight*ratio;ctx.drawImage(img,(width-w)/2,175+(boxH-h)/2,w,h);textY=boxH+235;}
+ if(content.tarot?.length){
+  const count=content.tarot.length,rows=count===5&&format!=='square'?2:1,cols=rows===2?3:count;
+  const boxH=height-(format==='square'?510:570),rowH=boxH/rows,cellW=(width-150)/cols;
+  const images=await Promise.all(content.tarot.map(async card=>{const img=new Image();img.crossOrigin='anonymous';img.decoding='async';await new Promise<void>((resolve,reject)=>{img.onload=()=>resolve();img.onerror=()=>reject(new Error('Artwork could not load'));img.src=card.image;});return img;}));
+  images.forEach((img,i)=>{const row=Math.floor(i/cols),col=i%cols,itemsInRow=Math.min(cols,count-row*cols),x=width/2+(col-(itemsInRow-1)/2)*cellW,top=175+row*rowH,ratio=Math.min((cellW-20)/img.naturalWidth,(rowH-72)/img.naturalHeight),w=img.naturalWidth*ratio,h=img.naturalHeight*ratio;ctx.drawImage(img,x-w/2,top,w,h);ctx.fillStyle='#f2e9f4';ctx.font=`500 ${count===5&&format==='square'?21:25}px system-ui`;ctx.fillText(content.tarot![i].title,x,top+h+30,cellW-12);ctx.fillStyle='#e7d2a2';ctx.font='21px system-ui';const reversed=content.tarot![i].orientation==='reversed';ctx.fillText(language==='ru'?(reversed?'↶ Перевёрнутая':'Прямая'):(reversed?'↶ Reversed':'Upright'),x,top+h+57,cellW-12);});
+  textY=boxH+235;
+ }else if(content.image){const img=new Image();img.crossOrigin='anonymous';img.decoding='async';await new Promise<void>((resolve,reject)=>{img.onload=()=>resolve();img.onerror=()=>reject(new Error('Artwork could not load'));img.src=content.image!;});const boxH=height-(format==='square'?510:570),boxW=width-190,ratio=Math.min(boxW/img.naturalWidth,boxH/img.naturalHeight),w=img.naturalWidth*ratio,h=img.naturalHeight*ratio;ctx.drawImage(img,(width-w)/2,175+(boxH-h)/2,w,h);textY=boxH+235;}
  ctx.fillStyle='#fbf3f9';textY=wrap(content.title,textY,format==='story'?54:48,width-150,2)+23;ctx.fillStyle='#d8cee2';textY=wrap(content.subtitle,textY,33,width-170,3)+22;
  if(content.badge){ctx.fillStyle='#e7d2a2';wrap(content.badge,Math.min(textY,height-170),28,width-170,2);}
  ctx.fillStyle='#d0b88b';ctx.font='28px system-ui';ctx.fillText(editorial?.description[language]??(/[А-Яа-яЁё]/.test(content.title)?'Luna · пространство самопознания':'Luna · a space for self-discovery'),width/2,height-90,width-170);

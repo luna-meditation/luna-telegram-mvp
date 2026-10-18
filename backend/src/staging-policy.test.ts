@@ -1,7 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import express from 'express';
-import {assertStagingIsolation, privateStagingGate, stagingQaOnly, stagingTelegramIds, stagingUserRecord, type StagingConfig} from './staging-policy.js';
+import {assertStagingIsolation, isFiniteAiMutation, privateStagingGate, stagingQaOnly, stagingTelegramIds, stagingUserRecord, type StagingConfig} from './staging-policy.js';
+
+test('finite provider window blocks every public generation path, but permits reading saved data', () => {
+  for (const path of ['/api/luna/messages','/api/luna/tools/tarot/reveal','/api/luna43/reports',
+    '/api/tarot/readings/interpret','/api/astrology/charts/abc/interpret','/api/luna/voice/abc']) {
+    assert.equal(isFiniteAiMutation('POST',path),true,path);
+    assert.equal(isFiniteAiMutation('GET',path),false,path);
+  }
+  for (const path of ['/health','/api/user','/api/garden','/api/luna-malicious']) {
+    assert.equal(isFiniteAiMutation('POST',path),false,path);
+  }
+});
 
 const config: StagingConfig = {
   STAGING_MODE:true, STAGING_SUPABASE_PROJECT_REF:'abcdefghijklmnopqrst',

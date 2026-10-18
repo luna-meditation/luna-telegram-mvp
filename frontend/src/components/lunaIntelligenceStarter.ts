@@ -5,5 +5,7 @@ export function intelligenceStarter(input:{language:'en'|'ru';name:string;now:nu
  const greeting=ru?`${hour<6?'Доброй ночи':hour<12?'Доброе утро':hour<18?'Добрый день':'Добрый вечер'}${name?', '+name:''}.`: `${hour<6?'A quiet moment':hour<12?'Good morning':hour<18?'Good afternoon':'Good evening'}${name?', '+name:''}.`;
  const c=input.conversation,age=c?.last_message_at?input.now-Date.parse(c.last_message_at):Infinity;
  const continuation=c&&age>=0&&age<7*86400000&&input.now-input.lastShown>=86400000&&c.title.trim()?{id:c.id,label:ru?'Продолжить прошлый разговор':'Continue our last conversation',title:c.title.replace(/\s+/g,' ').slice(0,60)}:null;
- return{greeting,continuation};
+ const question=ru?(hour<12?'Как ты сегодня себя чувствуешь?':'Что сейчас занимает твои мысли?'):(hour<12?'How are you feeling today?':'What is on your mind right now?');
+ const replies=ru?['Чувствую себя хорошо','Немного тревожно','Хочу разобраться в себе']:['I feel good','A little anxious','I want to understand myself'];
+ return{greeting,question,replies,continuation};
 }
