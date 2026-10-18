@@ -7,8 +7,8 @@ const source=resolve(dirname(fileURLToPath(import.meta.url)),'../..'),commit=exe
 assert.equal(process.env.LUNA_STAGING_SOURCE_COMMIT,commit,'Commit verified source first');
 execFileSync('git',['diff','--exit-code','HEAD','--','backend/src','backend/scripts','backend/test','frontend/src','frontend/scripts','frontend/index.html','supabase/migrations'],{cwd:source});
 const {build}=await import(createRequire(await realpath(source+'/frontend/node_modules/vite/package.json')).resolve('esbuild'));
-const luna42=process.env.LUNA42_STAGING_RELEASE==='true',luna41=luna42||process.env.LUNA41_STAGING_RELEASE==='true';
-const directory=await mkdtemp(luna41?'/tmp/luna41-staging.':'/tmp/luna40-staging.'),functions=directory+'/functions';await mkdir(functions);await mkdir(directory+'/.netlify');await cp(source+'/frontend/dist-staging',directory+'/public',{recursive:true});
+const luna43=process.env.LUNA43_STAGING_RELEASE==='true',luna42=luna43||process.env.LUNA42_STAGING_RELEASE==='true',luna41=luna42||process.env.LUNA41_STAGING_RELEASE==='true';
+const directory=await mkdtemp(luna43?'/tmp/luna43-staging.':luna41?'/tmp/luna41-staging.':'/tmp/luna40-staging.'),functions=directory+'/functions';await mkdir(functions);await mkdir(directory+'/.netlify');await cp(source+'/frontend/dist-staging',directory+'/public',{recursive:true});
 const index=await readFile(directory+'/public/index.html','utf8');assert.ok(!/offline-local-qa|window\.Telegram\?\?=/.test(index));
 // Published _redirects runs before TOML. Replace the app's generic SPA fallback
 // with isolated QA API rules so no request can fall through to production.
@@ -29,6 +29,19 @@ let voiceAuthFile=null;
 let actionAuthFile=null;
 let transcriptionAuthFile=null;
 let integrationAuthFile=null,integrationGrantId=null;
+if(luna43){
+ assert.equal(process.env.LUNA43_QA_APPROVED,'40_responses_8_stt_combined_usd0.50');
+ const samples=[];
+ for(const [language,expectedHash]of [['en','76cbb651f67b925278e64d5040ac7822e5efda4f78a655341ac6129b10c3785b'],['ru','8e8125e342ed33003069177509d2ea8d503722cd8e3fcd9d7fe9d5af091cfb85']]){
+  const original=await readFile('/tmp/luna41-voice-qa/'+language+'-sample.wav');assert.equal(createHash('sha256').update(original).digest('hex'),expectedHash);assert.equal(original.readUInt32LE(24),24000);
+  const count=(original.length-44)/2,length=Math.floor(count*2/3),wav=Buffer.alloc(44+length*2);original.copy(wav,0,0,44);wav.writeUInt32LE(wav.length-8,4);wav.writeUInt32LE(16000,24);wav.writeUInt32LE(32000,28);wav.writeUInt32LE(length*2,40);
+  for(let i=0;i<length;i++){const position=i*1.5,a=Math.floor(position),fraction=position-a;wav.writeInt16LE(Math.round(original.readInt16LE(44+a*2)*(1-fraction)+original.readInt16LE(44+Math.min(a+1,count-1)*2)*fraction),44+i*2);}
+  samples.push({language,base64:wav.toString('base64')});
+ }
+ const nonce=randomBytes(32).toString('hex'),authSha256=createHash('sha256').update(nonce).digest('hex');expiresAt=new Date(Date.now()+8*3600000).toISOString();
+ for(const readOnly of [false,true]){const name=readOnly?'luna43-release-status':'luna43-release-background';await build({...options,stdin:{contents:`import {run} from '${source}/backend/test/luna43-staging-release.mjs';export default async function(request,context){return run(request,context,${JSON.stringify({authSha256,expiresAt,sourceCommit:commit,readOnly,samples:readOnly?[]:samples})});}${readOnly?'':'export const config={background:true};'}`,resolveDir:source,sourcefile:name+'.mjs'},outfile:functions+'/'+name+'.mjs'});}
+ authFile=directory+'/luna43-command-private.json';await writeFile(authFile,JSON.stringify({nonce,expiresAt}),{mode:0o600,flag:'wx'});
+}
 if(luna42&&process.env.LUNA42_INTEGRATION_QA==='two_voice_http_calls_remaining_usd0.03'){
  const samples=[];
  for(const [language,hash]of [['en','76cbb651f67b925278e64d5040ac7822e5efda4f78a655341ac6129b10c3785b'],['ru','8e8125e342ed33003069177509d2ea8d503722cd8e3fcd9d7fe9d5af091cfb85']]){

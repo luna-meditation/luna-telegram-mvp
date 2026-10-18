@@ -8,7 +8,7 @@ const values:Record<string,[string,string]>={completed:['Completed','Завер�
 export function formatRecordValue(key:string,value:unknown,language:AppLanguage){
  const ru=language==='ru',locale=ru?'ru-RU':'en-GB';if(value===null||value===undefined)return ru?'Нет данных':'Unavailable';if(typeof value==='boolean')return value?(ru?'Да':'Yes'):(ru?'Нет':'No');
  if(typeof value==='number')return key.endsWith('_microusd')?new Intl.NumberFormat(locale,{style:'currency',currency:'USD',maximumFractionDigits:6}).format(value/1e6):new Intl.NumberFormat(locale,{maximumFractionDigits:3}).format(value);
- const text=String(value);if(/(?:_at|At|_until)$/.test(key)&&/^\d{4}-\d\d-\d\dT/.test(text)&&Number.isFinite(Date.parse(text)))return new Intl.DateTimeFormat(locale,{dateStyle:'medium',timeStyle:'short',timeZone:'UTC'}).format(new Date(text))+' UTC';
+ const text=String(value);if(key==='expires_at'&&text==='infinity')return ru?'Без срока сгорания':'No expiry';if(/(?:_at|At|_until)$/.test(key)&&/^\d{4}-\d\d-\d\dT/.test(text)&&Number.isFinite(Date.parse(text)))return new Intl.DateTimeFormat(locale,{dateStyle:'medium',timeStyle:'short',timeZone:'UTC'}).format(new Date(text))+' UTC';
  return values[text]?.[ru?1:0]??text;
 }
 export function AdminRecordList({items}:{items:Record<string,unknown>[]|null|undefined}){

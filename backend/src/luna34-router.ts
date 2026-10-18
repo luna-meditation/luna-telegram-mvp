@@ -5,7 +5,7 @@ import {supabase,upsertUser} from './db.js';
 import {createLuna34Progress} from './luna34-progress.js';
 import {readLuna34Membership} from './luna34-membership.js';
 import {getLunaUsage} from './luna-ai.js';
-import {betaEntitlement,readLuna32Settings} from './luna32-runtime.js';
+import {betaEntitlement,readLuna32Settings,successfulAiLimit} from './luna32-runtime.js';
 import {env} from './config.js';
 import {issueShareExportTicket,verifyShareExportTicket,shareExportSchema} from './luna34-share-proof.js';
 import {tarotCatalog} from './tarot-policy.js';
@@ -23,7 +23,7 @@ luna34Router.get('/progress',async(req,res,next)=>{try{res.json(await progress.s
 luna34Router.get('/referrals',async(req,res,next)=>{try{res.json(await referrals.dashboard(owner(req)));}catch(e){next(e);}});
 luna34Router.post('/referrals/link',async(req,res,next)=>{try{z.object({}).strict().parse(req.body);res.json(await referrals.dashboard(owner(req),true));}catch(e){next(e);}});
 luna34Router.post('/referrals/onboarding',async(req,res,next)=>{try{z.object({completed:z.literal(true)}).strict().parse(req.body);res.json(await referrals.finishOnboarding(owner(req)));}catch(e){next(e);}});
-luna34Router.get('/membership',async(req,res,next)=>{try{const [membership,usage,settings,products]=await Promise.all([readLuna34Membership(supabase,owner(req),env.LUNA34_COMMERCIAL_ENABLED),getLunaUsage(owner(req)),readLuna32Settings(supabase),createLuna30Commerce(supabase,env,input=>bot.telegram.callApi('createInvoiceLink',input)).availability()]);if(membership.membership.paid){products.premium_month=false;products.premium_year=false;}await recordFunnel(supabase,owner(req),'membership_viewed',new Date().toISOString().slice(0,10),'app');res.json({...membership,products,usage,beta:betaEntitlement(settings)});}catch(e){next(e);}});
+luna34Router.get('/membership',async(req,res,next)=>{try{const [membership,usage,settings,products]=await Promise.all([readLuna34Membership(supabase,owner(req),env.LUNA34_COMMERCIAL_ENABLED),getLunaUsage(owner(req)),readLuna32Settings(supabase),createLuna30Commerce(supabase,env,input=>bot.telegram.callApi('createInvoiceLink',input)).availability()]);if(membership.membership.paid||membership.administrative?.active)for(const product of ['premium_week','premium_month','premium_year','premium_lifetime'] as const)products[product]=false;await recordFunnel(supabase,owner(req),'membership_viewed',new Date().toISOString().slice(0,10),'app');res.json({...membership,products,usage,planAllowances:{freeDaily:successfulAiLimit(settings,false,{free:env.AI_MAX_MESSAGES_PER_DAY,premium:env.AI_PREMIUM_MAX_MESSAGES_PER_DAY}),premiumDaily:successfulAiLimit(settings,true,{free:env.AI_MAX_MESSAGES_PER_DAY,premium:env.AI_PREMIUM_MAX_MESSAGES_PER_DAY})},beta:betaEntitlement(settings)});}catch(e){next(e);}});
 luna34Router.get('/admin/metrics',async(req,res,next)=>{try{if(!env.ADMIN_TELEGRAM_ID||owner(req)!==env.ADMIN_TELEGRAM_ID){res.status(403).json({code:'admin_only'});return;}const result=await supabase.rpc('luna34_operating_metrics');if(result.error)throw result.error;res.json(result.data);}catch(e){next(e);}});
 luna34Router.post('/progress/events',async(req,res,next)=>{try{res.json(await progress.record(owner(req),req.body));}catch(e){next(e);}});
 luna34Router.post('/progress/acknowledge',async(req,res,next)=>{try{res.json(await progress.acknowledge(owner(req),req.body));}catch(e){next(e);}});

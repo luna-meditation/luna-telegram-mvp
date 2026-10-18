@@ -3,7 +3,7 @@ import {useEffect,useState} from 'react';
 import {getBirthProfiles,getMeetLuna,type BirthProfile,type AppLanguage,type UniverseData,type TarotReading,type MeetLunaState} from '../api';
 import {featureFlags} from '../config/featureFlags';
 import {cosmosAreas,cosmosCompletion,cosmosMemoryKey} from '../../../backend/src/luna41-cosmos-policy';
-import {meetInterestOptions} from '../../../backend/src/luna42-meet-config';
+import {meetInterestOptions,meetSteps,reusableMeetSteps} from '../../../backend/src/luna42-meet-config';
 import {cosmosDomainSummary} from '../../../backend/src/luna42-cosmos-domain';
 import './universe-overview.css';
 import './cosmos41.css';
@@ -13,7 +13,7 @@ export function MyUniverseOverview({data,readings,language,firstName,initData,on
  const en=language==='en',name=data.profile.display_name??data.identity?.firstName??firstName,configured=cosmosCompletion(data.memories).length;
  const [profiles,setProfiles]=useState<BirthProfile[]|null>(null),[birthError,setBirthError]=useState(false),[meet,setMeet]=useState<MeetLunaState|null>(null);
  useEffect(()=>{let active=true;getMeetLuna(initData).then(r=>{if(active)setMeet(r);}).catch(()=>{});if(featureFlags.astrology)getBirthProfiles(initData).then(r=>{if(active)setProfiles(r.profiles);}).catch(()=>{if(active)setBirthError(true);});return()=>{active=false;};},[initData]);
- const own=profiles?.find(p=>p.subject_kind==='self'),finished=Boolean(meet?.meet.finishedAt),started=Boolean(meet?.meet.completed?.length||meet?.meet.skipped?.length),confirmed=data.memories.filter(m=>m.confirmation_status==='confirmed'),goals=confirmed.filter(m=>m.category==='goals'),discoveries=readings.filter(r=>r.interpretation).slice(0,3);
+ const own=profiles?.find(p=>p.subject_kind==='self'),finished=Boolean(meet?.meet.finishedAt)||Boolean(meet&&meetSteps.every(step=>[...(meet.meet.completed??[]),...(meet.meet.skipped??[]),...reusableMeetSteps(data,Boolean(own))].includes(step))),started=Boolean(meet?.meet.completed?.length||meet?.meet.skipped?.length),confirmed=data.memories.filter(m=>m.confirmation_status==='confirmed'),goals=confirmed.filter(m=>m.category==='goals'),discoveries=readings.filter(r=>r.interpretation).slice(0,3);
  let interests:string[]=data.profile.interests;
  try{const stored=JSON.parse(confirmed.find(m=>m.memory_key==='meet_interests')?.memory_value??'null');if(Array.isArray(stored)&&stored.every(v=>typeof v==='string'))interests=stored;}catch{/* Legacy text remains available in memory management. */}
  const labels=(id:string)=>meetInterestOptions.find(o=>o[0]===id)?.[en?1:2]??id;

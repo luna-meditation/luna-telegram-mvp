@@ -2,16 +2,12 @@ import { ArrowUpRight, Flame, Flower2, NotebookPen, Sprout } from 'lucide-react'
 import type { AppLanguage, ProfileStats } from '../api';
 import { luna2Copy } from './copy';
 import { SectionBack } from './ExplorePage';
-import {OptimizedImage} from '../design-system/components/OptimizedImage';
 
-const gardenArtwork = ['level-0-empty-garden', 'level-1-first-bloom', 'level-2-lantern-glow', 'level-3-stone-path', 'level-4-twin-bloom', 'level-5-moon-bridge', 'level-6-reflection-garden', 'level-7-full-moon-garden'];
-
-export function ProfileOverview({ language, profile, onWallet, onJourney, onGarden, onActivity, onAchievements }: {
+export function ProfileOverview({ language, profile, onWallet, onJourney, onActivity, onAchievements }: {
   language: AppLanguage; profile: ProfileStats | null; onWallet: () => void; onJourney: () => void; onGarden: () => void; onActivity: () => void; onAchievements: () => void;
 }) {
   const t = luna2Copy[language];
   const seeds = profile ? (profile.moonSeedsAvailable ?? profile.moonSeeds ?? 0) : '—';
-  const gardenImage = gardenArtwork[Math.max(0, Math.min(7, Math.floor(profile?.gardenLevel ?? 0)))];
   return <section className="luna2-profile-overview" aria-label={t.journey}>
     <div className="premium-profile-stats">
       <button onClick={onWallet}><strong>{seeds}</strong><small>Moon Seeds</small></button>
@@ -19,7 +15,6 @@ export function ProfileOverview({ language, profile, onWallet, onJourney, onGard
       <button onClick={onAchievements}><strong>{profile?.achievements?.unlocked??'—'}</strong><small>{t.achievements}</small></button>
     </div>
     <div className="premium-profile-links">
-      <button type="button" className="premium-profile-link luna2-garden-entry" onClick={onGarden}><OptimizedImage src={`/assets/moon-garden/${gardenImage}.png`} sizes="52px" alt=""/><span><strong>{t.garden}</strong><small>{t.gardenLevel} {profile?.gardenLevel??'—'} · {t.gardenBody}</small></span><ArrowUpRight size={18}/></button>
       <button type="button" className="premium-profile-link luna2-activity-entry" onClick={onActivity}><NotebookPen size={23}/><span><strong>{language==='en'?'My journal':'Мой дневник'}</strong><small>{t.activityBody}</small></span><ArrowUpRight size={18}/></button>
       <button type="button" className="premium-profile-link luna2-journey-entry" onClick={onJourney}><Flame size={23}/><span><strong>{language==='en'?'Achievements & journey':'Достижения и путь'}</strong><small>{t.streak}: {profile?.currentStreak??'—'} {t.days}</small></span><ArrowUpRight size={18}/></button>
     </div>

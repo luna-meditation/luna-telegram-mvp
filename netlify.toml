@@ -6,13 +6,13 @@
   NODE_VERSION = "22"
   PNPM_VERSION = "9.15.0"
 
-# Luna 4.2 verified core; build requires current recovery and source-bound evidence.
+# Luna 4.3 verified commercial release; build requires current source-bound evidence.
 [context.production]
   command = "pnpm --filter @luna/frontend build:production"
 
 [context.production.environment]
-  LUNA_RELEASE_PROFILE = "luna42"
-  LUNA_RELEASE_DB_REVIEW = "../qa/luna42-release-review.json"
+  LUNA_RELEASE_PROFILE = "luna43"
+  LUNA_RELEASE_DB_REVIEW = "../qa/luna43-release-review.json"
   VITE_FEATURE_ADMIN_V4 = "true"
   VITE_FEATURE_COSMOS_V2 = "true"
   VITE_FEATURE_AI_VOICE_INPUT = "true"
@@ -27,12 +27,13 @@
   VITE_FEATURE_TAROT_DAILY = "true"
   VITE_FEATURE_TAROT_SPREADS = "true"
   VITE_FEATURE_ASTROLOGY = "true"
-  VITE_FEATURE_MOON_SEEDS_WALLET_V2 = "false"
-  VITE_FEATURE_MOON_SEEDS_PURCHASES = "false"
+  VITE_FEATURE_MOON_SEEDS_WALLET_V2 = "true"
+  VITE_FEATURE_MOON_SEEDS_PURCHASES = "true"
   VITE_FEATURE_BREATHWORK_AUDIO = "true"
   VITE_FEATURE_DAILY_CARD_V2 = "true"
   VITE_FEATURE_ECONOMY_REWARDS_V2 = "false"
-  VITE_FEATURE_TAROT_PAID_READINGS = "false"
+  VITE_FEATURE_TAROT_PAID_READINGS = "true"
+  VITE_FEATURE_PAYMENT_ATOMIC = "true"
   VITE_FEATURE_PREMIUM_V2 = "false"
 
 [[redirects]]

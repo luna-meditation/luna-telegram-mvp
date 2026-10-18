@@ -21,7 +21,7 @@ const ambiguityFixMigration = readFileSync(resolve(process.cwd(), '../database/m
 const dbSource = readFileSync(resolve(process.cwd(), 'src/db.ts'), 'utf8');
 
 test('every backend RPC call has a canonical SQL function definition', () => {
-  const luna42=['luna42_save_meet_step','luna42_reserve_voice','luna42_settle_voice','luna42_decide_memory_proposal','luna42_save_discovery','luna42_rename_discovery','luna42_record_experience','luna42_experience_report','luna42_save_editorial'];
+  const luna42=['luna43_purchase_seed_product','luna43_claim_deep_analysis','luna43_finish_deep_analysis','luna43_update_seed_catalog','luna42_save_meet_step','luna42_reserve_voice','luna42_settle_voice','luna42_decide_memory_proposal','luna42_save_discovery','luna42_rename_discovery','luna42_record_experience','luna42_experience_report','luna42_save_editorial'];
   const rpcNames = [...backendSource.matchAll(/\.rpc\(\s*['"]([^'"]+)['"]/g)].map((match) => match[1]).filter(name=>!luna42.includes(name));
   for(const name of luna42)assert.match(additiveMigrations,new RegExp('create or replace function public\\.'+name+'\\('));
   assert.match(additiveMigrations,/create or replace function public\.luna42_save_meet_step\(/);

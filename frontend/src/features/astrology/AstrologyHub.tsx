@@ -6,8 +6,8 @@ import AstrologyPage from './AstrologyPage';
 import CelestialCalendar from './CelestialCalendar';
 import {useEditorialEntries} from '../../editorial';
 
-type Section='home'|'natal'|'compatibility'|'calendar'|'path'|'profiles';
-export default function AstrologyHub(props:{language:AppLanguage;initData?:string;onBack:()=>void;registerBackHandler?:(handler:(()=>void)|null)=>void;initialSection?:'natal'|'compatibility'|'profiles'}){
+type Section='home'|'natal'|'compatibility'|'calendar'|'path'|'profiles'|'birth_editor';
+export default function AstrologyHub(props:{language:AppLanguage;initData?:string;onBack:()=>void;registerBackHandler?:(handler:(()=>void)|null)=>void;initialSection?:'natal'|'compatibility'|'profiles'|'birth_editor'}){
  const {language,initData,onBack,registerBackHandler}=props,en=language==='en',root=useRef<HTMLDivElement>(null);
  const editorial=useEditorialEntries();
  const [section,setSection]=useState<Section>(props.initialSection??'home'),[subject,setSubject]=useState<'self'|'other'|undefined>();
@@ -17,7 +17,7 @@ export default function AstrologyHub(props:{language:AppLanguage;initData?:strin
  useEffect(()=>{root.current?.scrollIntoView({block:'start',behavior:'auto'});},[section]);
  useEffect(()=>{if(section!=='home')return;let active=true;setProfilesError(false);getBirthProfiles(initData).then(r=>{if(active)setProfiles(r.profiles);}).catch(()=>{if(active){setProfiles(null);setProfilesError(true);}});return()=>{active=false;};},[section,initData,retry]);
  const manage=(kind?:'self'|'other')=>{setSubject(kind);setSection('profiles');};
- if(section==='natal'||section==='compatibility'||section==='path'||section==='profiles')return <AstrologyPage key={section} {...props} onBack={()=>setSection('home')} experience={section} initialSubjectKind={subject}/>;
+ if(section==='natal'||section==='compatibility'||section==='path'||section==='profiles'||section==='birth_editor')return <AstrologyPage key={section} {...props} onBack={()=>setSection('home')} experience={section==='birth_editor'?'profiles':section} initialSubjectKind={section==='birth_editor'?'self':subject} startOwnEditor={section==='birth_editor'}/>;
  const categories=[
   {id:'natal' as const,title:en?'My natal chart':'Моя натальная карта',body:en?'Character, relationships and life themes.':'Характер, отношения и жизненные темы.',cta:en?'Open my chart':'Открыть карту'},
   {id:'compatibility' as const,title:en?'Compatibility':'Совместимость',body:en?'Two charts. A closer look at your connection.':'Две карты и новый взгляд на ваши отношения.',cta:en?'Compare two charts':'Сравнить две карты'},

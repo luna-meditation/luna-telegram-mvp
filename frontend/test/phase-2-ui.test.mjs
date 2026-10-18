@@ -71,12 +71,12 @@ test('Phase 2.1 uses original bundled illustrations without broken remote assets
   assert.doesNotMatch(src('luna2/ProfileOverview.tsx'), /hero-light\.png|https:\/\//);
 });
 
-test('Phase 2.1 profile highlights real balance and selects garden artwork from existing progress', () => {
+test('Profile highlights the real balance and keeps the garden inside Journey rather than duplicating it', () => {
   const profile = src('luna2/ProfileOverview.tsx');
   assert.match(profile, /premium-profile-stats/);
   assert.match(profile, /onWallet/);
-  assert.match(profile, /Math\.floor\(profile\?\.gardenLevel \?\? 0\)/);
-  assert.equal((profile.match(/'level-\d-/g) ?? []).length, 8);
+  assert.doesNotMatch(profile, /luna2-garden-entry|premium-profile-link[^>]*onClick=\{onGarden\}/);
+  assert.match(profile, /onJourney/);
   assert.match(styles, /\.luna2-wallet-copy > b.*overflow-wrap: anywhere/);
   assert.match(styles, /\.luna2-garden-entry img.*object-fit: cover/);
   assert.match(styles, /\.luna2-chat \.luna-live-empty::before.*pointer-events: none/);
@@ -97,7 +97,7 @@ test('Home preserves mood hero and recommendations while new dashboard is opt-in
 test('Profile uses existing balances/history and has no local reward or charge mutations', () => {
   const profile=src('luna2/ProfileOverview.tsx');
   assert.match(profile,/profile\.moonSeedsAvailable \?\? profile\.moonSeeds/);
-  for(const field of ['currentStreak','gardenLevel','achievements']) assert.ok(profile.includes(field));
+  for(const field of ['currentStreak','achievements']) assert.ok(profile.includes(field));
   const journal=src('luna2/JournalPage.tsx');for(const field of ['weeklyCheckins','meditation_id'])assert.ok(journal.includes(field));
   assert.doesNotMatch(profile,/localStorage|fetch\(|createInvoice|saveHistory|setProfile|moonSeeds\s*[+-]=/);
   assert.match(app,/showJourneyEntry && <ProfileOverview/);

@@ -13,7 +13,7 @@ test('retry reuses the stable client request id without another user bubble', ()
 
 test('quota exhaustion blocks paid replies and retry but keeps free account commands available', () => {
   assert.match(source, /failedTurn\.state !== 'quota_exhausted'/);
-  assert.match(source, /quotaExhausted&&!commerceIntent\(draft\)/);
+  assert.match(source, /quotaExhausted&&!meetOpen&&!commerceIntent\(draft\)/);
   assert.match(source, /quotaExhausted&&<ChatCommerce view="quota"/);
   assert.match(source, /Your AI allowance is used/);
 });

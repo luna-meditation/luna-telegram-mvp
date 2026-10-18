@@ -10,7 +10,9 @@ export function createVoiceService(db:SupabaseClient,config:{key:()=>string|unde
   const started=performance.now();let settled=false;
   const settle=async(text:string|null,cost:number|null,input:number|null,output:number|null)=>{const r=await db.rpc(qa?'luna42_settle_voice_qa':'luna42_settle_voice',{p_owner:owner,p_request:v.requestId,p_text:text,p_cost:cost,p_input:input,p_output:output,p_latency:Math.round(performance.now()-started),...(qa?{p_grant:qa.grant}:{})});if(r.error||r.data!==true)throw new FoundationError(503,'voice_accounting_failed','Usage could not be verified.');settled=true;};
   try{
-   const form=new FormData();form.set('model',transcriptionModel);form.set('file',new Blob([Uint8Array.from(wav)],{type:'audio/wav'}),'voice.wav');form.set('response_format','json');form.set('prompt',v.language==='ru'?'Luna, Moon Seeds, Moon Garden. Русская и английская речь.':'Luna, Moon Seeds, Moon Garden. English and Russian speech.');
+   // A vocabulary prompt can hallucinate app names over silence/short speech.
+   // The selected ISO language is a hint, never an instruction to rewrite words.
+   const form=new FormData();form.set('model',transcriptionModel);form.set('file',new Blob([Uint8Array.from(wav)],{type:'audio/wav'}),'voice.wav');form.set('response_format','json');form.set('language',v.language);
    const response=await(config.transport??fetch)('https://api.openai.com/v1/audio/transcriptions',{method:'POST',headers:{Authorization:`Bearer ${key}`},body:form,signal:AbortSignal.timeout(45000)});if(!response.ok)throw new FoundationError(503,'voice_transcription_failed','Transcription could not finish.');
    const payload=await response.json(),usage=transcriptionUsage(payload);if(!usage)throw new FoundationError(503,'voice_usage_unverified','Transcription usage could not be verified.');const text=typeof payload.text==='string'?payload.text.trim():'';
    await settle(text&&text.length<=2000?text:null,usage.costMicrousd,usage.inputTokens,usage.outputTokens);
