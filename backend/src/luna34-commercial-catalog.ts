@@ -12,7 +12,7 @@ export const luna34CommercialCatalog={
  referrals:{inviter:30,newUser:20,maxMonthly:5},supportStars:[10,50,100,500],
  achievementRewardsEnabled:false
 } as const;
-export type MembershipKind='free'|'monthly'|'annual'|'lifetime'|'legacy_fixed_term';
+export type MembershipKind='free'|'weekly'|'monthly'|'annual'|'lifetime'|'legacy_fixed_term';
 const valid=(date:string|null|undefined)=>{const value=Date.parse(date??'');return Number.isFinite(value)?value:null;};
 /** UTC anniversary windows, clamped at month-end and inside the paid term.
  * Annual access allocates only the current month; never 12 months up front. */
@@ -23,13 +23,13 @@ export function billingMonthWindow(startIso:string,endIso:string,now=new Date())
  const offset=anniversary(monthOffset)>at?monthOffset-1:monthOffset;
  return {start:new Date(Math.max(start,anniversary(offset))).toISOString(),end:new Date(Math.min(end,anniversary(offset+1))).toISOString(),index:offset};
 }
-export function resolveMembership(input:{lifetime:boolean;legacyUntil?:string|null;period?:{start:string;end:string;days:30|365}|null},now=new Date()){
+export function resolveMembership(input:{lifetime:boolean;legacyUntil?:string|null;period?:{start:string;end:string;days:7|30|365}|null},now=new Date()){
  // Existing promises always take precedence over newly introduced quotas.
  if(input.lifetime)return {kind:'lifetime' as MembershipKind,paid:true,until:null,preserveLegacy:true,ordinaryLimit:null,resetAt:null};
  if((valid(input.legacyUntil)??0)>now.getTime())return {kind:'legacy_fixed_term' as MembershipKind,paid:true,until:input.legacyUntil!,preserveLegacy:true,ordinaryLimit:null,resetAt:null};
  const period=input.period,paidStart=valid(period?.start),paidEnd=valid(period?.end);if(period&&paidStart!==null&&paidEnd!==null&&paidStart<=now.getTime()&&paidEnd>now.getTime()){
   const window=period.days===365?billingMonthWindow(period.start,period.end,now):{start:period.start,end:period.end,index:0};
-  return {kind:(period.days===365?'annual':'monthly') as MembershipKind,paid:true,until:period.end,preserveLegacy:false,ordinaryLimit:300,resetAt:window.end,window};
+  return {kind:(period.days===365?'annual':period.days===7?'weekly':'monthly') as MembershipKind,paid:true,until:period.end,preserveLegacy:false,ordinaryLimit:period.days===7?null:300,resetAt:window.end,window};
  }
  const start=Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate());return {kind:'free' as MembershipKind,paid:false,until:null,preserveLegacy:false,ordinaryLimit:5,resetAt:new Date(start+86400000).toISOString(),window:{start:new Date(start).toISOString(),end:new Date(start+86400000).toISOString(),index:0}};
 }

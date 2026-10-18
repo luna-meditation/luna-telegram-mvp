@@ -1,0 +1,43 @@
+{
+  "status": "PASS",
+  "projectId": "vkcdtasbdoeilgfucoax",
+  "financialHashesUnchanged": true,
+  "tablesPreserved": 107,
+  "functionsPreserved": 72,
+  "tableChanges": [
+    "luna30_commercial_orders",
+    "luna34_commercial_settings",
+    "luna40_quota_grants",
+    "luna_seed_ledger"
+  ],
+  "functionChanges": [
+    "luna30_fulfill_order",
+    "luna32_ai_used",
+    "luna34_accept_order",
+    "luna34_allocate_period",
+    "luna34_claim_due_allocations",
+    "luna34_prepare_order",
+    "luna40_admin_overview",
+    "luna40_admin_users",
+    "luna40_reserve_ai_attempt"
+  ],
+  "newTables": [
+    "luna43_seed_purchases"
+  ],
+  "newFunctions": [
+    "luna43_claim_deep_analysis",
+    "luna43_finish_deep_analysis",
+    "luna43_journal_admin_adjustment",
+    "luna43_purchase_seed_product",
+    "luna43_update_seed_catalog"
+  ],
+  "newTriggers": [
+    {
+      "hash": "561de323f4d038b13844b79f743a224c",
+      "name": "luna43_admin_wallet_journal",
+      "table": "luna40_wallet_adjustments"
+    }
+  ],
+  "errors": [],
+  "checkoutStillClosed": true
+}

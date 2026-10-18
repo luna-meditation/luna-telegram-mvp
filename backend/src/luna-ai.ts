@@ -69,6 +69,7 @@ import {enforcePracticeActionClaims} from './luna40-meditation-selection.js';
 import {consultationTitle} from './luna33-titles.js';
 import {recordedAstrologyConsent} from './luna33-consent.js';
 import {independentPracticeTopic,astrologyWorkflowIntent} from './luna33-topic.js';
+import {usesConsultation,luna43ConversationInstructions} from './luna43-conversation.js';
 import {independentReflectionTopic,meaningfulQuickReplies,lastAssistantQuickReplies,luna34ConversationInstructions,requestedBreathOptions} from './luna34-conversation.js';
 import {readCommercialAllowance} from './luna34-allowances.js';
 import {commerceIntent} from './luna35-commerce-policy.js';
@@ -137,6 +138,7 @@ export const lunaChatInputSchema = z.object({
   astrology:astrologyAttachmentSchema.optional(),
   contextReset:z.boolean().optional(),
   astrologyConsent:z.literal(true).optional(),
+  attachmentSelected:z.boolean().optional(),
   conversationId: z.string().uuid().optional(),
   message: z.string().trim().min(1).max(env.AI_MAX_MESSAGE_LENGTH),
   language: languageSchema,
@@ -603,7 +605,7 @@ export function buildLunaOpenAiRequest(input: {
     store: false,
     service_tier:'default',
     reasoning: { effort: env.AI_REASONING_EFFORT },
-    instructions: systemPrompt(input.language, JSON.stringify(input.catalog), JSON.stringify(sharedContext))+(env.FEATURE_PERSONAL_MEMORY?'\n'+confirmedMemoryPrompt:'')+'\n'+russianAddressInstructions(input.language,addressContext?.personalContext??addressContext?.modeContext?.personalContext,input.recent.at(-1)?.content)+'\n'+consultationRuntimeInstructions+'\n'+luna34ConversationInstructions+'\n'+attachmentGrounding(mode==='tarot'||mode==='astrology'?mode:null)+'\n'+automaticConversationInstructions+`\nCURRENT_RESPONSE_LANGUAGE=${input.language}. Write all visible prose and quick replies in ${input.language==='ru'?'Russian':'English'}. Old conversation language and grammar examples do not override this server decision.`,
+    instructions: systemPrompt(input.language, JSON.stringify(input.catalog), JSON.stringify(sharedContext))+(env.FEATURE_PERSONAL_MEMORY?'\n'+confirmedMemoryPrompt:'')+'\n'+russianAddressInstructions(input.language,addressContext?.personalContext??addressContext?.modeContext?.personalContext,input.recent.at(-1)?.content)+'\n'+consultationRuntimeInstructions+'\n'+luna34ConversationInstructions+'\n'+attachmentGrounding(mode==='tarot'||mode==='astrology'?mode:null)+'\n'+automaticConversationInstructions+'\n'+luna43ConversationInstructions+`\nCURRENT_RESPONSE_LANGUAGE=${input.language}. Write all visible prose and quick replies in ${input.language==='ru'?'Russian':'English'}. Old conversation language and grammar examples do not override this server decision.`,
     input: (mode||env.FEATURE_PERSONAL_MEMORY?input.recent.slice(-8):input.recent).map((message,index,array) => ({ role: message.role, content: mode||env.FEATURE_PERSONAL_MEMORY?message.content.slice(0,index===array.length-1?2000:1000):message.content })),
     max_output_tokens: input.maxOutputTokens ?? env.AI_MAX_OUTPUT_TOKENS,
     text: lunaStructuredTextFormat(input.language)
@@ -963,6 +965,10 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
   const telegramId = user.telegram_id;
   const memoryBoundaryAtStart=env.FEATURE_PERSONAL_MEMORY?await getMemoryContextBoundary(telegramId):undefined;
   if(input.contextReset&&(input.readingId||input.chartId||input.astrology))throw new FoundationError(400,'conflicting_context','Choose an attachment or remove it, not both.');
+  const selectedKind=input.chartId||input.astrology?'astrology':input.readingId?'tarot':undefined;
+  if(selectedKind&&!usesConsultation(input.message,selectedKind,input.attachmentSelected)){
+    input.mode=undefined;input.contextReset=true;input.readingId=undefined;input.chartId=undefined;input.astrology=undefined;input.astrologyConsent=undefined;
+  }
   const practiceTopic=independentPracticeTopic(input.message)??independentReflectionTopic(input.message);
   if(practiceTopic){input.mode=practiceTopic;input.contextReset=true;input.readingId=undefined;input.chartId=undefined;input.astrology=undefined;input.astrologyConsent=undefined;}
   if(input.conversationId&&!input.contextReset&&!input.readingId&&!input.chartId&&!input.astrology&&(!input.mode||input.mode==='tarot'||input.mode==='astrology')){
@@ -971,8 +977,9 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
     const saved=await supabase.from('ai_messages').select('role,metadata,created_at').eq('telegram_id',telegramId).eq('conversation_id',input.conversationId).order('created_at',{ascending:false}).limit(env.AI_RECENT_MESSAGE_LIMIT);
     if(saved.error)throw new FoundationError(503,'context_unavailable','The saved context could not be loaded.');
     const attached=savedConsultationContext([...messagesAfterMemoryBoundary(saved.data??[],boundary)].reverse());
-    if(attached.astrology){input.astrology=attached.astrology;input.mode='astrology';}
-    else if(attached.readingId){input.readingId=attached.readingId;input.mode='tarot';}
+    if(attached.astrology&&usesConsultation(input.message,'astrology')){input.astrology=attached.astrology;input.mode='astrology';}
+    else if(attached.readingId&&usesConsultation(input.message,'tarot')){input.readingId=attached.readingId;input.mode='tarot';}
+    else if(attached.astrology||attached.readingId)input.contextReset=true;
   }
   if(input.astrology){input.chartId=input.astrology.chartId;input.mode='astrology';}
   if((input.mode==='astrology'||input.chartId)&&(!env.FEATURE_ASTROLOGY||!env.LUNA30_ASTROLOGY_AI_ENABLED||input.mode!=='astrology'||!input.chartId))throw new FoundationError(503,'astrology_unavailable','Open a calculated chart before discussing astrology.');
@@ -1345,7 +1352,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
       language: responseLanguage,
       state: conversationState,
       clarificationAllowed,
-      userRequestedDepth: isLongFormRequest(input.message)||Boolean(readingContext||chartContext),
+      userRequestedDepth: isLongFormRequest(input.message)||Boolean(readingContext),
       completionRequired
     });
     console.info('[Luna AI response review]', {
@@ -1366,7 +1373,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
             language: responseLanguage,
             clarificationAllowed,
             completionRequired,
-            preserveStructure:isLongFormRequest(input.message)||Boolean(readingContext||chartContext)
+            preserveStructure:true
           })
       });
     }
@@ -1557,7 +1564,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
         ...(input.readingId?{readingId:input.readingId}:{}),
         ...(selectedAstrologyAction?{contextReset:!selectedAstrologyAction.attachment,astrologyWorkflow:selectedAstrologyAction.workflow,...(selectedAstrologyAction.attachment?{astrology:selectedAstrologyAction.attachment}:{}),readingId:undefined,astrologyConsent:undefined}:{}),
         consultation:{version:1,phase,actions:memoryProposal?[]:actions,quickReplies:memoryProposal?[]:meaningfulQuickReplies(parsed.quickReplies,[...recent.filter(m=>m.role==='user').map(m=>m.content),...lastAssistantQuickReplies(recent)])},
-        ...(env.FEATURE_AI_CENTRAL_EXPERIENCE?{contextualActions:contextualActionIds(input.message,null)}:{}),
+        ...(env.FEATURE_AI_CENTRAL_EXPERIENCE?{contextualActions:chartContext?['birth_profile']:readingContext?['tarot']:contextualActionIds(input.message,null)}:{}),
         meditationAction,
         recommendedMeditation,
         safetyState: 'none',

@@ -44,7 +44,7 @@ async function saveExtendedReading(telegramId:number,input:SpreadInput|(TarotInp
  const limits=qaTarotLimits(telegramId);
  if(env.LUNA32_ENABLED)limits.daily=500;
  const safety=safetyCategory(input.question),generate=input.generate&&env.FEATURE_TAROT_AI&&Boolean(env.OPENAI_API_KEY)&&!safety&&(env.FEATURE_PREMIUM_V2||env.FEATURE_TAROT_PAID_READINGS||freeQa);
- const {data,error}=await supabase.rpc('reserve_luna_tarot_spread',{p_telegram_id:telegramId,p_client_reading_id:input.clientReadingId,p_request_hash:requestHash,p_kind:input.kind,p_cards:input.cards,p_intention:input.intention,p_question:input.question,p_language:input.language,p_generate:generate,p_order_id:env.FEATURE_TAROT_PAID_READINGS?orderId??null:null,p_premium_allowed:env.FEATURE_PREMIUM_V2,p_daily_limit:env.FEATURE_PREMIUM_V2||env.FEATURE_TAROT_PAID_READINGS?10:env.TAROT_AI_DAILY_LIMIT,p_global_limit:env.TAROT_AI_GLOBAL_DAILY_LIMIT});
+ const {data,error}=await supabase.rpc('reserve_luna_tarot_spread',{p_telegram_id:telegramId,p_client_reading_id:input.clientReadingId,p_request_hash:requestHash,p_kind:input.kind,p_cards:input.cards,p_intention:input.intention,p_question:input.question,p_language:input.language,p_generate:generate,p_order_id:env.FEATURE_TAROT_PAID_READINGS?orderId??null:null,p_premium_allowed:env.FEATURE_PREMIUM_V2,p_daily_limit:env.LUNA32_ENABLED?500:env.FEATURE_PREMIUM_V2||env.FEATURE_TAROT_PAID_READINGS?10:env.TAROT_AI_DAILY_LIMIT,p_global_limit:env.TAROT_AI_GLOBAL_DAILY_LIMIT});
  if(error||!data)throw new FoundationError(503,'history_unavailable','Could not save this reading.');
  let reserved=data as {status:string;acquired:boolean;reading?:StoredReading};
  if(freeQa&&generate&&reserved.reading?.status==='local'&&!reserved.acquired){

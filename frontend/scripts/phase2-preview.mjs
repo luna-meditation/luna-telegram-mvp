@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url';
 assert.equal(process.versions.node.split('.')[0], '22', 'Use Node.js 22');
 const frontend = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const tarotPreview = process.argv.includes('--tarot');
-const luna42Preview=process.argv.includes('--luna42');
+const luna43Preview=process.argv.includes('--luna43');
+const luna42Preview=luna43Preview||process.argv.includes('--luna42');
 const luna41Preview=luna42Preview||process.argv.includes('--luna41');
 const luna40Preview=luna41Preview||process.argv.includes('--luna40');
 const luna34Preview=luna40Preview||process.argv.includes('--luna34');
@@ -25,7 +26,7 @@ const productionFlags=process.argv.includes('--production-flags');
 const refinementPreview=process.argv.includes('--refinement')||luna21Preview;
 const legacyPreview = process.argv.includes('--legacy');
 assert.ok(!(tarotPreview&&legacyPreview),'Choose either Tarot or legacy preview');
-const outputDirectory = luna42Preview?'dist-luna42-preview':luna41Preview?'dist-luna41-preview':luna40Preview?'dist-staging':luna34Preview?'dist-luna34-preview':luna33Preview?'dist-luna33-preview':luna32Preview?'dist-luna32-preview':luna31Preview?'dist-luna31-preview':evolutionPreview?'dist-luna30-preview':centralPreview?'dist-luna24-preview':memoryPreview?'dist-memory-preview':productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
+const outputDirectory = luna43Preview?'dist-luna43-preview':luna42Preview?'dist-luna42-preview':luna41Preview?'dist-luna41-preview':luna40Preview?'dist-staging':luna34Preview?'dist-luna34-preview':luna33Preview?'dist-luna33-preview':luna32Preview?'dist-luna32-preview':luna31Preview?'dist-luna31-preview':evolutionPreview?'dist-luna30-preview':centralPreview?'dist-luna24-preview':memoryPreview?'dist-memory-preview':productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
 const output = resolve(frontend, outputDirectory);
 process.env.VITE_FEATURE_COSMOS_V2=luna41Preview?'true':'false';
 process.env.VITE_FEATURE_AI_VOICE_INPUT=luna42Preview?'true':'false';
@@ -34,7 +35,7 @@ process.env.VITE_FEATURE_BREATHWORK_GUIDED=luna41Preview?'true':'false';
 const flagNames = ['AI_CENTRAL_EXPERIENCE','PERSONAL_MEMORY','NEW_NAVIGATION','TAROT_DAILY','TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI','DAILY_CARD_V2','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2'];
 if(!process.argv.includes('--serve-only')){
 const build = spawn(process.execPath,[resolve(frontend,'node_modules/vite/bin/vite.js'),'build','--outDir',outputDirectory],{
-  cwd:frontend, stdio:'inherit', env:{...process.env,...Object.fromEntries(flagNames.map(key=>[`VITE_FEATURE_${key}`,'false'])),...(refinementPreview?Object.fromEntries(['PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI'].map(key=>[`VITE_FEATURE_${key}`,'true'])):{}),...(luna21Preview?{VITE_FEATURE_DAILY_CARD_V2:'true',VITE_FEATURE_TAROT_SPREADS:productionFlags?'false':'true'}:{}),VITE_FEATURE_AI_CENTRAL_EXPERIENCE:centralPreview?'true':'false',VITE_FEATURE_NEW_NAVIGATION:legacyPreview?'false':'true',VITE_FEATURE_TAROT_DAILY:tarotPreview||refinementPreview?'true':'false',VITE_FEATURE_PERSONAL_MEMORY:memoryPreview?'true':'false',VITE_API_URL:'',VITE_BOT_USERNAME:'',...(evolutionPreview?{VITE_FEATURE_BREATHWORK_AUDIO:'true',VITE_FEATURE_ASTROLOGY:'true'}:{})}
+  cwd:frontend, stdio:'inherit', env:{...process.env,...Object.fromEntries(flagNames.map(key=>[`VITE_FEATURE_${key}`,'false'])),...(refinementPreview?Object.fromEntries(['PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI'].map(key=>[`VITE_FEATURE_${key}`,'true'])):{}),...(luna21Preview?{VITE_FEATURE_DAILY_CARD_V2:'true',VITE_FEATURE_TAROT_SPREADS:productionFlags?'false':'true'}:{}),VITE_FEATURE_AI_CENTRAL_EXPERIENCE:centralPreview?'true':'false',VITE_FEATURE_NEW_NAVIGATION:legacyPreview?'false':'true',VITE_FEATURE_TAROT_DAILY:tarotPreview||refinementPreview?'true':'false',VITE_FEATURE_PERSONAL_MEMORY:memoryPreview?'true':'false',VITE_API_URL:'',VITE_BOT_USERNAME:'',...(luna43Preview?{VITE_FEATURE_MOON_SEEDS_WALLET_V2:'true',VITE_FEATURE_MOON_SEEDS_PURCHASES:'true',VITE_FEATURE_TAROT_PAID_READINGS:'true',VITE_FEATURE_PAYMENT_ATOMIC:'true'}:{}),...(evolutionPreview?{VITE_FEATURE_BREATHWORK_AUDIO:'true',VITE_FEATURE_ASTROLOGY:'true'}:{})}
 });
 const code = await new Promise(done=>build.once('exit',done));
 assert.equal(code,0,'Preview build failed');
@@ -48,7 +49,8 @@ const astrology=evolutionPreview?{
  ...await import('../../backend/dist/luna30-progression.js'),
  ...await import('../../backend/dist/progress-achievements.js'),
  ...await import('../../backend/dist/luna30-astrology-policy.js'),
- ...(luna34Preview?{...await import('../../backend/dist/luna34-achievements.js'),...await import('../../backend/dist/luna34-commercial-catalog.js'),...await import('../../backend/dist/luna34-conversation.js')}: {})
+ ...(luna34Preview?{...await import('../../backend/dist/luna34-achievements.js'),...await import('../../backend/dist/luna34-commercial-catalog.js'),...await import('../../backend/dist/luna34-conversation.js')}: {}),
+ ...(luna43Preview?await import('../../backend/dist/luna43-commerce-policy.js'):{})
 }:null;
 const birthProfiles=new Map(),birthCharts=new Map(),dreamEntries=new Map();
 const meetPatch=luna42Preview?(await import('../../backend/dist/luna42-meet.js')).meetStepPatch:null;
@@ -84,7 +86,7 @@ const server=createServer(async(req,res)=>{
       if(luna42Preview&&url.pathname.startsWith('/api/luna/voice/'))return json({code:'offline_provider_disabled',localFixtureOnly:true},503);
       let body={};if(req.method!=='GET'){let input='';for await(const part of req){input+=part;if(input.length>20000)return json({error:'Preview input too large'},413);}if(input)body=JSON.parse(input);}
       if(luna34Preview&&url.pathname.startsWith('/api/luna34/')){
-       if(url.pathname==='/api/luna34/membership')return json({catalog:astrology.luna34CommercialCatalog,membership:astrology.resolveMembership({lifetime:true}),commercialEnabled:false,quotasEnabled:false,balance:123,earned:345,transactions:[],purchases:[],newPurchases:[],usage:{limit:40,remaining:38,resetAt:new Date(new Date().setUTCHours(24,0,0,0)).toISOString()},beta:{active:true,expiresAt:'2026-11-01T00:00:00Z'}});
+       if(url.pathname==='/api/luna34/membership')return json({catalog:luna43Preview?astrology.luna43CommercialCatalog:astrology.luna34CommercialCatalog,membership:astrology.resolveMembership({lifetime:!luna43Preview}),commercialEnabled:luna43Preview,products:luna43Preview?Object.fromEntries(['premium_week','premium_month','premium_year','premium_lifetime','seeds_100','seeds_300','seeds_700','seeds_1500','support'].map(p=>[p,true])):{},planAllowances:{freeDaily:8,premiumDaily:40},quotasEnabled:false,balance:123,earned:345,transactions:[],purchases:[],newPurchases:[],usage:{limit:40,remaining:38,resetAt:new Date(new Date().setUTCHours(24,0,0,0)).toISOString()},beta:{active:true,expiresAt:'2026-11-01T00:00:00Z'}});
        if(url.pathname.startsWith('/api/luna34/referrals'))return json({enabled:false,link:null,total:0,qualified:0,rewarded:0,pending:0,seedsEarned:0,monthlyCap:5,rewardsEnabled:false,onboardingRequired:false});
        if(url.pathname==='/api/luna34/breath/start')return json({id:randomUUID(),verifiedSeconds:0,completed:false});
        if(url.pathname.includes('/heartbeat'))return json({verifiedSeconds:0,completed:false});
@@ -93,6 +95,7 @@ const server=createServer(async(req,res)=>{
        if(url.pathname==='/api/luna34/progress/acknowledge')return json({acknowledged:true,localFixtureOnly:true});
        return json({code:'offline_action_unavailable'},404);
       }
+      if(luna43Preview&&url.pathname==='/api/luna43/seed-products')return json({enabled:false,products:astrology.luna43CommercialCatalog.seedProducts,revision:0,purchases:[],additionalMessages:0,localFixtureOnly:true});
       if(luna32Preview&&url.pathname==='/api/luna32/local-reset'&&req.method==='POST'){checkin=null;if(body.resetAstrology===true){birthProfiles.clear();birthCharts.clear();}if(luna42Preview&&body.resetMeet===true){meetState={meet:{},revision:0,updatedAt:null};previewMemories.clear();previewDiscoveries.clear();personal={...emptyPersonal};previewMemoryEnabled=false;}return json({ok:true,localFixtureOnly:true});}
       if(astrology&&url.pathname.startsWith('/api/astrology/')){
        if(luna32Preview&&url.pathname==='/api/astrology/calendar')return json(astrology.calculateCelestialMonth(url.searchParams.get('month')));

@@ -1,5 +1,12 @@
 export const meetSteps=['name','interests','priority','relationships','birth','style','consent'] as const;
 export type MeetStep=typeof meetSteps[number];
+/** Reuse only user-entered canonical profile/confirmed facts. Telegram's
+ * inferred name and AI-generated symbolic reflections do not answer a step. */
+export function reusableMeetSteps(data:{profile:{display_name?:string|null;interests:readonly string[]};memories:Array<{memory_key:string;confirmation_status:string;memory_kind:string}>},hasOwnBirth=false):MeetStep[]{
+ const keys=new Set(data.memories.filter(m=>m.confirmation_status==='confirmed'&&m.memory_kind==='fact').map(m=>m.memory_key)),steps:MeetStep[]=[];
+ if(data.profile.display_name?.trim())steps.push('name');if(data.profile.interests.length||keys.has('meet_interests'))steps.push('interests');
+ if(keys.has('meet_priority'))steps.push('priority');if(keys.has('cosmos_relationships'))steps.push('relationships');if(keys.has('communication_style'))steps.push('style');if(hasOwnBirth)steps.push('birth');return steps;
+}
 export const meetInterestOptions=[
  ['relationships','Love & relationships','Любовь и отношения'],['career','Career & business','Карьера и дело'],['money','Money & goals','Деньги и цели'],['growth','Self-discovery','Самопознание'],['wellbeing','Emotional wellbeing','Эмоциональное благополучие'],['tarot','Tarot','Таро'],['astrology','Astrology','Астрология'],['meditation','Meditation & breathing','Медитация и дыхание'],['exploring','Just exploring','Просто знакомлюсь']
 ] as const;

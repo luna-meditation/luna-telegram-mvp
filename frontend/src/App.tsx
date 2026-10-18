@@ -1,6 +1,7 @@
 import {OptimizedImage,imageSource} from './design-system/components/OptimizedImage';
 import {observeAudioFocus,requestAudioFocus} from './audioFocus';
 import './luna34.css';
+import './luna43-polish.css';
 import {useLanguagePreference} from './localization/useLanguagePreference';
 import type {LanguageMode} from './localization/languagePreference';
 import {resolveLunaDestination} from '../../backend/src/luna41-navigation';
@@ -1832,7 +1833,8 @@ function App() {
   const [aiChartId,setAiChartId]=useState<string|import('./api').AstrologyChatAttachment|undefined>();
   const [cosmosDiscussion,setCosmosDiscussion]=useState<{area:string;key:string}|undefined>();
   const [conversationEntry,setConversationEntry]=useState<string|undefined>();
-  const [astrologyEntry,setAstrologyEntry]=useState<'natal'|'compatibility'|'profiles'|undefined>(launchDestination==='natal'||launchDestination==='compatibility'?launchDestination:undefined);
+  const [meetEntry,setMeetEntry]=useState<string|undefined>(launchDestination==='meet'?'launch':undefined);
+  const [astrologyEntry,setAstrologyEntry]=useState<'natal'|'compatibility'|'profiles'|'birth_editor'|undefined>(launchDestination==='natal'||launchDestination==='compatibility'?launchDestination:undefined);
   useEffect(()=>{const discuss=(event:Event)=>{const detail=(event as CustomEvent).detail,id=detail?.chartId;if(!featureFlags.astrology||typeof id!=='string'||!/^[-a-f0-9]{36}$/.test(id))return;setAiReadingId(undefined);setAiChartId(detail);};window.addEventListener('luna-discuss-chart',discuss);return()=>window.removeEventListener('luna-discuss-chart',discuss);},[]);
   const [tarotSetupKey,setTarotSetupKey]=useState(0);
   const tarotBackHandlerRef = useRef<(() => void) | null>(null);
@@ -1893,7 +1895,7 @@ function App() {
   const [profileNestedActive, setProfileNestedActive] = useState(false);
   const [profileEntry, setProfileEntry] = useState<ProfileSettingsView>(launchDestination==='invite'?'invite':launchDestination==='meet'?'meet':launchDestination==='cosmos'?'universe':'main');
   useDestinationObservation(initData);
-  useEffect(()=>{const open=(event:Event)=>{const destination=resolveLunaDestination((event as CustomEvent).detail?.destination,featureFlags);if(!destination)return;if(destination.page==='profile'){setProfileEntry('profileView' in destination?destination.profileView:'main');navigatePrimary('profile');return;}if(destination.page==='astrology')setAstrologyEntry('astrologySection' in destination?destination.astrologySection:undefined);if('tarotScreen' in destination)tarotDispatch({type:'screen',value:destination.tarotScreen});if(destination.id==='daily')tarotDispatch({type:'screen',value:'daily'});setPage(destination.page);};window.addEventListener('luna-open-destination',open);return()=>window.removeEventListener('luna-open-destination',open);},[setPage,navigatePrimary]);
+  useEffect(()=>{const open=(event:Event)=>{const destination=resolveLunaDestination((event as CustomEvent).detail?.destination,featureFlags);if(!destination)return;if(destination.id==='meet')setMeetEntry(crypto.randomUUID());if(destination.page==='profile'){setProfileEntry('profileView' in destination?destination.profileView:'main');navigatePrimary('profile');return;}if(destination.page==='astrology')setAstrologyEntry('astrologySection' in destination?destination.astrologySection:undefined);if('tarotScreen' in destination)tarotDispatch({type:'screen',value:destination.tarotScreen});if(destination.id==='daily')tarotDispatch({type:'screen',value:'daily'});setPage(destination.page);};window.addEventListener('luna-open-destination',open);return()=>window.removeEventListener('luna-open-destination',open);},[setPage,navigatePrimary]);
   useEffect(()=>{if(!featureFlags.ai_central_experience)return;const activity=()=>setPage('activity'),astrology=(event:Event)=>{const value=(event as CustomEvent).detail?.section;setAstrologyEntry(value==='natal'||value==='compatibility'?value:undefined);setPage('astrology');};window.addEventListener('luna-open-activity',activity);window.addEventListener('luna-open-astrology',astrology);return()=>{window.removeEventListener('luna-open-activity',activity);window.removeEventListener('luna-open-astrology',astrology);};},[setPage]);
   useEffect(()=>{const open=()=>{if(!featureFlags.personal_memory)return;setProfileEntry('universe');navigatePrimary('profile');};window.addEventListener('luna-open-universe',open);return()=>window.removeEventListener('luna-open-universe',open);},[navigatePrimary]);
   useEffect(()=>{const discuss=(event:Event)=>{const area=(event as CustomEvent).detail?.area;if(!featureFlags.cosmos_v2||!cosmosAreas.some(item=>item.id===area))return;setAiReadingId(undefined);setAiChartId(undefined);setCosmosDiscussion({area,key:crypto.randomUUID()});navigatePrimary('luna');};window.addEventListener('luna-discuss-cosmos',discuss);return()=>window.removeEventListener('luna-discuss-cosmos',discuss);},[navigatePrimary]);
@@ -2679,6 +2681,7 @@ function App() {
   };
 
   const buyPlan = async (plan: PurchasePlanId) => {
+    if(featureFlags.new_navigation){setPage('pricing');return;}
     if (openingPlan || paymentOperationRef.current) return;
     if (!accessVerified) {
       setPaymentMessage(language === 'ru' ? 'Не удалось подтвердить статус доступа. Попробуй обновить его.' : 'Your access status could not be verified. Please restore it first.');
@@ -2745,9 +2748,8 @@ function App() {
       paymentOperationRef.current = false;
 
       if (status === 'paid') {
-        setAccess((current) => ({ ...current, hasPremium: true, plan: plan === 'lifetime' ? 'Lifetime' : 'Annual' }));
-        setPaymentMessage(copy[language].paymentSuccessful);
-        void refreshAccessAndPayments(invoice.requestId).catch(() => undefined);
+        setPaymentMessage(copy[language].paymentPending);
+        await refreshAccessAndPayments(invoice.requestId);
         return;
       }
 
@@ -3055,10 +3057,11 @@ function App() {
             readingContextId={aiReadingId}
             chartContextId={aiChartId}
             cosmosDiscussion={cosmosDiscussion}
+            meetEntry={meetEntry}
             conversationEntry={conversationEntry}
             tarotSetupKey={tarotSetupKey}
             registerBackHandler={registerTarotBackHandler}
-            onClearReadingContext={()=>{setAiReadingId(undefined);setAiChartId(undefined);setCosmosDiscussion(undefined);setConversationEntry(undefined);}}
+            onClearReadingContext={()=>{setAiReadingId(undefined);setAiChartId(undefined);setCosmosDiscussion(undefined);setConversationEntry(undefined);setMeetEntry(undefined);}}
           />
         </Suspense>)}
 
@@ -3366,8 +3369,7 @@ function LibraryPage(props: {
         ariaLabel={t.libraryTitle}
         tabs={[
           { id: 'meditations', label: t.meditationsTab },
-          { id: 'breathing', label: t.breathingTab },
-          { id: 'mantras', label: t.mantrasTab }
+          { id: 'mantras', label: props.language==='ru'?'Мантры и звуки':'Mantras & Sounds' }
         ]}
       />
       <div className="library-search">
@@ -3376,14 +3378,14 @@ function LibraryPage(props: {
       </div>
       {props.mode === 'meditations' ? (
         <>
-          <div className="library-filter-scroll -mx-4 flex gap-2 overflow-x-auto px-4 pb-2 luna-scrollbar-none">
+          <details className="luna43-library-filters"><summary>{props.language==='ru'?'Категории и избранное':'Categories & favorites'}</summary><div className="library-filter-scroll -mx-4 flex gap-2 overflow-x-auto px-4 pb-2 luna-scrollbar-none">
             <FilterPill active={props.category === 'all'} onClick={() => props.setCategory('all')} label={t.all} />
             <FilterPill active={props.category === 'saved'} onClick={() => props.setCategory('saved')} label={t.navSaved} />
             <FilterPill active={props.category === 'short'} onClick={() => props.setCategory('short')} label={t.short} />
             {props.categories.map((item) => (
               <FilterPill key={item.slug} active={props.category === item.slug} onClick={() => props.setCategory(item.slug)} label={translateCategory(item.slug || item.name, props.language)} />
             ))}
-          </div>
+          </div></details>
           {props.loading && !props.meditations.length ? (
             <div className="space-y-1">
               {[0, 1, 2].map((item) => <MeditationCardSkeleton key={item} />)}
@@ -3470,6 +3472,7 @@ function LunaPage({
   readingContextId,
   chartContextId,
   cosmosDiscussion,
+  meetEntry,
   conversationEntry,
   tarotSetupKey,
   onClearReadingContext,
@@ -3486,6 +3489,7 @@ function LunaPage({
   readingContextId?:string;
   chartContextId?:string|import('./api').AstrologyChatAttachment;
   cosmosDiscussion?:{area:string;key:string};
+  meetEntry?:string;
   conversationEntry?:string;
   tarotSetupKey?:number;
   onClearReadingContext?:()=>void;
@@ -3506,6 +3510,7 @@ function LunaPage({
       readingContextId={readingContextId}
       chartContextId={chartContextId}
       cosmosDiscussion={cosmosDiscussion}
+      meetEntry={meetEntry}
       conversationEntry={conversationEntry}
       tarotSetupKey={tarotSetupKey}
       onClearReadingContext={onClearReadingContext}
@@ -4680,9 +4685,10 @@ function BreathCirclePage({
           </select>
         </label>}
         <details className="breath-practice-guide">
-          <summary>{language === 'en' ? 'How it helps' : 'Как выполнять'}</summary>
+          <summary>{language === 'en' ? 'How to practice' : 'Как выполнять'}</summary>
           <p>{practice.guide[language]}</p>
         </details>
+        <details className="breath-practice-guide"><summary>{language==='en'?'Why this practice':'Для чего эта практика'}</summary><p>{practice.description[language]} {language==='en'?'Choose a comfortable rhythm; this is a wellbeing practice, not medical treatment.':'Выбирай комфортный ритм. Это практика для самочувствия, а не лечение.'}</p></details>
         <div className="breath-duration-options" role="group" aria-label={language === 'en' ? 'Session duration' : 'Длительность сессии'}>
           {[1, 3, 5, 10].map((item) => (
             <button key={item} onClick={() => setMinutes(item)} disabled={running || hasStarted} aria-pressed={minutes === item}>
@@ -5159,7 +5165,7 @@ function resizeAvatarImage(file: File) {
   });
 }
 
-type ProfileSettingsView = 'main' | 'settings' | 'appearance' | 'goals' | 'notifications' | 'language' | 'subscription' | 'privacy' | 'privacy-policy' | 'support' | 'terms' | 'disclaimer' | 'personalization' | 'universe' | 'meet' | 'invite';
+type ProfileSettingsView = 'main' | 'settings' | 'appearance' | 'goals' | 'notifications' | 'language' | 'subscription' | 'privacy' | 'privacy-policy' | 'support' | 'terms' | 'disclaimer' | 'personalization' | 'memory' | 'universe' | 'meet' | 'invite';
 type RestoreState = 'idle' | 'loading' | 'success' | 'empty' | 'error';
 
 const APP_VERSION = import.meta.env.VITE_APP_VERSION ?? '0.1.0';
@@ -5501,7 +5507,7 @@ function ProfilePage({
       <ProfileSettingsRow icon={Target} title={language==='en'?'Goals':'Цели'} value={goalsLabel} onClick={()=>setView('goals')}/>
       <ProfileSettingsRow icon={Globe2} title={copy[language].language} value={languageLabel} onClick={()=>setView('language')}/>
       <ProfileSettingsRow icon={Bell} title={language==='en'?'Notifications':'Уведомления'} value={notificationLabel} onClick={()=>setView('notifications')}/>
-      {featureFlags.personalization&&<ProfileSettingsRow icon={User} title={language==='en'?'AI personalization':'AI-персонализация'} value={language==='en'?'Optional':'Необязательно'} onClick={()=>setView('personalization')}/>}
+      {featureFlags.personalization&&<ProfileSettingsRow icon={User} title={language==='en'?'Personalization & memory':'Персонализация и память'} value={language==='en'?'Optional':'Необязательно'} onClick={()=>setView('memory')}/>}
       <ProfileSettingsRow icon={Bot} title={language==='en'?'Luna AI':'Луна ИИ'} value={companionStatus} onClick={onLuna}/>
       <ProfileSettingsRow icon={Lock} title={language==='en'?'Privacy & Data':'Приватность и данные'} value="" onClick={()=>setView('privacy')}/>
       <ProfileSettingsRow icon={Heart} title={language==='en'?'Support':'Поддержка'} value="" onClick={()=>{setSupportCategory('problem');setSettingsMessage('');setView('support');}}/>
@@ -5509,6 +5515,7 @@ function ProfilePage({
     </section>
   </ProfileChildScreen>;
   if ((view === 'universe'||view==='meet')&&featureFlags.personal_memory) return <ProfileChildScreen title={language==='en'?'My Universe':'Мой космос'} onBack={()=>{if(!universeBackRef.current?.())setView('main');}} language={language}><MyUniverse key={view} startMeet={view==='meet'} language={language} initData={initData} firstName={firstName} onAstrology={onAstrology} onReading={onReading} goalOptions={profileGoalOptions} onBackChange={handler=>{universeBackRef.current=handler;}}/></ProfileChildScreen>;
+  if(view==='memory'&&featureFlags.personal_memory)return <ProfileChildScreen title={language==='en'?'Personalization & memory':'Персонализация и память'} onBack={()=>{if(!universeBackRef.current?.())setView('settings');}} language={language}><MyUniverse startMemory language={language} initData={initData} firstName={firstName} onAstrology={onAstrology} onReading={onReading} goalOptions={profileGoalOptions} onBackChange={handler=>{universeBackRef.current=handler;}}/></ProfileChildScreen>;
   if (view === 'personalization') return <ProfileChildScreen title={language==='en'?'Personal Luna profile':'Личный профиль Luna'} onBack={()=>setView(initialView==='personalization'?'main':'settings')} language={language}><PersonalizationSettings language={language} firstName={firstName} initData={initData} onLanguageChange={onLanguageChange} onClose={()=>setView(initialView==='personalization'?'main':'settings')}/></ProfileChildScreen>;
 
 
@@ -5870,14 +5877,14 @@ function ProfilePage({
       {avatarMessage && <p className="rounded-2xl border border-white/10 bg-white/[0.045] px-3 py-2 text-xs text-lavender" role="status">{avatarMessage}</p>}
       {avatarBusy && <div className="h-1 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gold transition-all" style={{ width: `${Math.max(8, avatarProgress)}%` }} /></div>}
 
-      {showJourneyEntry && <ProfileOverview language={language} profile={profile} onWallet={onWallet} onJourney={onJourney} onGarden={onGarden} onActivity={onActivity} onAchievements={onAchievements} />}
       {featureFlags.personal_memory&&<button className="universe-profile-entry" onClick={()=>setView('universe')}><span aria-hidden="true">✧</span><span><strong>{language==='en'?'My Universe':'Мой космос'}</strong><small>{language==='en'?'Your portrait, discoveries and confirmed memory':'Твой портрет, открытия и подтверждённая память'}</small></span><ChevronRight size={20}/></button>}
 
       <section className="luna-surface rounded-[26px] p-2">
         <ProfileSettingsRow icon={CreditCard} title={language === 'en' ? 'Membership & Moon Seeds' : 'Подписка и Moon Seeds'} value={localizedPlanStatus} onClick={() => setView('subscription')} />
         <ProfileSettingsRow icon={Gift} title={language==='en'?'Invite a friend':'Пригласить друга'} value="" onClick={()=>setView('invite')}/>
-        <ProfileSettingsRow icon={Settings} title={language==='en'?'Settings':'Настройки'} value={languageLabel} onClick={()=>setView('settings')}/>
       </section>
+      {showJourneyEntry && <ProfileOverview language={language} profile={profile} onWallet={onWallet} onJourney={onJourney} onGarden={onGarden} onActivity={onActivity} onAchievements={onAchievements} />}
+      <section className="luna-surface rounded-[22px] p-2"><ProfileSettingsRow icon={Settings} title={language==='en'?'Settings':'Настройки'} value={languageLabel} onClick={()=>setView('settings')}/></section>
 
       <section className="luna-surface profile-secondary-action rounded-[22px] p-2">
         <ProfileSettingsRow icon={Upload} title={copy[language].addHomeTitle} value={homeScreenMessage || ''} onClick={onAddHome} />

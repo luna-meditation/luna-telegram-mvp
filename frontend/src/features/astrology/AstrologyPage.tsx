@@ -12,8 +12,8 @@ import {RelationshipSelector,CompatibilityBasis} from './CompatibilityContext';
 import {AstrologyShareButton} from './AstrologyShareButton';
 
 export type AstrologyExperience='natal'|'compatibility'|'path'|'profiles';
-type Props={language:AppLanguage;initData?:string;onBack:()=>void;registerBackHandler?:(handler:(()=>void)|null)=>void;experience?:AstrologyExperience;initialSubjectKind?:'self'|'other'};
-export default function AstrologyPage({language,initData,onBack,registerBackHandler,experience='natal',initialSubjectKind}:Props){
+type Props={language:AppLanguage;initData?:string;onBack:()=>void;registerBackHandler?:(handler:(()=>void)|null)=>void;experience?:AstrologyExperience;initialSubjectKind?:'self'|'other';startOwnEditor?:boolean};
+export default function AstrologyPage({language,initData,onBack,registerBackHandler,experience='natal',initialSubjectKind,startOwnEditor=false}:Props){
  const en=language==='en',root=useRef<HTMLDivElement>(null),alive=useRef(true),working=useRef(false);
  const [profiles,setProfiles]=useState<BirthProfile[]>([]),[chart,setChart]=useState<NatalChart|null>(null),[secondChart,setSecondChart]=useState<NatalChart|null>(null),[comparison,setComparison]=useState<SynastryResult|null>(null);
  const [relationship,setRelationship]=useState<RelationshipKind|''>('');
@@ -24,7 +24,7 @@ export default function AstrologyPage({language,initData,onBack,registerBackHand
  const back=useCallback(()=>{if(form){setForm(false);return;}if(chart||comparison){setChart(null);setSecondChart(null);setComparison(null);return;}onBack();},[form,chart,comparison,onBack]);
  useEffect(()=>{registerBackHandler?.(back);return()=>registerBackHandler?.(null);},[back,registerBackHandler]);
  useEffect(()=>{root.current?.scrollIntoView({block:'start',behavior:'auto'});},[form,chart?.id,comparison?.firstChartId]);
- useEffect(()=>{alive.current=true;setProfiles([]);setChart(null);setComparison(null);setBusy(true);working.current=true;getBirthProfiles(initData).then(data=>{if(!alive.current)return;setProfiles(data.profiles);setFirst((data.profiles.find(p=>p.subject_kind==='self')??data.profiles[0])?.id??'');}).catch(e=>{if(alive.current)setError(astrologyError(e,language));}).finally(()=>{working.current=false;if(alive.current)setBusy(false);});return()=>{alive.current=false;};},[initData]);
+ useEffect(()=>{alive.current=true;setProfiles([]);setChart(null);setComparison(null);setBusy(true);working.current=true;getBirthProfiles(initData).then(data=>{if(!alive.current)return;setProfiles(data.profiles);const own=data.profiles.find(p=>p.subject_kind==='self');setFirst((own??data.profiles[0])?.id??'');if(startOwnEditor){setEditing(own??null);setNewKind('self');setForm(true);}}).catch(e=>{if(alive.current)setError(astrologyError(e,language));}).finally(()=>{working.current=false;if(alive.current)setBusy(false);});return()=>{alive.current=false;};},[initData,startOwnEditor]);
  const perform=async(action:()=>Promise<void>)=>{if(working.current)return;working.current=true;setBusy(true);setError('');try{await action();}catch(e){if(alive.current)setError(astrologyError(e,language));}finally{working.current=false;if(alive.current)setBusy(false);}};
  const open=(id=first)=>perform(async()=>{if(!id)return;const result=await calculateBirthChart(id,initData);if(alive.current){clear();setChart(result.chart);}});
  const compare=()=>perform(async()=>{if(!relationship||!first||!second||first===second)return;const [a,b]=await Promise.all([calculateBirthChart(first,initData),calculateBirthChart(second,initData)]);const result=await compareBirthCharts(a.chart.id,b.chart.id,initData,relationship||undefined);if(alive.current){setChart(a.chart);setSecondChart(b.chart);setComparison(result);}});

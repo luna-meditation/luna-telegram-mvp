@@ -97,7 +97,9 @@ export function constrainLunaResponse(input: {
       seen.add(key);
       return true;
     });
-  const result = (input.completionRequired ? sentences : sentences.slice(0, 5)).join(input.completionRequired ? '\n' : ' ').trim();
+  // Length is an instruction/quality signal, never permission to silently
+  // remove the answer's ending. The client folds optional depth accessibly.
+  const result = sentences.join(input.completionRequired ? '\n' : ' ').trim();
   if (result) return result;
   return input.language === 'ru' ? 'Я рядом.' : "I'm here.";
 }

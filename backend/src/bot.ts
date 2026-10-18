@@ -23,6 +23,7 @@ import {FoundationError} from './foundation-error.js';
 import {botLanguage,luna35BotCopy,welcomeKeyboard,botCommands,miniAppLink} from './luna35-bot-policy.js';
 import {readPublishedEditorial} from './luna42-editorial.js';
 import {recordFunnel} from './luna35-funnel.js';
+import {luna43CommercialCatalog} from './luna43-commerce-policy.js';
 
 export const bot = new Telegraf(env.BOT_TOKEN);
 const luna30Commerce=createLuna30Commerce(supabase,env,input=>bot.telegram.callApi('createInvoiceLink',input));
@@ -49,6 +50,7 @@ function miniAppButton(language: BotLanguage) {
 }
 
 function plansKeyboard(language: BotLanguage, plan: string) {
+  if(env.LUNA34_COMMERCIAL_ENABLED)return Markup.inlineKeyboard([[Markup.button.url(language==='ru'?'Посмотреть Premium':'View Premium',miniAppLink(env.BOT_USERNAME,'membership'))]]);
   if (plan === 'Lifetime') return Markup.inlineKeyboard([[miniAppButton(language)]]);
   if (plan === 'Monthly') {
     return Markup.inlineKeyboard([[miniAppButton(language)]]);
@@ -66,6 +68,7 @@ function plansMessage(language: BotLanguage, plan: string) {
   if (plan === 'Monthly') return language === 'ru'
     ? 'Premium уже активен. Ваши действующие права сохранены.'
     : 'Premium is active. Your existing access is preserved.';
+  if(env.LUNA34_COMMERCIAL_ENABLED){const c=luna43CommercialCatalog;return language==='ru'?`Premium: неделя — ${c.weekly.stars} Stars, месяц — ${c.premium.monthlyStars}, год — ${c.annual.stars}, Lifetime — ${c.lifetime.stars}. Все новые тарифы без автопродления. Подтверждение покупки — внутри Luna.`:`Premium: week — ${c.weekly.stars} Stars, month — ${c.premium.monthlyStars}, year — ${c.annual.stars}, Lifetime — ${c.lifetime.stars}. New plans are prepaid without auto-renewal. Confirm your purchase inside Luna.`;}
   return language === 'ru'
     ? `Действующий годовой доступ: ${plans.annual.amountStars} Stars на 12 месяцев. Новые планы готовятся; Lifetime больше не продаётся.`
     : `Existing annual access: ${plans.annual.amountStars} Stars for 12 months. New plans are being prepared; Lifetime is no longer on sale.`;
@@ -89,6 +92,7 @@ async function ensureUser(ctx: Context) {
 }
 
 export async function sendStarsInvoice(chatId: number, telegramId: number, planId: PlanId, requestId?: string) {
+  if(env.LUNA34_COMMERCIAL_ENABLED)throw new FoundationError(409,'use_current_catalog','Choose the current Premium plan inside Luna. Existing invoices remain valid.');
   if(planId==='lifetime')throw new FoundationError(409,'lifetime_not_on_sale','Existing Lifetime access is preserved; new Lifetime sales are closed.');
   const plan = plans[planId];
 
@@ -123,6 +127,7 @@ export async function sendStarsInvoice(chatId: number, telegramId: number, planI
 const inFlightInvoiceLinks = new Map<string, Promise<string>>();
 
 export async function createStarsInvoiceLink(telegramId: number, planId: PlanId, requestId?: string) {
+  if(env.LUNA34_COMMERCIAL_ENABLED)throw new FoundationError(409,'use_current_catalog','Choose the current Premium plan inside Luna. Existing invoices remain valid.');
   if(planId==='lifetime')throw new FoundationError(409,'lifetime_not_on_sale','Existing Lifetime access is preserved; new Lifetime sales are closed.');
   const key = `${telegramId}:${planId}`;
   const existing = inFlightInvoiceLinks.get(key);
@@ -291,6 +296,7 @@ bot.action(/^buy_(annual|lifetime)$/, async (ctx) => {
   await ensureUser(ctx);
   const planId = ctx.match[1];
   if (!isPlanId(planId)) return;
+  if(env.LUNA34_COMMERCIAL_ENABLED){const language=botLanguage(ctx.from.language_code),access=await getUserAccess(ctx.from.id);await ctx.reply(plansMessage(language,access.plan),plansKeyboard(language,access.plan));return;}
   if(planId==='lifetime'){await ctx.reply(botLanguage(ctx.from.language_code)==='ru'?'Новые Lifetime-покупки закрыты. Все ранее купленные права сохранены.':'New Lifetime sales are closed. All previously purchased access is preserved.');return;}
   const access = await getUserAccess(ctx.from.id);
   if (!paymentEligibility(access.plan, planId).allowed) {

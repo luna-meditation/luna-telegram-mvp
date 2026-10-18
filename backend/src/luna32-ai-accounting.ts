@@ -6,7 +6,7 @@ import {stagingAiMeterRecord} from './staging-ai-meter.js';
 import {readCommercialAllowance,reserveCommercialAllowance} from './luna34-allowances.js';
 type Operation={db:SupabaseClient;owner:number;key:string;lease:string;calls:number;limit:number;commercial?:boolean;allowanceId?:string|null;adminQuota?:boolean};
 const operationContext=new AsyncLocalStorage<Operation>();
-export const currentAiSafetyLimit=()=>operationContext.getStore()?.commercial?500:undefined;
+export const currentAiSafetyLimit=()=>operationContext.getStore()?.commercial||operationContext.getStore()?.adminQuota?500:undefined;
 export function providerCostCeiling(body:unknown){
  const value=body as {model?:string;max_output_tokens?:number;store?:boolean;service_tier?:string};
  if(!['gpt-5-mini','gpt-5-mini-2025-08-07'].includes(value.model??'')||!Number.isSafeInteger(value.max_output_tokens)||value.max_output_tokens!<512||value.max_output_tokens!>8192||value.store!==false)throw new FoundationError(503,'ai_budget_unsupported','This provider configuration is not approved for generation.');
@@ -25,7 +25,9 @@ export async function withAiOperation<T>(db:SupabaseClient,owner:number,key:stri
  if(!paid&&env.LUNA30_PREMIUM_ENTITLEMENTS_ENABLED){const period=await db.from('luna30_entitlement_periods').select('id').eq('telegram_id',owner).is('revoked_at',null).lte('period_start',new Date().toISOString()).gt('period_end',new Date().toISOString()).limit(1).maybeSingle();if(period.error)throw new FoundationError(503,'access_unavailable','Could not verify your access.');paid=Boolean(period.data);}
  const administrative=env.FEATURE_ADMIN_V4_MUTATIONS?await (await import('./luna40-grants.js')).readAdminGrants(db,owner):null;
  const context:Operation={db,owner,key,lease:randomUUID(),calls:0,adminQuota:env.FEATURE_ADMIN_V4_MUTATIONS,limit:successfulAiLimit(cfg,Boolean(paid||administrative?.active),{free:env.AI_MAX_MESSAGES_PER_DAY,premium:env.AI_PREMIUM_MAX_MESSAGES_PER_DAY})};
- if(env.LUNA34_COMMERCIAL_QUOTAS_ENABLED){const allowance=await readCommercialAllowance(db,owner);if(allowance.enabled){context.commercial=true;context.limit=500;}}
+ const prepaid=key.startsWith('deep:');
+ if(prepaid){const purchase=await db.from('luna43_seed_purchases').select('state').eq('telegram_id',owner).eq('id',key.slice(5)).eq('product','deep_analysis').maybeSingle();if(purchase.error||purchase.data?.state!=='processing')throw new FoundationError(403,'paid_analysis_required','A confirmed owned analysis is required.');context.adminQuota=false;context.limit=500;}
+ if(!prepaid&&env.LUNA34_COMMERCIAL_QUOTAS_ENABLED){const allowance=await readCommercialAllowance(db,owner);if(allowance.enabled){context.commercial=true;context.limit=500;}}
  let completed=false;
  try{return await operationContext.run(context,async()=>{const result=await task();completed=success(result);return result;});}
  finally{if(context.calls){const result=await db.rpc('luna32_finish_ai_operation',{p_owner:owner,p_operation:key,p_lease:context.lease,p_success:completed});if(result.error)console.error('[Luna AI accounting]',{code:'operation_settlement_failed',lease:context.lease});if(context.adminQuota&&!context.commercial){const settled=await db.rpc('luna40_finish_quota',{p_owner:owner,p_operation:key,p_lease:context.lease,p_success:completed});if(settled.error)console.error('[Luna AI accounting]',{code:'admin_quota_settlement_failed',lease:context.lease});}}if(context.allowanceId){const settled=await db.rpc('luna34_settle_allowance',{p_owner:owner,p_request:context.allowanceId,p_operation:key,p_success:completed&&context.calls>0});if(settled.error)console.error('[Luna AI accounting]',{code:'allowance_settlement_failed',lease:context.lease});}}

@@ -203,14 +203,15 @@ export async function getUserAccess(telegramId: number) {
 
   const now = Date.now();
   let activeUntil = data?.active_until ? new Date(data.active_until).getTime() : 0;
+  let paidLifetime=Boolean(data?.lifetime_access);
   // Separate read switch: pausing new sales must not revoke accepted v3 periods.
   // OFF in this release, so the existing access path performs no new queries.
   if(env.LUNA30_PREMIUM_ENTITLEMENTS_ENABLED&&!data?.lifetime_access){
     const period=await supabase.from('luna30_entitlement_periods').select('period_end').eq('telegram_id',telegramId).is('revoked_at',null).lte('period_start',new Date(now).toISOString()).gt('period_end',new Date(now).toISOString()).order('period_end',{ascending:false}).limit(1).maybeSingle();
     if(period.error)throw period.error;
-    if(period.data)activeUntil=Math.max(activeUntil,Date.parse(period.data.period_end));
+    if(period.data){paidLifetime=period.data.period_end==='infinity';if(!paidLifetime)activeUntil=Math.max(activeUntil,Date.parse(period.data.period_end));}
   }
-  const hasPaidPremium = Boolean(data?.lifetime_access || activeUntil > now);
+  const hasPaidPremium = Boolean(paidLifetime || activeUntil > now);
   const beta=env.LUNA32_ENABLED?betaEntitlement(await readLuna32Settings(supabase),now):null;
   const administrative=env.FEATURE_ADMIN_V4_MUTATIONS?await (await import('./luna40-grants.js')).readAdminGrants(supabase,telegramId):null;
   const hasPremium=hasPaidPremium||Boolean(administrative?.active)||Boolean(beta?.active&&beta.features.includes('meditations'));
@@ -221,7 +222,7 @@ export async function getUserAccess(telegramId: number) {
     hasPaidPremium,
     administrative,
     beta,
-    plan: data?.lifetime_access ? 'Lifetime' : activeUntil > now ? 'Monthly' : administrative?.active ? 'Gift Premium' : 'Free'
+    plan: paidLifetime ? 'Lifetime' : activeUntil > now ? 'Monthly' : administrative?.active ? 'Gift Premium' : 'Free'
   };
 }
 
@@ -1590,7 +1591,8 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
   const lastPracticeDate = [lastMeditationDate, lastBreathDate, lastPlaybackDate].filter(Boolean).sort().at(-1) ?? null;
   const gardenLevel = minutesListened >= 150 ? 5 : minutesListened >= 60 ? 4 : minutesListened >= 30 ? 3 : minutesListened >= 10 ? 2 : 1;
   const activeUntil = user?.active_until ? new Date(user.active_until).getTime() : 0;
-  const hasPremiumAccess = Boolean(user?.lifetime_access || activeUntil > Date.now());
+  const paidAccess=env.LUNA30_PREMIUM_ENTITLEMENTS_ENABLED?await getUserAccess(telegramId):null;
+  const hasPremiumAccess = paidAccess?.hasPaidPremium??Boolean(user?.lifetime_access || activeUntil > Date.now());
   const notificationPreferences = normalizeNotificationPreferences(user?.notification_preferences ?? {});
   const hasMorningPractice = (history ?? []).some((item) => {
     const hour = hourInTimeZone(item.last_played, notificationPreferences.timezone);
@@ -1788,7 +1790,7 @@ export async function getProfileStats(telegramId: number, localDate = todayKey()
     gardenLevel: moonGarden.gardenLevel,
     streakDays: currentStreak,
     lastPracticeDate,
-    purchasedPlan: user?.lifetime_access ? 'lifetime' : activeUntil > Date.now() ? 'monthly' : 'free',
+    purchasedPlan: paidAccess?.plan==='Lifetime'||user?.lifetime_access ? 'lifetime' : paidAccess?.hasPaidPremium||activeUntil > Date.now() ? 'monthly' : 'free',
     calmScore,
     achievements:progression34?{version:34,unlocked:progression34.unlocked,total:50,items:[...progression34.items,...achievements.items]}:achievements,
     journeyStatus,

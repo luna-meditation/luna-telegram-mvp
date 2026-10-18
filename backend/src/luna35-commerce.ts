@@ -4,7 +4,7 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import {FoundationError} from './foundation-error.js';
 import {readLuna34Membership} from './luna34-membership.js';
 import {readCommercialAllowance} from './luna34-allowances.js';
-import {betaEntitlement,readLuna32Settings} from './luna32-runtime.js';
+import {betaEntitlement,readLuna32Settings,successfulAiLimit} from './luna32-runtime.js';
 import {commerceText,pendingActionInput,actionEligibility,type CommerceView,type CommerceFacts} from './luna35-commerce-policy.js';
 import type {createLuna30Commerce} from './luna30-commerce.js';
 import {playbackRewardDecision} from './playback-security.js';
@@ -14,7 +14,7 @@ const hash=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).d
 // The owner-bound deterministic UUID is only an internal persistence identity.
 export function commerceRequestId(owner:number,request:string){if(z.string().uuid().safeParse(request).success)return request;const raw=hash(['luna35-commerce-request',owner,request]);return `${raw.slice(0,8)}-${raw.slice(8,12)}-4${raw.slice(13,16)}-8${raw.slice(17,20)}-${raw.slice(20,32)}`;}
 type Usage={limit:number;remaining:number;resetAt:string};
-type Config={LUNA34_COMMERCIAL_ENABLED:boolean;LUNA34_COMMERCIAL_QUOTAS_ENABLED:boolean;FEATURE_TAROT_PAID_READINGS:boolean;FEATURE_GARDEN_ATOMIC:boolean;FEATURE_ECONOMY_REWARDS_V2:boolean};
+type Config={AI_MAX_MESSAGES_PER_DAY?:number;AI_PREMIUM_MAX_MESSAGES_PER_DAY?:number;LUNA34_COMMERCIAL_ENABLED:boolean;LUNA34_COMMERCIAL_QUOTAS_ENABLED:boolean;FEATURE_TAROT_PAID_READINGS:boolean;FEATURE_GARDEN_ATOMIC:boolean;FEATURE_ECONOMY_REWARDS_V2:boolean};
 type PurchaseService=ReturnType<typeof createLuna30Commerce>;
 export function createLuna35Commerce(db:SupabaseClient,config:Config,payments:Pick<PurchaseService,'availability'>,usage:(owner:number)=>Promise<Usage>){
  async function overview(owner:number){
@@ -24,12 +24,12 @@ export function createLuna35Commerce(db:SupabaseClient,config:Config,payments:Pi
   if(config.LUNA34_COMMERCIAL_QUOTAS_ENABLED)for(const kind of ['three','five','compatibility'] as const){const value=await readCommercialAllowance(db,owner,kind);if(value.enabled&&typeof value.remaining==='number')included[kind]=value.remaining;}
   facts.included=included;
   if(config.FEATURE_TAROT_PAID_READINGS){const rules=await db.from('luna21_settings').select('paid_readings_enabled,single_seeds,three_seeds,five_seeds').eq('id',true).single();if(rules.error)throw fail();facts.paidReadings=rules.data.paid_readings_enabled===true;if(facts.paidReadings)facts.prices={...facts.prices,single:rules.data.single_seeds,three:rules.data.three_seeds,five:rules.data.five_seeds};}
-  if(facts.lifetime||facts.paid){products.premium_month=false;products.premium_year=false;}
+  if(facts.lifetime||facts.paid)for(const product of ['premium_week','premium_month','premium_year','premium_lifetime'] as const)products[product]=false;
   // Derive the legacy reward from the actual playback decision, not the future catalog.
   const minute=playbackRewardDecision({trustedListenedSeconds:60,previouslyAwardedPosition:0,completionBonusEligible:false,completionBonusAlreadyAwarded:false}).listeningSeedsAwarded;
   const earning=config.FEATURE_ECONOMY_REWARDS_V2?[]:[{id:'meditation',destination:'meditations',rewardPerMinute:minute,completionBonus:2,condition:'new_verified_listening_only'},{id:'breath',destination:'breathwork',seeds:1,condition:'verified_completed_session'}];
   const orders=await db.from('luna30_commercial_orders').select('id,request_id,product,stars,state,created_at').eq('telegram_id',owner).in('state',['pending','accepted']).order('created_at',{ascending:false}).limit(10);if(orders.error)throw fail();
-  return {facts,products,catalog:membership.catalog,membership:membership.membership,usage:quota,beta,balance:membership.balance,earning,transactions:membership.transactions,purchases:membership.purchases,newPurchases:membership.newPurchases,pendingOrders:orders.data??[]};
+  return {facts,products,planAllowances:{freeDaily:successfulAiLimit(settings,false,{free:config.AI_MAX_MESSAGES_PER_DAY??quota.limit,premium:config.AI_PREMIUM_MAX_MESSAGES_PER_DAY??quota.limit}),premiumDaily:successfulAiLimit(settings,true,{free:config.AI_MAX_MESSAGES_PER_DAY??quota.limit,premium:config.AI_PREMIUM_MAX_MESSAGES_PER_DAY??quota.limit})},catalog:membership.catalog,membership:membership.membership,usage:quota,beta,balance:membership.balance,earning,transactions:membership.transactions,purchases:membership.purchases,newPurchases:membership.newPurchases,pendingOrders:orders.data??[]};
  }
  async function pending(owner:number,conversationId?:string){let q=db.from('luna35_pending_actions').select('id,conversation_id,action_type,parameters,language,state,expires_at,created_at').eq('telegram_id',owner).in('state',['pending','resuming']).gt('expires_at',new Date().toISOString()).order('created_at',{ascending:false}).limit(3);if(conversationId)q=q.eq('conversation_id',conversationId);const r=await q;if(r.error)throw fail();return r.data??[];}
  async function verifyContext(owner:number,action:z.infer<typeof pendingActionInput>['action']){

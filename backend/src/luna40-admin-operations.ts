@@ -4,6 +4,7 @@ import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import type {AuthenticatedRequest} from './auth.js';
 import {FoundationError} from './foundation-error.js';
+import {parseLuna43Catalog,seedProductCatalogSchema} from './luna43-commerce-policy.js';
 import {hasAdminPermission,type AdminPermission,type AdminRole} from './luna40-admin-policy.js';
 import {editorialBaseline,parseEditorial,editorialMedia,type EditorialKind} from './luna42-editorial.js';
 
@@ -48,7 +49,7 @@ export function createAdminOperationsRouter(db:SupabaseClient,config:{ownerId?:n
  const read=async(table:string,fields:string,filter?:{owner?:number;column?:string;value?:string},limit=30)=>{let query=db.from(table).select(fields);if(filter?.owner)query=query.eq('telegram_id',filter.owner);if(filter?.column)query=query.eq(filter.column,filter.value);const r=await query.order('created_at',{ascending:false}).limit(limit);return r.error?{status:'unavailable' as const,items:[]}:{status:'verified' as const,items:r.data??[]};};
  router.get('/users/:id',guard('users.read'),async(req,res,next)=>{try{
   const id=ownerId.parse(req.params.id),user=await db.from('users').select('telegram_id,first_name,last_name,username,avatar_url,language_code,created_at,last_seen_at,active_until,lifetime_access,journey_status_rank').eq('telegram_id',id).maybeSingle();if(user.error)throw databaseError(user.error.code);if(!user.data)throw new FoundationError(404,'user_not_found','User not found.');
-  const [wallet,grants,adjustments,payments,receipts,ai,audit,playback,breathing]=await Promise.all([
+  const [wallet,grants,adjustments,payments,receipts,ai,audit,playback,breathing,paidPeriod]=await Promise.all([
    db.from('moon_gardens').select('moon_seeds_available,moon_seeds_earned_total,garden_level').eq('telegram_id',id).maybeSingle(),
    read('luna40_entitlement_grants','id,source,starts_at,expires_at,lifetime,revoked_at,reason,actor',{owner:id,column:undefined}),
    read('luna40_wallet_adjustments','id,delta,balance_before,balance_after,reason,created_at',{owner:id}),
@@ -57,9 +58,11 @@ export function createAdminOperationsRouter(db:SupabaseClient,config:{ownerId?:n
    read('luna32_ai_operations','operation_key,state,created_at',{owner:id}),
    db.from('luna40_admin_audit').select('id,actor,action,reason,result,created_at').eq('target',id).order('created_at',{ascending:false}).limit(30),
    db.from('playback_sessions').select('id,meditation_id,completed_at').eq('telegram_id',id).not('completed_at','is',null).order('completed_at',{ascending:false}).limit(20),
-   db.from('breath_sessions').select('id,mode,duration_seconds,completed_at').eq('telegram_id',id).order('completed_at',{ascending:false}).limit(20)
+   db.from('breath_sessions').select('id,mode,duration_seconds,completed_at').eq('telegram_id',id).order('completed_at',{ascending:false}).limit(20),
+   db.from('luna30_entitlement_periods').select('period_end').eq('telegram_id',id).is('revoked_at',null).lte('period_start',new Date().toISOString()).gt('period_end',new Date().toISOString()).order('period_end',{ascending:false}).limit(1).maybeSingle()
   ]);
-  res.json({user:user.data,wallet:wallet.error?null:wallet.data,grants,adjustments,payments,commercialReceipts:receipts,ai,audit:audit.error?null:audit.data,activity:{meditations:playback.error?null:playback.data,breathing:breathing.error?null:breathing.data},privacy:'No chat, journal, memory or birth details are included.'});
+  if(paidPeriod.error)throw databaseError(paidPeriod.error.code);const paidLifetime=user.data.lifetime_access||paidPeriod.data?.period_end==='infinity',paidUntil=paidLifetime?null:Date.parse(paidPeriod.data?.period_end??'')>Date.parse(user.data.active_until??'')||paidPeriod.data&&!user.data.active_until?paidPeriod.data?.period_end:user.data.active_until;
+  res.json({user:{...user.data,lifetime_access:paidLifetime,active_until:paidUntil},wallet:wallet.error?null:wallet.data,grants,adjustments,payments,commercialReceipts:receipts,ai,audit:audit.error?null:audit.data,activity:{meditations:playback.error?null:playback.data,breathing:breathing.error?null:breathing.data},privacy:'No chat, journal, memory or birth details are included.'});
  }catch(e){next(e);}});
  router.post('/users/:id/wallet',guard('financial.write',true),async(req,res,next)=>{try{const v=walletOperation.parse(req.body);res.json(await runAdminOperation(db,actor(req),ownerId.parse(req.params.id),v.requestId,'wallet.adjust',v.reason,{delta:v.delta,expectedBalance:v.expectedBalance}));}catch(e){next(e);}});
  router.post('/users/:id/entitlements',guard('financial.write',true),async(req,res,next)=>{try{const v=entitlementOperation.parse(req.body);res.json(await runAdminOperation(db,actor(req),ownerId.parse(req.params.id),v.requestId,'entitlement.'+v.action,v.reason,v.action==='grant'?{duration:v.duration,source:v.source}:v.action==='extend'?{grantId:v.grantId,days:v.days,expectedExpiresAt:v.expectedExpiresAt}:{grantId:v.grantId}));}catch(e){next(e);}});
@@ -87,5 +90,7 @@ export function createAdminOperationsRouter(db:SupabaseClient,config:{ownerId?:n
  router.get('/support/:id/notes',guard('support.read'),async(req,res,next)=>{try{const id=z.string().uuid().parse(req.params.id),r=await db.from('luna40_support_notes').select('id,actor,note,created_at').eq('ticket_id',id).order('created_at').limit(50);if(r.error)throw databaseError(r.error.code);res.json({items:r.data});}catch(e){next(e);}});
  router.post('/support/:id',guard('support.write'),async(req,res,next)=>{try{const v=supportOperation.parse(req.body);res.json(await runAdminOperation(db,actor(req),null,v.requestId,'support.update',v.reason,{ticketId:z.string().uuid().parse(req.params.id),status:v.status,priority:v.priority,expectedRevision:v.expectedRevision,note:v.note}));}catch(e){next(e);}});
  router.get('/runtime',guard('configuration.read'),async(_req,res)=>{const start=performance.now(),r=await db.from('luna40_admin_roles').select('telegram_id',{count:'exact',head:true});res.json({environment:config.environment,commit:config.commit??null,model:config.model,reportingTimezone:'UTC',database:{checkedAt:new Date().toISOString(),status:r.error?'unavailable':'verified',latencyMs:Math.round(performance.now()-start)},financialMutationsAvailable:config.mutationsEnabled===true,commercialConfigurationEditable:false,flags:config.flags??{},provider:{status:'not_probed',note:'No paid probe or secret is exposed.'}});});
+ router.get('/commercial-catalog',guard('configuration.read'),async(_req,res,next)=>{try{const r=await db.from('luna34_commercial_settings').select('catalog,catalog_revision,checkout_enabled').eq('id',true).single();if(r.error)throw databaseError();const catalog=parseLuna43Catalog(r.data.catalog);res.json({seedProducts:catalog.seedProducts,revision:r.data.catalog_revision,checkoutEnabled:r.data.checkout_enabled});}catch(error){next(error);}});
+ router.post('/commercial-catalog',guard('financial.write',true),async(req,res,next)=>{try{const v=z.object({...operationBase,expectedRevision:z.number().int().nonnegative(),seedProducts:seedProductCatalogSchema}).strict().parse(req.body),r=await db.rpc('luna43_update_seed_catalog',{p_actor:actor(req),p_request:v.requestId,p_expected:v.expectedRevision,p_body:v.seedProducts,p_reason:v.reason});if(r.error)throw databaseError(r.error.code);res.json(r.data);}catch(error){next(error);}});
  return router;
 }

@@ -1,0 +1,14 @@
+import {Router} from 'express';
+import {z} from 'zod';
+import {requireTelegramWebApp,type AuthenticatedRequest} from './auth.js';
+import {supabase} from './db.js';
+import {env} from './config.js';
+import {getAiPersonalProfile} from './personal-memory.js';
+import {createSeedProducts} from './luna43-seed-products.js';
+export const luna43Router=Router();
+export const luna43SeedProducts=createSeedProducts(supabase,{enabled:()=>env.LUNA34_COMMERCIAL_ENABLED,personalProfile:getAiPersonalProfile});
+const owner=(req:unknown)=>(req as AuthenticatedRequest).telegramUser.telegram_id;
+luna43Router.use(requireTelegramWebApp,(_req,res,next)=>{res.setHeader('Cache-Control','private, no-store');next();});
+luna43Router.get('/seed-products',async(req,res,next)=>{try{res.json(await luna43SeedProducts.overview(owner(req)));}catch(error){next(error);}});
+luna43Router.post('/seed-products/purchases',async(req,res,next)=>{try{res.json(await luna43SeedProducts.purchase(owner(req),req.body));}catch(error){next(error);}});
+luna43Router.post('/seed-products/:id/generate',async(req,res,next)=>{try{z.object({confirmed:z.literal(true)}).strict().parse(req.body);res.json(await luna43SeedProducts.generate(owner(req),z.string().uuid().parse(req.params.id)));}catch(error){next(error);}});

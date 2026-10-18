@@ -7,7 +7,7 @@ import {domainSuggestions} from '../../../backend/src/luna42-meet-config';
 import './cosmos42.css';
 export function CosmosDomain({data,areaId,language,initData,onChanged,onClose,showBack=false}:{data:UniverseData;areaId:string;language:AppLanguage;initData?:string;onChanged:()=>Promise<void>;onClose:()=>void;showBack?:boolean}){
  const area=cosmosAreas.find(a=>a.id===areaId),en=language==='en',memory=data.memories.find(m=>m.memory_key===cosmosMemoryKey(areaId)&&m.memory_kind==='fact');
- const [editing,setEditing]=useState(!memory),[draft,setDraft]=useState(()=>readCosmosDomain(memory?.memory_value??'')),[busy,setBusy]=useState(false),[error,setError]=useState(''),[sensitive,setSensitive]=useState(memory?.is_sensitive??false),pending=useRef(false);
+ const [editing,setEditing]=useState(false),[draft,setDraft]=useState(()=>readCosmosDomain(memory?.memory_value??'')),[busy,setBusy]=useState(false),[error,setError]=useState(''),[sensitive,setSensitive]=useState(memory?.is_sensitive??false),pending=useRef(false);
  const analyticsSession=useRef(crypto.randomUUID());
  useEffect(()=>{if(area)void observeLunaExperience({event:'domain_opened',step:area.id,sessionId:analyticsSession.current},initData);},[area,initData]);
  if(!area)return null;
