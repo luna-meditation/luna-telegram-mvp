@@ -6,15 +6,16 @@
   NODE_VERSION = "22"
   PNPM_VERSION = "9.15.0"
 
-# Luna 4.1 verified core; build requires current recovery and source-bound evidence.
+# Luna 4.2 verified core; build requires current recovery and source-bound evidence.
 [context.production]
   command = "pnpm --filter @luna/frontend build:production"
 
 [context.production.environment]
-  LUNA_RELEASE_PROFILE = "luna41"
-  LUNA_RELEASE_DB_REVIEW = "../qa/luna41-release-review.json"
+  LUNA_RELEASE_PROFILE = "luna42"
+  LUNA_RELEASE_DB_REVIEW = "../qa/luna42-release-review.json"
   VITE_FEATURE_ADMIN_V4 = "true"
   VITE_FEATURE_COSMOS_V2 = "true"
+  VITE_FEATURE_AI_VOICE_INPUT = "true"
   VITE_FEATURE_BREATHWORK_GUIDED = "false"
   VITE_FEATURE_AI_CENTRAL_EXPERIENCE = "true"
   VITE_FEATURE_PERSONALIZATION = "true"
