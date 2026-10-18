@@ -2,7 +2,7 @@
 
 ## Intelligence 2.0 — active program, 2026-10-18
 
-All eight specifications received and read. Part 8 authorizes their coordinated implementation. Branch `feature/luna-intelligence-2-0`, based on the verified production code at GitHub main `58ab85e4729e93197cefa534160cda4172be8e0c`. Existing unrelated edits are preserved. The single reviewed production migration was applied at 11:32 UTC after the gates below; application publication follows the verified build/PR workflow. Historical 1.0 test results below do not constitute 2.0 acceptance.
+All eight specifications received and read. Part 8 authorizes their coordinated implementation. Branch `feature/luna-intelligence-2-0`, based on the verified production code at GitHub main `58ab85e4729e93197cefa534160cda4172be8e0c`. Existing unrelated edits are preserved. **DEPLOYED** via PR #30: production main `93c9b6a5819296ffb65052248f8b25522995cdad`, Railway SUCCESS, Netlify Ready at 11:37:42 UTC. The single reviewed migration was applied at 11:32 UTC. Final Russian report below distinguishes local/staging tests from public production proof. Historical 1.0 results do not constitute 2.0 acceptance.
 
 | Requirement | Actual baseline / work | Evidence required | Status |
 | --- | --- | --- | --- |
@@ -14,8 +14,8 @@ All eight specifications received and read. Part 8 authorizes their coordinated 
 | Numerology/astrology | Versioned date-only calculation, timestamped actual transits and canonical chart subjects | Synthetic engine fixtures and real tool responses checked against exact numbers/aspects | VERIFIED STAGING |
 | Mobile UX | Grouped history, compact context, Cosmos loading, seven-day rhythm and 1/3/5 full-frame sharing | 16 core + 16 extended local cases at 360/375/390/393, RU/EN; current Dark-only policy | LOCAL PASS |
 | Commerce | Existing Stars/Seeds terms; six topic-specific 100-Seed reports, legacy hashes compatible | Native races/refunds/rights; one synthetic report charged once and cached; no real Stars transaction | VERIFIED WITH LIMITS |
-| Referrals | Reuse modern server-gated 30/20 rewards and 5/month cap; legacy health flag is separate | Native duplicate/concurrent/self checks and positive exact-once reward; owner authorizes modern production flag | READY FOR CONFIG VERIFICATION |
-| Release | Existing infrastructure, GPT-5-mini and $100 cap; one narrow additive migration | 80-table encrypted backup, two exact restores, 28 media; preflight unchanged | FINAL PREFLIGHT |
+| Referrals | Reuse modern server-gated 30/20 rewards and 5/month cap; legacy health flag is separate | Native duplicate/concurrent/self checks; approved modern flag applied on successful Railway release, no real referral fabricated | ENABLED / NATIVE TESTED |
+| Release | Existing infrastructure, GPT-5-mini and $100 cap; one narrow additive migration | 80-table backup, two restores, 28 media; exact SHA, 40 public mobile cases, unchanged financial fingerprints | DEPLOYED / PUBLIC SMOKE PASS |
 
 Verified root causes so far: direct natal routing misses “посмотри”; artifact retention is a separate phrase heuristic; one tool round cannot chain an optional profile lookup and actual retrieval; fallback consultation actions can add unrelated Tarot/meditation/breathing; the welcome's introduction link goes to My Cosmos despite the existing inline discovery component. The 1.0 benchmark primarily checked first-tool choice and local browser fixtures, so it did not prove the full physical-phone journey.
 
@@ -51,6 +51,106 @@ Order: P0 action/context/financial regressions → unified context/numerology �
 - Remaining limits: raw model benchmark misses still exist; conservative prose guards cannot prove all free text and may reject ambiguous correct prose. Russian compatibility can retain English technical terms and be too detailed. Physical iPhone microphone/keyboard/actual authenticated playback and a new real Stars purchase remain manual checks. Current Dark-only policy is preserved.
 - Migration verified at 11:32 UTC: exactly two metadata changes (Luna attempt-index constraint and reservation guard), unchanged RLS/grants/owners and all protected financial fingerprints. Anon/authenticated remain denied and service_role allowed. Other application objects unchanged. No data restore or financial rule change.
 - Release order: source-bound production build → development PR into main → Railway exact merged SHA SUCCESS → one local prebuilt Netlify production publication → public mobile/API/asset smoke and financial/schema comparison. Git CD remains main-only; a future unskipped main push can supersede the manual artifact. No broad data restore or financial rule change.
+
+## Итоговый отчёт Intelligence 2.0 — 2026-10-18, 11:41 UTC
+
+### A. Архитектура и исправленные причины
+
+Релиз реализован в существующем приложении, без новой системы чатов, кошельков, вычислений Таро или таймеров дыхания. Исправлены конкурирующие правила выбора темы, потеря точного natal/compatibility attachment, пропущенная команда «посмотри», перенос старого текста другого расклада в новый контекст и ограничение одного раунда инструментов. Теперь разрешена ограниченная цепочка lookup → action → answer: максимум три учитываемые provider-попытки для chat, одна успешная пользовательская квота; другие операции сохраняют максимум две попытки. Третий раунд проверен локально и в настоящей изолированной PostgreSQL, а реальные успешные staging-диалоги потребовали максимум два вызова.
+
+Проверенные источники передаются с каноническими названиями профилей, точными ID, типами и расчётными фактами. Явные противоречия имени, положений, аспектов или чисел отклоняются до сохранения ответа. Защитный слой не доказывает истинность произвольного текста и не выполняет скрытую повторную генерацию. Ошибки не считаются успешным ответом, стоимость фактически сделанных попыток сохраняется.
+
+### B. AI-качество и модель
+
+Production: **gpt-5-mini**, без смены модели или денежного потолка. Лимит Luna — **$100/месяц**, настройки OpenAI-аккаунта не менялись. На 12 одинаковых синтетических сценариях × 3 модели получены 8/12, 9/12 и 11/12 совпадений первого ожидаемого инструмента для GPT-5-mini, GPT-4.1-mini и GPT-4o-mini. Это не проценты успешных пользовательских диалогов: все модели допускают ошибки, а первым действием может быть корректный поиск данных. Смена production-модели по этой метрике не выполнялась.
+
+Независимо от метрики вручную прочитаны полные новые ответы и сверены вычисленные факты. Примеры:
+
+- «Посмотри мою натальную карту»: раньше мог появиться только текст обсуждения; теперь открывается сохранённая натальная карта, без повторного вопроса и provider-вызова.
+- Совместимость: найденное выдуманное имя устранено, используются принадлежащие пользователю названия двух профилей и выбранный деловой контекст.
+- Таро → астрология → обычный вопрос: старый расклад не определяет новую тему; вопрос о прототипе обсуждается как вопрос о прототипе, не заменяется меню медитаций.
+- Нумерология: длинный ответ с неточным объяснением мастер-чисел исправлен; итог использует реальные 4/1/3/4/4 и коротко обозначает символические ограничения. Неподдерживаемая подсказка расчёта другого года заменена двумя безопасными RU/EN вопросами для обсуждения.
+
+Остаются стилистические ограничения: отдельные русские ответы используют английские термины аспектов или дают больше деталей, чем нужно. Не заявляется безошибочность AI или человеческое понимание.
+
+### C. Персонализация и приватность
+
+Переиспользованы существующие My Cosmos, подтверждённая память, дневник, реальные практики, карты рождения и история. Контекст ограничен по объёму и запрашивается по теме; полная история не отправляется целиком. У записей памяти сохранены источник, время и подтверждение. Неподтверждённые, удалённые и запрещённые сведения исключаются. Отзыв/удаление создаёт границу приватности: старое согласие на вложение нельзя молча переиспользовать. Именно это обнаружилось при возобновлении тестовой сессии и было исправлено в тесте явным повторным выбором карты, а не ослаблением защиты.
+
+Знакомство с Луной запускается внутри чата через существующий компонент, необязательно и без покупки; редактирование в My Cosmos сохранено. Локально проверены ответы, пропуск, возврат, повторное открытие и согласия. Реальное сохранение/удаление/исключение памяти проверено в staging. Новый физический iPhone-прогон знакомства в этом релизе не выполнялся.
+
+### D. Нативные действия
+
+| Возможность | Реализовано и опубликовано | Фактическая проверка |
+| --- | --- | --- |
+| Таро 1/3/5 | Выбор/раскрытие внутри чата, прямое/перевёрнутое положение, увеличение, сохранённый контекст | Реальные staging-записи и AI-интерпретации, бесплатное повторное открытие; локальные мобильные жесты |
+| Дыхание | Общий таймлайн, Start/Pause/Resume/Stop, полноэкранный вариант | Локальное управление/возврат вкладки; реальные 62 секунды доказательства и ровно одно награждение в staging |
+| Медитация | Настоящий опубликованный каталог, права, язык, длительность и существующий плеер | Реальная серверная рекомендация; локально открыт правильный плеер, не выдано ложное сообщение об автозапуске |
+| Астрология и совместимость | Точные типы и ID, оба выбранных профиля, контекст связи | Реальные расчёты и ответы staging; контекст не заменён Таро |
+| Навигация | Разрешённые точные назначения, без обещаний неподдерживаемых файлов/действий | Детерминированные регрессии и реальные публичные переходы |
+| Коммерция | Серверный каталог, явное согласие, один атомарный заказ, восстановление/кэш | Native concurrency/refund/entitlement тесты; один синтетический разбор куплен и открыт повторно без дубля |
+
+Production-доступность страниц проверена без поддельного Telegram initData. Полный авторизованный путь на личном iPhone нельзя считать проверенным только по HTTP 200.
+
+### E. Расчётные системы и глубокие разборы
+
+Добавлен воспроизводимый версионированный модуль нумерологии по подтверждённой дате: жизненный путь, число дня рождения, личные год/месяц/день. Григорианские даты валидируются; исходная дата не включается в AI-контекст модуля. Интерпретация прямо помечается символической, не научным прогнозом. Расчёты по имени, произвольному году и неподключённым системам не обещаются.
+
+Текущие транзиты рассчитываются существующим астрономическим движком к точной натальной карте; возвращаются время UTC и именованные аспекты. Неизвестное время рождения не превращается в выдуманную точность. Пять упомянутых в ответе аспектов независимо совпали с расчётом на 2026-10-18T11:10:00Z.
+
+Deep Personal Analysis теперь имеет шесть явных тем и использует доступные подтверждённые источники/поддерживаемые расчёты. Сохранены старые хэши оплаченных результатов. Проверенный career-разбор сослался только на подтверждённую цель прототипа, предложил тест с двумя добровольцами и честно обозначил отсутствие других источников.
+
+### F. UX/UI
+
+Уплотнены контекст и история разговоров, добавлены поиск и группировка. Приветствие не расходует provider-вызов. My Cosmos не показывает ложное пустое состояние при загрузке. В Journey переиспользован фактический семидневный ритм. Поделиться 1/3/5 картами можно в трёх форматах с полной рамкой. Достижения, библиотека, Profile, дневник и существующие ассеты не переписаны в отдельную систему.
+
+Проверены 360×800, 375×812, 390×844, 393×852, RU/EN. В текущей production-политике приложение Dark-only; проверки системного Light preference не означают добавления новой Light-темы. Публичные Home, Astrology, дыхание, AI и Profile — 40 проверок; ещё 4 проверки подтвердили доступность нижних CTA после прокрутки. Просмотрены актуальные production-скриншоты, критических перекрытий/горизонтального скролла/битых изображений не найдено.
+
+### G. Монетизация
+
+Каталог прочитан непосредственно из production после релиза; он не изменён:
+
+- Premium: 500 Stars / 7 дней, 1000 / 30 дней, 5000 / 365 дней, Lifetime 10000. Эти текущие покупки предоплаченные, без автоматического продления. Ранее приобретённые права сохранены.
+- 20 дополнительных стандартных AI-ответов — 50 Moon Seeds; глубокий персональный разбор — 100 Seeds. Оба продукта разрешены в действующем серверном каталоге.
+- Пакеты: 100 Seeds / 100 Stars, 300 / 270, 700 / 590, 1500 / 1190. Существующие цены раскладов 15/40/70 Seeds и совместимости 100 Seeds не менялись.
+- Современная реферальная цепочка включена на следующем успешном Railway deployment: `LUNA34_REFERRALS_ENABLED=true`; существующие DB-разрешения уже были включены. Награды 30 пригласившему / 20 новому, максимум 5 квалификаций в месяц. Положительный сценарий, self/duplicate/race защита проверены в изолированной PostgreSQL. Реального приглашённого пользователя не выдумывали.
+- Новая месячная система commercial quotas остаётся выключенной согласно действующей конфигурации; прежние пользовательские квоты и права Lifetime не сужены. Legacy `luna30.referralRewards=false` в health относится к старому механизму, не новому `luna34`.
+- Реальных Stars-транзакций в этом прогоне: **0**. Балансы, платежи и подписки production совпали с preflight; AI-проверки не использовали средства пользователей.
+
+### H. Тесты, стоимость и границы доказательств
+
+- Node.js 22.23.3 локально; Railway 22.14.0. Frontend **257 PASS**, backend **670 PASS**, **0 FAIL**, **1 необязательный SKIP**. TypeScript, ESLint и обе сборки PASS.
+- Native PostgreSQL **59 PASS**: 42 текущих + 17 исторических тестов, включая RLS, grants, повторное применение, безопасный обратный guard, финансовые гонки, старые права и объекты другого приложения.
+- Реальный конечный staging-прогон: **58 проверок**, **59 provider-вызовов**, **$0.0603846** по actual usage и стандартным тарифам; из разрешённых 60 / $0.50. Неизвестный/удержанный расход 0, тестовый worker закрыт, обычная staging-генерация OFF.
+- Измеренная стоимость: обычный ответ $0.0009764; 1/3/5 карт $0.00083325 / $0.001371 / $0.00182275; исправленная совместимость $0.0020768; транзиты с инструментом $0.0020537; исправленная нумерология $0.0012929; career-разбор $0.000916. Повторное открытие — 0 provider-вызовов. Подробные токены/кэш/latency — в `LUNA-INTELLIGENCE-BENCHMARK.md`.
+- Локально 16 основных + 16 расширенных mobile-сценариев, дополнительно RU/EN числовая панель и плеер. Голосовой browser-тест: синтетический PCM и подменённая транскрипция; реальный микрофон/STT заново не оплачивался.
+- Production: 40 публичных mobile-проверок + 4 проверки прокрутки; 79 WebP колоды отвечают 200, хэши 5 стартовых assets совпадают с локальной сборкой, SHA найден в bundle. Приватные API возвращают 401 без авторизации; ошибок выполнения приложения не найдено. В браузерном прогоне записи блокировались, production AI-вызовов 0.
+- Ранние ошибки AI не скрыты и включены в стоимость. Три локальных HTTP-теста сначала упёрлись в sandbox EPERM; повторены с разрешённым loopback и прошли. Некритичное предупреждение: основной chunk 623.72 kB / 181.49 kB gzip, дальнейшее разделение остаётся оптимизацией.
+
+### I. Deployment и восстановление
+
+Основное приложение: **https://luna-telegram-miniapp.netlify.app**.
+
+- Development: `feature/luna-intelligence-2-0`; PR **https://github.com/luna-meditation/luna-telegram-mvp/pull/30**, merged, без конфликтов. Прямой push в main не выполнялся.
+- Production branch: **main**. Commit: **93c9b6a5819296ffb65052248f8b25522995cdad**. Дерево `dd6d3dcdbc1a318f3927b4e9d00a70a2dda13338` совпадает с проверенной development-сборкой.
+- Railway: **4d7c46ce-6587-46d4-889e-715023f7b6ae — SUCCESS**. Health сообщает точный SHA/project/model, Telegram webhook настроен, автоматические миграции отключены.
+- Netlify: **6ad4af8048d9b50d40d9be07 — Ready**, published **2026-10-18 11:37:42 UTC**. Одна production-публикация; 13 новых файлов, никаких QA Functions. Git build пропущен меткой `[skip netlify]`, в опубликованной версии SHA дополнительно подтверждён хэшами/bundle.
+- Миграция: только `20261018100000_luna_intelligence_bounded_tool_continuation.sql`. Post-hash `8836efeea0118ad26759621e58fa48a5`. RLS/FORCE, ACL и SECURITY INVOKER сохранены; anon/authenticated запрещены, service_role разрешён. Сравнение 108 relations / 86 functions показало ровно две согласованные metadata-разницы; другие приложения не затронуты.
+- Backup 10:27:14 UTC: 80 таблиц / 2313 строк, 84 функции, 1 view; две точные изолированные проверки восстановления. Все 28 Storage-архивов / 239528218 исходных байтов проверены расшифровкой/хэшами. Копия зашифрована, ключ вне Git; временные открытые базы удалены.
+- Путь восстановления: отключить новую функцию при критической регрессии, выполнить проверенный обратный guard без удаления третьих исторических попыток; исправление frontend — проверенный Git revert/fix-forward и новая сборка, не Netlify restoreSiteDeploy. Данные/историю не перезаписывать backup автоматически. Откат не потребовался.
+
+### J. Что осталось проверить вручную
+
+Не обнаружено открытых критических блокеров в проверенном объёме. **DEPLOYED** и **TESTED** не равны полной физической проверке личного аккаунта. На iPhone полностью закрыть старое окно обычной Luna (не QA), открыть заново и проверить:
+
+1. Луна ИИ → «Познакомиться с Луной»: пропуск, сохранение и повторное открытие; RU остаётся выбранным.
+2. Расклад на пять карт: выбрать/раскрыть, увеличить, открыть историю без повторной генерации; затем переключиться на натальную карту/совместимость.
+3. Дыхание на минуту: Start/Pause/Resume/Stop, отсутствие перекрытия при клавиатуре.
+4. Медитация: пользовательским нажатием Play запустить реальный звук, сверить нужную запись и завершение.
+5. Голос: разрешение микрофона, запись/отмена/прослушивание, редактирование распознанного текста. Сам новый запрос может использовать обычную квоту.
+6. Profile → кошелёк/подписка: убедиться в своём реальном балансе и правах; покупку подтверждать только намеренно, не ради формальной проверки.
+
+Новые платные сервисы не подключены. Ни один ручной шаг не требует передавать секреты или initData. Полный авторизованный production E2E, физический микрофон и реальная новая Stars-покупка остаются явно непроверенными в этом прогоне.
 
 ## Intelligence 1.0 — historical release evidence
 
