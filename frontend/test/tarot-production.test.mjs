@@ -7,8 +7,10 @@ test('only the approved frontend flags are enabled in the production context',()
  const config=text('../netlify.toml');
  assert.match(config,/\[context.production\][\s\S]*build:production/);
  const production=config.split('[context.production.environment]')[1].split('[[redirects]]')[0];
- assert.match(production,/LUNA_RELEASE_PROFILE = "luna43"/);
- assert.match(production,/LUNA_RELEASE_DB_REVIEW = "\.\.\/qa\/luna43-release-review.json"/);
+ assert.match(production,/LUNA_RELEASE_PROFILE = "intelligence"/);
+ assert.match(production,/LUNA_RELEASE_DB_REVIEW = "\.\.\/qa\/luna-intelligence-release-review.json"/);
+ assert.match(production,/VITE_FEATURE_LUNA_INTELLIGENCE = "true"/);
+ assert.match(text('scripts/build-production.mjs'),/verifyLunaIntelligenceReleaseEvidence/);
  assert.match(production,/VITE_FEATURE_ADMIN_V4 = "true"/);
  assert.match(production,/VITE_FEATURE_COSMOS_V2 = "true"/);
  assert.match(production,/VITE_FEATURE_BREATHWORK_GUIDED = "false"/);

@@ -16,5 +16,6 @@ export const backendFeatureFlags: BackendFeatureFlags = Object.freeze({
   cosmos_v2: env.FEATURE_COSMOS_V2,
   ai_modes: env.FEATURE_AI_MODES,
   tarot_history: env.FEATURE_TAROT_HISTORY,
-  tarot_ai: env.FEATURE_TAROT_AI
+  tarot_ai: env.FEATURE_TAROT_AI,
+  luna_intelligence: env.FEATURE_LUNA_INTELLIGENCE
 });
