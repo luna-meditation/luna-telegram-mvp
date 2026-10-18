@@ -10,6 +10,8 @@ import {compatibilityThemes,pathThemes} from './astrologyThemes';
 import {noteProgress} from '../progress/evidence';
 import {RelationshipSelector,CompatibilityBasis} from './CompatibilityContext';
 import {AstrologyShareButton} from './AstrologyShareButton';
+import {NumerologyPanel} from './NumerologyPanel';
+import {featureFlags} from '../../config/featureFlags';
 
 export type AstrologyExperience='natal'|'compatibility'|'path'|'profiles';
 type Props={language:AppLanguage;initData?:string;onBack:()=>void;registerBackHandler?:(handler:(()=>void)|null)=>void;experience?:AstrologyExperience;initialSubjectKind?:'self'|'other';startOwnEditor?:boolean};
@@ -77,6 +79,7 @@ export default function AstrologyPage({language,initData,onBack,registerBackHand
     {chart.calculation.aspects.length>0&&<details><summary>{en?'Calculated natal aspects':'Рассчитанные натальные аспекты'}</summary><ul className="luna30-aspect-list">{chart.calculation.aspects.map(a=><li key={a.from+a.to}>{planetName(a.from,language)} · {planetName(a.to,language)}<span>{aspectName(a.type,language)} · {a.orb.toFixed(1)}°</span></li>)}</ul></details>}
     <AstrologyReportPanel key={chart.id+language} firstChartId={chart.id} language={language} initData={initData}/>
    </section>}
+   {chart&&!comparison&&active?.subject_kind==='self'&&featureFlags.luna_intelligence&&<NumerologyPanel key={chart.id} chartId={chart.id} language={language} initData={initData}/>}
    {chart&&<small className="luna30-engine-note">Astronomy Engine {chart.calculation.engineVersion} · IANA {chart.calculation.timezoneDatabaseVersion}<br/>{en?'Reopening calculations or a saved report makes no AI request and spends no Moon Seeds.':'Повторное открытие расчётов или сохранённого отчёта не вызывает AI и не расходует Moon Seeds.'}</small>}
   </>}
  </div>;

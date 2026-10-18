@@ -1,4 +1,40 @@
-# Luna Intelligence 1.0 — model evidence
+# Luna Intelligence — model evidence
+
+## Intelligence 2.0 — 2026-10-18
+
+Existing isolated staging; 12 fixed synthetic RU/EN scenarios × 3 actually available models. Every per-case input hash is identical across models. These 36 first decisions precede the final grounding corrections and were not rerun or relabeled as full end-to-end journeys.
+
+| Model | Expected first-tool match | Cost for 12 | Median / p95 |
+| --- | --- | --- | --- |
+| gpt-5-mini | 8/12 | $0.00673555 | 1377 / 6143 ms |
+| gpt-4.1-mini | 9/12 | $0.01795640 | 1356 / 2049 ms |
+| gpt-4o-mini | 11/12 | $0.00680985 | 1307 / 2811 ms |
+
+Benchmark subtotal **$0.0315018**. A first lookup may legitimately precede an action; the metric is not journey success, factual accuracy or naturalness. No model switch: production remains GPT-5-mini, same $100 monthly cap.
+
+Real application validation used 23 further provider calls, including failed/rejected attempts: **59 calls total, $0.0603846**, within 60/$0.50. Worker closed, generation OFF, unknown/held cost 0. Owner isolation, exact saved cards/charts, confirmed memory, one synthetic paid report, cache reopening and actual elapsed breath completion checked separately from browser fixtures.
+
+| Observed final scenario | Provider calls | Input / cached / output tokens | Usage cost |
+| --- | --- | --- | --- |
+| One-card interpretation | 1 | 1237 / 0 / 262 | $0.00083325 |
+| Three-card interpretation | 1 | 1436 / 0 / 506 | $0.00137100 |
+| Five-card interpretation | 1 | 1539 / 0 / 719 | $0.00182275 |
+| Tarot follow-up | 1 | 6073 / 0 / 443 | $0.00240425 |
+| Corrected compatibility | 1 | 6944 / 1792 / 372 | $0.00207680 |
+| Corrected natal Mercury | 2 | 11469 / 7168 / 254 | $0.00176245 |
+| Actual current transits | 2 | 12922 / 8448 / 362 | $0.00205370 |
+| Corrected date numerology | 2 | 10242 / 8576 / 331 | $0.00129290 |
+| Ordinary prototype discussion | 1 | 5232 / 2816 / 151 | $0.00097640 |
+| Confirmed-context career report | 1 | 624 / 0 / 380 | $0.00091600 |
+| Saved reopening / explicit natal open | 0 | 0 | $0 |
+
+Costs use actual provider usage and published standard-tier rates, including cached input, not a guaranteed future price. Numeric tool continuation: first call 4910 input / 4864 cached / 31 output, $0.0001951; second call 5332 / 3712 / 300, $0.0010978. Combined provider latency 5895 ms excludes application/database overhead. Relevant retrieval measured 134 characters (~45 estimated tokens), 1517 ms in that final turn; no bulk chat history export. The successful live conversations required at most two calls; a three-call ceiling is covered by deterministic runtime/native-DB tests.
+
+Before/after, manually reviewed: fabricated compatibility alias → exact owned Synthetic A/B; direct «Посмотри мою натальную карту» produced discussion → actual saved chart without generation; expired chart consent → explicit re-selection preserves the privacy boundary; false master-number explanation/long overview → exact calculated numbers, concise symbolic limitations. The last response proposed an unsupported different-year shortcut; it is replaced locally by two verified discussion prompts, with regression tests and no extra cloud/provider request.
+
+Remaining quality limits: every model has raw selection failures; exact-claim guards are conservative rather than comprehensive truth verification. Some RU replies retain English aspect terms or too many facts. No new physical-iPhone, real Stars or real transcription benchmark is claimed. Full prior failures remain in the private synthetic QA ledger.
+
+## Intelligence 1.0 — historical evidence
 
 2026-10-18, existing isolated staging; 50 tasks, alternating 25 RU / 25 EN, same exact inputs and tool schemas for all three models. No production records. Provider budget shared with real application smoke: 180 calls / $1 maximum.
 

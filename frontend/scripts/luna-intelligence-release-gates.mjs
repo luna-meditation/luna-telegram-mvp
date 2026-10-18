@@ -1,16 +1,22 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createHash} from 'node:crypto';
+import {resolve} from 'node:path';
 import {releaseSourceDigest} from './release-source-digest.mjs';
 export function verifyLunaIntelligenceReleaseEvidence(r,root){
- assert.equal(r.release,'luna-intelligence-1-0');assert.equal(r.status,'PASS');
- assert.equal(r.baseCommit,'4774edf550ab81d10bc54682883cefad6b527859');
+ const v2=r.release==='luna-intelligence-2-0';assert.ok(v2||r.release==='luna-intelligence-1-0');assert.equal(r.status,'PASS');
+ assert.equal(r.baseCommit,v2?'58ab85e4729e93197cefa534160cda4172be8e0c':'4774edf550ab81d10bc54682883cefad6b527859');
  assert.equal(r.projectId,'vkcdtasbdoeilgfucoax');assert.equal(r.stagingProjectId,'funvzpmpbgazsisehiru');
- assert.equal(r.noDatabaseMigrations,true);assert.deepEqual(r.migrationHashes,{});assert.equal(r.productionWritesBeforeRelease,0);
+ assert.equal(r.productionWritesBeforeRelease,0);
+ if(v2){const name='20261018100000_luna_intelligence_bounded_tool_continuation.sql';assert.equal(r.noDatabaseMigrations,false);assert.deepEqual(Object.keys(r.migrationHashes),[name]);assert.equal(r.migrationHashes[name],createHash('sha256').update(readFileSync(resolve(root,'supabase/migrations',name))).digest('hex'));assert.equal(r.migrationStatus,'verified-production');assert.equal(r.nativeDatabaseChecks,59);assert.equal(r.migrationRollback,'PASS');}
+ else{assert.equal(r.noDatabaseMigrations,true);assert.deepEqual(r.migrationHashes,{});}
  assert.equal(r.backupRestorePasses,2);assert.equal(r.backupIntegrity,'PASS');assert.equal(r.backupMediaIntegrity,'PASS');
  assert.ok(r.backupTables>=79&&r.backupMediaObjects>=28);assert.ok(Date.now()-Date.parse(r.backupCapturedAt)>=0&&Date.now()-Date.parse(r.backupCapturedAt)<86400000);
  for(const key of ['frontendTestsStatus','backendTestsStatus','typeChecks','lint','builds','mobileStatus','stagingPersistence','telegramAuthorization','ownerIsolation','aiSmokeStatus','benchmarkReview','rollbackCompatibility','unchangedRlsGrants','financialCompatibility'])assert.equal(r[key],'PASS',key);
  assert.ok(r.frontendTests>=255);assert.ok(r.backendTests>=653);assert.ok(r.multiTurnActionCases>=40);assert.ok(r.mobileCases>=16);
- assert.equal(r.benchmarkCases,50);assert.equal(r.benchmarkModels,3);assert.equal(r.benchmarkDecisions,150);assert.equal(r.pairedInputHashesMatch,true);assert.equal(r.criticalAiActionFailures,0);
- assert.ok(r.aiProviderCalls>=150&&r.aiProviderCalls<=180);assert.ok(r.aiCostUsd>0&&r.aiCostUsd<=1);assert.equal(r.unknownAiSpendUsd,0);assert.equal(r.savedResultsProviderCalls,0);
+ assert.equal(r.benchmarkCases,v2?12:50);assert.equal(r.benchmarkModels,3);assert.equal(r.benchmarkDecisions,v2?36:150);assert.equal(r.pairedInputHashesMatch,true);assert.equal(r.criticalAiActionFailures,0);
+ assert.ok(r.aiProviderCalls>=(v2?36:150)&&r.aiProviderCalls<=(v2?60:180));assert.ok(r.aiCostUsd>0&&r.aiCostUsd<=(v2?.5:1));assert.equal(r.unknownAiSpendUsd,0);assert.equal(r.savedResultsProviderCalls,0);
+ if(v2)for(const key of ['calculatedTransits','dateNumerology','consentedContext','topicSpecificReport','multiCardSharing'])assert.equal(r[key],'PASS',key);
  assert.equal(r.productionModel,'gpt-5-mini');assert.equal(r.productionModelChanged,false);assert.equal(r.aiCapUsd,100);assert.equal(r.aiCapChanged,false);
  assert.equal(r.realStarsTransactions,0);assert.equal(r.existingPricesChanged,false);assert.equal(r.balancesAndEntitlementsPreserved,true);assert.equal(r.unrelatedObjectsUnchanged,true);
  assert.deepEqual(r.criticalBlockers,[]);assert.ok(r.knownLimitations.length>0);assert.match(r.stagingDeploymentId,/^[a-f0-9]{24}$/);

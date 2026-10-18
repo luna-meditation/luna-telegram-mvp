@@ -58,7 +58,7 @@ const birthProfiles=new Map(),birthCharts=new Map(),dreamEntries=new Map();
 const meetPatch=luna42Preview?(await import('../../backend/dist/luna42-meet.js')).meetStepPatch:null;
 const reflection=luna42Preview?(await import('../../backend/dist/luna40-compatibility.js')).compatibilityReflection:null;
 const buildMemoryProposal=luna42Preview?(await import('../../backend/dist/luna42-memory-proposal.js')).buildMemoryProposal:null;
-const intelligence=intelligencePreview?{...await import('../../backend/dist/luna-intelligence-command.js'),...await import('../../backend/dist/luna-intelligence-actions.js'),...await import('../../backend/dist/luna24-policy.js')}:null;
+const intelligence=intelligencePreview?{...await import('../../backend/dist/luna-intelligence-command.js'),...await import('../../backend/dist/luna-intelligence-actions.js'),...await import('../../backend/dist/luna24-policy.js'),...await import('../../backend/dist/luna-intelligence-numerology.js')}:null;
 let meetState={meet:{},revision:0,updatedAt:null};
 const date = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const monday=new Date();monday.setDate(monday.getDate()-((monday.getDay()+6)%7));
@@ -104,7 +104,7 @@ const server=createServer(async(req,res)=>{
        if(luna32Preview&&url.pathname==='/api/astrology/calendar')return json(astrology.calculateCelestialMonth(url.searchParams.get('month')));
        if(url.pathname==='/api/astrology/locations')return json({locations:astrology.searchBirthLocations(url.searchParams.get('q')??'')});
        if(url.pathname==='/api/astrology/profiles'&&req.method==='GET')return json({profiles:[...birthProfiles.values()]});
-       if(url.pathname.startsWith('/api/astrology/charts/')&&req.method==='GET'){const chart=birthCharts.get(url.pathname.split('/')[4]);return chart?json({chart}):json({code:'chart_not_found'},404);}
+       if(url.pathname.startsWith('/api/astrology/charts/')&&req.method==='GET'){const chart=birthCharts.get(url.pathname.split('/')[4]);if(chart&&intelligence&&url.pathname.endsWith('/numerology')){const p=birthProfiles.get(chart.profile_id);return p?.subject_kind==='self'?json({calculated:true,...intelligence.calculateDateNumerology(p.birth_date,new Date().toISOString().slice(0,10))}):json({calculated:false,requiresPersonalProfile:true});}return chart?json({chart}):json({code:'chart_not_found'},404);}
        if(url.pathname==='/api/astrology/reports'&&req.method==='GET')return json({report:null,cached:true});
        if(url.pathname==='/api/astrology/reports'&&req.method==='POST')return json({code:'offline_provider_disabled',error:'Offline UI preview never calls a real provider.'},503);
        const id=url.pathname.split('/')[4];
@@ -218,7 +218,7 @@ const server=createServer(async(req,res)=>{
           const m={id,conversation_id:id,role:'assistant',content:reading.interpretation?.summary??'OFFLINE QA — saved reading.',created_at:new Date().toISOString(),metadata:{tarot:{readingId:reading.id,clientReadingId:reading.client_reading_id,kind,revealed:count,requestHash:'0'.repeat(64),reading}}};
           centralConversations.set(id,{id,title:reading.language==='ru'?'Сохранённый расклад · QA':'Saved reading · QA',language:reading.language,status:'active',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),last_message_at:new Date().toISOString(),messages:[m]});return json({conversationId:id,message:m});
         }
-        if(url.pathname==='/api/luna/conversations'&&req.method==='GET')return json({conversations:[...centralConversations.values()].map(summary)});
+        if(url.pathname==='/api/luna/conversations'&&req.method==='GET'){const offset=Number(url.searchParams.get('offset')??0);return json({conversations:[...centralConversations.values()].sort((a,b)=>b.last_message_at.localeCompare(a.last_message_at)).slice(offset,offset+20).map(summary)});}
         const convoId=url.pathname.match(/^\/api\/luna\/conversations\/([^/]+)$/)?.[1];
         if(convoId&&centralConversations.has(convoId)){const c=centralConversations.get(convoId);if(req.method==='DELETE'){centralConversations.delete(convoId);return json({ok:true});}if(req.method==='GET')return json({conversation:summary(c),messages:c.messages});}
         const rename=url.pathname.match(/^\/api\/luna\/tools\/conversations\/([^/]+)$/)?.[1];

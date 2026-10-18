@@ -48,4 +48,4 @@ export async function retrieveIntelligenceContext(db:SupabaseClient,owner:number
  return{sources,requiresConsent:false,truncated:(rows.data?.length??0)>=40};
 }
 export function contextRetrievalMetrics(value:unknown,latencyMs:number){const text=JSON.stringify(value);return{characters:text.length,estimatedTokens:Math.ceil(text.length/3),latencyMs:Math.max(0,Math.round(latencyMs)),sources:value&&typeof value==='object'&&'sources' in value&&Array.isArray(value.sources)?value.sources.length:0};}
-export const symbolicSystemCapabilities=[{id:'western_astrology',status:'calculated'},{id:'tarot',status:'symbolic'},{id:'numerology',status:'unavailable'},{id:'human_design',status:'unavailable'},{id:'jyotish',status:'unavailable'},{id:'bazi',status:'unavailable'}] as const;
+export const symbolicSystemCapabilities=[{id:'western_astrology',status:'calculated'},{id:'tarot',status:'symbolic'},{id:'numerology',status:'date_only_calculated_symbolic',version:'pythagorean-date-1.0.0'},{id:'human_design',status:'unavailable'},{id:'jyotish',status:'unavailable'},{id:'bazi',status:'unavailable'}] as const;

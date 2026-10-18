@@ -1,0 +1,3 @@
+/** Public product vocabulary; no catalog prices or private context. */
+export const deepAnalysisTopics=['personality','relationships','career','money_goals','emotional_patterns','growth'] as const;
+export const deepTopicLabels={en:{personality:'Personality & strengths',relationships:'Relationships',career:'Career & direction',money_goals:'Money & goals',emotional_patterns:'Emotional patterns',growth:'Personal growth'},ru:{personality:'Личность и сильные стороны',relationships:'Отношения',career:'Карьера и направление',money_goals:'Деньги и цели',emotional_patterns:'Эмоциональные паттерны',growth:'Личное развитие'}} as const;

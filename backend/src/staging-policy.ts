@@ -2,6 +2,10 @@ import crypto from 'node:crypto';
 import type {NextFunction, Request, Response} from 'express';
 import type {TelegramUserInput} from './db.js';
 
+/** Public QA writes cannot race the finite synthetic provider budget window. */
+export const isFiniteAiMutation = (method: string, path: string) =>
+  method === 'POST' && /^\/api\/(?:luna\/|luna43\/|tarot\/|astrology\/)/.test(path);
+
 export type StagingConfig = {
   STAGING_MODE: boolean;
   STAGING_HOST?: 'standalone' | 'netlify';

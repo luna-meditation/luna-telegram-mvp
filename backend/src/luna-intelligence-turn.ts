@@ -1,0 +1,36 @@
+/** Shared, dependency-free turn boundary. It does not select a tool from model
+ * prose. It decides whether an explicitly authorized artifact remains relevant. */
+export type IntelligenceTopic='tarot'|'natal'|'compatibility'|'general';
+export function artifactTopic(input:{readingId?:string;chartId?:string;astrology?:{chartId:string;secondChartId?:string}}):IntelligenceTopic{
+ return input.astrology?.secondChartId?'compatibility':input.astrology||input.chartId?'natal':input.readingId?'tarot':'general';
+}
+export function retainsArtifact(message:string,topic:IntelligenceTopic,selected=false){
+ if(topic==='general')return false;
+ const text=message.trim();
+ if(/(?:new|different|another) topic|change (?:the )?subject|сменим тему|другая тема|не об этом|кстати.{0,30}(?:спал|сплю|сон|устал)|\b(?:I slept|my sleep|I feel tired)\b/iu.test(text))return false;
+ if(/медитац|подыш|дыхани|moon seeds|баланс|премиум|premium|запомни|удали|remember that|delete.*memory|\b(?:meditation|breathe|breathing)\b/iu.test(text))return false;
+ const tarot=/таро|расклад|выпавш|перев[её]рнут|\b(?:tarot|spread|drawn cards?|reversed)\b/iu.test(text);
+ const astro=/астролог|натальн|планет|меркур|венер|транзит|асцендент|\b(?:astrolog\w*|natal|birth chart|planet|mercury|venus|transit|ascendant)\b/iu.test(text);
+ const pair=/совместим|синастр|\b(?:compatibility|synastry)\b/iu.test(text);
+ if(topic==='tarot'&&(astro||pair)||topic!=='tarot'&&tarot||topic==='natal'&&pair)return false;
+ if(selected)return true;
+ if(topic==='tarot'&&tarot||topic==='natal'&&astro||topic==='compatibility'&&(pair||astro))return true;
+ if(text.length>400)return false;
+ // Semantic domains of a currently selected artifact, not a conversation title.
+ const focus=/сильн\S* сторон|слаб\S* сторон|отношен|общени|талант|карьер|работ|деньг|потенциал|следующ\S* шаг|мо[яейю]+ ситуац|повседнев|ссор|сближа|\b(?:strengths?|challenges?|relationships?|communicat\w*|talents?|career|work|money|potential|next step|my situation|everyday|conflict)\b/iu.test(text);
+ const reference=/^(?:а\s+|и\s+|что |как |почему |расскажи|поясни|объясни|подробнее|продолжи|это|какие |в ч[её]м|мо[ийяёе]\S* |наши |and\b|what\b|how\b|why\b|tell\b|explain\b|continue\b|go deeper\b|this\b|my\b|our\b)/iu.test(text);
+ return reference&&(focus||/это|об этом|этот|так|связаны|значит|подробнее|продолжи|this|that|these|mean|further|deeper|continue/iu.test(text));
+}
+export function relevantFollowUpActions(actions:readonly string[],topic:IntelligenceTopic){
+ const allowed=topic==='tarot'?['continue','alternative','journal']:topic==='natal'||topic==='compatibility'?['continue','journal']:[];
+ return [...new Set(actions)].filter(a=>allowed.includes(a)).slice(0,3);
+}
+/** Current date-only calculation has no arbitrary-year tool. These discussion
+ * prompts cannot advertise a calculation the server does not support. */
+export function numerologyQuickReplies(language:'ru'|'en'){
+ return language==='ru'?['Как применить это к моей цели?','Каковы ограничения этого метода?']:['How can I apply this to my goal?','What are the limits of this method?'];
+}
+export function responsePlan(message:string,topic:IntelligenceTopic){
+ const detailed=/подроб|глубок|деталь|полный разбор|in detail|deep(?:er)?|comprehensive/iu.test(message);
+ return{topic,depth:detailed?'detailed':'concise',intentPriority:'latest_user_request',ordinarySentences:[2,5],artifactOverviewWords:detailed?null:[80,150],maxOptionalReplies:3,requiresCalculationEvidence:topic==='natal'||topic==='compatibility',genuineClarificationOnly:true};
+}
