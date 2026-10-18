@@ -1,15 +1,16 @@
-type AstrologyAttachment={chartId:string;secondChartId?:string;reportId?:string;planet?:'sun'|'moon'|'mercury'|'venus'|'mars'|'jupiter'|'saturn'|'uranus'|'neptune'|'pluto'};
+type Planet='sun'|'moon'|'mercury'|'venus'|'mars'|'jupiter'|'saturn'|'uranus'|'neptune'|'pluto';
+type AstrologyAttachment={chartId:string;secondChartId?:string;reportId?:string;comparisonId?:string;relationship?:'romantic'|'business'|'friendship'|'family';planet?:Planet;aspect?:{from:Planet;to:Planet;type:'conjunction'|'sextile'|'square'|'trine'|'opposition'}};
 /** Active context is separate from historical attachments. Never infer an ID
  * from a title or expose arbitrary metadata from user-authored messages. */
 export function availableConsultationAttachments(messages:Array<{role?:string;metadata?:unknown}>){
  const readings=new Set<string>(),charts=new Map<string,AstrologyAttachment>(),uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i;
- for(const message of messages){if(message.role!=='assistant'||!message.metadata||typeof message.metadata!=='object')continue;const meta=message.metadata as {readingId?:string;tarot?:{readingId?:string};astrology?:AstrologyAttachment};const reading=meta.tarot?.readingId??meta.readingId;if(typeof reading==='string'&&uuid.test(reading))readings.add(reading);const chart=meta.astrology;if(chart&&uuid.test(chart.chartId)&&(!chart.secondChartId||uuid.test(chart.secondChartId)))charts.set(chart.chartId+':'+(chart.secondChartId??''),chart);}
+ for(const message of messages){if(message.role!=='assistant'||!message.metadata||typeof message.metadata!=='object')continue;const meta=message.metadata as {readingId?:string;tarot?:{readingId?:string};astrology?:AstrologyAttachment};const reading=meta.tarot?.readingId??meta.readingId;if(typeof reading==='string'&&uuid.test(reading))readings.add(reading);const chart=meta.astrology;if(chart&&uuid.test(chart.chartId)&&(!chart.secondChartId||uuid.test(chart.secondChartId))&&(!chart.reportId||uuid.test(chart.reportId))&&(!chart.comparisonId||uuid.test(chart.comparisonId)))charts.set(JSON.stringify([chart.chartId,chart.secondChartId??null,chart.reportId??null,chart.comparisonId??null,chart.relationship??null,chart.planet??null,chart.aspect??null]),chart);}
  return {readings:[...readings].slice(-12),charts:[...charts.values()].slice(-12)};
 }
 export function independentReflectionTopic(text:string):'dream'|'companion'|'wellbeing'|null{
  if(/\b(?:tarot|card|chart|compatibility|mercury|venus|natal)\b|таро|расклад|карт[ауы]|совместим|меркур|венер|натальн/i.test(text))return null;
  if(/\b(?:interpret|explore|discuss|understand).{0,30}(?:my|a|this) dream\b|мне приснилось|(?:обсуди|разбери|помоги понять|толкован).{0,30}сон/i.test(text))return 'dream';
- if(/\b(?:change (?:the )?topic|something else|just talk|general conversation)\b|сменим тему|на другую тему|просто поговорим/i.test(text))return 'companion';
+ if(/\b(?:change (?:the )?topic|different topic|new topic|something else|just talk|general conversation)\b|сменим тему|другая тема|на другую тему|просто поговорим/i.test(text))return 'companion';
  if(/^(?:i (?:feel|am feeling) (?:anxious|overwhelmed|sad)|мне (?:тревожно|грустно|тяжело)|я чувствую (?:тревогу|грусть))/i.test(text.trim()))return 'wellbeing';
  return null;
 }

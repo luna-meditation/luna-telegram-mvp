@@ -14,10 +14,10 @@ export function commerceIntent(text:string):CommerceView|null{
  return null;
 }
 export const pendingActionInput=z.object({id:z.string().uuid(),conversationId:z.string().uuid(),language:z.enum(['en','ru']),action:z.discriminatedUnion('type',[
- z.object({type:z.literal('tarot'),kind:z.enum(['single','three','five']),intention:z.enum(['general','love','career','growth']),question:z.string().trim().max(240)}).strict(),
+ z.object({type:z.literal('tarot'),kind:z.enum(['single','three','five']),intention:z.enum(['general','love','career','growth']),question:z.string().trim().max(240),actionMessageId:z.string().uuid().optional(),choiceSlots:z.array(z.number().int().min(0).max(8)).min(1).max(5).refine(v=>new Set(v).size===v.length).optional()}).strict(),
  z.object({type:z.literal('compatibility'),chartId:z.string().uuid(),secondChartId:z.string().uuid()}).strict(),
  z.object({type:z.literal('natal'),chartId:z.string().uuid()}).strict()
-])}).strict();
+])}).strict().superRefine((v,c)=>{if(v.action.type==='tarot'&&v.action.choiceSlots&&v.action.choiceSlots.length!==(v.action.kind==='single'?1:v.action.kind==='three'?3:5))c.addIssue({code:'custom',message:'Select the complete spread once.'});});
 export type PendingActionInput=z.infer<typeof pendingActionInput>;
 export type CommerceFacts={balance:number;paid:boolean;lifetime:boolean;beta:{active:boolean;features:readonly string[]};usage:{limit:number;remaining:number;resetAt:string};checkout:boolean;prices:{single:number;three:number;five:number;compatibility:number};included?:Partial<Record<'three'|'five'|'compatibility',number>>;paidReadings:boolean;knownOwned?:boolean};
 /** Read-only eligibility. This is never authorization to debit a wallet. */

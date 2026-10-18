@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url';
 assert.equal(process.versions.node.split('.')[0], '22', 'Use Node.js 22');
 const frontend = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const tarotPreview = process.argv.includes('--tarot');
-const luna43Preview=process.argv.includes('--luna43');
+const intelligencePreview=process.argv.includes('--intelligence');
+const luna43Preview=intelligencePreview||process.argv.includes('--luna43');
 const luna42Preview=luna43Preview||process.argv.includes('--luna42');
 const luna41Preview=luna42Preview||process.argv.includes('--luna41');
 const luna40Preview=luna41Preview||process.argv.includes('--luna40');
@@ -26,11 +27,12 @@ const productionFlags=process.argv.includes('--production-flags');
 const refinementPreview=process.argv.includes('--refinement')||luna21Preview;
 const legacyPreview = process.argv.includes('--legacy');
 assert.ok(!(tarotPreview&&legacyPreview),'Choose either Tarot or legacy preview');
-const outputDirectory = luna43Preview?'dist-luna43-preview':luna42Preview?'dist-luna42-preview':luna41Preview?'dist-luna41-preview':luna40Preview?'dist-staging':luna34Preview?'dist-luna34-preview':luna33Preview?'dist-luna33-preview':luna32Preview?'dist-luna32-preview':luna31Preview?'dist-luna31-preview':evolutionPreview?'dist-luna30-preview':centralPreview?'dist-luna24-preview':memoryPreview?'dist-memory-preview':productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
+const outputDirectory = intelligencePreview?'dist-intelligence-preview':luna43Preview?'dist-luna43-preview':luna42Preview?'dist-luna42-preview':luna41Preview?'dist-luna41-preview':luna40Preview?'dist-staging':luna34Preview?'dist-luna34-preview':luna33Preview?'dist-luna33-preview':luna32Preview?'dist-luna32-preview':luna31Preview?'dist-luna31-preview':evolutionPreview?'dist-luna30-preview':centralPreview?'dist-luna24-preview':memoryPreview?'dist-memory-preview':productionFlags?'dist-premium-preview':refinementPreview?'dist-refinement-preview':legacyPreview ? 'dist' : tarotPreview ? 'dist-tarot-preview' : 'dist-phase2';
 const output = resolve(frontend, outputDirectory);
 process.env.VITE_FEATURE_COSMOS_V2=luna41Preview?'true':'false';
 process.env.VITE_FEATURE_AI_VOICE_INPUT=luna42Preview?'true':'false';
 process.env.VITE_FEATURE_ADMIN_V4=luna40Preview?'true':'false';
+process.env.VITE_FEATURE_LUNA_INTELLIGENCE=intelligencePreview?'true':'false';
 process.env.VITE_FEATURE_BREATHWORK_GUIDED=luna41Preview?'true':'false';
 const flagNames = ['AI_CENTRAL_EXPERIENCE','PERSONAL_MEMORY','NEW_NAVIGATION','TAROT_DAILY','TAROT_SPREADS','ASTROLOGY','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','BREATHWORK_AUDIO','PERSONALIZATION','AI_MODES','TAROT_HISTORY','TAROT_AI','DAILY_CARD_V2','ECONOMY_REWARDS_V2','TAROT_PAID_READINGS','PREMIUM_V2'];
 if(!process.argv.includes('--serve-only')){
@@ -56,6 +58,7 @@ const birthProfiles=new Map(),birthCharts=new Map(),dreamEntries=new Map();
 const meetPatch=luna42Preview?(await import('../../backend/dist/luna42-meet.js')).meetStepPatch:null;
 const reflection=luna42Preview?(await import('../../backend/dist/luna40-compatibility.js')).compatibilityReflection:null;
 const buildMemoryProposal=luna42Preview?(await import('../../backend/dist/luna42-memory-proposal.js')).buildMemoryProposal:null;
+const intelligence=intelligencePreview?{...await import('../../backend/dist/luna-intelligence-command.js'),...await import('../../backend/dist/luna-intelligence-actions.js'),...await import('../../backend/dist/luna24-policy.js')}:null;
 let meetState={meet:{},revision:0,updatedAt:null};
 const date = (d=new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const monday=new Date();monday.setDate(monday.getDate()-((monday.getDay()+6)%7));
@@ -224,9 +227,9 @@ const server=createServer(async(req,res)=>{
           const id=body.conversationId??body.clientReadingId;
           let c=centralConversations.get(id);if(!c){c={id,title:body.language==='ru'?'Таро · локальный preview':'Tarot · offline preview',language:body.language,status:'active',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),last_message_at:new Date().toISOString(),messages:[]};centralConversations.set(id,c);}
           let m=c.messages.find(m=>m.id===body.clientReadingId);
-          if(!m){const count=body.kind==='five'?5:body.kind==='three'?3:1,cards=previewDeck.slice(0,count).map((v,i)=>({cardId:v.id,orientation:i%2?'reversed':'upright'}));
+          if(!m){const count=body.kind==='five'?5:body.kind==='three'?3:1,cards=intelligencePreview?intelligence.drawChatTarot(body.kind):previewDeck.slice(0,count).map((v,i)=>({cardId:v.id,orientation:i%2?'reversed':'upright'}));
             const reading={id:randomUUID(),client_reading_id:body.clientReadingId,reading_kind:body.kind,cards,card_id:cards[0].cardId,orientation:cards[0].orientation,intention:body.intention,question:body.question,language:body.language,status:'local',interpretation:null,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};
-            readings.set(body.clientReadingId,reading);m={id:body.clientReadingId,conversation_id:id,role:'assistant',content:body.language==='ru'?'Локальный UI preview. Открой карты по порядку. AI не вызывается.':'Offline UI preview. Reveal cards in order. No AI call is made.',created_at:new Date().toISOString(),metadata:{tarot:{readingId:reading.id,clientReadingId:body.clientReadingId,kind:body.kind,revealed:0,requestHash:'0'.repeat(64),reading}}};c.messages.push(m);}
+            readings.set(body.clientReadingId,reading);m={id:body.clientReadingId,conversation_id:id,role:'assistant',content:body.language==='ru'?'Локальный UI preview. Открой карты по порядку. AI не вызывается.':'Offline UI preview. Reveal cards in order. No AI call is made.',created_at:new Date().toISOString(),metadata:{...(body.actionMessageId?{intelligence:{version:1,attachments:[],originActionId:body.actionMessageId}}:{}),tarot:{readingId:reading.id,clientReadingId:body.clientReadingId,kind:body.kind,revealed:0,requestHash:'0'.repeat(64),reading}}};c.messages.push(m);}
           return json({conversationId:id,message:m});
         }
         const revealId=url.pathname.match(/^\/api\/luna\/tools\/tarot\/([^/]+)\/reveal$/)?.[1];
@@ -235,6 +238,7 @@ const server=createServer(async(req,res)=>{
           const prior=[...centralConversations.values()].find(c=>c.messages.some(m=>m.request_id===body.requestId&&m.role==='assistant'));const id=prior?.id??body.conversationId??randomUUID();let c=centralConversations.get(id);
           if(!c){c={id,title:body.message.slice(0,60),language:body.language,status:'active',created_at:new Date().toISOString(),updated_at:new Date().toISOString(),last_message_at:new Date().toISOString(),messages:[]};centralConversations.set(id,c);}
           let m=c.messages.find(m=>m.request_id===body.requestId&&m.role==='assistant');
+          if(!m&&intelligencePreview){const command=intelligence.resolveIntelligenceCommand(body.message);if(command&&!command.action.startsWith('astrology.')){const messageId=randomUUID(),prepared=await intelligence.createIntelligenceActionService({}, {features:{central:true,spreads:true,tarot_history:true,tarot_daily:true,astrology:true,personal_memory:true},usage:async()=>({remaining:8,limit:8,resetAt:new Date().toISOString()}),eligibility:async()=>({allowed:true,source:'local_fixture',required:0,shortfall:0}),recommendMeditation:async()=>({id:meditation.id,title:meditation.translations?.[body.language]?.title??meditation.title})}).prepare(880000002,body.requestId,body.language,command,messageId);m={id:messageId,conversation_id:id,request_id:body.requestId,role:'assistant',content:prepared.content,created_at:new Date().toISOString(),metadata:{contextReset:true,intelligence:{version:1,action:command.action,requestHash:'local-fixture',attachments:prepared.attachment?[prepared.attachment]:[]},...(prepared.navigation?{navigation:prepared.navigation}:{}),...(prepared.attachment?.type==='meditation'?{recommendedMeditationId:meditation.id,meditationAction:{type:'meditation_card',meditationId:meditation.id},recommendedMeditation:meditation}:{})}};c.messages.push({id:randomUUID(),role:'user',content:body.message,created_at:new Date().toISOString()},m);}}
           if(!m){m={id:randomUUID(),request_id:body.requestId,role:'assistant',content:body.language==='ru'?'Локальный UI preview: серверный AI здесь не вызывается.':'Offline UI preview: no server AI is called here.',created_at:new Date().toISOString(),metadata:luna33Preview?{...(body.astrology?{astrology:body.astrology,astrologyConsent:{version:1,chartId:body.astrology.chartId,...(body.astrology.secondChartId?{secondChartId:body.astrology.secondChartId}:{})}}:{}),...(/meditat|медитац/i.test(body.message)?{recommendedMeditationId:meditation.id,meditationAction:{type:'meditation_card',meditationId:meditation.id},recommendedMeditation:meditation}:{}),...(/breath|дых/i.test(body.message)?{workflowActions:['breathing'],resolvedIntent:'breathing',...(luna34Preview?{breathing:astrology.requestedBreathOptions(body.message)}:{})}:{})}:{}};c.messages.push({id:randomUUID(),role:'user',content:body.message,created_at:new Date().toISOString()},m);}
           return json({conversationId:id,message:m,duplicate:false,remaining:7,requestState:'completed'});
         }

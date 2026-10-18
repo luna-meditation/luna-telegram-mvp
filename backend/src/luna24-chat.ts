@@ -7,7 +7,7 @@ import {requireTelegramWebApp,type AuthenticatedRequest} from './auth.js';
 import {FoundationError} from './personalization.js';
 import {getTarotReading,saveTarotReading,readingFields,type StoredReading} from './tarot.js';
 import {saveTarotSpread,savePaidSingleTarot} from './tarot-spreads.js';
-import {chatTarotInput,chatTarotState,chatTarotHash,drawChatTarot,nextReveal,readingSize,type ChatTarotState} from './luna24-policy.js';
+import {chatTarotInput,chatTarotState,chatTarotHash,drawChatTarot,nextReveal,readingSize,validChatTarotOrigin,type ChatTarotState} from './luna24-policy.js';
 import {safetyCategory} from './luna-ai-policy.js';
 import {createAstrologyWorkflowService} from './luna33-workflows.js';
 import {createLuna34Progress} from './luna34-progress.js';
@@ -52,6 +52,7 @@ export async function openChatTarot(user:number,body:unknown){
  if(safetyCategory(input.question))throw fail('tarot_safety',422);
  const {data:existing,error:readError}=await supabase.from('ai_messages').select(messageFields).eq('id',input.clientReadingId).eq('telegram_id',user).maybeSingle();if(readError)throw fail('chat_unavailable');
  if(existing){const state=chatTarotState.parse(existing.metadata?.tarot);if(state.requestHash!==hash||input.conversationId&&existing.conversation_id!==input.conversationId)throw fail('reading_conflict',409);return response(user,existing);}
+ if(input.actionMessageId){const source=await ownedMessage(user,input.actionMessageId);if(!validChatTarotOrigin(source,input))throw fail('action_conflict',409);}
  const conversationId=input.conversationId??input.clientReadingId;
  if(input.conversationId)await ownedConversation(user,conversationId);
  else{const created=await supabase.from('ai_conversations').upsert({id:conversationId,telegram_id:user,title:input.language==='ru'?'Размышление с Таро':'Tarot reflection',language:input.language},{onConflict:'id',ignoreDuplicates:true});if(created.error)throw fail('chat_unavailable');await ownedConversation(user,conversationId);}
@@ -63,7 +64,7 @@ export async function openChatTarot(user:number,body:unknown){
  // Both interfaces call the existing authoritative reading services. No wallet or payment call.
  const saved=input.kind==='single'?(input.orderId?await savePaidSingleTarot(user,{reading:{...base,...cards[0]},orderId:input.orderId}):await saveTarotReading(user,{...base,...cards[0]})):await saveTarotSpread(user,{reading:{...base,kind:input.kind,cards},...(input.orderId?{orderId:input.orderId}:{})});
  const state:ChatTarotState={readingId:saved.reading.id,clientReadingId:input.clientReadingId,kind:input.kind,revealed:0,requestHash:hash};
- const created=await supabase.from('ai_messages').insert({id:input.clientReadingId,conversation_id:conversationId,telegram_id:user,role:'assistant',message_type:'tarot_reading',request_id:`tarot:${input.clientReadingId}`,content:input.language==='ru'?'Открой карты по порядку. Посмотрим на вопрос с новой стороны.':'Reveal the cards in order. Let’s look at your question from another perspective.',metadata:{tarot:state}}).select(messageFields).maybeSingle();
+ const created=await supabase.from('ai_messages').insert({id:input.clientReadingId,conversation_id:conversationId,telegram_id:user,role:'assistant',message_type:'tarot_reading',request_id:`tarot:${input.clientReadingId}`,content:input.language==='ru'?'Открой карты по порядку. Посмотрим на вопрос с новой стороны.':'Reveal the cards in order. Let’s look at your question from another perspective.',metadata:{tarot:state,...(input.actionMessageId?{intelligence:{version:1,attachments:[],originActionId:input.actionMessageId}}:{})}}).select(messageFields).maybeSingle();
  if(created.error){if(created.error.code==='23505'){const m=await ownedMessage(user,input.clientReadingId);return response(user,m);}throw fail('reading_save_failed');}
  if(!created.data)throw fail('reading_save_failed');return response(user,created.data);
 }

@@ -1,10 +1,9 @@
-import {useState} from 'react';
-import type {AppLanguage} from '../api';
-import {type BreathPracticeId} from '../features/breathing/practices';
-import {useBreathPractices} from '../features/breathing/editorialPractices';
-import {PracticePicker} from '../features/breathing/PracticePicker';
-export function ChatBreathing({language,initial,registerBackHandler}:{language:AppLanguage;initial?:{practiceId:string;minutes:number};registerBackHandler?:(handler:(()=>void)|null)=>void}){
- const breathPractices=useBreathPractices();
- const [id,setId]=useState<BreathPracticeId>(breathPractices.find(p=>p.id===initial?.practiceId)?.id??'calm'),[minutes,setMinutes]=useState(initial&&[1,3,5,10].includes(initial.minutes)?initial.minutes:1),en=language==='en';const practice=breathPractices.find(p=>p.id===id)!;
- return <section className="luna33-workflow luna33-breath-card" data-testid="chat-breathing"><small>{en?'A moment of calm':'Минута спокойствия'}</small><h3>{practice.name[language]}</h3><p>{practice.description[language]}</p><PracticePicker value={id} onChange={setId} disabled={false} language={language} registerBackHandler={registerBackHandler}/><div className="luna34-breath-durations" role="group" aria-label={en?'Duration':'Длительность'}>{[1,3,5,10].map(n=><button type="button" key={n} aria-pressed={minutes===n} onClick={()=>setMinutes(n)}>{n} {en?'min':'мин'}</button>)}</div><p>{practice.timing[language]}</p><button type="button" className="luna33-primary" onClick={()=>window.dispatchEvent(new CustomEvent('luna-open-breathing',{detail:{practiceId:id,minutes}}))}>{en?'Start practice':'Начать практику'}</button><small>{en?'A wellbeing practice, not treatment. Breathe gently and stop if uncomfortable.':'Практика для самочувствия, не лечение. Дышите мягко и остановитесь при дискомфорте.'}</small></section>;
+import {saveBreathSession,type AppLanguage} from '../api';
+import {breathPractices,type BreathPracticeId} from '../features/breathing/practices';
+import {BreathPracticeSession} from '../features/breathing/BreathPracticeSession';
+type Completion=(mode:BreathPracticeId,duration:number,breaths:number,sessionId?:string)=>Promise<void>;
+export function ChatBreathing({language,initial,initData,onComplete,registerBackHandler,sessionKey}:{language:AppLanguage;initial?:{practiceId:string;minutes:number};initData?:string;onComplete?:Completion;registerBackHandler?:(handler:(()=>void)|null)=>void;sessionKey?:string}){
+ const practiceId=breathPractices.find(p=>p.id===initial?.practiceId)?.id??'calm',minutes=initial&&[1,3,5,10].includes(initial.minutes)?initial.minutes:1;
+ const complete:Completion=onComplete??(async(mode,duration_seconds,breath_count,session_id)=>{const date=new Date(),local_date=`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;await saveBreathSession({mode,duration_seconds,breath_count,session_id,local_date},initData);});
+ return <BreathPracticeSession embedded redesigned cacheKey={sessionKey} language={language} initial={{practiceId,minutes}} initData={initData} onComplete={complete} onClose={()=>{}} registerBackHandler={registerBackHandler} onOpenFull={(selectedPractice,selectedMinutes)=>window.dispatchEvent(new CustomEvent('luna-open-breathing',{detail:{practiceId:selectedPractice,minutes:selectedMinutes}}))}/>;
 }

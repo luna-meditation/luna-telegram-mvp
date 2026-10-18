@@ -26,6 +26,7 @@ const runtimeKeys = [
   'LUNA30_PREMIUM_ENTITLEMENTS_ENABLED','LUNA30_PREMIUM_ENABLED','LUNA30_ANNUAL_ENABLED','LUNA30_SEED_PACKAGES_ENABLED','LUNA30_SUPPORT_ENABLED','LUNA30_PAID_COMPATIBILITY_ENABLED','LUNA30_MONTHLY_QUOTAS_ENABLED',
   'LUNA34_COMMERCIAL_ENABLED','LUNA34_COMMERCIAL_QUOTAS_ENABLED','LUNA34_REFERRALS_ENABLED','ADMIN_TELEGRAM_ID',
   'AI_CHAT_MODEL','AI_CHAT_ENABLED','AI_MEMORY_ENABLED','AI_MAX_MESSAGES_PER_DAY',
+  'FEATURE_LUNA_INTELLIGENCE','AI_PROMPT_VERSION',
   'AI_PREMIUM_MAX_MESSAGES_PER_DAY','AI_MAX_OUTPUT_TOKENS','AI_REASONING_EFFORT','AI_REQUEST_TIMEOUT_MS',
   'LUNA32_ENABLED','AI_STRUCTURED_MAX_OUTPUT_TOKENS',
   'TAROT_AI_DAILY_LIMIT','TAROT_AI_GLOBAL_DAILY_LIMIT','TAROT_AI_MAX_OUTPUT_TOKENS','COMMIT_SHA'
@@ -84,6 +85,14 @@ export async function netlifyStagingHandler(request: Request, context: StagingCo
       // No public deployment diagnostics or configuration details.
       return Response.json({code:'staging_startup_failed'},{status:503,headers:{'Cache-Control':'private, no-store'}});
     }
+  }
+  // A finite operator test temporarily enables the existing staging budget.
+  // Keep public QA API generations closed for its whole window (including an
+  // interrupted worker). The worker calls owner-bound services directly with
+  // synthetic identities. Production never imports this adapter.
+  if(request.method==='POST'&&process.env.FEATURE_LUNA_INTELLIGENCE==='true'&&(/^\/api\/luna\/(?:messages|chat|voice)/.test(path)||/^\/api\/(?:tarot|astrology)\/.+(?:generate|interpret|reveal|report)/.test(path)||/^\/api\/luna43\/.+generate/.test(path))){
+    const {supabase}=await import('./db.js');const window=await supabase.from('luna30_qa_report_runs').select('result').eq('run_name','luna-intelligence-1-0-20261018-v1').maybeSingle();
+    if(window.error||window.data?.result?.providerWindowOpen)return Response.json({code:'qa_validation_in_progress'},{status:503,headers:{'Cache-Control':'private, no-store'}});
   }
   const query: Record<string,string[]> = {};
   for (const [key,value] of url.searchParams) (query[key] ??= []).push(value);

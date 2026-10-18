@@ -5,6 +5,7 @@ import test from 'node:test';
 
 const source = readFileSync(resolve(process.cwd(), 'src/features/breathing/practices.ts'), 'utf8');
 const app = readFileSync(resolve(process.cwd(), 'src/App.tsx'), 'utf8');
+const session = readFileSync(resolve(process.cwd(), 'src/features/breathing/BreathPracticeSession.tsx'), 'utf8');
 const styles = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
 
 test('all nine real breathing practices live in one timing configuration', () => {
@@ -20,9 +21,10 @@ test('all nine real breathing practices live in one timing configuration', () =>
 
 test('Breath Circle consumes shared timing and exposes active controls', () => {
   assert.match(app, /breathPractices/);
-  assert.match(app, /breathPhaseAt/);
-  for (const label of ['Pause', 'Resume', 'Restart']) assert.match(app, new RegExp(label));
-  const breathCircle = app.slice(app.indexOf('function BreathCirclePage'), app.indexOf('function MoonGardenScene'));
+  assert.match(app, /<BreathPracticeSession/);
+  assert.match(session, /breathPhaseAt/);
+  for (const label of ['Pause', 'Resume', 'Restart']) assert.match(session, new RegExp(label));
+  const breathCircle = session;
   assert.match(breathCircle, /practice\.guide\[language\]/);
   assert.match(breathCircle, /\[1, 3, 5, 10\]/);
   assert.doesNotMatch(breathCircle, /hasPremium|onPremium|⭐/);
@@ -34,7 +36,7 @@ test('Breath Circle uses a clearly visible calm scale range and phase feedback',
   assert.match(source, /0\.82 \+ progress \* 0\.54/);
   assert.match(source, /1\.36 - progress \* 0\.48/);
   assert.match(source, /phase\.kind === 'hold'\s*\? 1\.36/);
-  assert.match(app, /data-phase=\{hasStarted \|\| running \? phase\.kind : 'ready'\}/);
+  assert.match(session, /data-phase=\{hasStarted \|\| running \? phase\.kind : 'ready'\}/);
   assert.match(styles, /data-phase="inhale"/);
   assert.match(styles, /data-phase="exhale"/);
   assert.match(styles, /\.breath-circle-orbit::before/);

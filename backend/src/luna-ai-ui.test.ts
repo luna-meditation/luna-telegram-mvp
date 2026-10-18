@@ -60,8 +60,11 @@ test('recommended meditation ids render as one shared in-chat practice card', ()
   assert.match(source, /hasOwnProperty\.call\(metadata, 'meditationAction'\)/);
   assert.match(source, /meditations\.find\(\(item\) => item\.id === recommendationId\)/);
   assert.match(source, /message\.metadata\?\.recommendedMeditation/);
-  assert.match(source, /<ChatMeditationCard/);
-  assert.match(source, /onOpen=\{\(\) => onOpenMeditation\(recommendation,\{messageId:message\.id,referenceId:recommendation\.id\}\)\}/);
+  const renderer=readFileSync(resolve(process.cwd(),'../frontend/src/components/LunaAttachmentRenderer.tsx'),'utf8');
+  assert.match(source, /<LunaAttachmentRenderer/);
+  assert.equal((renderer.match(/<ChatMeditationCard/g)??[]).length,1);
+  assert.ok(source.includes('onOpenMeditation(meditation,{messageId:message.id,referenceId:meditation.id})'));
+  assert.ok(renderer.includes('onOpen={()=>props.onOpenMeditation(meditation)}'));
   assert.match(source, /event:'meditation_card_rendered'/);
   assert.match(card, /language === 'ru' \? 'Начать практику' : 'Start practice'/);
   assert.match(card, /language === 'ru' \? 'Бесплатно' : 'Free'/);

@@ -27,6 +27,7 @@ dist-refinement-preview/
 dist-premium-preview/
 qa/
 dist-staging/
+dist-intelligence-preview/
 supabase/.temp/
 build/
 .vite/

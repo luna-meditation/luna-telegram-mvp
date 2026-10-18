@@ -28,8 +28,9 @@ test('recommendation stays associated with its assistant message', () => {
 test('an explicit cleared meditation action cannot revive a stale legacy card', () => {
   assert.match(source, /hasOwnProperty\.call\(metadata, 'meditationAction'\)/);
   assert.match(source, /metadata\.meditationAction\?\.meditationId \?\? null/);
-  assert.match(source, /<ChatMeditationCard/);
-  assert.equal((source.match(/<ChatMeditationCard/g) ?? []).length, 1);
+  const renderer=readFileSync(resolve(process.cwd(),'src/components/LunaAttachmentRenderer.tsx'),'utf8');
+  assert.match(source, /<LunaAttachmentRenderer/);
+  assert.equal((renderer.match(/<ChatMeditationCard/g) ?? []).length, 1);
 });
 
 test('chat keeps all quick prompts in a horizontal rail and normalizes long generated titles', () => {
