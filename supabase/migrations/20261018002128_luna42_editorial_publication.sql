@@ -27,7 +27,9 @@ begin
  end if;
  perform pg_advisory_xact_lock(hashtextextended('luna40_content:'||p_kind||':'||p_key,0));
  select coalesce(max(version),0) into latest from public.luna40_content_versions where kind=p_kind and content_key=p_key;
- if latest<>p_expected then raise exception 'content_changed' using errcode='40001';end if;
+ -- This is an application version conflict, not a serialization failure.
+ -- PostgREST retries 40001 and eventually returns 503; PT409 returns once.
+ if latest<>p_expected then raise exception 'content_changed' using errcode='PT409';end if;
  select to_jsonb(h) into before_value from public.luna42_published_editorial h where kind=p_kind and content_key=p_key;
  insert into public.luna40_content_versions(kind,content_key,version,state,body,actor) values(p_kind,p_key,latest+1,p_state,p_body,p_actor);
  result_value:=jsonb_build_object('key',p_key,'version',latest+1,'state',p_state);

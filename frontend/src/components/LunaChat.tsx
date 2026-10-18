@@ -612,7 +612,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
           }}
           placeholder={quotaExhausted ? (language === 'ru' ? 'Баланс, покупки и история доступны' : 'Balance, purchases and history are available') : (language === 'ru' ? 'Напишите Luna...' : 'Message Luna...')}
         />
-        {featureFlags.ai_voice_input&&<LunaVoiceInput language={language} initData={initData} disabled={thinking||contextBusy||Boolean(draft.trim())} onBusy={setVoiceBusy} onTranscript={text=>{setDraft(text);textareaRef.current?.focus();}}/>}
+        {featureFlags.ai_voice_input&&<LunaVoiceInput language={language} initData={initData} disabled={thinking||contextBusy||Boolean(draft.trim())} onBusy={setVoiceBusy} onTranscript={text=>{setDraft(text);requestAnimationFrame(()=>textareaRef.current?.focus());}}/>}
         <button type="submit" disabled={!draft.trim() || thinking || contextBusy || voiceBusy || quotaExhausted&&!commerceIntent(draft)} aria-label={language === 'ru' ? 'Отправить' : 'Send'}><Send size={17} /></button>
       </form>
     </section>

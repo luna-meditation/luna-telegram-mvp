@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';import {createHmac,randomUUID} from 'node:crypto';
 import {authorizeLuna32Smoke,luna32StagingSite} from '../dist/luna32-staging-guard.js';
 import {protectedStateFingerprint} from './luna31-financial-guard.mjs';
-const runName='luna42-voice-http-20261018-v2',qaOwner=158467796;
+const runName='luna42-voice-http-20261018-v3',qaOwner=158467796;
 const must=async q=>{const r=await q;assert.ifError(r.error);return r.data;};
 export async function run(request,context,options){
  if(!authorizeLuna32Smoke(request,context.site?.id,options)||Netlify.env.get('SUPABASE_URL')!=='https://funvzpmpbgazsisehiru.supabase.co')return new Response(null,{status:403});
@@ -12,7 +12,7 @@ export async function run(request,context,options){
  const stored=await must(db.from('luna30_qa_report_runs').select('state,result').eq('run_name',runName).maybeSingle());
  if(options.readOnly)return Response.json(stored??{state:'not_started',result:null},{headers:{'Cache-Control':'private, no-store'}});
  if(stored)return new Response(null,{status:204});
- const prior=await must(db.from('luna30_qa_report_runs').select('state,result').eq('run_name','luna42-voice-http-20261018-v1').single());assert.equal(prior.state,'failed');assert.equal(prior.result.providerCalls,0);assert.equal(prior.result.spentMicrousd,0);assert.equal(prior.result.heldMicrousd,0);
+ const prior=await must(db.from('luna30_qa_report_runs').select('state,result').eq('run_name','luna42-voice-http-20261018-v2').single());assert.equal(prior.state,'failed');assert.equal(prior.result.providerCalls,0);assert.equal(prior.result.spentMicrousd,0);assert.equal(prior.result.heldMicrousd,0);
  const result={status:'RUNNING',sourceCommit:options.sourceCommit,grantId:options.grantId,qaOwner,expiresAt:options.expiresAt,providerCalls:0,spentMicrousd:0,heldMicrousd:0,requestIds:[],checks:[],cms:[],voice:[],productionTouched:false,paymentOrSeedsChanged:false};
  const claim=await db.from('luna30_qa_report_runs').insert({run_name:runName,state:'running',result});if(claim.error?.code==='23505')return new Response(null,{status:204});assert.ifError(claim.error);
  const state=async()=>(await must(db.from('luna30_qa_report_runs').select('result').eq('run_name',runName).single())).result;
@@ -33,7 +33,7 @@ export async function run(request,context,options){
     const draft=await publish('draft',body),replay=await api('/api/admin/v4/content',draft.input);assert.deepEqual(replay.data,draft.r.data);
     assert.deepEqual((await must(db.from('luna42_published_editorial').select('body').eq('kind',kind).eq('content_key',key).maybeSingle()))?.body,priorPublished);
     await publish('published',body);const publicResult=await api('/api/content/editorial');assert.equal(publicResult.status,200);assert.deepEqual(publicResult.data.entries.find(e=>e.kind===kind&&e.key===key).body,body);
-    const conflict=await api('/api/admin/v4/content',{...draft.input,requestId:randomUUID()});assert.equal(conflict.status,409);
+    const conflict=await api('/api/admin/v4/content',{...draft.input,requestId:randomUUID()});assert.equal(conflict.status,409,`cms_conflict_${kind}_${conflict.data.code??'unknown'}`);
     const invalid=await api('/api/admin/v4/content',{...draft.input,requestId:randomUUID(),expectedVersion:await latest(),body:{...body,price:1}});assert.ok([400,422].includes(invalid.status));
     result.cms.push({kind,status:'PASS',savePublishReadReopenReplay:true,staleAndFinancialFieldsRejected:true});
    }finally{
