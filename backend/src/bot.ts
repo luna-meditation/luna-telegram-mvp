@@ -21,6 +21,7 @@ import {createLuna30Commerce} from './luna30-commerce.js';
 import {supabase} from './db.js';
 import {FoundationError} from './foundation-error.js';
 import {botLanguage,luna35BotCopy,welcomeKeyboard,botCommands,miniAppLink} from './luna35-bot-policy.js';
+import {readPublishedEditorial} from './luna42-editorial.js';
 import {recordFunnel} from './luna35-funnel.js';
 
 export const bot = new Telegraf(env.BOT_TOKEN);
@@ -199,8 +200,10 @@ bot.start(async (ctx) => {
   if(env.LUNA30_REFERRALS_ENABLED&&ctx.from?.id&&ctx.startPayload){try{await attributeValidatedReferral(ctx.from.id,ctx.startPayload);}catch(error){logBackendError(error,{endpoint:'Luna bot referral attribution'});}}
   const language = botLanguage(ctx.from?.language_code);
   const reply_markup=welcomeKeyboard(env.BOT_USERNAME,language,ctx.startPayload??'');
-  try{await ctx.replyWithPhoto(new URL('/images/home/luna35-bot-welcome.jpg',env.MINI_APP_URL).toString(),{caption:luna35BotCopy[language].welcome,reply_markup});}
-  catch{await ctx.reply(luna35BotCopy[language].welcome,{reply_markup});}
+  const editorial=(await readPublishedEditorial(supabase,env.SUPABASE_URL).catch(()=>[])).find(e=>e.kind==='bot'&&e.key==='welcome');
+  const welcome=editorial?editorial.body.title[language]+'\n\n'+editorial.body.description[language]:luna35BotCopy[language].welcome;
+  try{await ctx.replyWithPhoto(new URL(editorial?.body.image??'/images/home/luna35-bot-welcome.jpg',env.MINI_APP_URL).toString(),{caption:welcome,reply_markup});}
+  catch{await ctx.reply(welcome,{reply_markup});}
   if(ctx.from)await recordFunnel(supabase,ctx.from.id,'bot_welcome_sent',String(ctx.update.update_id),'bot');
 });
 

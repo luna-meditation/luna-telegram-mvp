@@ -1,6 +1,6 @@
 import {memo,useCallback,useRef,useState} from 'react';
 import {revealLunaTarot,type AppLanguage,type LunaMessage} from '../../api';
-import {tarotDeck} from './deck';
+import {useTarotDeck} from './editorialDeck';
 import {TarotCard} from './TarotCard';
 import {TarotDetails} from './TarotDetails';
 import {TarotAiInterpretation} from './TarotAiInterpretation';
@@ -11,6 +11,7 @@ import './tarot.css';
 
 const shortPositions={en:{1:['Main perspective'],3:['Situation','Focus','Direction'],5:['Question','Influences','Obstacles','Opportunities','Next step']},ru:{1:['Основной взгляд'],3:['Ситуация','Внимание','Направление'],5:['Суть','Факторы','Препятствия','Возможности','Следующий шаг']}};
 export const ChatTarotReading=memo(function ChatTarotReading({message,language,initData,onUpdate,registerBackHandler}:{message:LunaMessage;language:AppLanguage;initData?:string;onUpdate:(message:LunaMessage)=>void;registerBackHandler?:(handler:(()=>void)|null)=>void}){
+ const tarotDeck=useTarotDeck();
  const state=message.metadata?.tarot,reading=state?.reading,en=language==='en';
  const cards=reading?(reading.cards?.length?reading.cards:[{cardId:reading.card_id,orientation:reading.orientation}]):[];
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[zoom,setZoom]=useState<number|null>(null),lock=useRef(false);

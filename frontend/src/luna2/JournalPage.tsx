@@ -3,10 +3,11 @@ import {ArrowUpRight,BookOpen,NotebookPen,Sparkles,Smile} from 'lucide-react';
 import {getUniverse,listTarotReadings,type PersonalMemory,type AppLanguage,type Meditation,type PlaybackHistory,type TarotReading,type WellnessSummary} from '../api';
 import {featureFlags} from '../config/featureFlags';
 import {SectionBack} from './ExplorePage';
-import {tarotDeck} from '../features/tarot/deck';
+import {useTarotDeck} from '../features/tarot/editorialDeck';
 import {TarotImage as OptimizedImage} from '../features/tarot/TarotImage';
 
 export function JournalPage({language,history,meditations,wellness,onBack,onOpen,initData,onReading}:{language:AppLanguage;history:PlaybackHistory[];meditations:Meditation[];wellness:WellnessSummary|null;onBack:()=>void;onOpen:(m:Meditation)=>void;initData?:string;onReading:(r:TarotReading)=>void}){
+ const tarotDeck=useTarotDeck();
  const en=language==='en';
  const [filter,setFilter]=useState('all'),[readings,setReadings]=useState<TarotReading[]>([]),[next,setNext]=useState<number|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState(false);
  const [reflections,setReflections]=useState<PersonalMemory[]>([]);

@@ -5,7 +5,7 @@ export type TarotSuit = 'wands' | 'cups' | 'swords' | 'pentacles';
 export type TarotOrientation = 'upright' | 'reversed';
 export type TarotCardDefinition = {
  id: string; name: {en:string;ru:string}; arcana:'major'|'minor'; suit:TarotSuit|null; number:number; rank:string|null;
- image:string; width:number; height:number;
+ image:string; width:number; height:number;editorialDescription?:{en:string;ru:string};
  meaning:{en:Record<TarotOrientation,string>;ru:Record<TarotOrientation,string>};
 };
 

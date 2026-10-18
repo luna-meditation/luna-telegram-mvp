@@ -3,7 +3,7 @@ import {RotateCcw,Sparkles} from 'lucide-react';
 import {SectionBack} from '../../luna2/ExplorePage';
 import {featureFlags} from '../../config/featureFlags';
 import {saveTarotSpread,type AppLanguage} from '../../api';
-import {tarotDeck} from './deck';
+import {useTarotDeck} from './editorialDeck';
 import {TarotCard,TarotCardBack} from './TarotCard';
 import {TarotDetails} from './TarotDetails';
 import {TarotAiInterpretation} from './TarotAiInterpretation';
@@ -14,6 +14,7 @@ import type {TarotSession,TarotAction} from './session';
 import {tarotPositions as positions} from './positions';
 import {noteCompletedReading} from '../progress/evidence';
 export function TarotSpread({kind,language,initData,session,dispatch,onContinue,registerBackHandler}:{kind:SpreadKind;language:AppLanguage;initData?:string;session:TarotSession;dispatch:Dispatch<TarotAction>;onContinue?:(id:string)=>void;registerBackHandler:(handler:(()=>void)|null)=>void}){
+ const tarotDeck=useTarotDeck();
  const state=session.spreads?.[kind]??createSpreadSession(kind),size=kind==='three'?3:5,en=language==='en',t=tarotCopy[language];
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[zoom,setZoom]=useState<number|null>(null);const pending=useRef(false),choiceLock=useRef(new Set<number>()),alive=useRef(true);
  const send=(action:SpreadAction)=>dispatch({type:'spread',kind,action});

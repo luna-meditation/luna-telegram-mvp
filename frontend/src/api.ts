@@ -82,6 +82,7 @@ export type AccessState = {
 };
 
 export type AppLanguage = 'en' | 'ru';
+export const getPublishedEditorial=(initData?:string)=>request<{entries:import('../../backend/src/luna42-editorial-contract').EditorialEntry[]}>('/api/content/editorial',undefined,initData);
 export type RelationshipKind='romantic'|'business'|'friendship'|'family';
 export type BirthLocation={placeId:string;label:string;latitude:number;longitude:number;timezone:string;provider:string;confirmed:true};
 export type BirthProfile={id:string;subject_kind:'self'|'other';display_label:string;birth_date:string;birth_time:string|null;location:BirthLocation;revision:number;created_at:string;updated_at:string};

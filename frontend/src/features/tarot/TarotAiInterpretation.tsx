@@ -1,7 +1,8 @@
 import {ArrowRight,Sparkles} from 'lucide-react';
 import type {AppLanguage,TarotReading} from '../../api';
-import {tarotDeck} from './deck';
+import {useTarotDeck} from './editorialDeck';
 export function TarotAiInterpretation({reading,language,onContinue}:{reading:TarotReading;language:AppLanguage;onContinue?:(id:string)=>void}){
+ const tarotDeck=useTarotDeck();
  const ai=reading.interpretation;if(!ai||reading.status!=='ready')return null;
  const en=language==='en',v2=ai.version===2,action=v2?ai.actions?.[0]:ai.reflection;
  // Presentation only: historical interpretations remain intact, with no regeneration.

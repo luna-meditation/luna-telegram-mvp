@@ -4,7 +4,7 @@ import {History,Sparkles,Trash2} from 'lucide-react';
 import {saveTarotReading,listTarotReadings,deleteTarotReading,type AppLanguage,type TarotReading} from '../../api';
 import {noteCompletedReading} from '../progress/evidence';
 import {featureFlags} from '../../config/featureFlags';
-import {tarotDeck} from './deck';
+import {useTarotDeck} from './editorialDeck';
 import type {TarotSession,TarotAction} from './session';
 import {TarotAiInterpretation} from './TarotAiInterpretation';
 const messages={
@@ -12,6 +12,7 @@ const messages={
  ru:{history:'История раскладов',empty:'Здесь появятся сохранённые расклады.',load:'Загрузить ещё',error:'Не удалось подключиться. Локальный расклад остаётся доступным.',remove:'Удалить этот расклад и вопрос?',ai:'Осмыслить с Luna AI',notice:'Карта и вопрос будут отправлены в OpenAI. Предпочтения добавляются только с вашего согласия в профиле. Этот бесплатный ответ не расходует Moon Seeds.',pending:'Luna размышляет…',unavailable:'AI недоступен. Ниже показана локальная интерпретация.',limit:'Сегодняшний лимит AI исчерпан. Локальное значение остаётся доступным.',fallback:'Luna не смогла подготовить ответ. Доступно локальное значение; повторной генерации этого расклада не будет.',saved:'Сохранено приватно',local:'Сохранить расклад',continue:'Продолжить с Luna AI',sections:['Личный вывод','Значение карты','В контексте вопроса','Практическая мысль','Вопрос для вас'],safety:'Ваша безопасность важнее расклада. При непосредственной опасности или экстренной медицинской ситуации обратитесь в местную экстренную службу и к человеку, которому доверяете. Luna не может оказать экстренную помощь.',loading:'Загрузка…'}
 };
 export function TarotHistory({language,initData,dispatch,initiallyOpen=false}:{language:AppLanguage;initData?:string;dispatch:Dispatch<TarotAction>;initiallyOpen?:boolean}){
+ const tarotDeck=useTarotDeck();
  const t=messages[language];const [open,setOpen]=useState(initiallyOpen),[rows,setRows]=useState<TarotReading[]>([]),[next,setNext]=useState<number|null>(null),[busy,setBusy]=useState(false),[error,setError]=useState('');
  async function load(offset=0){setBusy(true);setError('');try{const result=await listTarotReadings(offset,initData);setRows(current=>offset?[...current,...result.readings]:result.readings);setNext(result.nextOffset);}catch{setError(t.error);}finally{setBusy(false);}}
  useEffect(()=>{if(initiallyOpen)void load();},[initiallyOpen,initData]);

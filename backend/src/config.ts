@@ -34,6 +34,7 @@ const envSchema = z.object({
   STAGING_SUPABASE_PROJECT_REF: z.string().optional(),
   STAGING_ACCESS_PASSWORD: z.string().optional(),
   STAGING_TELEGRAM_IDS: z.string().optional(),
+  STAGING_VOICE_QA_GRANT_ID:z.string().uuid().optional(),
   FEATURE_GARDEN_ATOMIC: envBoolean.default(false),
   FEATURE_PERSONALIZATION: envBoolean.default(false),
   FEATURE_PERSONAL_MEMORY: envBoolean.default(false),
@@ -103,6 +104,7 @@ const envSchema = z.object({
 export const env = envSchema.parse(process.env);
 if(env.FEATURE_ADMIN_V4_MUTATIONS&&!env.LUNA32_ENABLED)throw new Error('Admin mutation activation requires the existing verified AI accounting guard.');
 assertStagingIsolation(env);
+if(env.STAGING_VOICE_QA_GRANT_ID&&(!env.STAGING_MODE||env.STAGING_SUPABASE_PROJECT_REF!=='funvzpmpbgazsisehiru'||env.STAGING_TELEGRAM_IDS!=='158467796'))throw new Error('Voice QA grants are restricted to the existing isolated QA environment.');
 
 export const telegramAppUrl =
   `https://t.me/${env.BOT_USERNAME}?startapp`;

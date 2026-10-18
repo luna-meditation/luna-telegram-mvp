@@ -119,5 +119,6 @@ export async function runLunaToolTurn<T extends ToolResponse>(request:Record<str
  const output=[];for(const call of calls){const result=await tools.executeResult(call.name!,call.arguments!);if(result.status==='failed')throw new FoundationError(result.error?.retryable?503:422,result.error?.retryable?'tool_execution_failed':'tool_context_required','The application action could not be verified. No success was recorded.');output.push({type:'function_call_output',call_id:call.call_id,output:JSON.stringify(result)});}
  const final=await invoke({...request,include,input:[...request.input,...first.output??[],...output],tools:tools.definitions,tool_choice:'none',parallel_tool_calls:false});
  if(final.output?.some(c=>c.type==='function_call'))throw new FoundationError(502,'ai_tool_round_limit','The provider exceeded the tool boundary.');
- return final;
+ const usage=sumToolTurnUsage(first.usage,final.usage);
+ return usage?{...final,usage}:final;
 }

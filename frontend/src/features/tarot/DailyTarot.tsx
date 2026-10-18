@@ -2,7 +2,7 @@ import {useEffect,useRef,useState,type Dispatch} from 'react';
 import {RotateCcw,Sparkles} from 'lucide-react';
 import {SectionBack} from '../../luna2/ExplorePage';
 import {openDailyTarot,ApiRequestError,type AppLanguage} from '../../api';
-import {tarotDeck} from './deck';
+import {useTarotDeck} from './editorialDeck';
 import {TarotCard,TarotCardBack} from './TarotCard';
 import {TarotDetails} from './TarotDetails';
 import {TarotAiInterpretation} from './TarotAiInterpretation';
@@ -11,6 +11,7 @@ import {LunaShareButton} from '../sharing/LunaShareButton';
 import {noteCompletedReading} from '../progress/evidence';
 
 export function DailyTarot({language,initData,session,dispatch,onContinue,registerBackHandler}:{language:AppLanguage;initData?:string;session:TarotSession;dispatch:Dispatch<TarotAction>;onContinue?:(id:string)=>void;registerBackHandler:(handler:(()=>void)|null)=>void}){
+ const tarotDeck=useTarotDeck();
  const en=language==='en',daily=session.daily,reading=daily?.reading;
  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[gone,setGone]=useState(false),[revealed,setRevealed]=useState(reading?.status==='ready'),[zoom,setZoom]=useState(false);
  const lock=useRef(false),alive=useRef(true);

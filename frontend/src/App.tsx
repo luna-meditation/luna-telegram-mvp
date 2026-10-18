@@ -146,6 +146,8 @@ import { useAppRouteState } from './navigation/useAppRouteState';
 import { createTarotSession, reduceTarotSession } from './features/tarot/session';
 import { formatMeditationDuration } from './utils/duration';
 import { breathCycleSeconds, breathPhaseAt, breathPhaseLabel, breathPractices, type BreathPracticeId } from './features/breathing/practices';
+import {useEditorialLoader} from './editorial';
+import {useBreathPractices} from './features/breathing/editorialPractices';
 import { HomeV2 } from './v2/pages/HomeV2';
 import { ExplorePage, FeaturePreview, SectionBack, type ExploreCategory } from './luna2/ExplorePage';
 import { ProfileOverview } from './luna2/ProfileOverview';
@@ -1807,6 +1809,7 @@ function App() {
   const runtimeDiagnostics = useRuntimeDiagnostics();
   const user = telegram?.initDataUnsafe.user ?? fallbackUser;
   const initData = telegram?.initData;
+  useEditorialLoader(initData);
   useEffect(()=>{if(initData)void recordLuna35Launch(initData).catch(()=>undefined);},[initData]);
   const launchStartParam = miniAppStartParam();
   const launchDestination=parseLaunchDestination(launchStartParam).destination;
@@ -4566,12 +4569,18 @@ function BreathCirclePage({
   const startedAtRef = useRef<number | null>(launch?Date.now():null);
   const [sessionStarted, setSessionStarted] = useState(Boolean(launch));
   const breathAudio=useBreathAudio(redesigned&&featureFlags.breathwork_audio,language,featureFlags.breathwork_guided,()=>setRunning(false));
-  useEffect(()=>{if(launch)breathAudio.start();},[]);
   useEffect(()=>{if(!running)breathAudio.pause();},[running]);
   const durationSeconds = minutes * 60;
-  const practice = breathPractices.find((item) => item.id === mode) ?? breathPractices[0];
+  const currentPractices=useBreathPractices();
+  const selectedPractice=currentPractices.find(item=>item.id===mode)??currentPractices[0];
+  // An editor publishing while this screen is open cannot change an active
+  // session's timing. Pause/resume uses the same snapshot until reset.
+  const practiceSnapshot=useRef(selectedPractice);
+  if(!sessionStarted)practiceSnapshot.current=selectedPractice;
+  const practice=practiceSnapshot.current;
+  useEffect(()=>{if(launch)breathAudio.start(practice);},[]);
   const phase = breathPhaseAt(practice, elapsed);
-  useEffect(()=>{breathAudio.cue(mode,elapsed,running);},[mode,elapsed,running,language,breathAudio.mode]);
+  useEffect(()=>{breathAudio.cue(practice,elapsed,running);},[practice,elapsed,running,language,breathAudio.mode]);
   const hasStarted = (redesigned ? sessionStarted : elapsed > 0) && !done;
   const proof=useRef<{clientId:string;promise?:Promise<{id:string}>;previous?:Promise<unknown>}>({clientId:crypto.randomUUID()});
   const ensureProof=()=>{const current=proof.current;return current.promise??(current.promise=Promise.resolve(current.previous).then(()=>startVerifiedBreath(current.clientId,mode,durationSeconds,initData)));};
@@ -4605,7 +4614,7 @@ function BreathCirclePage({
 
   const startOrResume = () => {
     if(done||!sessionStarted)resetProof();
-    breathAudio.start();
+    breathAudio.start(practice);
     const resumeElapsed = done ? 0 : elapsed;
     setSavingError('');
     setDone(false);
@@ -4624,6 +4633,7 @@ function BreathCirclePage({
     setSavingError('');
     startedAtRef.current = null;
     setSessionStarted(false);
+    breathAudio.reset();
   };
 
   return (
@@ -4666,7 +4676,7 @@ function BreathCirclePage({
         {redesigned?<PracticePicker value={mode} onChange={setMode} disabled={running||hasStarted} language={language} registerBackHandler={registerBackHandler}/>:<label className="breath-practice-select">
           <span>{language === 'en' ? 'Practice' : 'Практика'}</span>
           <select value={mode} onChange={(event) => setMode(event.currentTarget.value as BreathMode)} disabled={running || hasStarted} aria-label={language === 'en' ? 'Breathing practice' : 'Дыхательная практика'}>
-            {breathPractices.map((item) => <option key={item.id} value={item.id}>{item.name[language]} — {item.timing[language]}</option>)}
+            {currentPractices.map((item) => <option key={item.id} value={item.id}>{item.name[language]} — {item.timing[language]}</option>)}
           </select>
         </label>}
         <details className="breath-practice-guide">

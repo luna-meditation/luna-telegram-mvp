@@ -2,7 +2,7 @@ import {useCallback,useEffect,useRef,useState,type Dispatch,type CSSProperties} 
 import {Compass,Heart,Briefcase,Leaf,Sparkles,Scan,RotateCcw,ArrowRight} from 'lucide-react';
 import type {AppLanguage} from '../../api';
 import {SectionBack} from '../../luna2/ExplorePage';
-import {tarotDeck} from './deck';
+import {useTarotDeck} from './editorialDeck';
 import {prepareCardChoices,randomIndex} from './draw';
 import {TarotCard,TarotCardBack} from './TarotCard';
 import {TarotDetails} from './TarotDetails';
@@ -20,6 +20,7 @@ import './tarot.css';
 
 const intentionIcons={general:Compass,love:Heart,career:Briefcase,growth:Leaf};
 export default function TarotPage({language,onBack,session,dispatch,registerBackHandler,initData,onContinue}:{language:AppLanguage;onBack:()=>void;session:TarotSession;dispatch:Dispatch<TarotAction>;registerBackHandler:(handler:(()=>void)|null)=>void;initData?:string;onContinue?:(id:string)=>void}){
+ const tarotDeck=useTarotDeck();
  const t=tarotCopy[language];
  const [error,setError]=useState(false),[coverFailed,setCoverFailed]=useState(false),[coverAttempt,setCoverAttempt]=useState(0),[zoom,setZoom]=useState(false);
  const heading=useRef<HTMLHeadingElement>(null),selectionLocked=useRef(false),shuffleLocked=useRef(false);

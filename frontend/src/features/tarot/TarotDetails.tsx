@@ -36,5 +36,6 @@ export function TarotDetails({card,orientation,language,position,onClose,registe
   <p className="tarot-orientation-pill">{t[orientation]}</p>
   {position&&<p className="tarot-details-position">{position}</p>}
   <p className="tarot-details-meaning">{card.meaning[language][orientation]}</p>
+  {card.editorialDescription&&<small>{card.editorialDescription[language]}</small>}
  </div></div>,document.body);
 }
