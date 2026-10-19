@@ -137,3 +137,38 @@ AI-тесты этого цикла: 0 вызовов, $0.
 открытие финальной карты до текста AI и бесплатное повторное открытие; источники
 натальной карты/чисел, пару правильных профилей, RU/EN и запись/edit голосового
 сообщения. Реальные покупки автоматически не инициировались.
+
+## Фактическая публикация — 20 октября 2026, 03:00 Makassar
+
+**Опубликовано и технически проверено**, но субъективная приёмка живого диалога
+на физическом iPhone остаётся за владельцем.
+
+- Приложение: https://luna-telegram-miniapp.netlify.app/
+- Существующий бот: https://t.me/lunameditation_bot (username не заменялся без
+  подтверждения BotFather; аккаунты и token identity сохранены).
+- Release PR: https://github.com/luna-meditation/luna-telegram-mvp/pull/34
+- Production commit: `3f153f100419f38df82c4d58c7eca8e57201ca1d`.
+- Точное дерево исходников: `5214f39f16ab9cad3878d9442a07f7261a5e108a`;
+  source digest: `ee00d62cb93ff61bc894c6205d77865dc98d0a598eeb58c913add92ace50a6a4`.
+- Netlify deploy: `6ad668c137e7e5aa2c7c5339`, ready, production.
+- Railway backend: `eb91976d-326e-4126-a9fd-b39cd049931d`, SUCCESS, точный release SHA.
+- Production frontend publications: **1**; staging publications: **0**;
+  Netlify cloud builds: **0**. Одна существующая Railway backend-сборка.
+- Публичный smoke: **102 PASS** — 4 SPA-маршрута, точные хэши 19 JS/CSS-файлов,
+  HEAD 200 image/webp для 78 карт и рубашки, published deploy ID, unchanged staging.
+- Backend smoke: **9 PASS** — health/commit/model/Supabase/Telegram startup и
+  8 реальных API-маршрутов, отвергающих запросы без авторизации с 401.
+- Защищённые финансовые хэши после публикации совпали с дорелизными. $100 cap,
+  generation enabled, действующая Beta и её окончание не менялись.
+- Реальные AI/STT provider-тесты: **0**, стоимость **$0**; production QA-записей
+  и реальных тестовых платежей: **0**. Фактическая новая provider latency/стоимость
+  живой интерпретации в этом цикле не измерялась и не подменяется старыми цифрами.
+- Netlify billing после публикации ещё показывал 238.3 remaining и 81 deploy:
+  панель предупреждает о задержке учёта. Одна новая публикация добавляет обычные
+  15 кредитов; ожидаемый остаток около 223.3 до нового трафика, не подтверждённый
+  точный итог счёта. Планы и auto-recharge не изменялись.
+
+Техническая проверка не включала чтение чужих чатов через Telegram или создание
+синтетических пользователей в production. На iPhone надо проверить живые ответы,
+запись RU/EN, keyboard/safe areas и естественность дальнейших вопросов. Отчётные
+изменения после публикации — только документация, не второй runtime-релиз.
