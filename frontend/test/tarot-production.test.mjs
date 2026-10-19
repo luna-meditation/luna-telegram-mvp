@@ -7,8 +7,8 @@ test('only the approved frontend flags are enabled in the production context',()
  const config=text('../netlify.toml');
  assert.match(config,/\[context.production\][\s\S]*build:production/);
  const production=config.split('[context.production.environment]')[1].split('[[redirects]]')[0];
- assert.match(production,/LUNA_RELEASE_PROFILE = "luna4-completion"/);
- assert.match(production,/LUNA_RELEASE_DB_REVIEW = "\.\.\/qa\/luna4-completion-release-review.json"/);
+ assert.match(production,/LUNA_RELEASE_PROFILE = "luna5"/);
+ assert.match(production,/LUNA_RELEASE_DB_REVIEW = "\.\.\/qa\/luna5-release-review.json"/);
  assert.match(production,/VITE_FEATURE_LUNA_INTELLIGENCE = "true"/);
  assert.match(text('scripts/build-production.mjs'),/verifyLunaIntelligenceReleaseEvidence/);
  assert.match(production,/VITE_FEATURE_ADMIN_V4 = "true"/);
@@ -20,6 +20,7 @@ test('only the approved frontend flags are enabled in the production context',()
  for(const key of ['NEW_NAVIGATION','TAROT_DAILY','TAROT_SPREADS','AI_CENTRAL_EXPERIENCE','ASTROLOGY','BREATHWORK_AUDIO','MOON_SEEDS_WALLET_V2','MOON_SEEDS_PURCHASES','TAROT_PAID_READINGS','PAYMENT_ATOMIC'])assert.match(production,new RegExp(`VITE_FEATURE_${key} = "true"`));
  for(const key of ['ECONOMY_REWARDS_V2','PREMIUM_V2'])assert.match(production,new RegExp(`VITE_FEATURE_${key} = "true"`));
  assert.match(text('scripts/build-production.mjs'),/if\(profile==='luna4-completion'\)[\s\S]*verifyLuna4CompletionEvidence/);
+ assert.match(text('scripts/build-production.mjs'),/if\(profile==='luna5'\)[\s\S]*verifyLuna5ReleaseEvidence/);
  assert.match(text('src/config/featureFlagDefinitions.ts'),/source\[featureFlagEnvironment\[key\]\] \?\? ''/);
 });
 test('stable Tarot image URLs cache without an immutable stale-art trap or frame blocking',()=>{

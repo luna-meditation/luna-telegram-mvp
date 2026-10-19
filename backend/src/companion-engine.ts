@@ -5,6 +5,10 @@ import {toolOperationId} from './luna40-actions.js';
 import {cosmosDomainSummary} from './luna42-cosmos-domain.js';
 import {potentiallySensitive,containsCredential,type PersonalMemory} from './personal-memory-policy.js';
 import {companionSettingsKey,companionPreference} from './companion-policy.js';
+import {createHash} from 'node:crypto';
+import {dailyEntryVersion,localCalendarDate,solarDailyReflection,type DailyPersonalEntry} from './daily-personal-entry.js';
+import type {readPersonalPortrait} from './personal-portrait.js';
+import {astrologyEngineMetadata} from './luna30-astrology-engine.js';
 export {companionSettingsKey,companionPreference} from './companion-policy.js';
 type Data={profile:{display_name?:string|null;ai_context_consent:boolean};memoryEnabled:boolean;memories:PersonalMemory[]};
 type StarterMeta={version:1;operationId:string;state:'selected'|'displayed'|'responded'|'dismissed'|'expired';reason:'welcome'|'confirmed_goal';sourceId:string|null;sourceRevision:number|null;selectedAt:string;expiresAt:string};
@@ -20,11 +24,28 @@ export function companionMessage(language:'en'|'ru',name:string|null,candidate:P
 }
 /** Reuse existing owner-bound conversation/message storage. No second memory
  * store, no private text in telemetry, no provider call and no external push. */
-export function createCompanionEngine(db:SupabaseClient,load:(owner:number)=>Promise<Data>){
+export function createCompanionEngine(db:SupabaseClient,load:(owner:number)=>Promise<Data>,options?:{portrait:(owner:number,localDate:string)=>ReturnType<typeof readPersonalPortrait>}){
  return{
   async open(owner:number,raw:unknown,now=new Date()){
-   const input=z.object({operationId:z.string().uuid(),language:z.enum(['en','ru']),conversationId:z.string().uuid().optional()}).strict().parse(raw);
+   const input=z.object({operationId:z.string().uuid(),language:z.enum(['en','ru']),conversationId:z.string().uuid().optional(),entryOnly:z.boolean().optional(),timeZone:z.string().max(100).refine(value=>{try{localCalendarDate(new Date(),value);return true;}catch{return false;}},'Use a valid IANA timezone.').default('UTC')}).strict().parse(raw);
    if(!Number.isSafeInteger(owner)||owner<=0)throw new FoundationError(403,'owner_required','Open Luna inside Telegram.');
+   if(input.entryOnly){
+    // Only an empty entry may request this projection. Never append a daily
+    // greeting to an ongoing thread and never create an empty conversation.
+    if(input.conversationId)return{conversationId:null,message:null};
+    const data=await load(owner),localDate=localCalendarDate(now,input.timeZone),en=input.language==='en';
+    const allowed=data.memoryEnabled&&data.profile.ai_context_consent,settings=companionPreference(data.memories);
+    const portrait=allowed&&options?await options.portrait(owner,localDate):null;
+    const sun=portrait?.chart?.facts.planets.find(p=>p.planet.toLowerCase()==='sun'),english=['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'];
+    const reflection=portrait&&settings.dailyAstrology?solarDailyReflection({language:input.language,localDate,sunSigns:sun?sun.signs.map(value=>english.indexOf(value)):portrait.dateOnlySun?.sunSigns??[],source:sun?'saved_chart':'date_only_sun'}):null;
+    const name=allowed?data.profile.display_name?.trim().slice(0,60):null;
+    const key=createHash('sha256').update(JSON.stringify({owner,localDate,timeZone:input.timeZone,language:input.language,epoch:portrait?.persistence.state==='saved'?portrait.persistence.sourceEpoch:null,birthVersion:portrait?.persistence.state==='saved'?portrait.persistence.sectionDigests.astrology:null,version:dailyEntryVersion,calculationVersion:astrologyEngineMetadata.version})).digest('hex');
+    let candidate=!reflection?selectCompanionCandidate(data,[],now.getTime()):null;
+    if(candidate){const past=await db.from('ai_messages').select('metadata').eq('telegram_id',owner).eq('role','assistant').contains('metadata',{companionStarter:{sourceId:candidate.id}}).order('created_at',{ascending:false}).limit(20);if(past.error)throw new FoundationError(503,'companion_unavailable','Could not verify your follow-up preference.');candidate=selectCompanionCandidate(data,(past.data??[]).map(row=>row.metadata.companionStarter as StarterMeta),now.getTime());}
+    const question=reflection?'':candidate?(en?`You chose to keep this goal in view: “${cosmosDomainSummary(candidate.memory_value).slice(0,140)}”. Is that what you would like to talk about, or is something else more important today?`:`У тебя есть сохранённая цель: «${cosmosDomainSummary(candidate.memory_value).slice(0,140)}». Хочешь поговорить о ней или сегодня важнее другое?`):portrait?.birth.available?(en?'What would you like to explore today?':'Что тебе хочется исследовать сегодня?'):(en?'We can simply talk, or explore your personal portrait together — no form required. What matters to you today?':'Можем просто поговорить или вместе исследовать твой личный портрет — без анкеты. Что для тебя сейчас важно?');
+    const entry:DailyPersonalEntry={version:1,key,localDate,timeZone:input.timeZone,greeting:en?`Hi${name?', '+name:''}. I’m here.`:`Привет${name?', '+name:''}. Я рядом.`,question,reflection,birthAvailable:Boolean(portrait?.birth.available),hasBirthTime:Boolean(portrait?.birth.hasTime),contextReflectionAllowed:allowed&&settings.symbolicAiContext};
+    return{conversationId:null,message:null,entry};
+   }
    const day=now.toISOString().slice(0,10),id=toolOperationId(owner,day,'companion.daily','v1');
    const prior=await db.from('ai_messages').select('id,conversation_id,request_id,role,content,metadata,created_at').eq('telegram_id',owner).eq('id',id).maybeSingle();if(prior.error)throw new FoundationError(503,'companion_unavailable','Could not verify the conversation starter.');
    if(prior.data){const meta=prior.data.metadata?.companionStarter as StarterMeta|undefined;return meta?.operationId===input.operationId?{conversationId:prior.data.conversation_id,message:prior.data,cached:true}:{conversationId:null,message:null,cooldownUntil:new Date(Date.parse(day+'T00:00:00Z')+86400000).toISOString()};}

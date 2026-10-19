@@ -1,0 +1,158 @@
+{
+  "release": "luna5-personal-intelligence",
+  "status": "PASS",
+  "checkedAt": "2026-10-19T18:51:27.269Z",
+  "baseCommit": "949d7d2857c65724f2e90d2046a38cb83c3a8c27",
+  "projectId": "vkcdtasbdoeilgfucoax",
+  "sourceDigest": "ee00d62cb93ff61bc894c6205d77865dc98d0a598eeb58c913add92ace50a6a4",
+  "frontendTestsStatus": "PASS",
+  "backendTestsStatus": "PASS",
+  "typeChecks": "PASS",
+  "lint": "PASS",
+  "backendBuild": "PASS",
+  "mobileStatus": "PASS",
+  "nativeSecurity": "PASS",
+  "backupIntegrity": "PASS",
+  "backupMediaIntegrity": "PASS",
+  "financialCompatibility": "PASS",
+  "localWorkflowPersistence": "PASS",
+  "deferredTarot": "PASS",
+  "freshChatEntry": "PASS",
+  "privacyConsent": "PASS",
+  "legacyOnboardingRemoved": "PASS",
+  "symbolicSources": "PASS",
+  "frontendTests": 290,
+  "frontendTotal": 290,
+  "backendTests": 948,
+  "backendTotal": 949,
+  "backendOptionalSkipped": 1,
+  "nativeDatabaseChecks": 10,
+  "mobileCases": 16,
+  "mobileChecks": 288,
+  "mobileScope": "Local browser and deterministic engines with mocked prose/in-process persistence; not physical Telegram or Supabase.",
+  "mobileEngines": [
+    "chromium",
+    "webkit"
+  ],
+  "mobileWidths": [
+    360,
+    375,
+    390,
+    393
+  ],
+  "mobileLanguages": [
+    "ru",
+    "en"
+  ],
+  "systemThemeChecks": [
+    "light",
+    "dark"
+  ],
+  "productTheme": "existing-dark-only",
+  "localTarotLatency": {
+    "scope": "Optimistic UI state, local fixed persistence/prose fixtures; NOT live provider or production latency.",
+    "count": 56,
+    "selectionToVisibleP50Ms": 113,
+    "selectionToVisibleP95Ms": 354,
+    "fixtureRevealDelayMs": 300,
+    "fixtureInterpretationDelayMs": 2200,
+    "generatedPostPerReading": 1
+  },
+  "stagingPublications": 0,
+  "productionPublicationsBeforeRelease": 0,
+  "approvedProductionPublications": 1,
+  "paidProviderCalls": 0,
+  "paidTranscriptions": 0,
+  "aiTestCostUsd": 0,
+  "freshProviderQuality": "not-run-owner-focused-policy",
+  "subjectiveIphoneQuality": "pending-owner-review",
+  "productionModel": "gpt-5-mini",
+  "modelChanged": false,
+  "aiCapUsd": 100,
+  "aiCapChanged": false,
+  "financialPolicyChanged": false,
+  "realStarsTransactions": 0,
+  "userDataMutatedByTests": false,
+  "backupRestorePasses": 2,
+  "backupTables": 91,
+  "backupFunctions": 127,
+  "backupMediaObjects": 28,
+  "backupRows": 2789,
+  "backupMediaBytes": 239528218,
+  "backupTemporaryPlaintextRemoved": true,
+  "backupOutsideSyncedDocuments": true,
+  "backupCapturedAt": "2026-10-19T18:15:19.377914+00:00",
+  "migrationStatus": "verified-native-rollback",
+  "migrationAppliedProduction": true,
+  "migrationProductionVersion": "20261019184219",
+  "blockedHistoricalSecurityMigrationApplied": false,
+  "migrationHashes": {
+    "20261019184219_luna5_chat_role_boundary.sql": "bb28453cf2461486c031ca0647efd6e9618f2556b7dd13e5a815ceff2b27fc6b"
+  },
+  "protectedFinancialHashesMatch": true,
+  "netlifyAudit": {
+    "cycle": "2026-10-16/2026-11-15",
+    "creditsRemainingBefore": 238.3,
+    "readyProductionContextDeploys": 81,
+    "mainDeploys": 15,
+    "existingStagingDeploys": 66,
+    "deployCredits": 1215,
+    "computeCredits": 54.6,
+    "bandwidthCredits": 13.3,
+    "webRequestCredits": 2.6,
+    "aiCredits": 0,
+    "totalUsageCredits": 1285.5,
+    "expectedFinalPublicationCredits": 15,
+    "branchDeploys": "main-only",
+    "pullRequestDeploys": false,
+    "mergeSkipToken": "[skip netlify]",
+    "planChanged": false
+  },
+  "checks": [
+    {
+      "name": "backend-type",
+      "status": "PASS"
+    },
+    {
+      "name": "frontend-type",
+      "status": "PASS"
+    },
+    {
+      "name": "backend-lint",
+      "status": "PASS"
+    },
+    {
+      "name": "frontend-lint",
+      "status": "PASS"
+    },
+    {
+      "name": "frontend-tests",
+      "status": "PASS"
+    },
+    {
+      "name": "backend-build",
+      "status": "PASS"
+    },
+    {
+      "name": "backend-tests",
+      "status": "PASS"
+    },
+    {
+      "name": "native",
+      "status": "PASS"
+    },
+    {
+      "name": "mobile",
+      "status": "PASS"
+    }
+  ],
+  "knownLimitations": [
+    "Fresh provider and subjective physical-iPhone conversational quality intentionally left to owner; no paid benchmark rerun.",
+    "Daily greeting is labelled general Sun symbolism, not current or natal-transit analysis.",
+    "A crashed deferred interpretation is observed/read safely, not automatically paid-retried.",
+    "Numerology retains documented UTC calendar periods; daily greeting separately uses the user IANA timezone.",
+    "Existing Dark-only product policy is preserved.",
+    "Main Vite chunk remains above the 500 kB advisory threshold."
+  ],
+  "criticalBlockers": []
+}

@@ -7,7 +7,8 @@ import {requireTelegramWebApp,type AuthenticatedRequest} from './auth.js';
 import {FoundationError} from './personalization.js';
 import {getTarotReading,saveTarotReading,readingFields,type StoredReading} from './tarot.js';
 import {saveTarotSpread,savePaidSingleTarot} from './tarot-spreads.js';
-import {chatTarotInput,chatTarotState,chatTarotHash,drawChatTarot,nextReveal,readingSize,validChatTarotOrigin,type ChatTarotState} from './luna24-policy.js';
+import {chatTarotInput,chatTarotState,chatTarotStateFromMetadata,storedChatTarotMetadata,chatTarotHash,drawChatTarot,readingSize,validChatTarotOrigin,type ChatTarotState} from './luna24-policy.js';
+import {runTarotReveal} from './tarot-reveal-pipeline.js';
 import {safetyCategory} from './luna-ai-policy.js';
 import {createAstrologyWorkflowService} from './luna33-workflows.js';
 import {createLuna34Progress} from './luna34-progress.js';
@@ -22,7 +23,7 @@ export async function hydrateLunaTarotMessages(user:number,messages:Array<Record
  if(!env.FEATURE_AI_CENTRAL_EXPERIENCE)return messages;
  const ids=[...new Set(messages.flatMap(m=>{const state=chatTarotState.safeParse((m.metadata as Record<string,unknown>|undefined)?.tarot);return state.success?[state.data.readingId]:[];}))],readings=new Map<string,StoredReading>();
  for(let offset=0;offset<ids.length;offset+=100){const {data,error}=await supabase.from('luna_tarot_readings').select(readingFields).eq('telegram_id',user).in('id',ids.slice(offset,offset+100)).returns<StoredReading[]>();if(error)throw fail('chat_unavailable');for(const r of data??[])readings.set(r.id,r);}
- return messages.map(m=>{const meta=m.metadata as Record<string,unknown>|undefined;const state=chatTarotState.safeParse(meta?.tarot);if(!state.success)return m;return {...m,metadata:{...meta,tarot:{...state.data,reading:readings.get(state.data.readingId)??null}}};});
+ return messages.map(m=>{const meta=m.metadata as Record<string,unknown>|undefined;const state=chatTarotState.safeParse(meta?.tarot);if(!state.success)return m;return {...m,metadata:{...meta,tarot:{...chatTarotStateFromMetadata(meta!),reading:readings.get(state.data.readingId)??null}}};});
 }
 async function response(user:number,message:Record<string,unknown>){return {conversationId:message.conversation_id,message:(await hydrateLunaTarotMessages(user,[message]))[0]};}
 // Attachment is a saved-data operation, never a provider request or a reward event.
@@ -79,25 +80,34 @@ export async function openChatTarot(user:number,body:unknown){
  if(!created.data)throw fail('reading_save_failed');return response(user,created.data);
 }
 export async function revealChatTarot(user:number,id:string,body:unknown){
- const {index}=z.object({index:z.number().int().min(0).max(4)}).strict().parse(body);
- let message=await ownedMessage(user,id);const state=chatTarotState.parse(message.metadata?.tarot);
- let next:ChatTarotState;try{next=nextReveal(state,index);}catch{throw fail('reveal_order',409);}
- if(next.revealed>state.revealed){const update=await supabase.from('ai_messages').update({metadata:{...message.metadata,tarot:next}}).eq('id',id).eq('telegram_id',user).contains('metadata',{tarot:{revealed:state.revealed}}).select(messageFields).maybeSingle();if(update.error)throw fail('reveal_save_failed');message=update.data??await ownedMessage(user,id);}
- const current=chatTarotState.parse(message.metadata?.tarot);
- const evidenceReading=await getTarotReading(user,current.readingId) as StoredReading&{cards?:Array<{cardId:string}>};
- const selection=current.kind==='single'?[evidenceReading.card_id]:(evidenceReading.cards??[]).map(c=>c.cardId);
- // The saved reveal CAS, not opening a message or an AI answer, is evidence.
- const progress=createLuna34Progress(supabase,(owner,id)=>createLuna34Referrals(supabase,{enabled:env.LUNA34_REFERRALS_ENABLED,botUsername:env.BOT_USERNAME}).qualify(owner,'tarot',id));
- if(selection[index])await progress.record(user,{kind:'reading_reveal',entityId:current.readingId,detail:selection[index]}).catch(()=>undefined);
- if(current.revealed===readingSize(current.kind))await progress.record(user,{kind:'reading_reveal',entityId:current.readingId,detail:'complete'}).catch(()=>undefined);
- if(current.revealed===readingSize(current.kind)){
-  await recordFunnel(supabase,user,'first_tarot_completed','first','verified');
+ try{return await runTarotReveal(body,{
+  load:async()=>{const message=await ownedMessage(user,id);return{...message,metadata:{...message.metadata,tarot:chatTarotStateFromMetadata(message.metadata)}};},
+  persist:async(message,prior,next)=>{const update=await supabase.from('ai_messages').update({metadata:storedChatTarotMetadata(message.metadata,next)}).eq('id',id).eq('telegram_id',user).contains('metadata',{tarot:{revealed:prior.revealed}}).select(messageFields).maybeSingle();if(update.error)throw fail('reveal_save_failed');return update.data??await ownedMessage(user,id);},
+  reading:state=>getTarotReading(user,state.readingId) as Promise<StoredReading&{cards?:Array<{cardId:string}>}>,
+  progress:async(state,cardId,complete)=>{const progress=createLuna34Progress(supabase,(owner,reference)=>createLuna34Referrals(supabase,{enabled:env.LUNA34_REFERRALS_ENABLED,botUsername:env.BOT_USERNAME}).qualify(owner,'tarot',reference));if(cardId)await progress.record(user,{kind:'reading_reveal',entityId:state.readingId,detail:cardId}).catch(()=>undefined);if(complete){await progress.record(user,{kind:'reading_reveal',entityId:state.readingId,detail:'complete'}).catch(()=>undefined);await recordFunnel(supabase,user,'first_tarot_completed','first','verified');}},
+  render:message=>response(user,message),interpret:()=>interpretChatTarot(user,id,false),
+  measure:metrics=>console.info('[Luna Tarot reveal timing]',metrics)
+ });}catch(error){if(error instanceof Error&&error.message==='reveal_order')throw fail('reveal_order',409);throw error;}
+}
+export async function readChatTarot(user:number,id:string){return response(user,await ownedMessage(user,id));}
+export async function interpretChatTarot(user:number,id:string,requireDeferred=true){
+ let message=await ownedMessage(user,id);const current=chatTarotStateFromMetadata(message.metadata);
+ if(current.revealed!==readingSize(current.kind)||requireDeferred&&!current.interpretationRequested)throw fail('reading_not_revealed',409);
   const reading=await getTarotReading(user,current.readingId) as StoredReading&{cards?:Array<{cardId:string;orientation:'upright'|'reversed'}>};
+  // An opened history item is not authority to regenerate a ready/failed result.
+  if(['ready','fallback','safety'].includes(reading.status))return response(user,message);
+  if(requireDeferred){
+   // The final reveal is permission for ONE initial attempt, not permission to
+   // generate later merely because an old local reading is reopened. Claim
+   // atomically before calling the existing accounting/interpretation service.
+   if(current.interpretationAttempted||reading.status==='processing')return response(user,message);
+   const claimed=await supabase.from('ai_messages').update({metadata:storedChatTarotMetadata(message.metadata,{...current,interpretationAttempted:true})}).eq('id',id).eq('telegram_id',user).contains('metadata',{tarot:{revealed:readingSize(current.kind)},tarotInterpretation:{version:1,requested:true}}).is('metadata->tarotInterpretation->>attempted',null).select(messageFields).maybeSingle();
+   if(claimed.error)throw fail('reading_save_failed');if(!claimed.data)return response(user,await ownedMessage(user,id));message=claimed.data;
+  }
   const base={clientReadingId:reading.client_reading_id,intention:reading.intention,question:reading.question,language:reading.language,generate:true};
   // Reservation RPCs handle idempotency and limits; timeout/fallback is never paid-retried.
   const result=current.kind==='single'?(current.orderId?await savePaidSingleTarot(user,{reading:{...base,cardId:reading.card_id,orientation:reading.orientation},orderId:current.orderId}):await saveTarotReading(user,{...base,cardId:reading.card_id,orientation:reading.orientation})):await saveTarotSpread(user,{reading:{...base,kind:current.kind,cards:reading.cards},...(current.orderId?{orderId:current.orderId}:{})});
-  if(result.reading.status==='ready'&&result.reading.interpretation){const updated=await supabase.from('ai_messages').update({content:result.reading.interpretation.summary}).eq('id',id).eq('telegram_id',user).select(messageFields).maybeSingle();if(updated.error)throw fail('reading_save_failed');message=updated.data??message;}
- }
+  if(requireDeferred||result.reading.status==='ready'&&result.reading.interpretation){const updated=await supabase.from('ai_messages').update({...(result.reading.status==='ready'&&result.reading.interpretation?{content:result.reading.interpretation.summary}:{}),...(requireDeferred?{metadata:storedChatTarotMetadata(message.metadata,{...current,interpretationAttempted:true,interpretationFinished:true})}:{})}).eq('id',id).eq('telegram_id',user).select(messageFields).maybeSingle();if(updated.error)throw fail('reading_save_failed');message=updated.data??message;}
  return response(user,message);
 }
 export const luna24Router=Router();
@@ -118,3 +128,5 @@ luna24Router.patch('/conversations/:id',async(req,res,next)=>{try{const user=(re
 luna24Router.post('/tarot',async(req,res,next)=>{try{const user=(req as AuthenticatedRequest).telegramUser;await upsertUser(user);res.json(await openChatTarot(user.telegram_id,req.body));}catch(e){next(e);}});
 luna24Router.post('/tarot/attach',async(req,res,next)=>{try{res.json(await attachSavedTarot((req as unknown as AuthenticatedRequest).telegramUser.telegram_id,req.body));}catch(e){next(e);}});
 luna24Router.post('/tarot/:id/reveal',async(req,res,next)=>{try{res.json(await revealChatTarot((req as unknown as AuthenticatedRequest).telegramUser.telegram_id,req.params.id,req.body));}catch(e){next(e);}});
+luna24Router.get('/tarot/:id',async(req,res,next)=>{try{res.set('Cache-Control','private, no-store');res.json(await readChatTarot((req as unknown as AuthenticatedRequest).telegramUser.telegram_id,req.params.id));}catch(e){next(e);}});
+luna24Router.post('/tarot/:id/interpret',async(req,res,next)=>{try{res.set('Cache-Control','private, no-store');res.json(await interpretChatTarot((req as unknown as AuthenticatedRequest).telegramUser.telegram_id,req.params.id));}catch(e){next(e);}});

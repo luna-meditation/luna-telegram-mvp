@@ -45,6 +45,7 @@
 .tarot-daily .tarot-card-flip { width: min(100%,224px); }
 .tarot-daily-back { width: 166px; aspect-ratio: 2 / 3; justify-self: center; margin: 6px 0; }
 .tarot-daily-back.is-shuffling { animation: tarot-daily-shuffle 450ms ease-in-out infinite alternate; }
+.luna5-card-caption{display:grid;gap:4px;padding-top:7px;min-width:0;text-align:center}.luna5-card-caption>strong{font-size:12px;line-height:1.4;font-weight:550;overflow-wrap:anywhere}.luna5-card-caption>span{font-size:10px;line-height:1.4;color:var(--text-secondary,#bbb1cc)}
 @keyframes tarot-daily-shuffle { to { transform: rotate(5deg) translateY(-4px); } }
 .tarot-daily-authorship { font-size: 14px; color: var(--color-text-secondary); text-align: center; }
 .tarot-daily-themes h2 { font-size: 18px; margin: 0 0 8px; }

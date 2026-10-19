@@ -5,8 +5,19 @@ import {validatedIntelligenceAttachments} from './luna-intelligence-contract.js'
 export const chatChoiceSlots=z.array(z.number().int().min(0).max(8)).min(1).max(5).refine(v=>new Set(v).size===v.length);
 export const chatTarotInput=z.object({clientReadingId:z.string().uuid(),conversationId:z.string().uuid().optional(),kind:z.enum(['single','three','five']),intention:z.enum(['general','love','career','growth']),question:z.string().trim().max(240),language:z.enum(['en','ru']),orderId:z.string().uuid().optional(),actionMessageId:z.string().uuid().optional(),choiceSlots:chatChoiceSlots.optional()}).strict().superRefine((v,c)=>{if(v.choiceSlots&&v.choiceSlots.length!==(v.kind==='single'?1:v.kind==='three'?3:5))c.addIssue({code:'custom',message:'Select the complete spread once.'});if(v.actionMessageId&&!v.conversationId)c.addIssue({code:'custom',message:'Keep the original conversation.'});});
 export type ChatTarotInput=z.infer<typeof chatTarotInput>;
-export type ChatTarotState={readingId:string;clientReadingId:string;kind:ChatTarotInput['kind'];revealed:number;requestHash:string;orderId?:string};
-export const chatTarotState=z.object({readingId:z.string().uuid(),clientReadingId:z.string().uuid(),kind:z.enum(['single','three','five']),revealed:z.number().int().min(0).max(5),requestHash:z.string().length(64),orderId:z.string().uuid().optional()}).strict();
+export type ChatTarotState={readingId:string;clientReadingId:string;kind:ChatTarotInput['kind'];revealed:number;requestHash:string;orderId?:string;interpretationRequested?:boolean;interpretationAttempted?:boolean;interpretationFinished?:boolean};
+export const chatTarotState=z.object({readingId:z.string().uuid(),clientReadingId:z.string().uuid(),kind:z.enum(['single','three','five']),revealed:z.number().int().min(0).max(5),requestHash:z.string().length(64),orderId:z.string().uuid().optional(),interpretationRequested:z.boolean().optional(),interpretationAttempted:z.boolean().optional(),interpretationFinished:z.boolean().optional()}).strict();
+const tarotInterpretationLifecycle=z.object({version:z.literal(1),requested:z.boolean().optional(),attempted:z.boolean().optional(),finished:z.boolean().optional()}).strict();
+/** Keep the stored Tarot object compatible with the previous strict reader.
+ * New lifecycle fields are a versioned metadata sibling, not a schema fork. */
+export function chatTarotStateFromMetadata(metadata:Record<string,unknown>):ChatTarotState{
+ const state=chatTarotState.parse(metadata.tarot),life=tarotInterpretationLifecycle.safeParse(metadata.tarotInterpretation);
+ return life.success?{...state,interpretationRequested:life.data.requested,interpretationAttempted:life.data.attempted,interpretationFinished:life.data.finished}:state;
+}
+export function storedChatTarotMetadata<T extends Record<string,unknown>>(metadata:T,state:ChatTarotState){
+ const{interpretationRequested:requested,interpretationAttempted:attempted,interpretationFinished:finished,...tarot}=state;
+ return{...metadata,tarot,...(requested!==undefined||attempted!==undefined||finished!==undefined?{tarotInterpretation:{version:1,requested,attempted,finished}}:{})};
+}
 export const readingSize=(kind:ChatTarotInput['kind'])=>kind==='single'?1:kind==='three'?3:5;
 export function chatTarotHash(input:ChatTarotInput){return createHash('sha256').update(JSON.stringify({kind:input.kind,intention:input.intention,question:input.question,language:input.language,...(input.actionMessageId?{actionMessageId:input.actionMessageId}:{}),...(input.choiceSlots?{choiceSlots:input.choiceSlots}:{})})).digest('hex');}
 export function validChatTarotOrigin(source:{conversation_id?:unknown;metadata?:unknown},input:{clientReadingId:string;conversationId?:string;kind:string}){

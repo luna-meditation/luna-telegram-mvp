@@ -14,7 +14,7 @@ import type {PortraitPersistence} from './personal-portrait-policy.js';
 
 type PortraitInput={memories:PersonalMemory[];profile:PersonalProfile;memoryEnabled:boolean};
 const digest=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
-const projectionVersion='luna4.0-portrait-v2';
+const projectionVersion='luna5-portrait-v1:astronomy-engine-2.1.19';
 const unavailable=()=>new FoundationError(503,'portrait_unavailable','Could not verify your personal portrait. Your saved data are unchanged.');
 const missing=(error:{code?:string}|null)=>error?.code==='PGRST202';
 

@@ -12,7 +12,11 @@ import {resolveLunaDestination} from './luna41-navigation.js';
 import {astrologyActionCopy,explicitRelationshipContext} from './luna40-astrology-action.js';
 import {verifiedAstrologyChatContext} from './luna30-astrology-chat-context.js';
 import {FoundationError} from './personalization.js';
-import {getAiPersonalProfile,getMemoryContextBoundary,advanceMemoryContextBoundary} from './personal-memory.js';
+import {getAiPersonalProfile,getUniverse,getMemoryContextBoundary,advanceMemoryContextBoundary} from './personal-memory.js';
+import {createCompanionEngine} from './companion-engine.js';
+import {readPersonalPortrait} from './personal-portrait.js';
+import type {DailyPersonalEntry} from './daily-personal-entry.js';
+import{personalWorkflowFromAnswer,personalWorkflowReply,personalContextQuery,personalWorkflowIdentity,validPersonalWorkflowChoice}from'./personal-conversation-workflow.js';
 import {messagesAfterMemoryBoundary,conversationStateAfterMemoryBoundary} from './personal-memory-policy.js';
 import {confirmedMemoryPrompt} from './luna/prompts/memory-policy.js';
 import {hydrateLunaTarotMessages} from './luna24-chat.js';
@@ -144,6 +148,8 @@ const tolerantModelResultSchema = z.object({
 });
 
 export const lunaChatInputSchema = z.object({
+  entryContext:z.object({key:z.string().regex(/^[a-f0-9]{64}$/),timeZone:z.string().max(100),dismissed:z.boolean()}).strict().optional(),
+  workflowReply:z.object({id:z.string().max(80),option:z.string().regex(/^option-[123]$/)}).strict().optional(),
   intelligenceVersion:z.literal(1).optional(),
   mode:lunaModeSchema.optional(),
   readingId:z.string().uuid().optional(),
@@ -839,16 +845,20 @@ async function loadContext(telegramId: number, conversationId: string, currentMe
   if((recentMessages.at(-1)?.role!=='user'||recentMessages.at(-1)?.content!==currentMessage)){
     recentMessages.push({role:'user',content:currentMessage,metadata:null,request_id:null,created_at:new Date().toISOString()});
   }
-  const storedState = resetAttachment?null:conversationStateAfterMemoryBoundary(conversation?.conversation_state,memoryBoundary);
+  const authorizedState=conversationStateAfterMemoryBoundary(conversation?.conversation_state,memoryBoundary);
+  const priorWorkflow=authorizedState&&typeof authorizedState==='object'?authorizedState as {workflow?:unknown;suspended_workflow?:unknown}:null;
+  const storedState = resetAttachment?{suspended_workflow:priorWorkflow?.workflow??priorWorkflow?.suspended_workflow}:authorizedState;
   const storedPending = !resetAttachment&&(!memoryBoundary || storedState) ? conversation?.pending_state : null;
   const pendingState = inferPendingStateFromRecent(storedPending, recentMessages);
   const conversationState = recoverConversationState(storedState, recentMessages);
+  const workflow=personalWorkflowReply(currentMessage,conversationState.workflow,conversationState.suspended_workflow);
   const context = {
     profile: user ? { firstName: user.first_name, goals: user.profile_goals } : null,
     latestCheckin: checkin ?? null,
     memories: !env.FEATURE_PERSONAL_MEMORY && user?.ai_memory_enabled && env.AI_MEMORY_ENABLED ? relevantMemories(currentMessage, memories ?? []) : [],
     pendingState,
-    conversationState
+    conversationState,
+    workflow
   };
   return {
     recent: recentMessages,
@@ -1078,7 +1088,12 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
     else personalReportContext=await readPersonalReportContext(supabase,telegramId,input.personalReportId);
   }
   const personalStarted=performance.now();
-  const personal=(input.mode||env.FEATURE_PERSONAL_MEMORY)&&env.FEATURE_PERSONALIZATION?permittedPersonalContext(await getAiPersonalProfile(telegramId,input.message)):null;
+  let entry:DailyPersonalEntry|null=null;
+  if(input.entryContext&&!input.conversationId&&!input.readingId&&!input.chartId&&!input.personalReportId&&env.FEATURE_PERSONAL_MEMORY){const current=await createCompanionEngine(supabase,getUniverse,{portrait:(owner,day)=>readPersonalPortrait(supabase,owner,()=>getUniverse(owner),day)}).open(telegramId,{operationId:crypto.randomUUID(),entryOnly:true,timeZone:input.entryContext.timeZone,language:input.language});if(current.entry?.key===input.entryContext.key)entry=current.entry;}
+  const entryQuestion=entry?(input.entryContext?.dismissed||entry.reflection&&!entry.contextReflectionAllowed?(responseLanguage==='ru'?'Что для тебя сейчас важно?':'What matters to you today?'):entry.question||entry.reflection?.text||''):'';
+  const entryWorkflow=entryQuestion?personalWorkflowReply(input.message,personalWorkflowFromAnswer(entryQuestion,[],'personal_entry')):null;
+  const personalOptions={calculatedOverview:true,artifact:input.readingId?{kind:'tarot' as const,id:input.readingId}:input.chartId&&!input.astrology?.secondChartId?{kind:'natal' as const,id:input.chartId}:undefined};
+  let personal=(input.mode||env.FEATURE_PERSONAL_MEMORY)&&env.FEATURE_PERSONALIZATION?permittedPersonalContext(await getAiPersonalProfile(telegramId,personalContextQuery(input.message,entryWorkflow),personalOptions)):null;
   const personalLatencyMs=performance.now()-personalStarted;
   let readingContext:unknown=null;
   if(input.readingId){
@@ -1181,6 +1196,10 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
     }
 
     const { recent:loadedRecent, context, catalog, memoryEnabled, pendingState, conversationState } = await loadContext(telegramId, resolvedConversationId, input.message,Boolean(input.contextReset));
+    if(!context.workflow&&entryWorkflow)context.workflow=entryWorkflow;
+    if(input.workflowReply&&!validPersonalWorkflowChoice(conversationState.workflow,input.workflowReply,input.message))throw new FoundationError(409,'workflow_changed','This choice belongs to an earlier question. Your conversation is saved.');
+    const contextQuery=personalContextQuery(input.message,context.workflow);
+    if(personal&&contextQuery!==input.message)personal=permittedPersonalContext(await getAiPersonalProfile(telegramId,contextQuery,personalOptions));
     const recent=intelligence&&(chartContext||readingContext)?answeredArtifactTurns(artifactScopedRecent(loadedRecent,{chartId:input.chartId,secondChartId:input.astrology?.secondChartId,readingId:input.readingId})):loadedRecent;
     const allowMeditationActions = true;
     responseLanguage = resolveResponseLanguage(input.message, input.language, recent, env.FEATURE_AI_CENTRAL_EXPERIENCE);
@@ -1312,6 +1331,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
     });
     const modelContext = {
       ...context,
+      ...(entry?{freshEntry:{question:entryQuestion,localDate:entry.localDate,basis:input.entryContext?.dismissed||!entry.contextReflectionAllowed?null:entry.reflection?.basis??null}}:{}),
       ...(personalReportContext?{personalReportContext}:{}),
       previousQuickReplies:lastAssistantQuickReplies(recent),
       ...(intelligence?{intelligence:{version:2,active:intelligenceReference({readingId:input.readingId,astrology:input.astrology??(input.chartId?{chartId:input.chartId}:undefined)}),available:availableConsultationAttachments(recent),personalContext:personal,privacyBoundary:memoryBoundaryAtStart??null,responsePlan:responsePlan(input.message,artifactTopic(input))}}:{}),
@@ -1636,6 +1656,7 @@ try{openAiResponse=env.LUNA32_ENABLED?await runLunaToolTurn({...request,instruct
         : pendingResolution && 'clearPending' in pendingResolution && pendingResolution.clearPending
           ? null
           : pendingState;
+    const finalQuickReplies=memoryProposal||intelligenceAction||selectedAstrologyAction?[]:intelligence&&verifiedNumerology?.calculated?numerologyQuickReplies(responseLanguage):intelligence?intelligenceQuickReplies(parsed.quickReplies,[...recent.filter(m=>m.role==='user').map(m=>m.content),...lastAssistantQuickReplies(recent)],readingContext?'tarot':chartContext?input.astrology?.secondChartId?'compatibility':'natal':'general'):meaningfulQuickReplies(parsed.quickReplies,[...recent.filter(m=>m.role==='user').map(m=>m.content),...lastAssistantQuickReplies(recent)]);
     const nextConversationState = updateConversationState({
       previous: conversationState,
       intent: resolvedIntent,
@@ -1643,6 +1664,7 @@ try{openAiResponse=env.LUNA32_ENABLED?await runLunaToolTurn({...request,instruct
       topic: selectedAstrologyAction ? selectedAstrologyAction.workflow.kind : intentResolution.topic,
       meditationId: attachedMeditationId,
       assistantMessage: assistantContent,
+      quickReplies:finalQuickReplies,
       userDecision: input.message,
       language: responseLanguage,
       resetActivityContext: Boolean(selectedAstrologyAction),
@@ -1670,7 +1692,8 @@ try{openAiResponse=env.LUNA32_ENABLED?await runLunaToolTurn({...request,instruct
         ...(input.chartId&&!intelligenceAction?{astrologyConsent:{version:1,chartId:input.chartId,...(input.astrology?.secondChartId?{secondChartId:input.astrology.secondChartId}:{})}}:{}),
         ...(input.readingId&&!intelligenceAction?{readingId:input.readingId}:{}),
         ...(selectedAstrologyAction?{contextReset:!selectedAstrologyAction.attachment,astrologyWorkflow:selectedAstrologyAction.workflow,...(selectedAstrologyAction.attachment?{astrology:selectedAstrologyAction.attachment}:{}),readingId:undefined,astrologyConsent:undefined}:{}),
-        consultation:{version:1,phase,actions:memoryProposal||intelligenceAction?[]:actions,quickReplies:memoryProposal||intelligenceAction||selectedAstrologyAction?[]:intelligence&&verifiedNumerology?.calculated?numerologyQuickReplies(responseLanguage):intelligence?intelligenceQuickReplies(parsed.quickReplies,[...recent.filter(m=>m.role==='user').map(m=>m.content),...lastAssistantQuickReplies(recent)],readingContext?'tarot':chartContext?input.astrology?.secondChartId?'compatibility':'natal':'general'):meaningfulQuickReplies(parsed.quickReplies,[...recent.filter(m=>m.role==='user').map(m=>m.content),...lastAssistantQuickReplies(recent)])},
+        consultation:{version:1,phase,actions:memoryProposal||intelligenceAction?[]:actions,quickReplies:finalQuickReplies},
+        ...(nextConversationState.workflow?{workflowChoices:{id:personalWorkflowIdentity(nextConversationState.workflow),options:nextConversationState.workflow.options}}:{}),
         ...(env.FEATURE_AI_CENTRAL_EXPERIENCE?{contextualActions:chartContext?['birth_profile']:readingContext?['tarot']:contextualActionIds(input.message,null)}:{}),
         meditationAction,
         recommendedMeditation,

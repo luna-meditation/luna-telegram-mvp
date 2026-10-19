@@ -47,6 +47,8 @@ export type BirthDiscoveryPreview={date:string;sun:{precision:string;sunSigns:nu
 export const previewBirthDiscovery=(date:string,initData?:string)=>request<BirthDiscoveryPreview>('/api/universe/birth/preview',{method:'POST',body:JSON.stringify({date})},initData);
 export const confirmBirthDiscovery=(date:string,expectedUpdatedAt:string|null,initData?:string)=>request<{saved:true;alreadySaved:boolean}>('/api/universe/birth/date',{method:'POST',body:JSON.stringify({date,expectedUpdatedAt,confirmed:true})},initData);
 export const openCompanionStarter=(operationId:string,language:AppLanguage,initData?:string,conversationId?:string)=>request<{conversationId:string|null;message:LunaMessage|null;cached?:boolean;cooldownUntil?:string}>('/api/universe/companion/starter',{method:'POST',body:JSON.stringify({operationId,language,...(conversationId?{conversationId}:{})})},initData);
+export type DailyPersonalEntry=import('../../backend/src/daily-personal-entry').DailyPersonalEntry;
+export const getCompanionEntry=(operationId:string,language:AppLanguage,timeZone:string,initData?:string)=>request<{entry:DailyPersonalEntry}>('/api/universe/companion/starter',{method:'POST',body:JSON.stringify({operationId,language,timeZone,entryOnly:true})},initData);
 export const acknowledgeCompanionStarter=(id:string,state:'displayed'|'responded'|'dismissed',initData?:string)=>request<{state:string}>(`/api/universe/companion/starter/${encodeURIComponent(id)}`,{method:'POST',body:JSON.stringify({state})},initData);
 export type Discovery=import('../../backend/src/luna42-discoveries').Discovery;
 export const getDiscoveries=(initData?:string)=>request<{discoveries:Discovery[]}>('/api/universe/discoveries',undefined,initData);
@@ -456,9 +458,10 @@ export type LunaMessage = {
     readingId?:string;
     memoryProposal?:MemoryProposal;
     consultation?:{version:1;phase:string;actions:Array<'continue'|'alternative'|'tarot'|'natal_chart'|'compatibility'|'meditation'|'breathing'|'journal'|'history'>;quickReplies?:string[]};
+    workflowChoices?:{id:string;options:Array<{id:string;label:string}>};
     breathing?:{practiceId:string;minutes:number};
     contextualActions?:Array<'tarot'|'birth_profile'|'journal'|'meditation'>;
-    tarot?:{readingId:string;clientReadingId:string;kind:'single'|'three'|'five';revealed:number;requestHash:string;originActionId?:string;reading:TarotReading|null};
+    tarot?:{readingId:string;clientReadingId:string;kind:'single'|'three'|'five';revealed:number;requestHash:string;originActionId?:string;interpretationRequested?:boolean;interpretationAttempted?:boolean;interpretationFinished?:boolean;reading:TarotReading|null};
     recommendedMeditationId?: string | null;
     meditationAction?: {
       type: 'meditation_card';
@@ -860,6 +863,8 @@ export async function getLunaConversation(conversationId: string, initData?: str
 export const getLunaUsage=(initData?:string)=>request<{remaining:number;limit:number;resetAt:string}>('/api/luna/usage',undefined,initData);
 
 export async function sendLunaMessage(input: {
+  entryContext?:{key:string;timeZone:string;dismissed:boolean};
+  workflowReply?:{id:string;option:string};
   intelligenceVersion?:1;
   personalReportId?:string;
   personalReportConsent?:true;
@@ -887,7 +892,9 @@ export async function deleteLunaConversation(conversationId: string, initData?: 
 
 export async function renameLunaConversation(id:string,title:string,initData?:string){return request<{id:string;title:string}>(`/api/luna/tools/conversations/${id}`,{method:'PATCH',body:JSON.stringify({title})},initData);}
 export async function openLunaTarot(input:{clientReadingId:string;conversationId?:string;kind:'single'|'three'|'five';intention:'general'|'love'|'career'|'growth';question:string;language:AppLanguage;actionMessageId?:string;choiceSlots?:number[]},initData?:string){return request<{conversationId:string;message:LunaMessage}>('/api/luna/tools/tarot',{method:'POST',body:JSON.stringify(input)},initData);}
-export async function revealLunaTarot(id:string,index:number,initData?:string){return request<{conversationId:string;message:LunaMessage}>(`/api/luna/tools/tarot/${id}/reveal`,{method:'POST',body:JSON.stringify({index})},initData);}
+export async function revealLunaTarot(id:string,index:number,initData?:string){return request<{conversationId:string;message:LunaMessage}>(`/api/luna/tools/tarot/${id}/reveal`,{method:'POST',body:JSON.stringify({index,deferInterpretation:true})},initData);}
+export async function interpretLunaTarot(id:string,initData?:string){return request<{conversationId:string;message:LunaMessage}>(`/api/luna/tools/tarot/${id}/interpret`,{method:'POST',body:'{}'},initData);}
+export async function readLunaTarotMessage(id:string,initData?:string){return request<{conversationId:string;message:LunaMessage}>(`/api/luna/tools/tarot/${id}`,{},initData);}
 export async function attachSavedLunaTarot(readingId:string,initData?:string,conversationId?:string){return request<{conversationId:string;message:LunaMessage}>('/api/luna/tools/tarot/attach',{method:'POST',body:JSON.stringify({readingId,...(conversationId?{conversationId}:{})})},initData);}
 export const resetLunaContext=(conversationId:string,requestId:string,language:AppLanguage,initData?:string)=>request<{message:LunaMessage}>(`/api/luna/tools/conversations/${conversationId}/context-reset`,{method:'POST',body:JSON.stringify({requestId,language})},initData);
 

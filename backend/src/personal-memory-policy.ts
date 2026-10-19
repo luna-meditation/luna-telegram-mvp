@@ -29,6 +29,7 @@ function goalContentTerms(value:string){return normalizedMemoryValue(value).spli
  * because both contain generic words such as "goal" or "change". */
 export function personalMemoryOverview(query:string):'all'|'goals'|null{
  const request=query.trim().replace(/^(?:luna|луна)[,\s]+/i,'');
+ if(/(?:my (?:strengths|weaknesses)|strengths and (?:weaknesses|challenges)|мои (?:сильные|слабые) стороны|(?:сильные и слабые|сильн.{0,20}сторон)|что (?:ты )?можешь сказать обо мне)/iu.test(request))return 'all';
  if(/^(?:help me (?:understand|explore) myself|(?:show|explore|discuss) my (?:portrait|cosmos|universe)|помоги (?:мне )?(?:лучше )?понять себя|(?:покажи|исследуем|обсудим) (?:мой портрет|мой космос|меня))(?:[?!.,\s]|$)/i.test(request))return 'all';
  if(/^(?:what (?:do you|does luna) (?:know|remember) about me|(?:show|summari[sz]e) my (?:saved (?:information|profile)|personal (?:profile|memories))|что (?:ты|луна) (?:обо мне|про меня) (?:знаешь|помнишь)|что (?:ты|луна) (?:знаешь|помнишь) (?:обо мне|про меня)|покажи (?:мой портрет|что (?:ты )?обо мне знаешь))(?:[?!.,\s]|$)/i.test(request))return 'all';
  if(/^(?:what are my (?:current |saved )?goals|(?:show|list) my (?:current |saved )?goals|какие у меня (?:сейчас |сохран[её]нные )?цели|покажи мои (?:текущие |сохран[её]нные )?цели)(?:[?!.,\s]|$)/i.test(request))return 'goals';

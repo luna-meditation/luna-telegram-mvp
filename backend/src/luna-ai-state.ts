@@ -1,4 +1,5 @@
 import { clarificationHash } from './luna-ai-pending.js';
+import{normalizePersonalWorkflow,personalWorkflowFromAnswer,type PersonalWorkflow}from'./personal-conversation-workflow.js';
 
 export const lunaConversationGoals = [
   'sleep', 'focus', 'anxiety', 'reset', 'breathing', 'journal', 'premium', 'relationship', 'science'
@@ -7,6 +8,8 @@ export const lunaConversationGoals = [
 export type LunaConversationGoal = typeof lunaConversationGoals[number];
 
 export type LunaConversationState = {
+  workflow?:PersonalWorkflow;
+  suspended_workflow?:PersonalWorkflow;
   version: 1;
   current_topic: string | null;
   current_goal: LunaConversationGoal | null;
@@ -25,6 +28,7 @@ export type RecentConversationMessage = {
   role?: string | null;
   content?: string | null;
   metadata?: unknown;
+  created_at?:string;
 };
 
 const emptyState = (): LunaConversationState => ({
@@ -59,8 +63,11 @@ export function normalizeConversationState(value: unknown): LunaConversationStat
   if (!value || typeof value !== 'object' || Array.isArray(value)) return fallback;
   const candidate = value as Record<string, unknown>;
   const count = Number(candidate.assistant_messages_since_question);
+  const workflow=normalizePersonalWorkflow(candidate.workflow),suspended=normalizePersonalWorkflow(candidate.suspended_workflow);
   return {
     version: 1,
+    ...(workflow?{workflow}:{}),
+    ...(suspended?{suspended_workflow:suspended}:{}),
     current_topic: nullableString(candidate.current_topic, 120),
     current_goal: normalizeGoal(candidate.current_goal),
     current_intent: nullableString(candidate.current_intent, 80),
@@ -95,6 +102,7 @@ export function recoverConversationState(stored: unknown, recent: RecentConversa
     recommendedMeditationId?: unknown;
     meditationAction?: { meditationId?: unknown } | null;
     resolvedIntent?: unknown;
+    consultation?:{quickReplies?:string[]};
   } | null;
   const latestRecommendation = nullableString(
     latestMetadata?.recommendedMeditationId ?? latestMetadata?.meditationAction?.meditationId,
@@ -104,9 +112,11 @@ export function recoverConversationState(stored: unknown, recent: RecentConversa
   const messagesSinceQuestion = question && !state.previous_assistant_question
     ? 0
     : state.assistant_messages_since_question;
+  const transcriptWorkflow=latestAssistant?.content?personalWorkflowFromAnswer(latestAssistant.content,latestMetadata?.consultation?.quickReplies??[],state.current_topic,new Date(latestAssistant.created_at??Date.now())):null;
 
   return {
     ...state,
+    ...(!state.workflow&&normalizePersonalWorkflow(transcriptWorkflow)?{workflow:normalizePersonalWorkflow(transcriptWorkflow)!}:{}),
     current_intent: state.current_intent ?? nullableString(latestMetadata?.resolvedIntent, 80),
     current_meditation_id: state.current_meditation_id ?? latestRecommendation,
     current_recommendation_id: state.current_recommendation_id ?? latestRecommendation,
@@ -127,6 +137,7 @@ export function updateConversationState(input: {
   language: 'en' | 'ru';
   clearMeditationContext?: boolean;
   resetActivityContext?: boolean;
+  quickReplies?:string[];
 }) {
   const previous = input.resetActivityContext ? emptyState() : input.previous;
   const question = lastAssistantQuestion(input.assistantMessage);
@@ -134,8 +145,12 @@ export function updateConversationState(input: {
     ?? (input.clearMeditationContext ? null : previous.current_meditation_id);
   const recommendationId = input.meditationId
     ?? (input.clearMeditationContext ? null : previous.current_recommendation_id);
+  const workflow=personalWorkflowFromAnswer(input.assistantMessage,input.quickReplies??[],input.topic);
+  const switchedWorkflow=Boolean(input.previous.workflow&&(input.resetActivityContext||input.topic&&input.previous.current_topic&&input.topic!==input.previous.current_topic));
   return {
     version: 1,
+    ...(workflow?{workflow}:{}),
+    ...(switchedWorkflow?{suspended_workflow:input.previous.workflow!}:input.previous.suspended_workflow?{suspended_workflow:input.previous.suspended_workflow}:{}),
     current_topic: input.topic ?? previous.current_topic,
     current_goal: input.goal ?? previous.current_goal,
     current_intent: input.intent,
