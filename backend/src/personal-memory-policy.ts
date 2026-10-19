@@ -24,6 +24,7 @@ const hints:Record<string,RegExp>={goals:/goal|work|career|growth|цель|ра�
  * because both contain generic words such as "goal" or "change". */
 export function personalMemoryOverview(query:string):'all'|'goals'|null{
  const request=query.trim().replace(/^(?:luna|луна)[,\s]+/i,'');
+ if(/^(?:help me (?:understand|explore) myself|(?:show|explore|discuss) my (?:portrait|cosmos|universe)|помоги (?:мне )?(?:лучше )?понять себя|(?:покажи|исследуем|обсудим) (?:мой портрет|мой космос|меня))(?:[?!.,\s]|$)/i.test(request))return 'all';
  if(/^(?:what (?:do you|does luna) (?:know|remember) about me|(?:show|summari[sz]e) my (?:saved (?:information|profile)|personal (?:profile|memories))|что (?:ты|луна) (?:обо мне|про меня) (?:знаешь|помнишь)|что (?:ты|луна) (?:знаешь|помнишь) (?:обо мне|про меня)|покажи (?:мой портрет|что (?:ты )?обо мне знаешь))(?:[?!.,\s]|$)/i.test(request))return 'all';
  if(/^(?:what are my (?:current |saved )?goals|(?:show|list) my (?:current |saved )?goals|какие у меня (?:сейчас |сохран[её]нные )?цели|покажи мои (?:текущие |сохран[её]нные )?цели)(?:[?!.,\s]|$)/i.test(request))return 'goals';
  return null;
@@ -37,7 +38,7 @@ export function cosmosAreaRelevant(key:string,query:string){
 }
 export function selectRelevantMemories(rows:PersonalMemory[],query:string,maxChars=1600){
  const tokens=normalizedMemoryValue(query).split(' ').filter(t=>t.length>3);
- const eligible=rows.filter(r=>r.confirmation_status==='confirmed'&&r.memory_kind==='fact'&&!r.is_sensitive&&r.category!=='birth_information'&&cosmosAreaRelevant(r.memory_key,query)&&!potentiallySensitive(r.memory_key+' '+r.memory_value));
+ const eligible=rows.filter(r=>r.confirmation_status==='confirmed'&&r.memory_kind==='fact'&&!r.is_sensitive&&r.category!=='birth_information'&&r.memory_key!=='companion_settings'&&cosmosAreaRelevant(r.memory_key,query)&&!potentiallySensitive(r.memory_key+' '+r.memory_value));
  const counts=new Map<string,number>();for(const r of eligible){const k=r.category+':'+canonicalMemoryKey(r.memory_key);counts.set(k,(counts.get(k)??0)+1);}
  const overview=personalMemoryOverview(query),scored=eligible.map(r=>({r,score:['personal_facts','preferences'].includes(r.category)&&/name|address|pronouns|gender|communication_style|имя|обращен|местоимения|^род$/i.test(r.memory_key)?10:(r.memory_key.startsWith('cosmos_')?3:overview==='all'||overview==='goals'&&r.category==='goals'?2:hints[r.category]?.test(query)?2:0)+tokens.filter(t=>normalizedMemoryValue(r.memory_value+' '+r.memory_key).includes(t)).length})).filter(x=>x.score>0&&counts.get(x.r.category+':'+canonicalMemoryKey(x.r.memory_key))===1).sort((a,b)=>b.score-a.score||b.r.updated_at.localeCompare(a.r.updated_at));
  const selected:Array<{id:string;category:string;key:string;value:string;source:string;createdAt:string;updatedAt:string}>=[];let length=0;const seen=new Set<string>();for(const {r}of scored){const value=normalizedMemoryValue(r.memory_value);if(seen.has(value))continue;const item={id:r.id,category:r.category,key:r.memory_key,value:r.memory_key.startsWith('cosmos_')?cosmosDomainContext(r.memory_value):r.memory_value,source:r.source_type,createdAt:r.created_at,updatedAt:r.updated_at};const size=JSON.stringify(item).length;if(length+size>maxChars)continue;selected.push(item);length+=size;seen.add(value);if(selected.length===6)break;}return selected;

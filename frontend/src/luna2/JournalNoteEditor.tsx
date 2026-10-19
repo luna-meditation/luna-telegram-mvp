@@ -2,9 +2,9 @@ import {useRef,useState} from 'react';
 import {ApiRequestError,getUniverse,removePersonalMemory,writePersonalMemory,type AppLanguage,type PersonalMemory} from '../api';
 
 export const isJournalNote=(memory:PersonalMemory)=>memory.memory_key.startsWith('journal_note_')&&memory.source_type==='user_entered';
-export function JournalNoteEditor({memory,language,initData,onSaved,onClose}:{memory?:PersonalMemory;language:AppLanguage;initData?:string;onSaved:(memory?:PersonalMemory)=>void;onClose:()=>void}){
+export function JournalNoteEditor({memory,initialText='',language,initData,onSaved,onClose}:{memory?:PersonalMemory;initialText?:string;language:AppLanguage;initData?:string;onSaved:(memory?:PersonalMemory)=>void;onClose:()=>void}){
  const en=language==='en',key=useRef(memory?.memory_key??`journal_note_${crypto.randomUUID()}`),pending=useRef(false);
- const [text,setText]=useState(memory?.memory_value??''),[sensitive,setSensitive]=useState(memory?.is_sensitive??false),[busy,setBusy]=useState(false),[remove,setRemove]=useState(false),[error,setError]=useState('');
+ const [text,setText]=useState(memory?.memory_value??initialText),[sensitive,setSensitive]=useState(memory?.is_sensitive??false),[busy,setBusy]=useState(false),[remove,setRemove]=useState(false),[error,setError]=useState('');
  async function save(){
   if(pending.current||text.trim().length<2)return;pending.current=true;setBusy(true);setError('');
   try{const result=await writePersonalMemory({category:'reflections',key:key.current,value:text.trim(),confirmed:true,kind:'symbolic',sensitiveConsent:sensitive,...(memory?{revision:memory.revision}:{})},initData,memory?.id);onSaved(result);}

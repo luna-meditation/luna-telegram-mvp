@@ -1,7 +1,8 @@
 import {ArrowRight,Sparkles} from 'lucide-react';
 import type {AppLanguage,TarotReading} from '../../api';
 import {useTarotDeck} from './editorialDeck';
-export function TarotAiInterpretation({reading,language,onContinue}:{reading:TarotReading;language:AppLanguage;onContinue?:(id:string)=>void}){
+import {SourceReflection} from '../../luna2/SourceReflection';
+export function TarotAiInterpretation({reading,language,onContinue,initData}:{reading:TarotReading;language:AppLanguage;initData?:string;onContinue?:(id:string)=>void}){
  const tarotDeck=useTarotDeck();
  const ai=reading.interpretation;if(!ai||reading.status!=='ready')return null;
  const en=language==='en',v2=ai.version===2,action=v2?ai.actions?.[0]:ai.reflection;
@@ -24,6 +25,7 @@ export function TarotAiInterpretation({reading,language,onContinue}:{reading:Tar
   </>}
   {ai.continuation&&<p>{ai.continuation}</p>}
  </details>
+ <SourceReflection kind="tarot" referenceId={reading.id} language={language} initData={initData}/>
  {onContinue&&<button type="button" className="tarot-draw-button" onClick={()=>onContinue(reading.id)}>{en?'Discuss with Luna':'Обсудить с Luna'}<ArrowRight size={18}/></button>}
  </section>;
 }

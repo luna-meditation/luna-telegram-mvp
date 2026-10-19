@@ -1,8 +1,23 @@
 import type {IntelligenceActionId,IntelligenceSpread} from './luna-intelligence-contract.js';
 import {requestedBreathOptions} from './luna34-conversation.js';
+import {intelligenceUuid} from './luna-intelligence-contract.js';
 export type IntelligenceCommand={action:IntelligenceActionId;input:Record<string,unknown>;reason:string};
 const tarot=/\b(?:tarot|spread|cards?)\b|таро|расклад|(?:одн[ауой]|три|тр[её]х|пять|пят[ьи]|[135])\s+карт/iu;
 const newRequest=/\b(?:start|draw|deal|new|another|let'?s|want|give|do|make)\b|давай|сделай|начн[иём]|начнем|хочу|нов[ыо]|ещ[её]|погада|раскин|разлож/iu;
+export function isPracticeAccessQuestion(message:string){
+ return message.length<=250&&/(?:this|that)\s+(?:practice|meditation)|эт\p{L}*\s+(?:практик\p{L}*|медитац\p{L}*)/iu.test(message)&&/\b(?:access|included|premium|play|allowed)\b|доступ|входит|премиум|слушать/iu.test(message);
+}
+/** Input is already owner/conversation filtered and newest first. Never reach
+ * across an explicit later topic change to a stale meditation recommendation. */
+export function selectedPracticeForAccess(messages:readonly {role?:string;metadata?:unknown}[]):string|undefined{
+ for(const message of messages){
+  if(message.role!=='assistant')continue;
+  const m=message.metadata as {meditationAction?:{meditationId?:unknown};recommendedMeditationId?:unknown;contextReset?:boolean}|null;
+  const id=m?.meditationAction?.meditationId??m?.recommendedMeditationId;
+  if(intelligenceUuid(id))return id;
+  if(m?.contextReset)return undefined;
+ }
+}
 export function requestedSpread(message:string):IntelligenceSpread|null{
  const subject=message.split(/(?:вопрос|question)\s*[:—-]/iu)[0];
  const precise=subject.match(/(?:\b([135]|one|three|five|single)[-\s]*(?:cards?|card spread)|(?:на\s+)?(одну|одной|одна|три|тр[её]х|пять|пяти|[135])\s*карт)/iu);
@@ -21,10 +36,12 @@ export function resolveIntelligenceCommand(message:string,active?:{type:string;k
  // to prose that may offer unsupported rectification or alternative houses.
  const missingBirthTime=/\bwithout\s+(?:(?:an?|the|exact|known)\s+){0,3}birth\s+time\b|\bbirth\s+time\s+(?:is\s+)?(?:unknown|missing|not known)\b|\b(?:don'?t|do not) know (?:my |the )?birth time\b|(?:без|нет|не знаю).{0,25}врем\S*.{0,15}рожд|врем\S*.{0,15}рожд\S*.{0,20}(?:неизвест|не знаю|не указан)/iu.test(text);
  if(missingBirthTime&&/\b(?:houses?|ascendant)\b|(?<!\p{L})(?:дом(?:а|ов|ы|ах)?|асцендент\p{L}*)(?!\p{L})/iu.test(text))return{action:'capability.unavailable',input:{capability:'unknown_birth_time'},reason:'verified_birth_time_limitation'};
- const requested=text.replace(/(?:не хочу|не надо|не нужно|без|do not|don'?t want|not)\s+(?:таро|расклад\S*|tarot|(?:a )?reading)[^,.;!?]*(?:[,.;!?]|$)/giu,' ');
+ const requested=text.replace(/(?:\b(?:do not|don'?t want|don'?t|not|without)\s+(?:(?:a|an|the|new|another)\s+)*(?:tarot(?:\s+(?:spread|reading))?|spread|reading)\b|(?:не(?:\s+(?:хочу|надо|нужно|делай|начинай))?|без)\s+(?:(?:нов\p{L}*|ещ[её]\s+од\p{L}*)\s+)?(?:таро|расклад\p{L}*))[^,.;!?]*(?:[,.;!?]|$)/giu,' ');
  // A named calculated system takes precedence over the ambiguous word "карта".
  // Opening a report is distinct from interpreting an already active one.
  const natal=/\b(?:natal|birth)\s+chart\b|натальн\S*\s+карт/iu.test(requested);
+ if(!natal&&/\b(?:open|show)\s+(?:the\s+)?astrology\b|(?:открой|покажи).{0,15}(?:раздел\s+)?астрологи/iu.test(requested))return{action:'navigation.open',input:{destination:'astrology'},reason:'explicit_astrology_menu_not_new_report'};
+ if(/(?:birth profiles?|профил\p{L}*)/iu.test(requested)&&/(?:choose|select|выбрать|выбери|выбор)/iu.test(requested)&&/\bchart\b|карт\p{L}*/iu.test(requested)&&!/\btarot\b|таро/iu.test(requested))return{action:'astrology.natal',input:{},reason:'select_actual_saved_birth_profile'};
  // A direct Open/Look command must still produce the real chart when that
  // chart is already active. An analysis follow-up is not an Open command.
  if(natal&&/\b(?:open|show|look|check|see)\b|открой|покажи|посмотр|взглян/iu.test(requested)&&!/почему|что.{0,15}знач|\b(?:why|what.{0,15}mean)\b/iu.test(requested))return{action:'astrology.natal',input:{},reason:'explicit_saved_natal'};
@@ -45,6 +62,7 @@ export function resolveIntelligenceCommand(message:string,active?:{type:string;k
  if(/(?:\b(?:where|open|change|switch|select).{0,35}(?:language|russian|english)\b|(?:где|откр|смен|помен|измен|переключ).{0,30}(?:язык|русск|английск))/iu.test(text))return {action:'settings.language',input:{},reason:'actual_language_settings'};
  if(/\b(?:open|show).{0,25}(?:my universe|my cosmos)\b|(?:открой|покажи).{0,20}(?:(?:мой )?космос|мо[её] созвездие)/iu.test(text))return{action:'cosmos.open',input:{},reason:'actual_cosmos_destination'};
  if(/\b(?:open|show).{0,20}journal\b|(?:открой|покажи).{0,20}дневник/iu.test(text)&&!/прошл|недел|месяц|last|previous/iu.test(text))return{action:'journal.open',input:{},reason:'actual_journal_destination'};
+ if(/\b(?:want to|let'?s)\s+(?:save|write|keep)\s+(?:a\s+)?(?:thought|reflection|note)|хочу\s+(?:записать|сохранить)\s+(?:мысль|заметку|размышление)/iu.test(text))return{action:'journal.open',input:{},reason:'explicit_journal_creation'};
  if(/^(?:please |luna[, ]+|луна[, ]+)?(?:open|show|открой|покажи)\s+(?:(?:my|the|мои|мой|раздел)\s+)?(?:moon garden|garden|achievements|journey|support|settings|лунный сад|сад|достижения|мой путь|поддержку|помощь|настройки)[.!?]?$/iu.test(text.split(/[,;]/u)[0].trim())){
   const destination=/garden|сад/iu.test(text)?'garden':/achievements|достижения/iu.test(text)?'achievements':/journey|путь/iu.test(text)?'journey':/support|поддержку|помощь/iu.test(text)?'support':'settings';
   return{action:'navigation.open',input:{destination},reason:'explicit_existing_destination'};

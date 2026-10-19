@@ -12,7 +12,7 @@
 
 [context.production.environment]
   LUNA_RELEASE_PROFILE = "intelligence"
-  LUNA_RELEASE_DB_REVIEW = "../qa/luna-intelligence-release-review.json"
+  LUNA_RELEASE_DB_REVIEW = "../qa/meet-luna4-release-review.json"
   VITE_FEATURE_LUNA_INTELLIGENCE = "true"
   VITE_FEATURE_ADMIN_V4 = "true"
   VITE_FEATURE_COSMOS_V2 = "true"

@@ -1828,6 +1828,7 @@ function App() {
   const [aiChartId,setAiChartId]=useState<string|import('./api').AstrologyChatAttachment|undefined>();
   const [cosmosDiscussion,setCosmosDiscussion]=useState<{area:string;key:string}|undefined>();
   const [conversationEntry,setConversationEntry]=useState<string|undefined>();
+  const [personalReportEntry,setPersonalReportEntry]=useState<{id:string;key:string}|undefined>();
   const [meetEntry,setMeetEntry]=useState<string|undefined>(launchDestination==='meet'?'launch':undefined);
   const [astrologyEntry,setAstrologyEntry]=useState<'natal'|'compatibility'|'profiles'|'birth_editor'|undefined>(launchDestination==='natal'||launchDestination==='compatibility'?launchDestination:undefined);
   useEffect(()=>{const discuss=(event:Event)=>{const detail=(event as CustomEvent).detail,id=detail?.chartId;if(!featureFlags.astrology||typeof id!=='string'||!/^[-a-f0-9]{36}$/.test(id))return;setAiReadingId(undefined);setAiChartId(detail);};window.addEventListener('luna-discuss-chart',discuss);return()=>window.removeEventListener('luna-discuss-chart',discuss);},[]);
@@ -1891,7 +1892,7 @@ function App() {
   const [profileEntry, setProfileEntry] = useState<ProfileSettingsView>(launchDestination==='invite'?'invite':launchDestination==='meet'?'meet':launchDestination==='cosmos'?'universe':'main');
   useDestinationObservation(initData);
   useEffect(()=>{const open=(event:Event)=>{const destination=resolveLunaDestination((event as CustomEvent).detail?.destination,featureFlags);if(!destination)return;if(destination.id==='meet')setMeetEntry(crypto.randomUUID());if(destination.page==='profile'){setProfileEntry('profileView' in destination?destination.profileView:'main');navigatePrimary('profile');return;}if(destination.page==='astrology')setAstrologyEntry('astrologySection' in destination?destination.astrologySection:undefined);if('tarotScreen' in destination)tarotDispatch({type:'screen',value:destination.tarotScreen});if(destination.id==='daily')tarotDispatch({type:'screen',value:'daily'});setPage(destination.page);};window.addEventListener('luna-open-destination',open);return()=>window.removeEventListener('luna-open-destination',open);},[setPage,navigatePrimary]);
-  useEffect(()=>{if(!featureFlags.ai_central_experience)return;const activity=()=>setPage('activity'),astrology=(event:Event)=>{const value=(event as CustomEvent).detail?.section;setAstrologyEntry(value==='natal'||value==='compatibility'?value:undefined);setPage('astrology');};window.addEventListener('luna-open-activity',activity);window.addEventListener('luna-open-astrology',astrology);return()=>{window.removeEventListener('luna-open-activity',activity);window.removeEventListener('luna-open-astrology',astrology);};},[setPage]);
+  useEffect(()=>{if(!featureFlags.ai_central_experience)return;const activity=()=>setPage('activity'),astrology=(event:Event)=>{const value=(event as CustomEvent).detail?.section;setAstrologyEntry(value==='natal'||value==='compatibility'?value:undefined);setPage('astrology');},report=(event:Event)=>{const id=(event as CustomEvent).detail?.id;if(typeof id==='string'&&/^[a-f0-9-]{36}$/i.test(id)){setPersonalReportEntry({id,key:crypto.randomUUID()});setPage('luna');}},portrait=(event:Event)=>{const section=(event as CustomEvent).detail?.section;setCosmosDiscussion({area:'portrait_'+(typeof section==='string'?section:'overview'),key:crypto.randomUUID()});setPage('luna');};window.addEventListener('luna-open-activity',activity);window.addEventListener('luna-open-astrology',astrology);window.addEventListener('luna-discuss-personal-report',report);window.addEventListener('luna-portrait-discuss',portrait);return()=>{window.removeEventListener('luna-open-activity',activity);window.removeEventListener('luna-open-astrology',astrology);window.removeEventListener('luna-discuss-personal-report',report);window.removeEventListener('luna-portrait-discuss',portrait);};},[setPage]);
   useEffect(()=>{const open=()=>{if(!featureFlags.personal_memory)return;setProfileEntry('universe');navigatePrimary('profile');};window.addEventListener('luna-open-universe',open);return()=>window.removeEventListener('luna-open-universe',open);},[navigatePrimary]);
   useEffect(()=>{const discuss=(event:Event)=>{const area=(event as CustomEvent).detail?.area;if(!featureFlags.cosmos_v2||!cosmosAreas.some(item=>item.id===area))return;setAiReadingId(undefined);setAiChartId(undefined);setCosmosDiscussion({area,key:crypto.randomUUID()});navigatePrimary('luna');};window.addEventListener('luna-discuss-cosmos',discuss);return()=>window.removeEventListener('luna-discuss-cosmos',discuss);},[navigatePrimary]);
   useEffect(()=>{const open=(event:Event)=>{const id=(event as CustomEvent).detail?.id;if(!featureFlags.cosmos_v2||typeof id!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(id))return;setAiReadingId(undefined);setAiChartId(undefined);setCosmosDiscussion(undefined);setConversationEntry(id);navigatePrimary('luna');};window.addEventListener('luna-open-conversation',open);return()=>window.removeEventListener('luna-open-conversation',open);},[navigatePrimary]);
@@ -3053,6 +3054,8 @@ function App() {
             readingContextId={aiReadingId}
             chartContextId={aiChartId}
             cosmosDiscussion={cosmosDiscussion}
+            personalReportEntry={personalReportEntry}
+            onReportEntryConsumed={key=>setPersonalReportEntry(current=>current?.key===key?undefined:current)}
             meetEntry={meetEntry}
             conversationEntry={conversationEntry}
             tarotSetupKey={tarotSetupKey}
@@ -3469,6 +3472,8 @@ function LunaPage({
   readingContextId,
   chartContextId,
   cosmosDiscussion,
+  personalReportEntry,
+  onReportEntryConsumed,
   meetEntry,
   conversationEntry,
   tarotSetupKey,
@@ -3487,6 +3492,8 @@ function LunaPage({
   readingContextId?:string;
   chartContextId?:string|import('./api').AstrologyChatAttachment;
   cosmosDiscussion?:{area:string;key:string};
+  personalReportEntry?:{id:string;key:string};
+  onReportEntryConsumed?:(key:string)=>void;
   meetEntry?:string;
   conversationEntry?:string;
   tarotSetupKey?:number;
@@ -3509,6 +3516,8 @@ function LunaPage({
       readingContextId={readingContextId}
       chartContextId={chartContextId}
       cosmosDiscussion={cosmosDiscussion}
+      personalReportEntry={personalReportEntry}
+      onReportEntryConsumed={onReportEntryConsumed}
       meetEntry={meetEntry}
       conversationEntry={conversationEntry}
       tarotSetupKey={tarotSetupKey}

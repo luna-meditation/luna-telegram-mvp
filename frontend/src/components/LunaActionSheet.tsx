@@ -1,8 +1,8 @@
 import {useEffect,useRef} from 'react';
 import {createPortal} from 'react-dom';
-import {X,Sparkles,Orbit,Heart,Headphones,Wind,Moon,Compass,NotebookPen,type LucideIcon} from 'lucide-react';
+import {X,Sparkles,Orbit,Heart,Headphones,Wind,Moon,Compass,NotebookPen,Hash,type LucideIcon} from 'lucide-react';
 import type {AppLanguage} from '../api';
-type Action='tarot'|'natal'|'compatibility'|'meditation'|'breathing'|'dream'|'cosmos'|'journal';
+type Action='tarot'|'natal'|'compatibility'|'numerology'|'meditation'|'breathing'|'dream'|'cosmos'|'journal';
 export function LunaActionSheet({language,onClose,onAction,availability}:{language:AppLanguage;onClose:()=>void;onAction:(action:Action)=>void;availability:{tarot:boolean;astrology:boolean;cosmos:boolean}}){
  const en=language==='en',dialog=useRef<HTMLDialogElement>(null);
  useEffect(()=>{const focus=document.activeElement as HTMLElement|null;dialog.current?.showModal();return()=>{dialog.current?.close();focus?.focus({preventScroll:true});};},[]);
@@ -10,6 +10,7 @@ export function LunaActionSheet({language,onClose,onAction,availability}:{langua
   {id:'tarot',icon:Sparkles,title:en?'Tarot reading':'Расклад Таро',body:en?'A new perspective on your question':'Новый взгляд на твой вопрос',show:availability.tarot},
   {id:'natal',icon:Orbit,title:en?'Natal chart':'Натальная карта',body:en?'Explore your saved birth chart':'Исследуй свою карту рождения',show:availability.astrology},
   {id:'compatibility',icon:Heart,title:en?'Compatibility':'Совместимость',body:en?'Two charts, one conversation':'Две карты, один разговор',show:availability.astrology},
+  {id:'numerology',icon:Hash,title:en?'Numerology':'Нумерология',body:en?'Your saved date, calculated numbers':'Сохранённая дата и точные числа',show:availability.cosmos},
   {id:'meditation',icon:Headphones,title:en?'Meditation':'Медитация',body:en?'Choose a practice from the library':'Выбери практику в библиотеке'},
   {id:'breathing',icon:Wind,title:en?'Breathe together':'Подышать вместе',body:en?'A quiet minute, right here':'Спокойная минута прямо здесь'},
   {id:'dream',icon:Moon,title:en?'Dream reflection':'Размышление о сне',body:en?'Explore the images that stayed with you':'Исследуй образы, которые запомнились'},

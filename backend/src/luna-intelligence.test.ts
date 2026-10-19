@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {createClient} from '@supabase/supabase-js';
 import {createIntelligenceActionService} from './luna-intelligence-actions.js';
-import {resolveIntelligenceCommand,requestedSpread} from './luna-intelligence-command.js';
+import {resolveIntelligenceCommand,requestedSpread,isPracticeAccessQuestion,selectedPracticeForAccess} from './luna-intelligence-command.js';
 import {isIntelligenceAttachment,validatedIntelligenceAttachments} from './luna-intelligence-contract.js';
 import {intelligenceReference,relevantArtifactFollowUp,retrieveIntelligenceContext} from './luna-intelligence-context.js';
 import {availableConsultationAttachments} from './luna34-conversation.js';
@@ -17,7 +17,7 @@ import {intelligenceMeditationRequest,scopeIntelligenceIntent} from './luna-inte
 import {resolveLunaIntent} from './luna-ai-intent.js';
 import {normalizeConversationState} from './luna-ai-state.js';
 const owner=51001,other=51002,meditation=randomUUID(),usage={remaining:0,limit:8,resetAt:'2026-10-20T00:00:00Z'};
-function fixture(){
+function fixture(hasPracticeAccess=true){
  const writes:string[]=[],reads:string[]=[],tables:Record<string,Array<Record<string,unknown>>>={ai_conversations:[],ai_messages:[],user_memories:[]};
  const db=createClient('https://synthetic.invalid','synthetic-local-fixture',{auth:{persistSession:false},global:{fetch:async(input,init)=>{
   const u=new URL(String(input)),table=u.pathname.split('/').at(-1)!,rows=tables[table];assert.ok(rows,'Unexpected table '+table);const method=init?.method??'GET',h=new Headers(init?.headers);reads.push(table);
@@ -28,8 +28,9 @@ function fixture(){
   const limit=Number(u.searchParams.get('limit'));if(limit>0)result=result.slice(0,limit);
   return Response.json(h.get('accept')?.includes('vnd.pgrst.object')?result[0]??null:result);
  }}});
- const service=createIntelligenceActionService(db,{features:{central:true,spreads:true,tarot_history:true,tarot_daily:true,astrology:true,personal_memory:true},usage:async()=>usage,eligibility:async()=>({allowed:true,source:'existing_access',required:0,shortfall:0}),recommendMeditation:async()=>({id:meditation,title:'Focus QA'}),safety:(_l,c)=>'Emergency support: '+c});
- return{db,tables,writes,reads,service};
+ const practiceChecks:Array<{owner:number;id:string}>=[];
+ const service=createIntelligenceActionService(db,{features:{central:true,spreads:true,tarot_history:true,tarot_daily:true,astrology:true,personal_memory:true},usage:async()=>usage,eligibility:async()=>({allowed:true,source:'existing_access',required:0,shortfall:0}),recommendMeditation:async()=>({id:meditation,title:'Focus QA'}),openMeditation:async(owner,id)=>{practiceChecks.push({owner,id});return{id,title:'Focus QA',hasAccess:hasPracticeAccess};},safety:(_l,c)=>'Emergency support: '+c});
+ return{db,tables,writes,reads,service,practiceChecks};
 }
 const direct:Array<[string,'ru'|'en',string,number?]>=[
  ['Давай расклад на пять карт','ru','tarot.start',5],['Сделай расклад на три карты','ru','tarot.start',3],['Хочу одну карту Таро','ru','tarot.start',1],['Давай новый расклад Таро','ru','tarot.start'],['Луна, сделай расклад на 5 карт','ru','tarot.start',5],['Начни расклад на трёх картах','ru','tarot.start',3],['Хочу расклад на карьеру','ru','tarot.start'],['Сделай расклад о личном росте','ru','tarot.start'],
@@ -47,6 +48,32 @@ for(const [text,language,action,count] of direct)test(`multi-turn action: ${text
  const before=f.writes.length,again=await f.service.message(owner,input,command);assert.equal(again.message.id,first.message.id);assert.equal(again.duplicate,true);assert.equal(f.writes.length,before,'reopening/retry cannot generate, reward or charge');assert.equal(f.tables.ai_messages.filter(r=>r.request_id===input.requestId).length,2);assert.ok(f.writes.every(t=>['ai_messages','ai_conversations'].includes(t)));
 });
 test('new spread count ignores numbers in the question and negated Tarot never starts a draw',()=>{assert.equal(requestedSpread('Draw one card. Question: five years from now?'),'single');for(const text of ['I don’t want Tarot','Не делай новый расклад','Explain my new Tarot spread','Что означает перевёрнутая карта?'])assert.equal(resolveIntelligenceCommand(text),null,text);assert.equal(resolveIntelligenceCommand('Давай ещё расклад Таро',{type:'tarot_reading',kind:'five'})?.input.kind,'five');});
+test('a negated new Tarot request cannot overrule the explicitly requested real meditation',()=>{
+ for(const text of ['Different topic. Recommend an actual meditation for focus, not another Tarot spread.','Recommend a meditation, not a new Tarot reading.','Не хочу ещё один расклад, подбери медитацию для фокуса.','Не делай новый расклад. Найди медитацию для сна.'])assert.equal(resolveIntelligenceCommand(text,{type:'tarot_reading',kind:'five'})?.action,'meditation.recommend',text);
+ for(const text of ['What does this reversed card mean in my reading?','Что означает именно перевёрнутая карта в моём раскладе?','Do not draw another Tarot reading.','Не начинай ещё один расклад.'])assert.equal(resolveIntelligenceCommand(text,{type:'tarot_reading',kind:'three'}),null,text);
+});
+test('Astrology menu and profile selection are distinct actual destinations, never invented profile names',()=>{
+ for(const text of ['Please open Astrology rather than repeating a full report.','Открой раздел астрологии.'])assert.deepEqual(resolveIntelligenceCommand(text)?.input,{destination:'astrology'});
+ for(const text of ['У меня два профиля. Дай выбрать, какую карту открыть.','Let me choose which birth profile chart to open.'])assert.equal(resolveIntelligenceCommand(text)?.action,'astrology.natal',text);
+});
+test('practice access is resolved from the latest actual recommendation, not user-invented or stale attachments',()=>{
+ for(const text of ['Эта практика входит в мой доступ?','Is this meditation included in my access?'])assert.equal(isPracticeAccessQuestion(text),true);
+ for(const text of ['У меня тревога, нужна поддержка.','What is Premium?'])assert.equal(isPracticeAccessQuestion(text),false);
+ const card={role:'assistant',metadata:{contextReset:true,meditationAction:{meditationId:meditation}}};
+ assert.equal(selectedPracticeForAccess([{role:'user',metadata:{recommendedMeditationId:randomUUID()}},card]),meditation);
+ assert.equal(selectedPracticeForAccess([{role:'assistant',metadata:{contextReset:true,tarot:{}}},card]),undefined);
+ assert.equal(selectedPracticeForAccess([{role:'assistant',metadata:{meditationAction:{meditationId:'forged-id'}}}]),undefined);
+});
+test('actual selected practice access is read-only, localized, owner-bound and replay-safe',async()=>{
+ for(const access of [true,false])for(const language of ['ru','en'] as const){
+  const f=fixture(access),input={requestId:randomUUID(),message:language==='ru'?'Эта практика входит в мой доступ?':'Is this practice included in my access?',language},command={action:'meditation.open' as const,input:{id:meditation},reason:'verify_exact_selected_practice'};
+  const first=await f.service.message(owner,input,command),second=await f.service.message(owner,input,command);
+  assert.equal(first.message.id,second.message.id);assert.equal(second.duplicate,true);assert.deepEqual(f.practiceChecks,[{owner,id:meditation}]);
+  assert.equal(first.message.metadata.meditationAction.meditationId,meditation);assert.equal(first.remaining,0);
+  assert.match(first.message.content,language==='ru'?(access?/входит в твой текущий доступ/:/сейчас она не входит в твой доступ/):(access?/is included in your current access/:/does not include it/));
+  assert.doesNotMatch(first.message.content,/I (?:started|played|charged)|Я (?:включила|списала)/iu);assert.ok(f.writes.every(t=>['ai_messages','ai_conversations'].includes(t)));
+ }
+});
 test('failed/foreign/colliding actions cannot retarget an owned conversation or financial state',async()=>{const f=fixture(),id=randomUUID(),command=resolveIntelligenceCommand('Draw five cards')!;f.tables.ai_conversations.push({id,telegram_id:other,status:'active'});await assert.rejects(f.service.message(owner,{requestId:randomUUID(),conversationId:id,message:'Draw five cards',language:'en'},command),/original conversation/);assert.equal(f.writes.length,0);const input={requestId:randomUUID(),message:'Draw five cards',language:'en' as const};await f.service.message(owner,input,command);await assert.rejects(f.service.message(owner,{...input,message:'Draw three cards'},resolveIntelligenceCommand('Draw three cards')!),/original action/);});
 test('all seven attachment types validate their own payload and action, never a prose label',()=>{const id=randomUUID(),base={version:1,id,operationId:id,status:'AUTHORIZED',access:'user_action'},values=[{type:'tarot_reading',action:'tarot.start',payload:{stage:'choose',kind:'five',clientReadingId:id,intention:'general',question:''}},{type:'natal_chart',action:'astrology.natal',payload:{stage:'ready',chartId:id}},{type:'compatibility_report',action:'astrology.compatibility',payload:{stage:'ready',chartId:id,secondChartId:randomUUID()}},{type:'meditation',action:'meditation.open',payload:{meditationId:id}},{type:'breathing_session',action:'breathing.start',payload:{practiceId:'box',minutes:1}},{type:'moon_seeds_offer',action:'wallet.balance',payload:{view:'wallet'}},{type:'premium_offer',action:'premium.entitlements',payload:{view:'premium'}}];for(const value of values){assert.equal(isIntelligenceAttachment({...base,...value}),true);assert.equal(isIntelligenceAttachment({...base,...value,payload:{title:'Tarot cards'}}),false);assert.equal(isIntelligenceAttachment({...base,...value,action:'safety.support'}),false);}assert.deepEqual(validatedIntelligenceAttachments([{title:'Tarot',type:'compatibility_report'}]),[]);});
 test('server Tarot origin is bound to source message, chosen count and conversation',()=>{const id=randomUUID(),clientReadingId=randomUUID(),conversationId=randomUUID(),attachment={version:1,id,operationId:id,type:'tarot_reading',action:'tarot.start',status:'AUTHORIZED',access:'user_action',payload:{stage:'choose',kind:'five',clientReadingId,intention:'general',question:''}},source={conversation_id:conversationId,metadata:{intelligence:{version:1,attachments:[attachment]}}},input={clientReadingId,conversationId,kind:'five'};assert.equal(validChatTarotOrigin(source,input),true);for(const bad of [{...input,clientReadingId:randomUUID()},{...input,kind:'three'},{...input,conversationId:randomUUID()}])assert.equal(validChatTarotOrigin(source,bad),false);const body={...input,intention:'general',question:'QA',language:'en',actionMessageId:id,choiceSlots:[0,1,2,3,4]};assert.equal(chatTarotInput.safeParse(body).success,true);assert.equal(chatTarotInput.safeParse({...body,choiceSlots:[0,0,2,3,4]}).success,false);assert.equal(pendingActionInput.safeParse({id:clientReadingId,conversationId,language:'en',action:{type:'tarot',kind:'five',intention:'general',question:'',actionMessageId:id,choiceSlots:[0]}}).success,false);assert.notEqual(chatTarotHash(chatTarotInput.parse(body)),chatTarotHash(chatTarotInput.parse({...body,choiceSlots:[4,3,2,1,0]})));for(const kind of ['single','three','five'] as const){const draw=drawChatTarot(kind);assert.equal(new Set(draw.map(c=>c.cardId)).size,kind==='single'?1:kind==='three'?3:5);}});
@@ -65,7 +92,7 @@ test('benchmark regressions: explicit destinations execute without a provider pr
  assert.equal(resolveIntelligenceCommand('Мне нужна поддержка, грустно'),null);
 });
 test('unverified opening, playback, memory and financial claims fail closed; valid UI invitations remain',()=>{
- for(const text of ["Opening the Moon Garden for you now.","I have saved your goal.","I'll open your chart.",'Открываю поддержку.','Я списала 50 Moon Seeds.','Запустила медитацию.'])assert.equal(unverifiedExecutionClaim(text),true,text);
+ for(const text of ["Opening the Moon Garden for you now.","I have saved your goal.","I'll open your chart.","I drew five cards.","I've drawn a new spread.",'Открываю поддержку.','Я списала 50 Moon Seeds.','Запустила медитацию.','Я вытянула новую карту.'])assert.equal(unverifiedExecutionClaim(text),true,text);
  for(const text of ['Открой раздел «Поддержка» кнопкой ниже.','Open Moon Garden below.','Your saved reading is here. Tap Play to start.','Ты сохранила цель, теперь выбери следующий шаг.','I am here to listen.'])assert.equal(unverifiedExecutionClaim(text),false,text);
 });
 test('benchmark regressions: misspelled and quiet meditation requests do not launch breathwork',async()=>{

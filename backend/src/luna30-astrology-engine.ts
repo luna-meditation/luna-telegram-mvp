@@ -2,6 +2,7 @@ import {createRequire} from 'node:module';
 import {Temporal} from '@js-temporal/polyfill';
 import {birthCalculationInput,calculatedChart,chartCacheKey} from './astrology-foundation.js';
 import type {z} from 'zod';
+import {discoveryDate} from './birth-discovery-policy.js';
 // 2.1.19's import entry lacks type:module; use its official CommonJS entry on Node 22.
 const {Body,Ecliptic,GeoVector,MakeTime,SiderealTime,e_tilt,MoonPhase,SearchMoonQuarter,NextMoonQuarter}=createRequire(import.meta.url)('astronomy-engine') as typeof import('astronomy-engine');
 
@@ -11,6 +12,14 @@ const normalize=(n:number)=>((n%360)+360)%360;
 export const zodiacSign=(longitude:number)=>Math.floor(normalize(longitude)/30);
 export function aspectBetween(from:number,to:number){const angle=Math.abs(((normalize(from)-normalize(to)+540)%360)-180);const choices=[['conjunction',0],['sextile',60],['square',90],['trine',120],['opposition',180]] as const;const nearest=choices.map(([type,degrees])=>({type,orb:Math.abs(angle-degrees)})).sort((a,b)=>a.orb-b.orb)[0];return nearest.orb<=6?nearest:null;}
 function planetsAt(date:Date){return bodies.map(body=>({id:body.toLowerCase(),longitude:normalize(Ecliptic(GeoVector(body,date,true)).elon)}));}
+/** Date-only discovery without a fabricated birthplace or noon chart. Cover
+ * UTC+14 through UTC-12 for the entire possible local birth day. Cusp dates
+ * can return more than one solar sign; no ascendant, houses or Moon certainty. */
+export function calculateDateOnlySun(raw:string){
+ const date=discoveryDate.parse(raw),start=Date.parse(date+'T00:00:00Z')-14*3600000,signs=new Set<number>();
+ for(let hour=0;hour<=50;hour++)signs.add(zodiacSign(Ecliptic(GeoVector(Body.Sun,new Date(start+hour*3600000),true)).elon));
+ return{engine:astrologyEngineMetadata,precision:'date_only_global_time_window' as const,sunSigns:[...signs].sort((a,b)=>a-b),hasAscendant:false,hasHouses:false,hasPreciseMoon:false};
+}
 /** Requires a location resolved/validated by a trusted server adapter, not arbitrary client coordinates. */
 export function calculateNatalChart(raw:z.infer<typeof birthCalculationInput>){
  const input=birthCalculationInput.parse(raw),birth=Temporal.PlainDate.from(input.date);
