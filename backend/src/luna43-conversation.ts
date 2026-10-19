@@ -1,8 +1,10 @@
+import {declinesTarot,explicitlyUnselectedReference} from './luna-intelligence-turn.js';
 export type ConsultationKind='tarot'|'astrology';
 /** This is a context safety boundary, not the intent engine. New tasks are
  * still selected by structured model tools. Historical IDs are only recovered
  * for a reference to that artifact or a short unambiguous follow-up. */
 export function usesConsultation(message:string,kind:ConsultationKind,selected=false){
+ if(kind==='tarot'&&declinesTarot(message)||explicitlyUnselectedReference(message))return false;
  if(selected)return true;
  const text=message.trim();
  if(/\bmoon\s+(?:seeds|garden)\b|лунн[а-яё]*\s+сад|(?:баланс|купить|куплю|стоимост|цена).{0,30}(?:seeds|семян|семена)/iu.test(text))return false;

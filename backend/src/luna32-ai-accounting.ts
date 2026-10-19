@@ -3,10 +3,10 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import {FoundationError} from './foundation-error.js';
 import {readLuna32Settings,successfulAiLimit} from './luna32-runtime.js';
 import {stagingAiMeterRecord} from './staging-ai-meter.js';
-import {readCommercialAllowance,reserveCommercialAllowance} from './luna34-allowances.js';
-type Operation={db:SupabaseClient;owner:number;key:string;lease:string;calls:number;limit:number;commercial?:boolean;allowanceId?:string|null;adminQuota?:boolean};
+import {readCommercialAllowance,reserveCommercialAllowance,settleCommercialAllowance} from './luna34-allowances.js';
+type Operation={db:SupabaseClient;owner:number;key:string;lease:string;calls:number;limit:number;commercial?:boolean;allowanceVersion?:string;allowanceId?:string|null;adminQuota?:boolean;prepaid?:boolean;readingOrder?:{id:string;kind:'single'|'three'|'five'}};
 const operationContext=new AsyncLocalStorage<Operation>();
-export const currentAiSafetyLimit=()=>operationContext.getStore()?.commercial||operationContext.getStore()?.adminQuota?500:undefined;
+export const currentAiSafetyLimit=()=>operationContext.getStore()?.commercial||operationContext.getStore()?.adminQuota||operationContext.getStore()?.prepaid?500:undefined;
 export function providerCostCeiling(body:unknown){
  const value=body as {model?:string;max_output_tokens?:number;store?:boolean;service_tier?:string};
  if(!['gpt-5-mini','gpt-5-mini-2025-08-07'].includes(value.model??'')||!Number.isSafeInteger(value.max_output_tokens)||value.max_output_tokens!<512||value.max_output_tokens!>8192||value.store!==false)throw new FoundationError(503,'ai_budget_unsupported','This provider configuration is not approved for generation.');
@@ -15,7 +15,16 @@ export function providerCostCeiling(body:unknown){
  // reasoning/output tokens, tool schemas and the default (non-priority) tier.
  return Math.ceil((bytes+1024)*0.25+value.max_output_tokens!*2);
 }
-export async function withAiOperation<T>(db:SupabaseClient,owner:number,key:string,task:()=>Promise<T>,success:(result:T)=>boolean=()=>true):Promise<T>{
+async function verifyPaidReading(db:SupabaseClient,owner:number,key:string,order:NonNullable<Operation['readingOrder']>,bound=false){
+ if(!key.startsWith('tarot:'))throw new FoundationError(403,'reading_order_mismatch','Use the original reading purchase.');
+ const result=await db.from('luna_reading_orders').select('status,kind,client_reading_id').eq('telegram_id',owner).eq('id',order.id).maybeSingle();
+ if(result.error)throw new FoundationError(503,'order_unavailable','Your purchase is preserved.');
+ // Reservation binds an ENTITLED order. Only successful result settlement
+ // changes it to CONSUMED. Requiring that final status before dispatch made
+ // every genuine paid draw fail while the old unit fixture invented success.
+ const row=result.data;if(!row||row.kind!==order.kind||!['entitled','consumed'].includes(row.status)||row.client_reading_id!==null&&row.client_reading_id!==key.slice(6)||bound&&(row.status!=='entitled'||row.client_reading_id!==key.slice(6)))throw new FoundationError(403,'reading_order_mismatch','Use the original owned reading purchase.');
+}
+export async function withAiOperation<T>(db:SupabaseClient,owner:number,key:string,task:()=>Promise<T>,success:(result:T)=>boolean=()=>true,options?:{readingOrder?:Operation['readingOrder']}):Promise<T>{
  if(process.env.LUNA32_ENABLED!=='true'){if(process.env.LUNA34_COMMERCIAL_QUOTAS_ENABLED==='true')throw new FoundationError(503,'ai_accounting_required','Commercial allowances require the verified global cost guard.');return task();}
  const {env}=await import('./config.js');
  const parent=operationContext.getStore();if(parent){if(parent.owner!==owner)throw new FoundationError(403,'context_owner_mismatch','This context is private.');return task();}
@@ -25,18 +34,23 @@ export async function withAiOperation<T>(db:SupabaseClient,owner:number,key:stri
  if(!paid&&env.LUNA30_PREMIUM_ENTITLEMENTS_ENABLED){const period=await db.from('luna30_entitlement_periods').select('id').eq('telegram_id',owner).is('revoked_at',null).lte('period_start',new Date().toISOString()).gt('period_end',new Date().toISOString()).limit(1).maybeSingle();if(period.error)throw new FoundationError(503,'access_unavailable','Could not verify your access.');paid=Boolean(period.data);}
  const administrative=env.FEATURE_ADMIN_V4_MUTATIONS?await (await import('./luna40-grants.js')).readAdminGrants(db,owner):null;
  const context:Operation={db,owner,key,lease:randomUUID(),calls:0,adminQuota:env.FEATURE_ADMIN_V4_MUTATIONS,limit:successfulAiLimit(cfg,Boolean(paid||administrative?.active),{free:env.AI_MAX_MESSAGES_PER_DAY,premium:env.AI_PREMIUM_MAX_MESSAGES_PER_DAY})};
- const prepaid=key.startsWith('deep:');
- if(prepaid){const purchase=await db.from('luna43_seed_purchases').select('state').eq('telegram_id',owner).eq('id',key.slice(5)).eq('product','deep_analysis').maybeSingle();if(purchase.error||purchase.data?.state!=='processing')throw new FoundationError(403,'paid_analysis_required','A confirmed owned analysis is required.');context.adminQuota=false;context.limit=500;}
- if(!prepaid&&env.LUNA34_COMMERCIAL_QUOTAS_ENABLED){const allowance=await readCommercialAllowance(db,owner);if(allowance.enabled){context.commercial=true;context.limit=500;}}
+ const prepaid=key.startsWith('deep:')?'deep_analysis':key.startsWith('portrait:')?'personal_portrait':key.startsWith('compatibility:')?'compatibility_report':null;
+ if(prepaid){const purchase=await db.from('luna43_seed_purchases').select('state').eq('telegram_id',owner).eq('id',key.slice(key.indexOf(':')+1)).eq('product',prepaid).maybeSingle();if(purchase.error||purchase.data?.state!=='processing')throw new FoundationError(403,'paid_analysis_required','A confirmed owned analysis is required.');context.prepaid=true;context.adminQuota=false;context.limit=500;}
+ if(options?.readingOrder){await verifyPaidReading(db,owner,key,options.readingOrder);context.prepaid=true;context.readingOrder=options.readingOrder;context.adminQuota=false;context.limit=500;}
+ if(!context.prepaid&&env.LUNA34_COMMERCIAL_QUOTAS_ENABLED){const allowance=await readCommercialAllowance(db,owner);if(allowance.enabled){context.commercial=true;context.allowanceVersion=allowance.contractVersion;context.limit=500;}}
  let completed=false;
  try{return await operationContext.run(context,async()=>{const result=await task();completed=success(result);return result;});}
- finally{if(context.calls){const result=await db.rpc('luna32_finish_ai_operation',{p_owner:owner,p_operation:key,p_lease:context.lease,p_success:completed});if(result.error)console.error('[Luna AI accounting]',{code:'operation_settlement_failed',lease:context.lease});if(context.adminQuota&&!context.commercial){const settled=await db.rpc('luna40_finish_quota',{p_owner:owner,p_operation:key,p_lease:context.lease,p_success:completed});if(settled.error)console.error('[Luna AI accounting]',{code:'admin_quota_settlement_failed',lease:context.lease});}}if(context.allowanceId){const settled=await db.rpc('luna34_settle_allowance',{p_owner:owner,p_request:context.allowanceId,p_operation:key,p_success:completed&&context.calls>0});if(settled.error)console.error('[Luna AI accounting]',{code:'allowance_settlement_failed',lease:context.lease});}}
+ finally{if(context.calls){const result=await db.rpc('luna32_finish_ai_operation',{p_owner:owner,p_operation:key,p_lease:context.lease,p_success:completed});if(result.error)console.error('[Luna AI accounting]',{code:'operation_settlement_failed',lease:context.lease});if(context.adminQuota&&!context.commercial){const settled=await db.rpc('luna40_finish_quota',{p_owner:owner,p_operation:key,p_lease:context.lease,p_success:completed});if(settled.error)console.error('[Luna AI accounting]',{code:'admin_quota_settlement_failed',lease:context.lease});}}if(context.allowanceId){const settled=await settleCommercialAllowance(db,owner,context.allowanceId,key,completed&&context.calls>0,{version:context.allowanceVersion,lease:context.lease});if(settled.error)console.error('[Luna AI accounting]',{code:'allowance_settlement_failed',lease:context.lease});}}
 }
 export function guardedProviderTransport(transport:(body:unknown,signal:AbortSignal)=>Promise<Response>){
  return async(body:unknown,signal:AbortSignal)=>{
   if(process.env.LUNA32_ENABLED!=='true')return transport(body,signal);
   const op=operationContext.getStore();if(!op)throw new FoundationError(503,'ai_accounting_context_missing','This AI action is unavailable.');
   const ceiling=providerCostCeiling(body);const maxCalls=op.key.startsWith('chat:')&&process.env.FEATURE_LUNA_INTELLIGENCE==='true'?3:2;if(op.calls>=maxCalls)throw new FoundationError(503,'ai_tool_round_limit','This turn reached its bounded tool limit.');
+  // A confirmed purchase replaces the ordinary answer/included allowance; it
+  // is not an extra charge. Verify that the existing draw RPC bound it to this
+  // exact reading before dispatch, not merely that a pending order exists.
+  if(op.readingOrder)await verifyPaidReading(op.db,op.owner,op.key,op.readingOrder,true);
   const id=randomUUID(),index=op.calls+1;
   const args={p_owner:op.owner,p_operation:op.key,p_lease:op.lease,p_call:index,p_attempt:id,p_model:(body as {model:string}).model,p_ceiling:ceiling,p_limit:op.limit};
   const reserve=await (op.adminQuota&&!op.commercial?op.db.rpc('luna40_reserve_ai_attempt',args):op.db.rpc('luna32_reserve_ai_attempt',args));
@@ -51,7 +65,7 @@ export function guardedProviderTransport(transport:(body:unknown,signal:AbortSig
   try{
    // Lease ownership precedes the quota hold. A duplicate/crashed old worker
    // cannot release another worker's in-flight commercial allowance.
-   if(op.commercial&&index===1&&op.allowanceId===undefined)op.allowanceId=await reserveCommercialAllowance(op.db,op.owner,op.key);
+   if(op.commercial&&index===1&&op.allowanceId===undefined)op.allowanceId=await reserveCommercialAllowance(op.db,op.owner,op.key,{version:op.allowanceVersion,lease:op.lease});
    dispatched=true;
    const response=await transport({...body as object,service_tier:'default'},signal);
    if(!response.ok){

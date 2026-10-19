@@ -13,5 +13,9 @@ test('the checked-in candidate evidence cannot authorize production while real A
  if(review.status!=='PASS'){
   assert.equal(review.release,'meet-luna-4-0');assert.ok(review.criticalBlockers.length>0);
   assert.throws(()=>verifyLunaIntelligenceReleaseEvidence(review,root));
+ }else if(review.sourceDigest!==releaseSourceDigest(root)){
+  // The prior production receipt is immutable evidence for its own sources,
+  // not authorization for later development work or a new financial policy.
+  assert.throws(()=>verifyLunaIntelligenceReleaseEvidence(review,root),/Source changed after final verification/);
  }else verifyLunaIntelligenceReleaseEvidence(review,root);
 });

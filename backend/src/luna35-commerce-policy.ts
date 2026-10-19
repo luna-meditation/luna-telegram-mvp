@@ -1,13 +1,20 @@
 import {z} from 'zod';
 export const commerceViews=['wallet','shop','premium','earn','history','quota','resume'] as const;
 export type CommerceView=typeof commerceViews[number];
+export type EarningPolicy='legacy'|'luna4'|'unavailable';
+export type CommerceEarning={id:string;destination:string;seeds?:number;rewardPerMinute?:number;completionBonus?:number;seventhDayBonus?:number;condition:string};
+export function commerceEarningOptions(policy:EarningPolicy,legacyMinute:number,rewards?:{dailyCheckin:number;sevenDayStreak:number}):CommerceEarning[]{
+ if(policy==='luna4')return rewards?[{id:'checkin',destination:'home',seeds:rewards.dailyCheckin,seventhDayBonus:rewards.sevenDayStreak,condition:'one_verified_checkin_per_server_utc_day'}]:[];
+ return policy==='legacy'?[{id:'meditation',destination:'meditations',rewardPerMinute:legacyMinute,completionBonus:2,condition:'new_verified_listening_only'},{id:'breath',destination:'breathwork',seeds:1,condition:'verified_completed_session'}]:[];
+}
 /** Conservative commands only: emotionally sensitive messages stay with the safety pipeline. */
 export function commerceIntent(text:string):CommerceView|null{
  const clean=text.trim();if(clean.length>350||/suicid|kill myself|hurt myself|panic|abuse|lonely|одинок|самоуб|убить себя|паник|насили|боль в груди/i.test(clean))return null;
  if(/^(?:continue (?:my |the )?(?:previous |pending )?(?:reading|purchase|action)|продолж(?:и|ить) (?:предыдущий |прошлый |сохранённый )?(?:расклад|покупку|действие))[.!?]?$/i.test(clean))return 'resume';
- if(/(?:continue|resume|продолж\p{L}*).{0,35}(?:action|reading|purchase|действи\p{L}*|расклад|покуп\p{L}*).{0,45}(?:paused|before payment|pending|приостанов\p{L}*|до оплат\p{L}*)/iu.test(clean))return 'resume';
+ if(/(?:continue|resume|продолж\p{L}*).{0,35}(?:action|reading|purchase|действи\p{L}*|расклад|покуп\p{L}*).{0,45}(?:paused|before payment|pending|приостанов\p{L}*|прерван\p{L}*|(?:до|перед) оплат\p{L}*)/iu.test(clean))return 'resume';
  if(/(?:earn|free seeds|заработ|получить бесплатно).{0,45}(?:seeds|семен)|(?:seeds|семен).{0,45}(?:earn|заработ)/i.test(clean))return 'earn';
- if(/(?:transaction|payment history|purchase history|истори[яю] (?:покуп|платеж|баланс|транзакц))/i.test(clean))return 'history';
+ if(/(?:transaction|payment history|purchase history|истори[яю] (?:покуп|платеж|баланс|транзакц)|(?:последн\p{L}*|истори\p{L}*).{0,20}операци\p{L}*.{0,15}баланс)/iu.test(clean)||/\b(?:did|has|was|is)\b.{0,35}\b(?:payment|purchase)\b.{0,25}\b(?:finish|complete|paid|confirm|succeed)|\b(?:payment|purchase)\b.{0,20}\b(?:status|confirmed|completed)|(?:статус|прош[её]л|заверш[её]н|подтвержд[её]н|проверь).{0,20}плат[её]ж|плат[её]ж.{0,20}(?:прош|заверш|подтвержд|статус)/iu.test(clean))return 'history';
+ if(/\b(?:my|current|actual)\b.{0,20}\bsubscription\b|\b(?:subscription|plan)\b.{0,20}\b(?:active|current)|(?:какая|мой|моя|действующ\p{L}*).{0,30}(?:подписк\p{L}*|тариф)|(?:подписк\p{L}*|тариф).{0,25}(?:действующ\p{L}*|активн\p{L}*)/iu.test(clean))return 'premium';
  if(/(?:how (?:many|much)|сколько|мой|my|show|покажи).{0,40}(?:balance|seeds|баланс|семян)|(?:wallet|кошел[её]к)/i.test(clean))return 'wallet';
  if(/(?:buy|purchase|купить|купи|покуп).{0,35}(?:seeds|семен)|(?:seeds shop|магазин seeds)/i.test(clean))return 'shop';
  if(/(?:premium|премиум|upgrade|подписк|тариф).{0,30}(?:cost|price|сколько|цен|куп|оформ|стоит)|^(?:how much is premium|сколько стоит premium|premium|премиум|i want to upgrade|хочу premium|хочу подписку)[.!?]?$/i.test(clean))return 'premium';
@@ -20,25 +27,26 @@ export const pendingActionInput=z.object({id:z.string().uuid(),conversationId:z.
  z.object({type:z.literal('natal'),chartId:z.string().uuid()}).strict()
 ])}).strict().superRefine((v,c)=>{if(v.action.type==='tarot'&&v.action.choiceSlots&&v.action.choiceSlots.length!==(v.action.kind==='single'?1:v.action.kind==='three'?3:5))c.addIssue({code:'custom',message:'Select the complete spread once.'});});
 export type PendingActionInput=z.infer<typeof pendingActionInput>;
-export type CommerceFacts={balance:number;paid:boolean;lifetime:boolean;beta:{active:boolean;features:readonly string[]};usage:{limit:number;remaining:number;resetAt:string};checkout:boolean;prices:{single:number;three:number;five:number;compatibility:number};included?:Partial<Record<'three'|'five'|'compatibility',number>>;paidReadings:boolean;knownOwned?:boolean};
+export type CommerceFacts={balance:number;paid:boolean;lifetime:boolean;preserveLegacy?:boolean;beta:{active:boolean;features:readonly string[]};usage:{limit:number;remaining:number;resetAt:string};checkout:boolean;prices:{single:number;three:number;five:number;compatibility:number};included?:Partial<Record<'three'|'five'|'compatibility',number>>;paidReadings:boolean;knownOwned?:boolean;earningPolicy?:EarningPolicy;hasPendingAction?:boolean};
 /** Read-only eligibility. This is never authorization to debit a wallet. */
 export function actionEligibility(facts:CommerceFacts,kind:'single'|'three'|'five'|'compatibility'){
  const feature=kind==='compatibility'?'astrology':'tarot';
  if(facts.knownOwned)return {allowed:true,source:'saved_result',required:0,shortfall:0};
  if(facts.beta.active&&facts.beta.features.includes(feature))return {allowed:true,source:'public_beta',required:0,shortfall:0};
- if(facts.lifetime)return {allowed:true,source:'legacy_lifetime',required:0,shortfall:0};
- if(facts.paid&&!facts.checkout)return {allowed:true,source:'existing_paid_rights',required:0,shortfall:0};
+ if(facts.lifetime&&facts.preserveLegacy!==false)return {allowed:true,source:'legacy_lifetime',required:0,shortfall:0};
+ if(facts.preserveLegacy)return {allowed:true,source:'existing_paid_rights',required:0,shortfall:0};
+ if(facts.paid&&facts.preserveLegacy!==false&&!facts.checkout)return {allowed:true,source:'existing_paid_rights',required:0,shortfall:0};
  if((facts.included?.[kind as 'three'|'five'|'compatibility']??0)>0)return {allowed:true,source:'included_allowance',required:0,shortfall:0};
  // A future catalog is not an active price. Do not put a paywall over today's flow.
  if(!facts.paidReadings)return {allowed:true,source:'existing_access',required:0,shortfall:0};
- const required=facts.prices[kind];return {allowed:facts.balance>=required,source:'moon_seeds',required,shortfall:Math.max(0,required-facts.balance)};
+ const required=facts.prices[kind],paused=!facts.checkout&&facts.preserveLegacy===false;return {allowed:!paused&&facts.balance>=required,source:paused?'sales_paused':'moon_seeds',required,shortfall:Math.max(0,required-facts.balance)};
 }
 export function commerceText(view:CommerceView,language:'en'|'ru',facts:CommerceFacts){
  const en=language==='en';if(view==='quota')return en?`You have ${facts.usage.remaining} of ${facts.usage.limit} AI replies left. Your allowance resets at ${facts.usage.resetAt}. Saved conversations remain available.`:`Осталось ответов AI: ${facts.usage.remaining} из ${facts.usage.limit}. Квота обновится ${facts.usage.resetAt}. Сохранённые разговоры доступны.`;
  if(view==='wallet')return en?`You have ${facts.balance} Moon Seeds. Nothing is charged by opening your wallet.`:`У вас ${facts.balance} Moon Seeds. Просмотр баланса ничего не списывает.`;
  if(view==='shop')return facts.checkout?(en?'Choose a package. Telegram will ask you to confirm the exact Stars payment.':'Выберите пакет. Telegram попросит подтвердить точную сумму в Stars.'):(en?'Moon Seeds purchases are not available yet. Your current balance and access are unchanged.':'Покупки Moon Seeds пока недоступны. Текущий баланс и доступ не изменены.');
- if(view==='premium')return facts.lifetime?(en?'Lifetime Premium is already active. You do not need another subscription.':'Lifetime Premium уже активен. Новая подписка не нужна.'):facts.paid?(en?'Your paid Premium access is active. No duplicate subscription is needed.':'Ваш оплаченный Premium активен. Повторная подписка не нужна.'):facts.checkout?(en?'Choose your Premium term below. Each purchase is prepaid, without automatic renewal. Your current access is preserved.':'Выберите срок Premium ниже. Каждый тариф оплачивается один раз, без автопродления. Текущий доступ сохраняется.'):facts.beta.active?(en?'Your Public Beta access is active within the current quota.':'Public Beta активна в пределах текущей квоты.'):(en?'Purchases are not available yet. Your current rights are preserved.':'Покупки пока недоступны. Текущие права сохранены.');
- if(view==='earn')return en?'Choose a real practice. Rewards are checked after completion, never just for opening a page.':'Выберите практику. Награда проверяется после завершения, а не за открытие страницы.';
- if(view==='resume')return en?'Your saved action can be reopened below. No payment or AI generation happens until you explicitly continue.':'Сохранённое действие можно открыть ниже. Без вашего продолжения платежей и AI-генерации не будет.';
+ if(view==='premium')return facts.lifetime?(en?'Lifetime Premium is already active. You do not need another subscription.':'Lifetime Premium уже активен. Новая подписка не нужна.'):facts.paid?(en?'Your paid Premium access is active. No duplicate subscription is needed.':'Ваш оплаченный Premium активен. Повторная подписка не нужна.'):facts.beta.active?(en?'Your plan is Free with temporary Public Beta access within its current quota. This is not a paid Premium subscription and does not renew automatically.':'У вас бесплатный план с временным доступом Public Beta в пределах текущей квоты. Это не оплаченная подписка Premium; автоматического продления нет.'):facts.checkout?(en?'Choose your Premium term below. Each purchase is prepaid, without automatic renewal. Your current access is preserved.':'Выберите срок Premium ниже. Каждый тариф оплачивается один раз, без автопродления. Текущий доступ сохраняется.'):(en?'Purchases are not available yet. Your current rights are preserved.':'Покупки пока недоступны. Текущие права сохранены.');
+ if(view==='earn')return facts.earningPolicy==='luna4'?(en?'Save a daily check-in. Only a verified server-day check-in earns the displayed reward; opening a page or replaying audio does not.':'Сохрани ежедневный чек-ин. Награда начисляется за подтверждённый сервером день, а не за открытие страницы или повтор аудио.'):facts.earningPolicy==='unavailable'?(en?'Reward rules are not active yet. No reward is promised or charged.':'Правила наград пока не включены. Начислений и списаний за просмотр нет.'):(en?'Choose a real practice. Rewards are checked after completion, never just for opening a page.':'Выберите практику. Награда проверяется после завершения, а не за открытие страницы.');
+ if(view==='resume')return facts.hasPendingAction===false?(en?'No pending action was found in this conversation. Nothing was purchased or generated. Tell me which action you want to return to.':'В этом разговоре нет ожидающего продолжения действия. Покупок и генерации не было. Подскажи, к какому действию хочешь вернуться.'):(en?'Your saved action can be reopened below. No payment or AI generation happens until you explicitly continue.':'Сохранённое действие можно открыть ниже. Без вашего продолжения платежей и AI-генерации не будет.');
  return en?'Your verified balance and payment history. Pending payments do not grant access.':'Подтверждённая история баланса и платежей. Ожидающий платёж не даёт доступ.';
 }

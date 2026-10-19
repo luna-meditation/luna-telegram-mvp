@@ -10,11 +10,12 @@ assert.equal(process.env.LUNA_STAGING_SOURCE_COMMIT,commit,'Commit verified sour
 execFileSync('git',['diff','--exit-code','HEAD','--','backend/src','backend/scripts','backend/test','frontend/src','frontend/scripts','frontend/index.html','supabase/migrations'],{cwd:source});
 const {build}=await import(createRequire(await realpath(source+'/frontend/node_modules/vite/package.json')).resolve('esbuild'));
 const luna43=process.env.LUNA43_STAGING_RELEASE==='true',luna42=luna43||process.env.LUNA42_STAGING_RELEASE==='true',luna41=luna42||process.env.LUNA41_STAGING_RELEASE==='true';
-const meet4=process.env.MEET_LUNA4_QA_WORKER==='true',intelligence3=process.env.LUNA_INTELLIGENCE3_STAGING_RELEASE==='true',intelligence2=process.env.LUNA_INTELLIGENCE2_STAGING_RELEASE==='true';
-const intelligence=meet4||intelligence3||intelligence2||process.env.LUNA_INTELLIGENCE_STAGING_RELEASE==='true';
+const completion4=process.env.LUNA4_COMPLETION_QA_WORKER==='true',meet4=process.env.MEET_LUNA4_QA_WORKER==='true',intelligence3=process.env.LUNA_INTELLIGENCE3_STAGING_RELEASE==='true',intelligence2=process.env.LUNA_INTELLIGENCE2_STAGING_RELEASE==='true';
+const completionIntegration=completion4&&process.env.LUNA4_COMPLETION_INTEGRATION==='true';
+const intelligence=completion4||meet4||intelligence3||intelligence2||process.env.LUNA_INTELLIGENCE_STAGING_RELEASE==='true';
 const directory=await mkdtemp(luna43?'/tmp/luna43-staging.':luna41?'/tmp/luna41-staging.':'/tmp/luna40-staging.'),functions=directory+'/functions';await mkdir(functions);await mkdir(directory+'/.netlify');
-const publicSource=meet4?process.env.MEET4_PRESERVE_QA_PUBLIC:source+'/frontend/dist-staging';
-if(meet4)assert.ok(publicSource?.startsWith('/tmp/luna40-staging.')&&publicSource.endsWith('/public'),'Technical worker update must preserve the previously published QA frontend');
+const publicSource=completion4||meet4?process.env.MEET4_PRESERVE_QA_PUBLIC:source+'/frontend/dist-staging';
+if(completion4||meet4)assert.ok(publicSource?.startsWith('/tmp/luna40-staging.')&&publicSource.endsWith('/public'),'Technical worker update must preserve the previously published QA frontend');
 // APFS/reflink-capable filesystems can share these immutable asset blocks.
 // Only tiny routing metadata changes below; unsupported systems safely copy.
 await cp(publicSource,directory+'/public',{recursive:true,mode:fsConstants.COPYFILE_FICLONE});
@@ -39,13 +40,14 @@ let actionAuthFile=null;
 let transcriptionAuthFile=null;
 let integrationAuthFile=null,integrationGrantId=null;
 if(intelligence){
- assert.equal(process.env.LUNA_INTELLIGENCE_QA_APPROVED,meet4?'100_responses_6_stt_combined_usd0.75':intelligence3?'90_responses_8_stt_combined_usd0.75':intelligence2?'60_responses_combined_usd0.50':'180_responses_combined_usd1');
+ assert.equal(process.env.LUNA_INTELLIGENCE_QA_APPROVED,completionIntegration?'320_responses_4_stt_combined_usd0.50':completion4?'60_responses_4_stt_combined_usd0.50':meet4?'100_responses_6_stt_combined_usd0.75':intelligence3?'90_responses_8_stt_combined_usd0.75':intelligence2?'60_responses_combined_usd0.50':'180_responses_combined_usd1');
  assert.ok(!luna43&&!luna42&&!luna41,'Do not bundle historical paid workers with Intelligence');
  const nonce=randomBytes(32).toString('hex'),authSha256=createHash('sha256').update(nonce).digest('hex');expiresAt=new Date(Date.now()+8*3600000).toISOString();
- const samples=meet4||intelligence3?JSON.parse(await readFile(process.env.LUNA3_VOICE_SAMPLES,'utf8')):[];
+ const samples=meet4||intelligence3||completionIntegration?JSON.parse(await readFile(process.env.LUNA3_VOICE_SAMPLES,'utf8')):[];
+ if(completionIntegration){assert.equal(samples.length,3);const hashes=['fcce8f1248cd49dd7541dc17730041975c1b1c361d30a682508429878840af0f','7dca8fb22f7821f2e3641495a6a62f3c30a586949ffa9c71aa9d3a31c41bfe28','315573efa13f6426417d0c42555dbeb64b3d49ab8d3ce1b2515d6b2a08fac989'];for(const sample of samples)assert.ok(hashes.includes(createHash('sha256').update(Buffer.from(sample.base64,'base64')).digest('hex'))&&sample.sha256===createHash('sha256').update(Buffer.from(sample.base64,'base64')).digest('hex'));}
  if(meet4){assert.ok(samples.length>=2&&samples.length<=6);for(const sample of samples)assert.equal(createHash('sha256').update(Buffer.from(sample.base64,'base64')).digest('hex'),sample.sha256);}
  if(intelligence3){assert.equal(samples.length,5);for(const sample of samples)assert.equal(createHash('sha256').update(Buffer.from(sample.base64,'base64')).digest('hex'),sample.sha256);}
- for(const readOnly of [false,true]){const name=readOnly?'luna-intelligence-status':'luna-intelligence-background';await build({...options,stdin:{contents:`import {run} from '${source}/backend/test/${meet4?'meet-luna4-staging':'luna-intelligence-staging'}.mjs';export default async function(request,context){return run(request,context,${JSON.stringify({authSha256,expiresAt,sourceCommit:commit,readOnly,...(meet4?{program:'meet4',samples:readOnly?[]:samples}:intelligence3?{program:'intelligence3',samples:readOnly?[]:samples}:intelligence2?{program:'intelligence2'}:{})})});}${readOnly?'':'export const config={background:true};'}`,resolveDir:source,sourcefile:name+'.mjs'},outfile:functions+'/'+name+'.mjs'});}
+ for(const readOnly of [false,true]){const name=readOnly?'luna-intelligence-status':'luna-intelligence-background';await build({...options,stdin:{contents:`import {run} from '${source}/backend/test/${completionIntegration?'luna4-integration-staging':completion4?'luna4-completion-staging':meet4?'meet-luna4-staging':'luna-intelligence-staging'}.mjs';export default async function(request,context){return run(request,context,${JSON.stringify({authSha256,expiresAt,sourceCommit:commit,readOnly,...(completion4?{program:'completion4',...(completionIntegration?{samples:readOnly?[]:samples}:{})}:meet4?{program:'meet4',samples:readOnly?[]:samples}:intelligence3?{program:'intelligence3',samples:readOnly?[]:samples}:intelligence2?{program:'intelligence2'}:{})})});}${readOnly?'':'export const config={background:true};'}`,resolveDir:source,sourcefile:name+'.mjs'},outfile:functions+'/'+name+'.mjs'});}
  authFile=directory+'/luna-intelligence-command-private.json';await writeFile(authFile,JSON.stringify({nonce,expiresAt}),{mode:0o600,flag:'wx'});
 }
 if(luna43){

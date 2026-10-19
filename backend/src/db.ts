@@ -6,6 +6,8 @@ import {stagingUserRecord} from './staging-policy.js';
 import {buildLuna30Progress,type Luna30ProgressInput} from './luna30-progression.js';
 import {loadLuna30ActivityMetadata} from './luna30-progress-source.js';
 import {createLuna34Progress} from './luna34-progress.js';
+import {createLuna4Rewards,legacySeedReward} from './luna4-rewards.js';
+import {reconcileReferralPurchase}from'./luna4-referrals.js';
 import {
   paymentPlanDetails,
   payloadPlanFromStoredPayment,
@@ -189,6 +191,7 @@ export async function upsertUser(user: TelegramUserInput) {
     .single();
 
   if (error) throw error;
+  if(env.FEATURE_ECONOMY_REWARDS_V2)try{await createLuna4Rewards(supabase,()=>true).welcome(user.telegram_id);}catch{console.error('[Luna rewards]',{code:'welcome_pending'});}
   return data;
 }
 
@@ -701,7 +704,8 @@ export async function upsertHistory(telegramId: number, input: HistoryInput) {
     completionBonusEligible: sessionQualifiesForCompletion,
     completionBonusAlreadyAwarded: Boolean(existing?.completion_seed_bonus_awarded)
   });
-  const { nextAwardedPosition, completionBonusAwarded, moonSeedsAwarded } = rewards;
+  const { nextAwardedPosition, completionBonusAwarded } = rewards;
+  const moonSeedsAwarded=legacySeedReward(rewards.moonSeedsAwarded,env.FEATURE_ECONOMY_REWARDS_V2);
 
   const { error } = await supabase
     .from('history')
@@ -746,7 +750,7 @@ export async function upsertHistory(telegramId: number, input: HistoryInput) {
     completion_percent: completion,
     completed,
     moonSeedsAwarded,
-    completionBonusAwarded: completionBonusAwarded > 0
+    completionBonusAwarded: !env.FEATURE_ECONOMY_REWARDS_V2&&completionBonusAwarded > 0
   };
 }
 
@@ -782,12 +786,13 @@ export async function recordSceneMoonSeed(telegramId: number, input: {
     return { awarded: false, moonSeeds: 0 };
   }
 
-  await awardMoonSeeds(telegramId, 1);
+  const seeds=legacySeedReward(1,env.FEATURE_ECONOMY_REWARDS_V2);
+  if(seeds>0)await awardMoonSeeds(telegramId, seeds);
   await recordPracticeDay(telegramId, 'scene', Math.max(5, Math.round(durationSeconds / 60)), input.local_date);
   await updateStreak(telegramId, input.local_date);
   return {
-    awarded: true,
-    moonSeeds: 1,
+    awarded: seeds>0,
+    moonSeeds: seeds,
     scene_id: input.scene_id ?? null
   };
 }
@@ -1022,6 +1027,7 @@ export async function upsertDailyCheckin(telegramId: number, input: DailyCheckin
   } catch (streakError) {
     logBackendError(streakError, { endpoint: 'daily check-in Active Luna Day streak update', telegramId });
   }
+  if(env.FEATURE_ECONOMY_REWARDS_V2)try{return{...data,reward:await createLuna4Rewards(supabase,()=>true).checkin(telegramId,data.id)};}catch{console.error('[Luna rewards]',{code:'checkin_reward_pending'});return{...data,reward:{status:'pending',awarded:0}};}
   return data;
 }
 
@@ -1354,7 +1360,7 @@ async function mutateAtomicGarden(telegramId:number,action:string,element:string
 }
 
 async function awardMoonSeeds(telegramId: number, amount: number) {
-  if (amount <= 0) return;
+  if (amount <= 0 || env.FEATURE_ECONOMY_REWARDS_V2) return;
   if(env.FEATURE_GARDEN_ATOMIC){await mutateAtomicGarden(telegramId,'award',null,amount);return;}
 
   const { data: existing, error: readError } = await supabase
@@ -2020,6 +2026,7 @@ export async function recordSuccessfulPayment(input: {
     const {data,error}=await supabase.rpc('luna21_fulfill_existing_stars',{p_telegram_id:input.telegram_id,p_plan:input.plan,p_currency:'XTR',p_amount:plan.amountStars,p_charge_id:input.telegram_payment_charge_id,p_provider_charge_id:input.provider_payment_charge_id??''});
     if(error||!data)throw new Error('Stars fulfillment unavailable.');
     const result=data as {isNewPayment:boolean;seedsGranted:boolean};
+    await reconcileReferralPurchase(supabase,input.telegram_id,env.LUNA34_REFERRALS_ENABLED);
     return {...result,access:await getUserAccess(input.telegram_id)};
   }
 

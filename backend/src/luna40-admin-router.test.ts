@@ -1,5 +1,25 @@
 import test from 'node:test';import assert from 'node:assert/strict';import express from 'express';import type {SupabaseClient} from '@supabase/supabase-js';import type {AuthenticatedRequest} from './auth.js';import {createAdmin40Router} from './luna40-admin.js';
 import {editorialBaseline} from './luna42-editorial.js';
+import {luna4EconomyCandidate} from './luna4-economy-policy.js';
+test('active economy route has distinct audited RPC, explicit confirmation and no activation/owner bypass fields',async()=>{
+ const calls:Array<{name:string;input:Record<string,unknown>}>=[],db={async rpc(name:string,input:Record<string,unknown>){calls.push({name,input});return{data:{catalog:input.p_body,revision:8,active:true},error:null};}} as unknown as SupabaseClient;
+ const app=express();app.use((req,_res,next)=>{(req as AuthenticatedRequest).telegramUser={telegram_id:40001};next();});app.use('/api/admin/v4',createAdmin40Router(db,{ownerId:40001,enabled:true,environment:'isolated-test',model:'gpt-5-mini',mutationsEnabled:true}));app.use((_error:unknown,_req:express.Request,res:express.Response,_next:express.NextFunction)=>{void _error;void _next;res.status(422).json({code:'invalid_catalog'});});
+ const server=app.listen(0,'127.0.0.1');await new Promise<void>(r=>server.once('listening',r));const address=server.address();assert.ok(address&&typeof address!=='string');const origin='http://127.0.0.1:'+address.port,base={requestId:'64000000-0000-4000-8000-000000000008',expectedRevision:7,catalog:luna4EconomyCandidate,reason:'Synthetic future offers',confirmed:true};
+ const send=(body:unknown)=>fetch(origin+'/api/admin/v4/commercial-economy',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+ try{assert.equal((await send(base)).status,200);assert.equal(calls[0].name,'luna4_update_active_catalog');assert.equal(calls[0].input.p_actor,40001);for(const bad of[{...base,active:true},{...base,checkoutEnabled:true},{...base,telegramId:40002},{...base,confirmed:false},{...base,catalog:{...luna4EconomyCandidate,premiumStars:{...luna4EconomyCandidate.premiumStars,monthly:1}}}])assert.equal((await send(bad)).status,422);assert.equal(calls.length,1);}finally{await new Promise<void>(r=>server.close(()=>r()));}
+});
+test('economy draft uses owner authorization and strict finite terms, and cannot activate checkout',async()=>{
+ const calls:Array<{name:string;input:Record<string,unknown>}>=[];
+ const db={async rpc(name:string,input:Record<string,unknown>){calls.push({name,input});return{data:{catalog:input.p_body,revision:1,active:false},error:null};}} as unknown as SupabaseClient;
+ const app=express();app.use((req,_res,next)=>{(req as AuthenticatedRequest).telegramUser={telegram_id:40001};next();});app.use('/api/admin/v4',createAdmin40Router(db,{ownerId:40001,enabled:true,environment:'isolated-test',model:'gpt-5-mini',mutationsEnabled:true}));app.use((error:unknown,_req:express.Request,res:express.Response,_next:express.NextFunction)=>{void error;void _next;res.status(422).json({code:'invalid_draft'});});
+ const server=app.listen(0,'127.0.0.1');await new Promise<void>(r=>server.once('listening',r));const address=server.address();assert.ok(address&&typeof address!=='string');const origin='http://127.0.0.1:'+address.port;
+ const send=(body:unknown)=>fetch(origin+'/api/admin/v4/commercial-economy-draft',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+ const base={requestId:'64000000-0000-4000-8000-000000000001',expectedRevision:0,catalog:luna4EconomyCandidate,reason:'Synthetic economy draft',confirmed:true};
+ try{const r=await send(base);assert.equal(r.status,200);assert.equal((await r.json()).active,false);assert.equal(calls[0].name,'luna4_update_next_catalog');assert.equal(calls[0].input.p_actor,40001);assert.deepEqual(calls[0].input.p_body,luna4EconomyCandidate);
+  for(const bad of [{...base,active:true},{...base,telegramId:40002},{...base,catalog:{...luna4EconomyCandidate,premiumStars:{...luna4EconomyCandidate.premiumStars,monthly:1}}},{...base,catalog:{...luna4EconomyCandidate,products:{...luna4EconomyCandidate.products,aiMessages:{seeds:50,quantity:101}}}},{...base,confirmed:false}])assert.equal((await send(bad)).status,422);
+  assert.equal(calls.length,1);
+ }finally{await new Promise<void>(r=>server.close(()=>r()));}
+});
 test('actual admin mount parses bounded JSON before the global parser while preserving raw media and financial locks',async()=>{
  const mutations:Array<{name:string;input:Record<string,unknown>}>=[],uploads:Buffer[]=[];
  const db={async rpc(name:string,input:Record<string,unknown>){mutations.push({name,input});if(input.p_expected===999)return{data:null,error:{code:'PT409'}};return{data:{key:input.p_key,version:1,state:'draft'},error:null};},storage:{from(){return{async upload(_path:string,body:Buffer){uploads.push(body);return{error:null};},getPublicUrl(path:string){return{data:{publicUrl:'https://qa.supabase.co/storage/v1/object/public/meditations/'+path}};}};}}}as unknown as SupabaseClient;

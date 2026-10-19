@@ -5,9 +5,15 @@ import {meetLuna4Modules} from './luna/prompts/meet-luna4.js';
 export const intelligencePromptVersions=['intelligence-v1','intelligence-v3','meet-luna4'] as const;
 export const usesIntelligencePrompt=(version:string)=>intelligencePromptVersions.some(v=>v===version);
 export function intelligenceQuickReplies(raw:unknown,previous:string[],topic:'tarot'|'natal'|'compatibility'|'general'){
- return meaningfulQuickReplies(raw,previous).filter(value=>!/(?:excel|pdf|docx|human design|jyotish|bazi|бадзы|джйотиш)/iu.test(value)).filter(value=>topic==='general'?true:topic==='tarot'?!/natal chart|compatibility report|натальн|совместим/iu.test(value):!/tarot|расклад|таро|вытянуть карт/iu.test(value));
+ return meaningfulQuickReplies(raw,previous).filter(value=>!/(?:excel|pdf|docx|human design|jyotish|bazi|бадзы|джйотиш|schedule (?:a |the )?reminder|set (?:a |the )?reminder|start (?:a )?\d+[ -]minute (?:focus )?session|постав[ьи].{0,12}напоминани|запланиру[йю].{0,12}напоминани)/iu.test(value)).filter(value=>topic==='general'?true:topic==='tarot'?!/natal chart|compatibility report|натальн|совместим/iu.test(value):!/tarot|расклад|таро|вытянуть карт/iu.test(value));
 }
 export function unverifiedCapabilityClaim(text:string){return /(?:I (?:have )?(?:created|generated|sent|attached|exported)|I've (?:created|generated|sent|attached|exported)|я (?:создала|сгенерировала|отправила|прикрепила|выгрузила)).{0,65}(?:file|pdf|excel|spreadsheet|docx|файл|пдф|эксель)/iu.test(text);}
+/** Breathwork has its own verified timeline. A general chat has no arbitrary
+ * focus timer or scheduled-reminder tool, so it cannot offer to run one. */
+export function unverifiedAutomationClaim(text:string){return text.split(/(?<=[.!?])\s+|\n/u).some(sentence=>{
+ if(/\b(?:cannot|can't|can’t|do not|don't|not able)\b|не (?:могу|умею|поддерживаю)|на (?:сво[её]м|тво[её]м|вашем) телефоне|on your (?:phone|device)|how (?:to|you can) (?:set|start)/iu.test(sentence))return false;
+ return /\b(?:I can|I will|I'll|I’ll|shall I|would you like me to|want me to|let me)\b.{0,80}\b(?:set|start|schedule|create)\b.{0,35}\b(?:timer|reminder)\b/iu.test(sentence)||/(?:я\s+(?:могу|могла бы)|хочешь.{0,20}чтобы я|давай я|могу).{0,120}(?:постав|установ|зада|запус|запланир|созда).{0,35}(?:таймер|напоминан)/iu.test(sentence);
+});}
 /** A model sentence cannot acknowledge a client action or a financial mutation.
  * Verified navigation is rewritten to an actual button invitation before this guard. */
 export function unverifiedExecutionClaim(text:string){

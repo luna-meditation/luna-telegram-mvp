@@ -1,3 +1,4 @@
+import {declinesTarot} from './luna-intelligence-turn.js';
 type Planet='sun'|'moon'|'mercury'|'venus'|'mars'|'jupiter'|'saturn'|'uranus'|'neptune'|'pluto';
 type AstrologyAttachment={chartId:string;secondChartId?:string;reportId?:string;comparisonId?:string;relationship?:'romantic'|'business'|'friendship'|'family';planet?:Planet;aspect?:{from:Planet;to:Planet;type:'conjunction'|'sextile'|'square'|'trine'|'opposition'}};
 /** Active context is separate from historical attachments. Never infer an ID
@@ -8,6 +9,7 @@ export function availableConsultationAttachments(messages:Array<{role?:string;me
  return {readings:[...readings].slice(-12),charts:[...charts.values()].slice(-12)};
 }
 export function independentReflectionTopic(text:string):'dream'|'companion'|'wellbeing'|null{
+ if(declinesTarot(text)&&/\b(?:talk about my day|just talk|general conversation)\b|поговорим о мо[её]м дне|просто поговорим/iu.test(text))return 'companion';
  if(/\b(?:tarot|card|chart|compatibility|mercury|venus|natal)\b|таро|расклад|карт[ауы]|совместим|меркур|венер|натальн/i.test(text))return null;
  if(/\b(?:interpret|explore|discuss|understand).{0,30}(?:my|a|this) dream\b|мне приснилось|(?:обсуди|разбери|помоги понять|толкован).{0,30}сон/i.test(text))return 'dream';
  if(/\b(?:change (?:the )?topic|different topic|new topic|something else|just talk|general conversation)\b|сменим тему|другая тема|на другую тему|просто поговорим/i.test(text))return 'companion';

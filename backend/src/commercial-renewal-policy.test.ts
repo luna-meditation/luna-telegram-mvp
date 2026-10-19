@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {invoiceIsRecurring} from './commercial-renewal-policy.js';
+test('historical monthly renewals and prepaid versions retain their actual terms',()=>{for(const version of ['luna-3.0-proposed','luna-3.4'])assert.equal(invoiceIsRecurring('premium_month',version),true);for(const version of ['luna-4.3','luna-4.0-completion-v1'])assert.equal(invoiceIsRecurring('premium_month',version),false);for(const product of ['premium_week','premium_year','premium_lifetime','seeds_100','support'])assert.equal(invoiceIsRecurring(product,'luna-4.3'),false);});
+test('unknown or missing catalog version cannot silently turn a monthly purchase into recurring',()=>{for(const version of ['', 'luna-future','luna-4.4'])assert.throws(()=>invoiceIsRecurring('premium_month',version),/unreviewed_invoice/);});

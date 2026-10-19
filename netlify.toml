@@ -11,8 +11,8 @@
   command = "pnpm --filter @luna/frontend build:production"
 
 [context.production.environment]
-  LUNA_RELEASE_PROFILE = "intelligence"
-  LUNA_RELEASE_DB_REVIEW = "../qa/meet-luna4-release-review.json"
+  LUNA_RELEASE_PROFILE = "luna4-completion"
+  LUNA_RELEASE_DB_REVIEW = "../qa/luna4-completion-release-review.json"
   VITE_FEATURE_LUNA_INTELLIGENCE = "true"
   VITE_FEATURE_ADMIN_V4 = "true"
   VITE_FEATURE_COSMOS_V2 = "true"
@@ -32,10 +32,10 @@
   VITE_FEATURE_MOON_SEEDS_PURCHASES = "true"
   VITE_FEATURE_BREATHWORK_AUDIO = "true"
   VITE_FEATURE_DAILY_CARD_V2 = "true"
-  VITE_FEATURE_ECONOMY_REWARDS_V2 = "false"
+  VITE_FEATURE_ECONOMY_REWARDS_V2 = "true"
   VITE_FEATURE_TAROT_PAID_READINGS = "true"
   VITE_FEATURE_PAYMENT_ATOMIC = "true"
-  VITE_FEATURE_PREMIUM_V2 = "false"
+  VITE_FEATURE_PREMIUM_V2 = "true"
 
 [[redirects]]
   from = "/*"

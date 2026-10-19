@@ -1,0 +1,9 @@
+import type {Luna4Economy,Luna4Plan} from '../../../../backend/src/luna4-economy-policy';
+export function productPlan(product:string):Luna4Plan|null{
+ switch(product){case 'premium_week':return 'weekly';case 'premium_month':return 'monthly';case 'premium_year':return 'annual';case 'premium_lifetime':return 'lifetime';default:return null;}
+}
+export function PremiumBenefits({value,plan,language}:{value:Luna4Economy['premiumAllowances']['monthly'];plan:string;language:'en'|'ru'}){
+ const en=language==='en',period=plan==='weekly'?(en?'per 7-day term':'за срок 7 дней'):plan==='monthly'?(en?'per 30-day term':'за срок 30 дней'):(en?'per billing month':'за расчётный месяц');
+ const plural=(n:number,singular:string,many:string,ru:[string,string,string])=>en?(n===1?singular:many):ru[new Intl.PluralRules('ru').select(n)==='one'?0:new Intl.PluralRules('ru').select(n)==='few'?1:2];
+ return <div className="luna4-included-benefits"><strong>{en?'Included benefits':'Включённые возможности'}</strong><ul><li>{value.standard} {plural(value.standard,'standard AI reply','standard AI replies',['стандартный ответ AI','стандартных ответа AI','стандартных ответов AI'])} · {period}</li><li>{value.three} {plural(value.three,'three-card reading','three-card readings',['расклад на 3 карты','расклада на 3 карты','раскладов на 3 карты'])} · {period}</li>{value.deep>0&&<li>{value.deep} {plural(value.deep,'deep personal analysis','deep personal analyses',['глубокий персональный разбор','глубоких персональных разбора','глубоких персональных разборов'])} · {period}</li>}{value.premiumMeditations&&<li>{en?'Premium meditations':'Premium-медитации'}</li>}</ul><small>{en?'Opening saved results is free. Extra reports and follow-up messages use their own displayed allowance or price.':'Открытие сохранённых результатов бесплатно. Дополнительные разборы и сообщения-продолжения используют свою показанную квоту или цену.'}</small></div>;
+}

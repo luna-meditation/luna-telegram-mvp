@@ -8,10 +8,11 @@ import type {calculateDateNumerology} from './luna-intelligence-numerology.js';
  * distinct from a requested technical-method explanation. No prose repair. */
 export function assertGroundedNumerologyProse(text:string,facts:ReturnType<typeof calculateDateNumerology>,request:string){
  const labels={lifePath:'life path|жизненн\\p{L}* пут\\p{L}*',birthday:'birthday(?: number)?|число (?:дня )?рождения',personalYear:'personal year|личн\\p{L}* год\\p{L}*',personalMonth:'personal month|личн\\p{L}* месяц\\p{L}*',personalDay:'personal day|личн\\p{L}* д(?:ень|ня|не)'} as const;
- for(const [key,label] of Object.entries(labels))for(const match of text.matchAll(new RegExp(`(?:${label})[ \\t*]*(?:(?:is|equals|—|–|:|равен|это)[ \\t*]*)?(\\d{1,2})(?!\\d)`,'giu'))){if(Number(match[1])!==facts[key as keyof typeof labels])throw new Error('ungrounded_numerology_value');}
+ for(const [key,label] of Object.entries(labels))for(const match of text.matchAll(new RegExp(`(?:${label})[ \\t*]*(?:(?:is|equals|—|–|:|=|равен|это)[ \\t*]*)?(\\d{1,2})(?!\\d)`,'giu'))){if(Number(match[1])!==facts[key as keyof typeof labels])throw new Error('ungrounded_numerology_value');}
  const technical=/master|мастер|method|метод|step.by.step|пошаг|how.{0,20}calcul|как.{0,20}(?:счит|рассчит)/iu.test(request),detailed=technical||/in detail|подроб|deep analysis|глубокий разбор/iu.test(request);
  if(!technical&&/master numbers?|мастер.?числ/iu.test(text))throw new Error('unrequested_numerology_method');
  if(/only.{0,24}intermediate|только.{0,24}промежуточ/iu.test(text))throw new Error('ungrounded_numerology_method');
+ if(/\b(?:expect shifts|your (?:life path \d+ )?wiring|you are destined|this year will bring)\b|(?:в этом году (?:тебя|вас) жд[её]т|числ\p{L}* гарантиру\p{L}*|тебе суждено)/iu.test(text))throw new Error('ungrounded_numerology_prediction');
  if(!detailed&&text.trim().split(/\s+/u).length>200)throw new Error('numerology_overview_too_long');
 }
 export type GroundedChartContext={first:Chart;second?:Chart;synastry?:{aspects:Array<{from:string;to:string;type:string}>}};

@@ -188,7 +188,7 @@ export function isReadyMeditationRequest(message: string) {
 }
 
 export function isAlternativeRecommendationRequest(message: string) {
-  return /\b(?:another|other options?|alternatives?|something else|anything else|different one)\b/i.test(message) ||
+  return /\b(?:another|other options?|alternatives?|something else|anything else|different(?:\s+(?:existing|available|published))?\s+(?:one|meditation|practice|track))\b/i.test(message) ||
     /(?:а\s+есть\s+ещ[её]|ещ[её]\s+(?:друг|вариант)|друг(?:ая|ие|ой|ую)|что[- ]?нибудь\s+ещ[её]|давай\s+друг)/i.test(message);
 }
 
@@ -219,7 +219,7 @@ const intentKeywords: Record<string, RegExp> = {
   anxiety: /(anxious|anxiety|panic|worried|worry|stress|stressed|overwhelmed|нервнича|тревог|паник|стресс|перегруж)/i,
   sleep: /(can't sleep|cannot sleep|insomnia|sleep|bed|night|tired|уснуть|спать|сон\b|сна\b|бессон|ноч)/i,
   self_kindness: /(self[- ]?criticism|hate myself|not good enough|shame|guilt|criticizing myself|самокрит|ненавижу себя|стыд|вина|недостаточно хорош)/i,
-  focus: /(overthink|thoughts won.t stop|mental noise|cannot focus|can't focus|\b(?:for|to) focus\b|\bfocus (?:meditation|practice)\b|concentrate|attention|clarity|зацик|мысли не останавли|не могу сосредоточ|фокус|вниман|ясност)/i,
+  focus: /(overthink|thoughts won.t stop|mental noise|cannot focus|can't focus|\b(?:for|to) focus\b|\bfocus (?:meditation|practice)\b|concentrat|attention|clarity|зацик|мысли не останавли|сосредоточ|концентр|фокус|вниман|ясност)/i,
   grounding: /(ground|grounding|dissociate|scattered|unsteady|center|balance|заземл|рассеян|неустойчив|баланс|собраться)/i,
   morning: /(morning|start my day|wake up|routine|focus today|утро|утрен|начать день|рутин|просну)/i
 };

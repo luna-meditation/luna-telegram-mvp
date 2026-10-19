@@ -6,9 +6,9 @@ import {FoundationError} from './foundation-error.js';
  * Reading it cannot claim a generation lease or touch the wallet. */
 export async function readPersonalReportContext(db:SupabaseClient,owner:number,id:string){
  z.string().uuid().parse(id);
- const r=await db.from('luna43_seed_purchases').select('id,product,state,result,created_at').eq('telegram_id',owner).eq('id',id).eq('product','deep_analysis').maybeSingle();
+ const r=await db.from('luna43_seed_purchases').select('id,product,state,result,created_at').eq('telegram_id',owner).eq('id',id).maybeSingle();
  if(r.error)throw new FoundationError(503,'report_unavailable','Could not open the selected report.');
- if(!r.data||r.data.state!=='ready'||!r.data.result)throw new FoundationError(404,'report_not_found','Choose a completed personal report from this account.');
+ if(!r.data||!['deep_analysis','personal_portrait'].includes(r.data.product)||r.data.state!=='ready'||!r.data.result)throw new FoundationError(404,'report_not_found','Choose a completed personal report from this account.');
  // Saved fulfillment adds topic/source/usage metadata to the validated prose.
  // Validate the actual deliverable, while excluding server billing metadata
  // from model context. Strict parsing of the whole saved envelope rejected

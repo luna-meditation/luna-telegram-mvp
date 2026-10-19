@@ -11,7 +11,7 @@ import {createLunaTools,runLunaToolTurn} from './luna32-tools.js';
 import {chatTarotInput,validChatTarotOrigin,chatTarotHash,drawChatTarot} from './luna24-policy.js';
 import {pendingActionInput} from './luna35-commerce-policy.js';
 import {toolOutcome} from './luna40-actions.js';
-import {buildIntelligenceInstructions,unverifiedExecutionClaim} from './luna-intelligence-prompt.js';
+import {buildIntelligenceInstructions,unverifiedExecutionClaim,unverifiedAutomationClaim} from './luna-intelligence-prompt.js';
 import {intelligenceTitleUpdate} from './luna33-titles.js';
 import {intelligenceMeditationRequest,scopeIntelligenceIntent} from './luna-intelligence-policy.js';
 import {resolveLunaIntent} from './luna-ai-intent.js';
@@ -54,7 +54,29 @@ test('a negated new Tarot request cannot overrule the explicitly requested real 
 });
 test('Astrology menu and profile selection are distinct actual destinations, never invented profile names',()=>{
  for(const text of ['Please open Astrology rather than repeating a full report.','Открой раздел астрологии.'])assert.deepEqual(resolveIntelligenceCommand(text)?.input,{destination:'astrology'});
- for(const text of ['У меня два профиля. Дай выбрать, какую карту открыть.','Let me choose which birth profile chart to open.'])assert.equal(resolveIntelligenceCommand(text)?.action,'astrology.natal',text);
+ for(const text of ['У меня два профиля. Дай выбрать, какую карту открыть.','Let me choose which birth profile chart to open.','I have two profiles. Let me choose which chart to open.'])assert.equal(resolveIntelligenceCommand(text)?.action,'astrology.natal',text);
+});
+test('leaving Tarot aside is not a draw; an explicitly absent selection cannot choose another activity',async()=>{
+ for(const text of ['Let’s leave Tarot aside and talk about my day.','Давай оставим Таро и поговорим о моём дне.','Open that one. I have not selected a chart, card or practice yet.','Открой вот это. Я ещё не выбрал ни карту, ни расклад, ни практику.']){
+  assert.equal(resolveIntelligenceCommand(text,{type:'tarot_reading',kind:'three'}),null,text);
+  const f=fixture(),tools=createLunaTools({db:f.db,owner,requestFocus:text,language:'en',readingContext:null,catalog:[],personalContext:null,access:{},quota:async()=>usage,astrologyEnabled:true,intelligence:{consented:false,prepare:command=>f.service.prepare(owner,randomUUID(),'en',command)}});
+  assert.equal(tools.definitions.some(tool=>tool.name==='start_tarot_reading'),false,text);
+  assert.deepEqual(await tools.execute('start_tarot_reading','{"kind":"three","intention":"general","question":""}'),{error:'tool_unavailable'});assert.equal(f.writes.length,0);
+ }
+});
+test('hidden feelings cannot be sold as a targeted symbolic reading',async()=>{
+ for(const [language,message]of [['en','Can these cards tell me exactly what my partner secretly feels?'],['ru','Можно по картам точно узнать тайные чувства партнёра?']] as const){
+  const f=fixture(),command=resolveIntelligenceCommand(message);assert.equal(command?.input.capability,'private_feelings');assert.ok(command);
+  const result=await f.service.message(owner,{requestId:randomUUID(),message,language},command);assert.equal(result.message.metadata.intelligence.attachments.length,0);assert.match(result.message.content,language==='ru'?/не позволяет достоверно узнать/:/cannot establish/);assert.ok(f.writes.every(table=>['ai_messages','ai_conversations'].includes(table)));
+ }
+ assert.equal(resolveIntelligenceCommand('What does this card symbolize about my own feelings?'),null);
+ assert.equal(resolveIntelligenceCommand('How can Tarot help me reflect on my own hidden feelings?'),null);
+});
+test('continuing an unavailable saved goal cannot manufacture a replacement memory proposal',async()=>{
+ for(const requestFocus of ['Let us continue the small drawing goal I confirmed.','Давай продолжим подтверждённую цель по рисованию.']){
+  const f=fixture(),tools=createLunaTools({db:f.db,owner,requestFocus,language:'en',readingContext:null,catalog:[],personalContext:{confirmedMemories:[]},access:{},quota:async()=>usage,astrologyEnabled:false,memory:{sourceMessageId:randomUUID(),boundary:null}});
+  assert.equal(tools.definitions.some(tool=>tool.name==='get_user_context'),true);assert.equal(tools.definitions.some(tool=>tool.name==='propose_memory_change'),false);assert.deepEqual(await tools.execute('propose_memory_change','{}'),{error:'tool_unavailable'});assert.equal(f.reads.length,0);assert.equal(f.writes.length,0);
+ }
 });
 test('practice access is resolved from the latest actual recommendation, not user-invented or stale attachments',()=>{
  for(const text of ['Эта практика входит в мой доступ?','Is this meditation included in my access?'])assert.equal(isPracticeAccessQuestion(text),true);
@@ -118,3 +140,4 @@ test('missing birth-time houses are an honest free server answer, not an invente
  }
  for(const message of ['У меня нет времени дома, нужен один шаг для проекта.','I have no time at home.','Explain what a birth time means.'])assert.equal(resolveIntelligenceCommand(message),null,message);
 });
+test('prose cannot offer an unavailable general timer or reminder while device instructions remain honest',()=>{for(const text of ['I can set a fifteen-minute timer in this chat.','Would you like me to schedule a reminder for tomorrow?','Хочешь, чтобы я дал ещё вариант упражнения или задал таймер прямо в чате?','Я могу поставить напоминание завтра.'])assert.equal(unverifiedAutomationClaim(text),true,text);for(const text of ['Set a timer on your phone.','You can set your own timer.','I cannot set a timer in Luna.','Я не могу поставить таймер.','Поставь таймер на своём телефоне.','Start the breathing practice with its actual button.'])assert.equal(unverifiedAutomationClaim(text),false,text);});

@@ -22,7 +22,13 @@ const dbSource = readFileSync(resolve(process.cwd(), 'src/db.ts'), 'utf8');
 
 test('every backend RPC call has a canonical SQL function definition', () => {
   const luna42=['luna43_purchase_seed_product','luna43_claim_deep_analysis','luna43_finish_deep_analysis','luna43_update_seed_catalog','luna42_save_meet_step','luna42_reserve_voice','luna42_settle_voice','luna42_decide_memory_proposal','luna42_save_discovery','luna42_rename_discovery','luna42_record_experience','luna42_experience_report','luna42_save_editorial'];
-  const rpcNames = [...backendSource.matchAll(/\.rpc\(\s*['"]([^'"]+)['"]/g)].map((match) => match[1]).filter(name=>!luna42.includes(name));
+  const portrait=['luna4_portrait_epoch','luna4_save_portrait_snapshot','luna4_open_portrait_discussion','luna4_update_next_catalog','luna4_accept_order','luna4_prepare_order','luna4_membership_contract','luna4_allowance_status','luna4_reserve_allowance','luna4_settle_allowance','luna4_analysis_allowance_status','luna4_purchase_seed_product','luna4_claim_personal_analysis','luna4_finish_personal_analysis','luna4_claim_welcome','luna4_reward_checkin','luna4_reserve_tarot_spread','luna4_tarot_prices','luna4_buy_seed_reading','luna4_daily_quote','luna4_reserve_daily_card','luna4_finish_daily_access'];
+  portrait.push('luna4_cancel_daily_delivery');
+  portrait.push('luna4_attribute_referral','luna4_qualify_referral','luna4_reward_referral_purchase','luna4_referral_status');
+  portrait.push('luna4_purchase_compatibility','luna4_claim_compatibility_purchase','luna4_finish_compatibility_purchase','luna4_claim_paid_compatibility','luna4_finish_paid_compatibility');
+  portrait.push('luna4_update_active_catalog');
+  for(const name of portrait)assert.match(additiveMigrations,new RegExp('create or replace function public\\.'+name+'\\('));
+  const rpcNames = [...backendSource.matchAll(/\.rpc\(\s*['"]([^'"]+)['"]/g)].map((match) => match[1]).concat([...backendSource.matchAll(/referralContractRpc\(db,'[^']+','([^']+)'/g)].map(match=>match[1])).filter(name=>!luna42.includes(name)&&!portrait.includes(name));
   for(const name of luna42)assert.match(additiveMigrations,new RegExp('create or replace function public\\.'+name+'\\('));
   assert.match(additiveMigrations,/create or replace function public\.luna42_save_meet_step\(/);
   assert.match(additiveMigrations,/revoke all on function public\.luna42_save_meet_step\(bigint,uuid,integer,text,boolean,text,jsonb,jsonb\) from public,anon,authenticated/);

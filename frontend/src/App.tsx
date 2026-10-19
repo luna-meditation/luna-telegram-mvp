@@ -2015,6 +2015,9 @@ function App() {
     return refresh;
   };
 
+  const accountRefreshHandler=useRef(refreshAccount);accountRefreshHandler.current=refreshAccount;
+  useEffect(()=>{const changed=()=>{void accountRefreshHandler.current().catch(()=>undefined);};window.addEventListener('luna-wallet-changed',changed);return()=>window.removeEventListener('luna-wallet-changed',changed);},[initData]);
+
   const refreshAccessAndPayments = async (telemetryRequestId = createPaymentRequestId()) => {
     logPaymentStage('entitlement_refresh_started', { requestId: telemetryRequestId }, initData);
     try {
@@ -2646,6 +2649,7 @@ function App() {
       const nextSummary = await getWellnessSummary(initData, todayLocalDate()).catch(() => null);
       setWellness((current) => nextSummary ? { ...nextSummary, todayCheckin: checkin } : current ? { ...current, todayCheckin: checkin } : optimisticWellnessSummary(checkin));
       showCheckinConfirmation();
+      if(checkin.reward&&(checkin.reward.awarded+(checkin.reward.bonus??0))>0)showNotice((language==='en'?'Saved · +':'Сохранено · +')+(checkin.reward.awarded+(checkin.reward.bonus??0))+' Moon Seeds');
       void Promise.all([refreshAccount(), refreshLibrary()]);
     } catch (error) {
       setMood(previousMood);
@@ -2666,6 +2670,7 @@ function App() {
     const nextSummary = await getWellnessSummary(initData, todayLocalDate()).catch(() => null);
     setWellness((current) => nextSummary ? { ...nextSummary, todayCheckin: checkin } : current ? { ...current, todayCheckin: checkin } : current);
     showCheckinConfirmation();
+    if(checkin.reward&&(checkin.reward.awarded+(checkin.reward.bonus??0))>0)showNotice((language==='en'?'Saved · +':'Сохранено · +')+(checkin.reward.awarded+(checkin.reward.bonus??0))+' Moon Seeds');
     void Promise.all([refreshAccount(), refreshLibrary()]);
   };
 
