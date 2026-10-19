@@ -9,10 +9,11 @@ test('old Explore launches redirect to Home without adding a ghost navigation en
  assert.deepEqual(nav.reduceRouteState({current:'luna',trail:[]},{type:'navigate',page:'explore'},true),{current:'home',trail:[]});
  for(const page of ['tarot','astrology','library','breathCircle'])assert.equal(nav.primaryParent(page,true),'home');
 });
-test('new Home has four illustrated directions and one separate free daily card',()=>{
+test('new Home has four illustrated directions and one separate daily card without an unconditional free-price claim',()=>{
  const home=read('luna2/HomeDiscovery.tsx'),hero=read('v2/components/V2Hero.tsx');
  for(const id of ['tarot','astrology','meditations','breathwork'])assert.equal(home.split(`id:'${id}'`).length,2);
- assert.match(home,/Бесплатно · одна сохранённая карта в день/);assert.match(home,/Карта дня/);assert.match(home,/luna21Flags.daily_card_v2\?onDaily\?\?onTarot/);
+ assert.match(home,/Одна сохранённая интерпретация в день/);assert.doesNotMatch(home,/Бесплатно · одна сохранённая карта в день/);assert.match(home,/Карта дня/);assert.match(home,/luna21Flags.daily_card_v2\?onDaily\?\?onTarot/);
+ const daily=read('features/tarot/DailyTarot.tsx');assert.match(daily,/data-testid="daily-price-confirmation"/);assert.match(daily,/disabled=\{busy\|\|!consent\}/);assert.match(daily,/confirmed:true,expectedSeeds:quote.seeds/);
  assert.match(hero,/onMood=|onSelect=\{onMood\}/);assert.match(hero,/moodSaved && activeMood/);assert.match(hero,/Поговорим о самом важном/);
  const manifest=JSON.parse(read('v2/home-hero-25.json'));for(const image of manifest.variants){assert.equal(readFileSync('public'+image.src).length,image.bytes);assert.ok(image.bytes<50000);}
  assert.equal(manifest.width/manifest.height,16/9);

@@ -2,7 +2,9 @@
 
 ## Актуальный итог, 19 октября 2026
 
-Этот раздел заменяет приведённый ниже исторический BLOCKED checkpoint. Владелец пополнил Netlify; ошибки исправлены и проверены повторно. Production publication пока не подтверждена — её идентификаторы будут добавлены только после успешного выполнения.
+**PRODUCTION ОПУБЛИКОВАН И ПРОВЕРЕН.** Финальный отчёт: [MEET-LUNA-4-PRODUCTION.md](MEET-LUNA-4-PRODUCTION.md). PR #32; merge `4e632959bb459ce7548b59d404fe65d3c78d2c3f`; Railway `2beffe6d-6754-49b4-9bcd-2f20e084f4ad` SUCCESS; Netlify `6ad56f5c30d4a35acbdd9271` Ready, опубликован `2026-10-19T01:16:18.914Z` (09:16 Asia/Makassar). Post-release: 48 public RU/EN mobile checks PASS, 79 Tarot WebP доступны, HTML/JS/CSS hashes совпали, API 401 без авторизации, schema/security/financial fingerprints неизменны; $100 monthly cap подтверждён SQL. Production provider calls/data-test writes: 0.
+
+Этот раздел заменяет приведённый ниже исторический BLOCKED checkpoint. Владелец пополнил Netlify; ошибки исправлены, повторно проверены и опубликованы. Проверки, ограничения и расходы ниже относятся именно к этому релизу, а не к старым версиям.
 
 Финальный проверенный backend source: `ec715d79bf727acc61e4f7e15a7162f04829de20`. Development: `feature/meet-luna-4-personal-intelligence`. Базовый production main: `b0406e22c11e712155e8e62dd68d86ea713656bb`.
 

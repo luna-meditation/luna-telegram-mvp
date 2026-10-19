@@ -17,13 +17,13 @@ export function createAstrologyReportService(db:SupabaseClient,options:{enabled:
    await available();await chart(owner,firstId);if(secondId)await chart(owner,secondId);
    return {report:await cached(owner,astrologyReportKey(owner,firstId,secondId,secondId?'compatibility':'portrait',language,relationship)),cached:true};
   },
-  async generate(owner:number,input:{firstChartId:string;secondChartId?:string;language:'en'|'ru';consent:true;relationship?:import('./luna40-compatibility.js').RelationshipKind}){
+  async generate(owner:number,input:{firstChartId:string;secondChartId?:string;language:'en'|'ru';consent:true;relationship?:import('./luna40-compatibility.js').RelationshipKind},delivery?:{paidPurchaseId:string}){
    return withAiOperation(db,owner,'report:'+astrologyReportKey(owner,input.firstChartId,input.secondChartId??null,input.secondChartId?'compatibility':'portrait',input.language,input.relationship),async()=>{
    await available();const kind:AstrologyReportKind=input.secondChartId?'compatibility':'portrait';
    const first=await chart(owner,input.firstChartId),second=input.secondChartId?await chart(owner,input.secondChartId):null;
    if(second?.profile_id===first.profile_id)throw new FoundationError(400,'different_charts_required','Select two different profiles.');
    const key=astrologyReportKey(owner,first.id,second?.id??null,kind,input.language,input.relationship),previous=await cached(owner,key);if(previous)return {report:previous,cached:true};
-   const {data:claim,error}=await db.rpc('luna30_claim_astrology_report',{p_owner:owner,p_first:first.id,p_second:second?.id??null,p_kind:kind,p_language:input.language,p_key:key,p_daily_chat_limit:await options.dailyLimit(owner)});
+   const {data:claim,error}=delivery?await db.rpc('luna4_claim_paid_compatibility',{p_owner:owner,p_purchase:delivery.paidPurchaseId,p_key:key}):await db.rpc('luna30_claim_astrology_report',{p_owner:owner,p_first:first.id,p_second:second?.id??null,p_kind:kind,p_language:input.language,p_key:key,p_daily_chat_limit:Math.min(100,await options.dailyLimit(owner))});
    if(error||!claim)throw unavailable();
    if(!claim.acquired){const result=await cached(owner,key);if(result)return {report:result,cached:true};throw new FoundationError(claim.status==='limit'?429:409,claim.status==='limit'?'daily_limit':'report_in_progress',claim.status==='failed'?'This attempt needs review before retrying. No extra generation was started.':'A report is already being prepared, or the daily limit was reached.');}
    // Never automatically retry an ambiguous provider outcome. The durable claim
@@ -41,7 +41,8 @@ export function createAstrologyReportService(db:SupabaseClient,options:{enabled:
     const usage=await db.from('ai_usage').upsert({...meter,telegram_id:owner,request_id:`astro:${key}`},{onConflict:'telegram_id,request_id'});if(usage.error)throw unavailable();
     const text=responseOutputText(payload);if(!text)throw unavailable();const report=validateFreshAstrologyReport(JSON.parse(text),kind);
     if(personal){const after=await db.from('luna_personal_profiles').select('updated_at,ai_context_consent').eq('telegram_id',owner).maybeSingle();if(after.error||JSON.stringify(after.data)!==JSON.stringify(before?.data))throw unavailable();}
-    const settled=await db.rpc('luna30_finish_astrology_report',{p_owner:owner,p_key:key,p_report:report,p_model:meter.model,p_input:meter.input_tokens,p_output:meter.output_tokens});
+    const finishArgs={p_owner:owner,p_key:key,p_report:report,p_model:meter.model,p_input:meter.input_tokens,p_output:meter.output_tokens};
+    const settled=delivery?await db.rpc('luna4_finish_paid_compatibility',{...finishArgs,p_purchase:delivery.paidPurchaseId}):await db.rpc('luna30_finish_astrology_report',finishArgs);
     if(settled.error||!settled.data)throw unavailable();return {report:settled.data,cached:false};
    }catch{
     await db.from('luna30_astrology_jobs').update({state:'failed',updated_at:new Date().toISOString()}).eq('telegram_id',owner).eq('cache_key',key).eq('state','processing');

@@ -24,7 +24,7 @@ export function HomeDiscovery({language,tarotEnabled,onTarot,onMeditate,onBreath
  ] as const;
  return <>
   <button type="button" disabled={!tarotEnabled||dailyState==='removed'} onClick={luna21Flags.daily_card_v2?onDaily??onTarot:onTarot} className="luna2-daily-card luna25-daily-card" aria-disabled={!tarotEnabled} data-feature-flag="tarot_daily" data-feature-enabled={tarotEnabled} aria-label={en?'Card of the day':'Карта дня'}>
-   <CelestialArt kind="tarot" sizes="88px"/><div><h2>{en?'Card of the day':'Карта дня'}</h2><p>{dailyState==='saved'?(en?'View your saved card':'Посмотреть сохранённую карту'):dailyState==='removed'?(en?'A new card arrives at 00:00 UTC':'Новая карта — в 00:00 UTC'):(en?'Free · one saved card each day':'Бесплатно · одна сохранённая карта в день')}</p></div><ArrowUpRight size={18}/>
+   <CelestialArt kind="tarot" sizes="88px"/><div><h2>{en?'Card of the day':'Карта дня'}</h2><p>{dailyState==='saved'?(en?'View your saved card':'Посмотреть сохранённую карту'):dailyState==='removed'?(en?'A new card arrives at 00:00 UTC':'Новая карта — в 00:00 UTC'):(en?'One saved reflection each day':'Одна сохранённая интерпретация в день')}</p></div><ArrowUpRight size={18}/>
   </button>
   <section className="luna25-home-categories" aria-label={t.quickActions}>{categories.map(c=><button type="button" key={c.id} data-category={c.id} className={`luna25-category is-${c.id}`} onClick={c.onOpen} disabled={!c.onOpen}>
    <div className="luna25-category-art" aria-hidden="true"><OptimizedImage src={homeArt[c.id].variants[0].src} asset={homeArt[c.id]} alt="" sizes="(max-width: 600px) calc((100vw - 44px) / 2), 260px"/></div>

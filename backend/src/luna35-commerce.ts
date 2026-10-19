@@ -5,7 +5,7 @@ import {FoundationError} from './foundation-error.js';
 import {readLuna34Membership} from './luna34-membership.js';
 import {readCommercialAllowance} from './luna34-allowances.js';
 import {betaEntitlement,readLuna32Settings,successfulAiLimit} from './luna32-runtime.js';
-import {commerceText,pendingActionInput,actionEligibility,type CommerceView,type CommerceFacts} from './luna35-commerce-policy.js';
+import {commerceText,commerceEarningOptions,pendingActionInput,actionEligibility,type CommerceView,type CommerceFacts} from './luna35-commerce-policy.js';
 import type {createLuna30Commerce} from './luna30-commerce.js';
 import {playbackRewardDecision} from './playback-security.js';
 import {validChatTarotOrigin} from './luna24-policy.js';
@@ -20,15 +20,16 @@ type PurchaseService=ReturnType<typeof createLuna30Commerce>;
 export function createLuna35Commerce(db:SupabaseClient,config:Config,payments:Pick<PurchaseService,'availability'>,usage:(owner:number)=>Promise<Usage>){
  async function overview(owner:number){
   const [membership,quota,settings,products]=await Promise.all([readLuna34Membership(db,owner,config.LUNA34_COMMERCIAL_ENABLED),usage(owner),readLuna32Settings(db),payments.availability()]);
-  const beta=betaEntitlement(settings),facts:CommerceFacts={balance:membership.balance,paid:membership.membership.paid||membership.administrative?.active===true,lifetime:membership.membership.kind==='lifetime'||membership.administrative?.lifetime===true,beta,usage:quota,checkout:membership.commercialEnabled,prices:membership.catalog.seeds,paidReadings:config.FEATURE_TAROT_PAID_READINGS};
+  const beta=betaEntitlement(settings),facts:CommerceFacts={balance:membership.balance,paid:membership.membership.paid||membership.administrative?.active===true,lifetime:membership.membership.kind==='lifetime'||membership.administrative?.lifetime===true,preserveLegacy:membership.membership.preserveLegacy||membership.administrative?.lifetime===true,beta,usage:quota,checkout:membership.commercialEnabled,prices:membership.catalog.seeds,paidReadings:config.FEATURE_TAROT_PAID_READINGS};
   const included:Partial<Record<'three'|'five'|'compatibility',number>>={};
   if(config.LUNA34_COMMERCIAL_QUOTAS_ENABLED)for(const kind of ['three','five','compatibility'] as const){const value=await readCommercialAllowance(db,owner,kind);if(value.enabled&&typeof value.remaining==='number')included[kind]=value.remaining;}
   facts.included=included;
-  if(config.FEATURE_TAROT_PAID_READINGS){const rules=await db.from('luna21_settings').select('paid_readings_enabled,single_seeds,three_seeds,five_seeds').eq('id',true).single();if(rules.error)throw fail();facts.paidReadings=rules.data.paid_readings_enabled===true;if(facts.paidReadings)facts.prices={...facts.prices,single:rules.data.single_seeds,three:rules.data.three_seeds,five:rules.data.five_seeds};}
+  const newEconomy='newEconomy' in membership.catalog?membership.catalog.newEconomy:null;facts.earningPolicy=config.FEATURE_ECONOMY_REWARDS_V2?(newEconomy?'luna4':'unavailable'):'legacy';
+  if(config.FEATURE_TAROT_PAID_READINGS){const rules=await db.from('luna21_settings').select('paid_readings_enabled,single_seeds,three_seeds,five_seeds').eq('id',true).single();if(rules.error)throw fail();facts.paidReadings=rules.data.paid_readings_enabled===true;if(facts.paidReadings&&!('newEconomy' in membership.catalog))facts.prices={...facts.prices,single:rules.data.single_seeds,three:rules.data.three_seeds,five:rules.data.five_seeds};}
   if(facts.lifetime||facts.paid)for(const product of ['premium_week','premium_month','premium_year','premium_lifetime'] as const)products[product]=false;
   // Derive the legacy reward from the actual playback decision, not the future catalog.
   const minute=playbackRewardDecision({trustedListenedSeconds:60,previouslyAwardedPosition:0,completionBonusEligible:false,completionBonusAlreadyAwarded:false}).listeningSeedsAwarded;
-  const earning=config.FEATURE_ECONOMY_REWARDS_V2?[]:[{id:'meditation',destination:'meditations',rewardPerMinute:minute,completionBonus:2,condition:'new_verified_listening_only'},{id:'breath',destination:'breathwork',seeds:1,condition:'verified_completed_session'}];
+  const earning=commerceEarningOptions(facts.earningPolicy,minute,newEconomy?.rewards);
   const orders=await db.from('luna30_commercial_orders').select('id,request_id,product,stars,state,created_at').eq('telegram_id',owner).in('state',['pending','accepted']).order('created_at',{ascending:false}).limit(10);if(orders.error)throw fail();
   return {facts,products,planAllowances:{freeDaily:successfulAiLimit(settings,false,{free:config.AI_MAX_MESSAGES_PER_DAY??quota.limit,premium:config.AI_PREMIUM_MAX_MESSAGES_PER_DAY??quota.limit}),premiumDaily:successfulAiLimit(settings,true,{free:config.AI_MAX_MESSAGES_PER_DAY??quota.limit,premium:config.AI_PREMIUM_MAX_MESSAGES_PER_DAY??quota.limit})},catalog:membership.catalog,membership:membership.membership,usage:quota,beta,balance:membership.balance,earning,transactions:membership.transactions,purchases:membership.purchases,newPurchases:membership.newPurchases,pendingOrders:orders.data??[]};
  }
@@ -44,7 +45,7 @@ export function createLuna35Commerce(db:SupabaseClient,config:Config,payments:Pi
  }
  return {
   overview,pending,
-  async card(owner:number,view:CommerceView,language:'en'|'ru',conversationId?:string){const data=await overview(owner),actions=await pending(owner,conversationId);return {version:1 as const,view,language,...data,pending:actions.map(action=>({...action,eligibility:action.action_type==='tarot'?actionEligibility(data.facts,action.parameters.kind):action.action_type==='compatibility'?actionEligibility(data.facts,'compatibility'):null})),content:commerceText(view,language,data.facts)};},
+  async card(owner:number,view:CommerceView,language:'en'|'ru',conversationId?:string){const data=await overview(owner),actions=await pending(owner,conversationId);return {version:1 as const,view,language,...data,pending:actions.map(action=>({...action,eligibility:action.action_type==='tarot'?actionEligibility(data.facts,action.parameters.kind):action.action_type==='compatibility'?actionEligibility(data.facts,'compatibility'):null})),content:commerceText(view,language,{...data.facts,hasPendingAction:actions.length>0})};},
   async eligibility(owner:number,kind:'single'|'three'|'five'|'compatibility'){return actionEligibility((await overview(owner)).facts,kind);},
   async message(owner:number,input:{requestId:string;conversationId?:string;message:string;language:'en'|'ru'},view:CommerceView){
    const request=commerceRequestId(owner,input.requestId),card=await this.card(owner,view,input.language,input.conversationId);

@@ -1,7 +1,7 @@
 import type {TarotReading,TarotSelection,AppLanguage} from '../../api';
 export type SpreadKind='three'|'five';
-export type SpreadSession={kind:SpreadKind;stage:'intention'|'shuffling'|'choose'|'reveal'|'interpretation';intention:TarotReading['intention'];question:string;choices:string[];selected:Array<TarotSelection&{slot:number}>;revealed:number;clientReadingId?:string;language?:AppLanguage;reading?:TarotReading};
-export type SpreadAction={type:'intention';value:SpreadSession['intention']}|{type:'question';value:string}|{type:'shuffle';choices:string[];clientReadingId:string;language:AppLanguage}|{type:'ready'}|{type:'choose';slot:number;orientation:TarotSelection['orientation']}|{type:'reveal';index:number}|{type:'saved';reading:TarotReading}|{type:'reset'};
+export type SpreadSession={kind:SpreadKind;stage:'intention'|'shuffling'|'choose'|'reveal'|'interpretation';intention:TarotReading['intention'];question:string;choices:string[];selected:Array<TarotSelection&{slot:number}>;revealed:number;clientReadingId?:string;language?:AppLanguage;reading?:TarotReading;orderId?:string};
+export type SpreadAction={type:'intention';value:SpreadSession['intention']}|{type:'question';value:string}|{type:'shuffle';choices:string[];clientReadingId:string;language:AppLanguage}|{type:'ready'}|{type:'choose';slot:number;orientation:TarotSelection['orientation']}|{type:'reveal';index:number}|{type:'saved';reading:TarotReading}|{type:'order';id:string}|{type:'retry_access';clientReadingId:string}|{type:'reset'};
 export function createSpreadSession(kind:SpreadKind):SpreadSession{return {kind,stage:'intention',intention:'general',question:'',choices:[],selected:[],revealed:0};}
 export function reduceSpreadSession(state:SpreadSession,action:SpreadAction):SpreadSession{
  const size=state.kind==='three'?3:5;
@@ -17,6 +17,8 @@ export function reduceSpreadSession(state:SpreadSession,action:SpreadAction):Spr
   }
   case 'reveal':return state.stage==='reveal'&&action.index===state.revealed&&state.revealed<size?{...state,revealed:state.revealed+1,stage:state.revealed+1===size?'interpretation':'reveal'}:state;
   case 'saved':return state.clientReadingId===action.reading.client_reading_id&&!(state.reading?.status==='ready'&&action.reading.status!=='ready')?{...state,reading:action.reading}:state;
+  case 'order':return state.stage==='interpretation'&&!state.orderId?{...state,orderId:action.id}:state;
+  case 'retry_access':return state.stage==='interpretation'&&state.reading?.status==='fallback'&&state.orderId?{...state,clientReadingId:action.clientReadingId,reading:undefined}:state;
   case 'reset':return createSpreadSession(state.kind);
  }
 }

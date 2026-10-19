@@ -87,6 +87,13 @@ export async function netlifyStagingHandler(request: Request, context: StagingCo
       return Response.json({code:'staging_startup_failed'},{status:503,headers:{'Cache-Control':'private, no-store'}});
     }
   }
+  // Completion QA may temporarily test the candidate financial catalog. Close
+  // EVERY public mutation (including the QA bot webhook), not just AI routes,
+  // until the reviewed worker restores its exact original staging settings.
+  if(process.env.STAGING_SUPABASE_PROJECT_REF==='funvzpmpbgazsisehiru'&&!['GET','HEAD','OPTIONS'].includes(request.method)){
+    const {supabase}=await import('./db.js');const completion=await supabase.from('luna30_qa_report_runs').select('result').eq('run_name','luna4-completion-integration-20261019-v1').maybeSingle();
+    if(completion.error||completion.data?.result?.providerWindowOpen)return Response.json({code:'qa_validation_in_progress'},{status:503,headers:{'Cache-Control':'private, no-store'}});
+  }
   // A finite operator test temporarily enables the existing staging budget.
   // Keep public QA API generations closed for its whole window (including an
   // interrupted worker). The worker calls owner-bound services directly with

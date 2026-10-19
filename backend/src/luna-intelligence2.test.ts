@@ -2,7 +2,19 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createClient} from '@supabase/supabase-js';
 import {resolveIntelligenceCommand} from './luna-intelligence-command.js';
-import {artifactTopic,retainsArtifact,relevantFollowUpActions,responsePlan,numerologyQuickReplies} from './luna-intelligence-turn.js';
+import {artifactTopic,retainsArtifact,relevantFollowUpActions,responsePlan,numerologyQuickReplies,missingSavedGoalInstruction} from './luna-intelligence-turn.js';
+test('a missing retrieved saved goal is distinguished from the current statement without claiming a database fact',()=>{
+ for(const message of ['Let us continue the small drawing goal I confirmed.','Давай продолжим подтверждённую цель по рисованию.']){
+  assert.match(missingSavedGoalInstruction({confirmedMemories:[{category:'preferences',value:'Quiet practice'}]},message),/SAVED_GOAL_SOURCE_MISSING/);
+  assert.equal(missingSavedGoalInstruction({confirmedMemories:[{category:'goals',value:'Draw briefly'}]},message),'');
+  assert.equal(missingSavedGoalInstruction({confirmedMemories:[{category:'life_context',value:'{"goal":"Draw briefly"}'}]},message),'');
+ }
+ assert.equal(missingSavedGoalInstruction(null,'I want to learn drawing.'),'');
+});
+test('explicitly abandoned or unselected artifacts cannot remain active, even with a stale selected flag',()=>{
+ for(const text of ['Let’s leave Tarot aside and talk about my day.','Давай оставим Таро и поговорим о моём дне.','Open that one. I have not selected a chart, card or practice yet.','Открой вот это. Я ещё не выбрал ни карту, ни расклад, ни практику.'])for(const selected of [false,true])assert.equal(retainsArtifact(text,'tarot',selected),false,text);
+ assert.equal(retainsArtifact('Leave Tarot aside. Explain Mercury in my natal chart.','natal',true),true);
+});
 import {calculateDateNumerology,reduceNumber} from './luna-intelligence-numerology.js';
 import {verifiedNumerologyContext,namedTransitFacts} from './luna-intelligence-personal-context.js';
 import {createLunaTools,runLunaToolTurn} from './luna32-tools.js';
@@ -83,7 +95,7 @@ test('numerology is owner/consent scoped and never returns raw birth information
 test('numeric prose must match calculated values and not invent unrequested arithmetic rules',()=>{
  const facts=calculateDateNumerology('2000-01-01','2026-10-18'),request='Explain my Life Path and personal year, with symbolic limits.';
  assert.doesNotThrow(()=>assertGroundedNumerologyProse('Your Life Path is 4 and Personal Year is 3. These are symbolic reflection prompts, not scientific predictions.',facts,request));
- for(const text of ['Your Life Path is 7.','Личный год: 9.','Master numbers are retained only during intermediate reductions.','Reflection '.repeat(201)])assert.throws(()=>assertGroundedNumerologyProse(text,facts,request));
+ for(const text of ['Your Life Path is 7.','Личный год: 9.','Master numbers are retained only during intermediate reductions.','Reflection '.repeat(201),'Expect shifts in routines this year.','Your wiring makes you a naturally caring person.','В этом году тебя ждёт успех.'])assert.throws(()=>assertGroundedNumerologyProse(text,facts,request));
  assert.doesNotThrow(()=>assertGroundedNumerologyProse('Master numbers 11/22/33 survive each Life Path stage, including the final sum. Calendar periods reduce to 1–9.',facts,'Explain the master-number method.'));
 });
 test('Intelligence allows lookup then action, forces a final answer after the action',async()=>{

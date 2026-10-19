@@ -17,6 +17,7 @@ export type TarotSession={
  clientReadingId?:string;
  readingLanguage?:'en'|'ru';
  savedReading?:TarotReading;
+ orderId?:string;
 };
 export type TarotAction=
  |{type:'screen';value:NonNullable<TarotSession['screen']>}
@@ -26,6 +27,8 @@ export type TarotAction=
  |{type:'question';value:string}
  |{type:'shuffle';choices:readonly string[];at:number;clientReadingId?:string;language?:'en'|'ru'}
  |{type:'saved';reading:TarotReading}
+ |{type:'order';id:string}
+ |{type:'retry_access';clientReadingId:string}
  |{type:'resume';reading:TarotReading}
  |{type:'deleted';id:string}
  |{type:'ready'}
@@ -54,6 +57,8 @@ export function reduceTarotSession(state:TarotSession,action:TarotAction):TarotS
   }
   case 'reveal': return state.stage==='reveal'&&state.result?{...state,stage:'interpretation'}:state;
   case 'saved': return state.clientReadingId===action.reading.client_reading_id&&!(state.savedReading?.status==='ready'&&action.reading.status!=='ready')?{...state,savedReading:action.reading}:state;
+  case 'order':return state.stage==='interpretation'&&!state.orderId?{...state,orderId:action.id}:state;
+  case 'retry_access':return state.stage==='interpretation'&&state.savedReading?.status==='fallback'&&state.orderId?{...state,clientReadingId:action.clientReadingId,savedReading:undefined}:state;
   case 'resume': {
    const r=action.reading,kind=r.reading_kind;
    if((kind==='three'||kind==='five')&&r.cards?.length===(kind==='three'?3:5))return {...state,screen:kind,spreads:{...state.spreads,[kind]:{...createSpreadSession(kind),stage:'interpretation',intention:r.intention,question:r.question,selected:r.cards.map((c,slot)=>({...c,slot})),revealed:r.cards.length,clientReadingId:r.client_reading_id,language:r.language,reading:r}}};

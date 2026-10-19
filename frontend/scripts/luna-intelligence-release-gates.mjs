@@ -3,7 +3,9 @@ import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {resolve} from 'node:path';
 import {releaseSourceDigest} from './release-source-digest.mjs';
+import {verifyLuna4CompletionEvidence} from './luna4-completion-release-gates.mjs';
 export function verifyLunaIntelligenceReleaseEvidence(r,root){
+ if(r.release==='luna4-completion')return verifyLuna4CompletionEvidence(r,root);
  if(r.release==='meet-luna-4-0'){
   assert.equal(r.status,'PASS');assert.equal(r.baseCommit,'b0406e22c11e712155e8e62dd68d86ea713656bb');assert.equal(r.projectId,'vkcdtasbdoeilgfucoax');assert.equal(r.stagingProjectId,'funvzpmpbgazsisehiru');
   assert.equal(r.productionDatabaseWritesBeforeRelease,0);assert.equal(r.productionConfigurationWritesBeforeRelease,0);assert.equal(r.noDatabaseMigrations,true);assert.deepEqual(r.migrationHashes,{});

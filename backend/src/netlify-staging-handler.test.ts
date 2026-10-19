@@ -33,6 +33,11 @@ function auth(id:number) {
   params.set('hash',createHmac('sha256',secret).update(data).digest('hex'));
   return params.toString();
 }
+test('real staging completion window blocks all public mutations, but never queries production or alters saved reads',async()=>{
+ const oldRef=process.env.STAGING_SUPABASE_PROJECT_REF,oldFetch=globalThis.fetch;process.env.STAGING_SUPABASE_PROJECT_REF='funvzpmpbgazsisehiru';const calls:string[]=[];
+ globalThis.fetch=async input=>{const url=String(input);calls.push(url);assert.match(url,/luna30_qa_report_runs/);assert.match(url,/luna4-completion-integration-20261019-v1/);return Response.json({result:{providerWindowOpen:true}});};
+ try{for(const path of['/api/payments/invoice-link','/api/garden','/api/profile/language','/telegram/webhook']){const r=await netlifyStagingHandler(new Request('https://luna-staging-itfl.netlify.app'+path,{method:'POST',body:'{}'}),context);assert.equal(r.status,503);assert.deepEqual(await r.json(),{code:'qa_validation_in_progress'});}const n=calls.length;assert.equal((await netlifyStagingHandler(new Request('https://luna-staging-itfl.netlify.app/api/plans'),context)).status,401);assert.equal(calls.length,n);assert.equal((await netlifyStagingHandler(new Request('https://luna-staging-itfl.netlify.app/api/plans',{method:'POST',body:'{}'}),{site:{id:'production-site'}})).status,403);assert.equal(calls.length,n);}finally{globalThis.fetch=oldFetch;process.env.STAGING_SUPABASE_PROJECT_REF=oldRef;}
+});
 test('modern staging function preserves auth and routes without bot startup or cloud calls',async () => {
   const request = (path:string,headers:Record<string,string>={},method='GET',body?:string) => new Request(`https://luna-staging-itfl.netlify.app${path}`,{method,headers,body});
   const originalFetch = globalThis.fetch;
