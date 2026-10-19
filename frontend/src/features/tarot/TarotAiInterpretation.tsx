@@ -11,7 +11,7 @@ export function TarotAiInterpretation({reading,language,onContinue,initData}:{re
  <p className="tarot-ai-label"><Sparkles size={16}/>Luna AI</p>
  <div className="tarot-ai-takeaway"><h3>{en?'Your takeaway':'Главный вывод'}</h3><p>{ai.summary}</p></div>
  {v2&&Boolean(ai.cards?.length)&&<div className="tarot-ai-card-insights luna3-card-details" aria-label={en?'Explore each card':'Подробнее о каждой карте'}>{ai.cards?.map(c=><details key={c.cardId}><summary><span><strong>{tarotDeck.find(card=>card.id===c.cardId)?.name[language]??c.cardId}</strong><small>{c.position} · {c.orientation==='reversed'?(en?'Reversed':'Перевёрнутая'):(en?'Upright':'Прямая')}</small></span></summary><p>{c.positionMeaning}</p><p>{c.application}</p><p>{c.detail}</p></details>)}</div>}
- {action&&<div className="luna251-practical"><h3>{en?'One small step':'Один небольшой шаг'}</h3><p>{action}</p></div>}
+ {action&&<div className="luna251-practical"><h3>{en?'A perspective to consider':'Для размышления'}</h3><p>{action}</p></div>}
  <p className="luna251-reflection-question">{ai.question}</p>
  <details className="tarot-ai-details luna251-reading-details"><summary>{en?'Explore the reading':'Подробнее о раскладе'}</summary>
   {v2?<>

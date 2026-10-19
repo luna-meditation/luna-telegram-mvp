@@ -1,0 +1,55 @@
+{
+  "status": "PASS",
+  "schemaSha256": "b1d4b89d2793095ed793565a1577597422e8665d7707ae2d1a581d1ad2fbf731",
+  "schemaCapturedAt": "2026-10-19T18:15:19.377914+00:00",
+  "checks": [
+    {
+      "name": "baseline reproduces the legacy TRUNCATE grant without bypassing RLS",
+      "status": "PASS"
+    },
+    {
+      "name": "narrow migration applies twice with unchanged history, ownership, RLS and unrelated data",
+      "status": "PASS"
+    },
+    {
+      "name": "anon/authenticated cannot SELECT or TRUNCATE either private chat table, even with forged service claims",
+      "status": "PASS"
+    },
+    {
+      "name": "existing server CRUD rights remain; explicit owner filters isolate the two synthetic owners",
+      "status": "PASS"
+    },
+    {
+      "name": "new workflow JSON persists across reopening without a schema fork or another account write",
+      "status": "PASS"
+    },
+    {
+      "name": "one persisted final reveal allows one interpretation claim; duplicate and foreign-owner claims are denied",
+      "status": "PASS"
+    },
+    {
+      "name": "transaction rollback restores the exact previous ACL without touching data",
+      "status": "PASS"
+    },
+    {
+      "name": "migration fails closed if RLS or any existing service CRUD privilege is missing",
+      "status": "PASS"
+    },
+    {
+      "name": "all nine private profile/context tables remain protected from public client roles",
+      "status": "PASS"
+    },
+    {
+      "name": "legacy Lifetime and the unrelated application sentinel are unchanged",
+      "status": "PASS"
+    }
+  ],
+  "migrationHashes": {
+    "20261019184219_luna5_chat_role_boundary.sql": "bb28453cf2461486c031ca0647efd6e9618f2556b7dd13e5a815ceff2b27fc6b"
+  },
+  "productionWrites": 0,
+  "copiedUserRows": 0,
+  "providerCalls": 0,
+  "isolatedPostgresStopped": true,
+  "plaintextDatabaseRemoved": true
+}

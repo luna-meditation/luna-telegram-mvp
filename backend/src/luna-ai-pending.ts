@@ -139,7 +139,8 @@ export function inferPendingStateFromRecent(
   const latestAssistant = [...recent].reverse().find((message) => message.role === 'assistant');
   if (!latestAssistant) return null;
   const content = latestAssistant.content ?? '';
-  if (/(сон|фокус|перезагруз|sleep|focus|reset)/i.test(content) && /\?/u.test(content)) {
+  if (/(сон|фокус|перезагруз|sleep|focus|reset)/i.test(content) && /\?/u.test(content)
+    &&(/медитац|практик|meditat|practice/iu.test(content)||/(сон|sleep)/iu.test(content)&&/(фокус|focus)/iu.test(content)&&/(перезагруз|reset)/iu.test(content))) {
     return createPendingClarification({ clarification: content });
   }
 

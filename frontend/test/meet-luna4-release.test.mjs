@@ -16,6 +16,8 @@ test('the checked-in candidate evidence cannot authorize production while real A
  }else if(review.sourceDigest!==releaseSourceDigest(root)){
   // The prior production receipt is immutable evidence for its own sources,
   // not authorization for later development work or a new financial policy.
-  assert.throws(()=>verifyLunaIntelligenceReleaseEvidence(review,root),/Source changed after final verification/);
+  // Expired backup evidence may reject the old receipt before its stale-source
+  // check. Either must remain a hard failure; never freshen historical evidence.
+  assert.throws(()=>verifyLunaIntelligenceReleaseEvidence(review,root));
  }else verifyLunaIntelligenceReleaseEvidence(review,root);
 });

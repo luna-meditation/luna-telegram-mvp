@@ -1,8 +1,8 @@
 import {supabase} from './db.js';
 import {env} from './config.js';
 import {getPersonalProfile,FoundationError} from './personalization.js';
-import {memoryWriteSchema,canonicalMemoryKey,normalizedMemoryValue,potentiallySensitive,containsCredential,selectRelevantMemories,selectRelevantReflections,type PersonalMemory} from './personal-memory-policy.js';
-import {resolvePersonalBirth,birthContextAvailability} from './personal-context-engine.js';
+import {memoryWriteSchema,canonicalMemoryKey,normalizedMemoryValue,potentiallySensitive,containsCredential,type PersonalMemory} from './personal-memory-policy.js';
+import {resolvePersonalBirth,assemblePersonalIntelligence} from './personal-context-engine.js';
 const fields='id,category,memory_key,memory_value,confirmation_status,memory_kind,is_sensitive,source_type,source_message_id,revision,created_at,updated_at,confirmed_at';
 // Reuse canonical profile metadata as a privacy boundary, without deleting chat history.
 export async function advanceMemoryContextBoundary(owner:number){
@@ -35,10 +35,10 @@ export async function writePersonalMemory(owner:number,body:unknown,id?:string){
  const {data,error}=await query.select(fields).maybeSingle();if(error?.code==='23505')throw new FoundationError(409,'memory_conflict','This memory exists.');if(error)throw new FoundationError(503,'memory_unavailable','Could not save memory.');if(!data)throw new FoundationError(409,'memory_changed','This memory was removed or changed. Refresh and try again.');return data as PersonalMemory;
 }
 export async function removePersonalMemory(owner:number,id?:string){await advanceMemoryContextBoundary(owner);let query=supabase.from('user_memories').delete().eq('telegram_id',owner);if(id)query=query.eq('id',id);const {data,error}=await query.select('id');if(error)throw new FoundationError(503,'memory_unavailable','Could not delete memory.');return{deleted:data?.length??0};}
-export async function getAiPersonalProfile(owner:number,query=''){
+export async function getAiPersonalProfile(owner:number,query='',options:{calculatedOverview?:boolean;artifact?:{kind:'natal'|'tarot';id:string}}={}){
  const savedProfile=await getPersonalProfile(owner);
  const profile=env.FEATURE_PERSONAL_MEMORY?{...savedProfile,preferences:potentiallySensitive(savedProfile.preferences)?'':savedProfile.preferences}:savedProfile;
  if(!env.FEATURE_PERSONAL_MEMORY||!env.AI_MEMORY_ENABLED||!profile.ai_context_consent)return profile;
  const {data:user,error}=await supabase.from('users').select('ai_memory_enabled').eq('telegram_id',owner).maybeSingle();if(error||!user?.ai_memory_enabled)return profile;
- try{const [rows,birth]=await Promise.all([listPersonalMemories(owner),resolvePersonalBirth(supabase,owner)]);return {...profile,known_birth:birthContextAvailability(birth),preferences:potentiallySensitive(profile.preferences)?'':profile.preferences,confirmed_memories:selectRelevantMemories(rows,query),saved_reflections:selectRelevantReflections(rows,query)};}catch{return {...profile,preferences:''};}
+ try{const [rows,birth]=await Promise.all([listPersonalMemories(owner),resolvePersonalBirth(supabase,owner)]);return assemblePersonalIntelligence({profile,rows,birth,query,includeCalculated:options.calculatedOverview,artifact:options.artifact});}catch{return {...profile,preferences:''};}
 }
