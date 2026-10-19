@@ -138,9 +138,10 @@ export async function runLunaToolTurn<T extends ToolResponse>(request:Record<str
  const maxRounds=options.maxToolRounds??1;let transcript=[...request.input],usage:ToolResponse['usage'];let count=0,finish=false;
  for(let round=0;round<=maxRounds;round++){
   const numericBoundary=tools.numerologyContext()?'\nNUMEROLOGY_RESULT_BOUNDARY: The server has calculated all requested indicators. Answer now with 80–150 words unless the user explicitly asked for detailed calculation steps. Quote the exact returned values; interpret only the requested indicators, not every field. One sentence on symbolic/non-scientific limits is enough. Do not introduce master-number or arithmetic rules unless explicitly asked. If asked, the supplied rules are exact: masters survive each Life Path reduction including the final sum, Birthday retains 11/22, calendar periods always reduce to 1–9. No additional profile lookup or unrelated tool is needed.':'';
-  const result=await invoke({...request,instructions:String(request.instructions??'')+numericBoundary,include,input:transcript,tools:tools.definitions,tool_choice:options.answerFromSelectedEvidence||round===maxRounds||finish?'none':'auto',parallel_tool_calls:false});
+  const result=await invoke({...request,instructions:String(request.instructions??'')+numericBoundary,include,input:transcript,tools:options.answerFromSelectedEvidence?[]:tools.definitions,tool_choice:options.answerFromSelectedEvidence||round===maxRounds||finish?'none':'auto',parallel_tool_calls:false});
   usage=sumToolTurnUsage(usage,result.usage);
   const calls=result.output?.filter(v=>v.type==='function_call')??[];
+  if(options.answerFromSelectedEvidence&&calls.length)throw new FoundationError(502,'invalid_tool_response','An explanation cannot execute another action.');
   if(!calls.length||result.status!=='completed')return usage?{...result,usage}:result;
   if(round===maxRounds||finish)throw new FoundationError(502,'ai_tool_round_limit','The provider exceeded the tool boundary.');
   count+=calls.length;

@@ -6,7 +6,7 @@ export type IntelligenceTopic='tarot'|'natal'|'compatibility'|'general';
 export function answerFromAttachedEvidence(hasChart:boolean,message:string){
  if(!hasChart||/(?:transit|today|current sky|транзит|сегодня|сейчас на небе)/iu.test(message))return false;
  if(/(?:\b(?:open|find|save|remember|delete|start|new|another|list|search)\b|открой|найди|сохран|запомни|удали|начн|новый|прошл[ыо])/iu.test(message))return false;
- return /(?:\b(?:explain|interpret|why|how|what|meaning|understand)\b|объясн|интерпрет|почему|(?<!\p{L})как(?!\p{L})|значит|смысл|разбери)/iu.test(message);
+ return /(?:\b(?:explain|interpret|why|how|what|meaning|understand)\b|объясн|интерпрет|почему|(?<!\p{L})как(?!\p{L})|значит|означа|смысл|разбери)/iu.test(message);
 }
 export function artifactTopic(input:{readingId?:string;chartId?:string;astrology?:{chartId:string;secondChartId?:string}}):IntelligenceTopic{
  return input.astrology?.secondChartId?'compatibility':input.astrology||input.chartId?'natal':input.readingId?'tarot':'general';
@@ -17,7 +17,11 @@ export function retainsArtifact(message:string,topic:IntelligenceTopic,selected=
  if(/(?:new|different|another) topic|change (?:the )?subject|сменим тему|другая тема|не об этом|кстати.{0,30}(?:спал|сплю|сон|устал)|\b(?:I slept|my sleep|I feel tired)\b/iu.test(text))return false;
  if(/медитац|подыш|дыхани|moon seeds|баланс|премиум|premium|запомни|удали|remember that|delete.*memory|\b(?:meditation|breathe|breathing)\b/iu.test(text))return false;
  const tarot=/таро|расклад|выпавш|перев[её]рнут|\b(?:tarot|spread|drawn cards?|reversed)\b/iu.test(text);
- const astro=/астролог|натальн|планет|меркур|венер|транзит|асцендент|\b(?:astrolog\w*|natal|birth chart|planet|mercury|venus|transit|ascendant)\b/iu.test(text);
+ // Generated follow-ups can name any calculated planet, not only Mercury or
+ // Venus. Do not drop the exact chart behind a valid “Tell me about Mars”.
+ // A leading vocative “Луна,” is the companion, not a Moon-placement request.
+ const chartText=text.replace(/^\s*Луна\s*[,!:]\s*/iu,'');
+ const astro=/астролог|натальн|планет|солнц|лун[аеуыо]|меркур|венер|марс|юпитер|сатурн|уран|нептун|плутон|транзит|асцендент|\b(?:astrolog\w*|natal|birth chart|planets?|sun|moon|mercury|venus|mars|jupiter|saturn|uranus|neptune|pluto|transit|ascendant)\b/iu.test(chartText);
  const pair=/совместим|синастр|\b(?:compatibility|synastry)\b/iu.test(text);
  if(topic==='tarot'&&(astro||pair)||topic!=='tarot'&&tarot||topic==='natal'&&pair)return false;
  if(selected)return true;

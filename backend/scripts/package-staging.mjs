@@ -1,6 +1,7 @@
 // Package only the existing isolated QA site; paid test workers require a
 // separate finite owner-approved opt-in below. This script never deploys.
 import {readFile,writeFile,cp,mkdir,mkdtemp,realpath,readdir} from 'node:fs/promises';
+import {constants as fsConstants} from 'node:fs';
 import {createRequire} from 'node:module';import {dirname,resolve} from 'node:path';import {fileURLToPath} from 'node:url';import {execFileSync} from 'node:child_process';import assert from 'node:assert/strict';
 import {createHash,randomBytes} from 'node:crypto';
 assert.equal(process.versions.node.split('.')[0],'22');
@@ -14,7 +15,9 @@ const intelligence=meet4||intelligence3||intelligence2||process.env.LUNA_INTELLI
 const directory=await mkdtemp(luna43?'/tmp/luna43-staging.':luna41?'/tmp/luna41-staging.':'/tmp/luna40-staging.'),functions=directory+'/functions';await mkdir(functions);await mkdir(directory+'/.netlify');
 const publicSource=meet4?process.env.MEET4_PRESERVE_QA_PUBLIC:source+'/frontend/dist-staging';
 if(meet4)assert.ok(publicSource?.startsWith('/tmp/luna40-staging.')&&publicSource.endsWith('/public'),'Technical worker update must preserve the previously published QA frontend');
-await cp(publicSource,directory+'/public',{recursive:true});
+// APFS/reflink-capable filesystems can share these immutable asset blocks.
+// Only tiny routing metadata changes below; unsupported systems safely copy.
+await cp(publicSource,directory+'/public',{recursive:true,mode:fsConstants.COPYFILE_FICLONE});
 const index=await readFile(directory+'/public/index.html','utf8');assert.ok(!/offline-local-qa|window\.Telegram\?\?=/.test(index));
 // Published _redirects runs before TOML. Replace the app's generic SPA fallback
 // with isolated QA API rules so no request can fall through to production.
@@ -36,7 +39,7 @@ let actionAuthFile=null;
 let transcriptionAuthFile=null;
 let integrationAuthFile=null,integrationGrantId=null;
 if(intelligence){
- assert.equal(process.env.LUNA_INTELLIGENCE_QA_APPROVED,meet4?'90_responses_6_stt_combined_usd0.75':intelligence3?'90_responses_8_stt_combined_usd0.75':intelligence2?'60_responses_combined_usd0.50':'180_responses_combined_usd1');
+ assert.equal(process.env.LUNA_INTELLIGENCE_QA_APPROVED,meet4?'100_responses_6_stt_combined_usd0.75':intelligence3?'90_responses_8_stt_combined_usd0.75':intelligence2?'60_responses_combined_usd0.50':'180_responses_combined_usd1');
  assert.ok(!luna43&&!luna42&&!luna41,'Do not bundle historical paid workers with Intelligence');
  const nonce=randomBytes(32).toString('hex'),authSha256=createHash('sha256').update(nonce).digest('hex');expiresAt=new Date(Date.now()+8*3600000).toISOString();
  const samples=meet4||intelligence3?JSON.parse(await readFile(process.env.LUNA3_VOICE_SAMPLES,'utf8')):[];

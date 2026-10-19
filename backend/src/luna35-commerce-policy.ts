@@ -5,6 +5,7 @@ export type CommerceView=typeof commerceViews[number];
 export function commerceIntent(text:string):CommerceView|null{
  const clean=text.trim();if(clean.length>350||/suicid|kill myself|hurt myself|panic|abuse|lonely|одинок|самоуб|убить себя|паник|насили|боль в груди/i.test(clean))return null;
  if(/^(?:continue (?:my |the )?(?:previous |pending )?(?:reading|purchase|action)|продолж(?:и|ить) (?:предыдущий |прошлый |сохранённый )?(?:расклад|покупку|действие))[.!?]?$/i.test(clean))return 'resume';
+ if(/(?:continue|resume|продолж\p{L}*).{0,35}(?:action|reading|purchase|действи\p{L}*|расклад|покуп\p{L}*).{0,45}(?:paused|before payment|pending|приостанов\p{L}*|до оплат\p{L}*)/iu.test(clean))return 'resume';
  if(/(?:earn|free seeds|заработ|получить бесплатно).{0,45}(?:seeds|семен)|(?:seeds|семен).{0,45}(?:earn|заработ)/i.test(clean))return 'earn';
  if(/(?:transaction|payment history|purchase history|истори[яю] (?:покуп|платеж|баланс|транзакц))/i.test(clean))return 'history';
  if(/(?:how (?:many|much)|сколько|мой|my|show|покажи).{0,40}(?:balance|seeds|баланс|семян)|(?:wallet|кошел[её]к)/i.test(clean))return 'wallet';

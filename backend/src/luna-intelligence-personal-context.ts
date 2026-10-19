@@ -20,9 +20,12 @@ export async function verifiedCurrentTransits(db:SupabaseClient,owner:number,cha
 }
 /** Numeric zodiac indices are for renderers, not for a language model to
  * reinterpret. Localized labels are derived from the very same engine values. */
+const signsRu=['Овен','Телец','Близнецы','Рак','Лев','Дева','Весы','Скорпион','Стрелец','Козерог','Водолей','Рыбы'];
+const planetsRu:Record<string,string>={sun:'Солнце',moon:'Луна',mercury:'Меркурий',venus:'Венера',mars:'Марс',jupiter:'Юпитер',saturn:'Сатурн',uranus:'Уран',neptune:'Нептун',pluto:'Плутон'};
+const aspectsRu:Record<string,string>={conjunction:'соединение',sextile:'секстиль',square:'квадрат',trine:'трин',opposition:'оппозиция'};
+export function astrologyEvidenceLabels(language:'ru'|'en'){
+ return{planets:Object.fromEntries(Object.keys(planetsRu).map(id=>[id,language==='ru'?planetsRu[id]:id])),aspects:Object.fromEntries(Object.keys(aspectsRu).map(id=>[id,language==='ru'?aspectsRu[id]:id])),signs:Object.fromEntries(zodiacFactNames.map((name,index)=>[name,language==='ru'?signsRu[index]:name]))};
+}
 export function namedTransitFacts(snapshot:ReturnType<typeof calculateCurrentTransits>){
- const signsRu=['Овен','Телец','Близнецы','Рак','Лев','Дева','Весы','Скорпион','Стрелец','Козерог','Водолей','Рыбы'];
- const planetsRu:Record<string,string>={sun:'Солнце',moon:'Луна',mercury:'Меркурий',venus:'Венера',mars:'Марс',jupiter:'Юпитер',saturn:'Сатурн',uranus:'Уран',neptune:'Нептун',pluto:'Плутон'};
- const aspectsRu:Record<string,string>={conjunction:'соединение',sextile:'секстиль',square:'квадрат',trine:'трин',opposition:'оппозиция'};
  return{...snapshot,interpretationBoundary:'A snapshot of calculated angular relationships, not a prediction or proof of personality. Current positions and natal positions are distinct.',current:snapshot.current.map(p=>({...p,signName:zodiacFactNames[p.sign],signNameRu:signsRu[p.sign],planetNameRu:planetsRu[p.id]})),aspects:snapshot.aspects.map(a=>({...a,labelEn:`transiting ${a.transiting} — ${a.type} — natal ${a.natal}`,labelRu:`транзит: ${planetsRu[a.transiting]} — ${aspectsRu[a.type]} — натальная карта: ${planetsRu[a.natal]}`}))};
 }

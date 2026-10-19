@@ -37,7 +37,21 @@ const signPatterns=['aries|овен|овн\\p{L}*','taurus|телец|тельц
 const planetPattern=Object.keys(planetAliases).map(p=>p+'\\p{L}*').join('|');
 const norm=(text:string)=>text.normalize('NFKC').toLocaleLowerCase().replace(/ё/g,'е');
 const planet=(text:string)=>Object.entries(planetAliases).find(([stem])=>norm(text).startsWith(stem))?.[1];
-export function assertGroundedAstrologyProse(text:string,context:GroundedChartContext,preferredName?:string,transits?:{current:Array<{id:string;sign:number}>;aspects:Array<{transiting:string;natal:string;type:string}>}|null){
+/** A narrow question about one planet receives that planet and its actual
+ * neighbours, not unrelated natal aspects to accidentally reattribute. This
+ * projects existing verified data only; it never calculates or changes storage. */
+export function focusedNatalQuestionEvidence<T extends GroundedChartContext>(context:T,request:string):T{
+ if(context.second)return context;
+ const mentions=[...new Set([...request.matchAll(new RegExp(`(?<!\\p{L})(${planetPattern})(?!\\p{L})`,'giu'))].map(m=>planet(m[1])))].filter((id):id is string=>Boolean(id));
+ if(mentions.length!==1||!context.first.placements[mentions[0]])return context;
+ const focus=mentions[0],aspects=context.first.aspects.filter(a=>a.from===focus||a.to===focus),allowed=new Set([focus,...aspects.flatMap(a=>[a.from,a.to])]);
+ return{...context,first:{...context.first,placements:Object.fromEntries(Object.entries(context.first.placements).filter(([id])=>allowed.has(id))),aspects}};
+}
+export function assertGroundedAstrologyProse(text:string,context:GroundedChartContext,preferredName?:string,transits?:{current:Array<{id:string;sign:number}>;aspects:Array<{transiting:string;natal:string;type:string}>}|null,request?:string){
+ if(request&&!transits&&!context.second){
+  const focused=focusedNatalQuestionEvidence(context,request);
+  if(focused!==context)for(const match of text.matchAll(new RegExp(`(?<!\\p{L})(${planetPattern})(?!\\p{L})`,'giu')))if(!focused.first.placements[planet(match[1])!])throw new Error('ungrounded_chart_focus');
+ }
  const charts=[context.first,...context.second?[context.second]:[]],names=charts.map(c=>norm(c.subject.label));if(preferredName)names.push(norm(preferredName));
  // A missing ascendant means the supplied calculation has no usable house
  // framework. Reject explicit planet-in-house assertions before persistence.
@@ -67,8 +81,8 @@ export function assertGroundedAstrologyProse(text:string,context:GroundedChartCo
  if(context.second)for(const sentence of text.split(/[.!?\n]/u))if(new RegExp(aspectPattern,'iu').test(sentence)&&new RegExp(`(?:${planetPattern})[ \\t]*/[ \\t]*(?:${planetPattern})`,'iu').test(sentence))throw new Error('ungrounded_chart_aspect');
  // Only an explicit adjacent relation. An arbitrary text span can incorrectly
  // bind the previous placement to an aspect in the next clause/list item.
- const link='[ \\t]*(?:(?:is|in|в|находится|образует)[ \\t]+)?[—–:-]?[ \\t]*';
- const target='[ \\t]*(?:(?:to|with|к|с|натальн\\p{L}*)[ \\t]+){0,2}[—–:-]?[ \\t]*';
+ const link='[ \\t]*(?:(?:is|in|forms?|forming|в|находится|образует)[ \\t]+)?(?:(?:a|an|the)[ \\t]+)?[—–:-]?[ \\t]*';
+ const target='[ \\t]*(?:(?:to|with|the|к|с|натальн\\p{L}*)[ \\t]+){0,3}[—–:-]?[ \\t]*';
  const aspects=new RegExp(`(?<!\\p{L})(${planetPattern})(?!\\p{L})${link}(${aspectPattern})${target}(${planetPattern})(?!\\p{L})`,'giu');
  const evidence=[...(context.second?context.synastry?.aspects??[]:context.first.aspects),...transits?.aspects.map(a=>({from:a.transiting,to:a.natal,type:a.type}))??[]];
  for(const match of text.matchAll(aspects)){

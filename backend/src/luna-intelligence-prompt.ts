@@ -11,7 +11,7 @@ export function unverifiedCapabilityClaim(text:string){return /(?:I (?:have )?(?
 /** A model sentence cannot acknowledge a client action or a financial mutation.
  * Verified navigation is rewritten to an actual button invitation before this guard. */
 export function unverifiedExecutionClaim(text:string){
- return /(?:^|[.!?\n]\s*)(?:(?:I(?: am|'m|’m| have|'ve|’ve)?\s+)(?:opening|opened|started|played|purchased|charged|debited|saved|deleted)|(?:Я\s+)?(?:открываю|открыла|запустила|включила|оплатила|списала|сохранила|удалила))(?=$|[\s.!?,:;])/iu.test(text)
+ return /(?:^|[.!?\n]\s*)(?:(?:I(?: am|'m|’m| have|'ve|’ve)?\s+)(?:opening|opened|started|played|purchased|charged|debited|saved|deleted|drew|drawn|dealt)|(?:Я\s+)?(?:открываю|открыла|запустила|включила|оплатила|списала|сохранила|удалила|вытянула|разложила))(?=$|[\s.!?,:;])/iu.test(text)
   ||/(?:\b(?:I will|I'll|I’ll) open\b|(?:^|[.!?\n]\s*)Opening\s+(?:the|your|my|Moon|Astrology|Support))|(?:^|[.!?\n]\s*)(?:Открываю|Открою)\s+(?:раздел|поддержку|настройки|карту|сад)/iu.test(text);
 }
 /** One versioned composition replaces years of appended, contradictory prompt

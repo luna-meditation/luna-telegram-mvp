@@ -9,7 +9,11 @@ export async function readPersonalReportContext(db:SupabaseClient,owner:number,i
  const r=await db.from('luna43_seed_purchases').select('id,product,state,result,created_at').eq('telegram_id',owner).eq('id',id).eq('product','deep_analysis').maybeSingle();
  if(r.error)throw new FoundationError(503,'report_unavailable','Could not open the selected report.');
  if(!r.data||r.data.state!=='ready'||!r.data.result)throw new FoundationError(404,'report_not_found','Choose a completed personal report from this account.');
- const result=deepAnalysisResultSchema.parse(r.data.result);
+ // Saved fulfillment adds topic/source/usage metadata to the validated prose.
+ // Validate the actual deliverable, while excluding server billing metadata
+ // from model context. Strict parsing of the whole saved envelope rejected
+ // every real completed purchase despite the synthetic prose-only test passing.
+ const result=deepAnalysisResultSchema.strip().parse(r.data.result);
  if(JSON.stringify(result).length>14000)throw new FoundationError(422,'report_too_large','Choose a specific section to discuss.');
  return{id:r.data.id,source:'saved_paid_personal_report',createdAt:r.data.created_at,...result,grounding:'A saved interpretation, not confirmed personal facts. Discuss the selected report without drawing cards, recalculating or charging again.'};
 }

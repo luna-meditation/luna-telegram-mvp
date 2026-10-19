@@ -54,6 +54,14 @@ test('follow-up retains exact domain; explicit new topic beats even a fresh atta
  assert.deepEqual(relevantFollowUpActions(['continue','tarot','continue','journal'],'compatibility'),['continue','journal']);
  assert.equal(responsePlan('Мои сильные стороны','natal').depth,'concise');
 });
+test('planet quick replies retain the exact selected chart, while the companion name is not a Moon request',()=>{
+ for(const name of ['Sun','Moon','Mercury','Venus','Mars','Jupiter','Saturn','Uranus','Neptune','Pluto'])assert.equal(retainsArtifact('Tell me about '+name,'natal'),true,name);
+ for(const name of ['Солнце','Луне','Меркурии','Венере','Марсе','Юпитере','Сатурне','Уране','Нептуне','Плутоне'])assert.equal(retainsArtifact('Расскажи о '+name,'natal'),true,name);
+ assert.equal(retainsArtifact('Луна, я плохо спал','natal'),false);
+ assert.equal(retainsArtifact('Show my Moon Seeds balance','natal'),false);
+ assert.equal(retainsArtifact('Different topic: help with a Mars prototype','natal'),false);
+ assert.equal(retainsArtifact('Tell me about Mars','tarot'),false);
+});
 test('versioned date numerology uses documented reductions and strict Gregorian dates',()=>{
  assert.equal(reduceNumber(11),11);assert.equal(reduceNumber(22),22);assert.equal(reduceNumber(33),33);assert.equal(reduceNumber(11,false),2);
  const chart=calculateDateNumerology('1990-01-01','2026-10-18');

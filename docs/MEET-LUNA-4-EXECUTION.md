@@ -1,5 +1,108 @@
 # Meet Luna 4.0 — implementation and release ledger
 
+## Актуальный итог, 19 октября 2026
+
+Этот раздел заменяет приведённый ниже исторический BLOCKED checkpoint. Владелец пополнил Netlify; ошибки исправлены и проверены повторно. Production publication пока не подтверждена — её идентификаторы будут добавлены только после успешного выполнения.
+
+Финальный проверенный backend source: `ec715d79bf727acc61e4f7e15a7162f04829de20`. Development: `feature/meet-luna-4-personal-intelligence`. Базовый production main: `b0406e22c11e712155e8e62dd68d86ea713656bb`.
+
+### Реализовано
+
+- Общий canonical/legacy resolver даты рождения, owner-bound date-only preview и явное revision-safe подтверждение. Необязательный progressive discovery; время/место/асцендент не выдумываются.
+- Читаемый персональный портрет с источниками, реальными рассчитанными показателями, подтверждёнными интересами/целями и компактным empty state. Сферы жизни остаются вторичными; неизвестные сильные стороны не заполняются предположениями.
+- Компактное меню девяти действий Luna AI, встроенные Journal/Cosmos/date numerology, сохраняемое бесплатное приветствие/follow-up с consent, dismiss и cooldown. Никаких внешних уведомлений или нового планировщика.
+- Явная доставка ready paid report и owner-bound контекст обсуждения. Повторное открытие не генерирует и не списывает. Истёкший execution lease восстанавливается существующим атомарным RPC; нельзя одновременно вернуть средства и выдать результат.
+- Видимые отдельные voice allowance/reset; действующие пять попыток в сутки не повышены. Запись → распознавание → редактируемый текст → явный Send; это не хранимые voice messages или непрерывный звонок.
+- Подтверждаемая feedback-запись к реальному источнику и приватная семидневная сводка завершённых практик/сохранённых записей. Не выводит психологическую пользу из факта completion.
+
+### Исправленные причины AI-сбоев
+
+1. `meet-luna4` была зарегистрирована, но отсутствовала в старом списке версий настоящего chat caller: benchmark использовал новую политику, реальный chat — legacy. Теперь один `usesIntelligencePrompt` и регрессия на настоящий request builder.
+2. Текущий запрос гарантирован последним; старые неотвеченные artifact-вопросы исключены из model context без удаления истории.
+3. Объяснение выбранного natal/compatibility/Tarot/paid result получает один exact typed evidence payload и релевантный разрешённый personal context, без stale runtime/catalog. Ненужные tools отключены; неожиданный function call отвергается до execution.
+4. Узкий Mercury вопрос больше не получает отдельный Sun–Moon аспект. Передаются только реальные соседи нужной планеты; исходный расчёт не изменяется, grounding guard сохранён. Quick replies всех десяти планет удерживают точную карту.
+5. Reversed follow-up не запускает новый draw. «not another Tarot spread» не перекрывает явную просьбу настоящей медитации.
+6. Доступ к последней реальной практике проверяется по published catalog ID + server entitlements без provider или покупки. Старый/чужой контекст не выбирается. Playback не объявляется начавшимся без Play.
+7. Явный выбор birth profile, меню Astrology и resume paused action открывают реальные owner-bound workflows, не выдуманные варианты/повторную анкету.
+8. Ready paid envelope принимает штатные metadata-поля, но billing не передаётся модели. Сравнение сохранённого JSON семантическое, не по порядку JSONB-ключей.
+
+Неудачные provider-ответы и расходы сохранены; successful-answer quota не расходуется при failed response. Защитные проверки рассчитанных фактов не ослаблялись, автоматических платных повторов нет.
+
+### Проверки
+
+| Проверка | Фактический результат |
+| --- | --- |
+| Node 22.23.3 suites | Backend 723 PASS + 1 optional SKIP; frontend 275 PASS |
+| TypeScript / lint / backend+frontend builds | PASS; Vite chunk >500 kB — предупреждение, не build error |
+| Native PostgreSQL 17, production schema без пользовательских строк | 9 PASS: RLS/forged claims, 12 concurrent duplicate purchases, leases, fulfillment/refund race, Lifetime/чужой wallet/соседнее приложение |
+| Chromium/WebKit RU/EN, 360/375/390/393 | 160 PASS; 40 Retina screenshots |
+| Saved paid-report open/discuss | 4 browser PASS, 0 generation/purchase/chat requests |
+| Browser PCM capture/cancel/retry/permission denial | 4 PASS; provider mocked, физический микрофон не заявляется |
+| Настоящий staging backend | 78 PASS после validate: 1/3/5 draw/reveal/AI/save/free reopen, memory CRUD, pair/natal, paid report, breath completion/reward once, 3 actual STT, owner denial |
+| Новые edge journeys | Reversed Star follow-up, negative Tarot→meditation switch, exact practice access, profile selector/menu/resume, Mars quick reply — PASS |
+
+QA run `meet-luna4-20261019-v1`, synthetic owner `510054001`, staging project `funvzpmpbgazsisehiru`. Финальный worker deploy `6ad56bc5b128f9f7bfd30481`, source `ec715d79bf727acc61e4f7e15a7162f04829de20`. Обычная staging generation снова OFF. Старый QA frontend сохранён байт-в-байт, это НЕ новый пользовательский preview.
+
+За программу было десять успешных технических worker publications, одна отклонённая 403 до пополнения и одна локальная ENOSPC попытка без deploy. Это не маскируется под одну публикацию. Больше промежуточных staging deploy не требуется.
+
+### Benchmark и качество
+
+Фиксированный набор: 60 GPT-5-mini решений + 6 парных comparison решений (3 одинаковых кейса для GPT-4.1-mini и GPT-4o-mini) + 4 before-policy решения. Raw exact first-tool match: **45/60, 3/3, 3/3**. Input hashes парных сравнений совпадают. Это НЕ E2E-процент успеха; маленькая comparison выборка не обосновывает смену production-модели.
+
+Все 15 несовпадений независимо разобраны. Read-only catalog перед рекомендацией и условное признание Lifetime не являются сами по себе финансовой регрессией. Реальные проблемы отрицания, access, reversed follow-up, selector и navigation исправлены полными server journeys. Вопрос о guided audio для всех практик остаётся неоднозначным для raw model selection; интерфейс не объявляет неготовое аудио работающим. Полный benchmark после точечных исправлений не запускался повторно; цифры не повышаются задним числом.
+
+До/после на синтетических данных:
+
+- Две натальные карты → раньше просьба назвать Tarot-карты; теперь реальная business-пара, точные Mars–Sun opposition / Uranus–Saturn conjunction, русские названия и практический совет без новых расчётов.
+- Reversed вопрос → раньше `start_tarot_reading`; теперь краткое объяснение сохранённой reversed Star по исходному вопросу, без draw/charge.
+- «Входит ли эта практика в доступ?» → раньше обещание проверки; теперь реальная Focused Calm и проверенный доступ, честное «playback has not started».
+- Ready paid envelope → раньше strict-parser отказ; теперь точный saved result/follow-up, один -100 debit, ноль повторной генерации/возврата.
+
+Модель всё ещё бывает многословной: Mars quick reply дал длинный, но проверенный по расчёту ответ. Не заявляется идеальный интеллект или доказанная психологическая оценка.
+
+### Фактическая стоимость
+
+Разрешённый конечный бюджет: **100 Responses + 6 STT, вместе $0.75**; расширения 90→94→100 не сбрасывали usage. Факт: **95 Responses + 3 STT, $0.0758998**, unknown costs/holds 0. Это расчёт по actual provider usage и опубликованным тарифам, не отдельный счёт OpenAI; неудачные попытки включены.
+
+| Сценарий | Calls | Input / cached / output tokens | USD |
+| --- | ---: | --- | ---: |
+| Benchmark/comparisons/before | 70 | 305149 / 255232 / 7536 | 0.0341397 |
+| Tarot 1 / 3 / 5 | 1 / 1 / 1 | 1300/0/286; 1486/0/505; 1588/0/664 | 0.000897 / 0.0013815 / 0.001725 |
+| Обычный prototype conversation | 1 | 6016 / 3840 / 315 | 0.00127 |
+| Корректная compatibility v7 | 1 | 4099 / 0 / 540 | 0.00210475 |
+| Узкий Mercury follow-up v3 | 1 | 3056 / 1792 / 232 | 0.0008248 |
+| Новый reversed follow-up | 1 | 3222 / 0 / 206 | 0.0012175 |
+| Новый Mars quick reply | 1 | 7359 / 2816 / 370 | 0.00194615 |
+| Новый синтетический deep result | 1 | 876 / 0 / 603 | 0.001425 |
+| Saved deep result follow-up | 1 | 6268 / 0 / 635 | 0.002837 |
+| Saved reopen/retry | 0 дополнительных | — | 0 |
+
+Последний релевантный personal retrieval: 339 символов (~113 estimated tokens), около 1.1–1.7 s в staging. Полный provider input включает инструкции/evidence; это не точное billing-разбиение слоёв. Date numerology: два provider-шага tool+ответ, $0.00258265. Прямые app/commerce действия обходятся без модели.
+
+### Данные, финансы и recovery
+
+Миграций нет. Production Supabase `vkcdtasbdoeilgfucoax`: повторно совпали schema/RLS/ACL/SECURITY DEFINER/config/trigger и financial fingerprints, включая соседнее приложение. Нет synthetic production rows.
+
+Сохранены Premium 500/неделя, 1000/месяц, 5000/год, 10000/Lifetime Stars; AI 20/50 Seeds, deep analysis 100 Seeds, прежние wallet/quota/payment правила. Production model **gpt-5-mini** не меняется, cap **$100/месяц** не меняется; меняется только prompt policy на `meet-luna4`. Реального Stars-платежа или возврата исторической покупки нет.
+
+Свежая encrypted Luna-only копия `pre-meet-luna4-20261019.Y4f2kJ`, capture `2026-10-18T17:47:36.485Z`: **80 таблиц/2512 строк/84 функции/1 view, два независимых точных восстановления**. 28 Storage archives, 239528218 исходных bytes, расшифровка/хэши PASS. Encrypted SQL SHA `5036e61dbd0f8a3396ba25ada84681241e6c251e5cd00e9ee1e56d54642d3708` перепроверен, возраст <24 h; ключи вне Git.
+
+Выпуск: закрытый QA + PASS source-bound ledger → verified development PR → expected-head merge `[skip netlify]` → Railway backend exact SHA/health → одна local Node 22 prebuilt Netlify frontend publication без QA Functions → public assets/79 Tarot WebP/API auth/mobile shell/post-release fingerprints. Future push main может заменить manual frontend deploy. При регрессии остановка rollout и fix-forward через проверенный Git revert/rebuild; backup не перезаписывает live users автоматически, старый Netlify deploy API не восстанавливается.
+
+### Что остаётся проверить/ограничено
+
+- Физические iPhone Telegram microphone, keyboard и audio audition для этого source; browser PCM и actual STT не подменяют устройство.
+- Новый real Stars checkout только отдельной осознанной покупкой владельца, не автоматически.
+- Dark-only политика продукта сохранена, новая Light поддержка не заявляется.
+- Источники/timestamps портрета есть, полного архива всех ревизий нет. Отдельная after-meditation feedback карточка не добавлена в большой PlayerPage; поддержанные breath/Tarot/natal feedback пути работают.
+- Midheaven, Human Design, Jyotish, BaZi не имитируются; существующий Astronomy Engine 2.1.19 и неопределённость неизвестного времени сохранены.
+- `@Meetluna_bot` не подтверждён BotFather; существующие bot ID/token и `@lunameditation_bot` сохранены, display name Meet Luna 🌙 подтверждено ранее.
+- Отдельный Railway website service offline — pre-existing; работающий основной Mini App/backend не затрагивается созданием новых сервисов.
+
+После релиза на iPhone: полностью закрыть обычную Luna → открыть снова; проверить RU, My Cosmos, Journal save/reopen, 1/3/5 прямо в чате, saved paid report, запись/отмена/распознавание/редактирование/Send, Play и composer с клавиатурой. Сохранённые результаты открываются без новых генераций.
+
+## Исторический audit/checkpoint (заменён актуальным разделом выше)
+
 All eight owner specifications were read on 2026-10-19. Development branch: `feature/meet-luna-4-personal-intelligence`. Baseline production: main `b0406e22c11e712155e8e62dd68d86ea713656bb`, Netlify `6ad4df068ea7bcde797e9ad9`, Railway `41eee2ff-3bd4-443f-8fb9-083e695549a5`. No routine staging deployments. Existing unrelated worktree changes are excluded.
 
 ## Audit: source of truth and observed failures

@@ -8,7 +8,7 @@ import {isIntelligenceAttachment,type IntelligenceActionId,type IntelligenceAtta
 
 type Usage={limit:number;remaining:number;resetAt:string};
 type Eligibility={allowed:boolean;source:string;required:number;shortfall:number};
-type Options={features:NavigationAvailability&{central:boolean;spreads:boolean};usage:(owner:number)=>Promise<Usage>;eligibility:(owner:number,kind:'single'|'three'|'five')=>Promise<Eligibility>;recommendMeditation?:(owner:number,message:string,language:IntelligenceLanguage)=>Promise<{id:string;title:string}>;safety?:(language:IntelligenceLanguage,category:'self_harm'|'medical_emergency'|'violence')=>string};
+type Options={features:NavigationAvailability&{central:boolean;spreads:boolean};usage:(owner:number)=>Promise<Usage>;eligibility:(owner:number,kind:'single'|'three'|'five')=>Promise<Eligibility>;recommendMeditation?:(owner:number,message:string,language:IntelligenceLanguage)=>Promise<{id:string;title:string}>;openMeditation?:(owner:number,id:string,language:IntelligenceLanguage)=>Promise<{id:string;title:string;hasAccess:boolean}>;safety?:(language:IntelligenceLanguage,category:'self_harm'|'medical_emergency'|'violence')=>string};
 export type PreparedIntelligenceAction={action:IntelligenceActionId;attachment:IntelligenceAttachment|null;navigation:{destination:LunaDestinationId;operationId:string}|null;content:string};
 const fields='id,conversation_id,request_id,role,content,metadata,created_at';
 const digest=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -28,6 +28,10 @@ export function createIntelligenceActionService(db:SupabaseClient,options:Option
     const p=intelligenceActionInputs['safety.support'].parse(command.input);if(!options.safety)throw unavailable();content=options.safety(language,p.category);
    }else if(command.action==='meditation.recommend'){
     const p=intelligenceActionInputs['meditation.recommend'].parse(command.input);if(!options.recommendMeditation)throw unavailable();const chosen=await options.recommendMeditation(owner,p.goal,language);attachment={...base,type:'meditation',payload:{meditationId:chosen.id}};content=en?`Here is ${chosen.title}. Tap its card to open the player or check available access. Playback starts only when you choose Play.`:`Вот «${chosen.title}». Нажми на карточку, чтобы открыть плеер или проверить доступ. Аудио начнётся только после нажатия Play.`;
+   }else if(command.action==='meditation.open'){
+    const p=intelligenceActionInputs['meditation.open'].parse(command.input);if(!options.openMeditation)throw unavailable();const chosen=await options.openMeditation(owner,p.id,language);if(chosen.id!==p.id)throw unavailable();
+    attachment={...base,type:'meditation',payload:{meditationId:chosen.id}};
+    content=chosen.hasAccess?(en?`“${chosen.title}” is included in your current access. Tap Play on its card when you are ready; playback has not started.`:`«${chosen.title}» входит в твой текущий доступ. Нажми Play на карточке, когда будет удобно; воспроизведение ещё не началось.`):(en?`“${chosen.title}” is a Premium practice, and your current access does not include it. Its card shows the available access options. Nothing has been purchased or played.`:`«${chosen.title}» — Premium-практика, сейчас она не входит в твой доступ. Доступные варианты показаны на карточке. Покупок и воспроизведения не было.`);
    }else if(command.action==='tarot.start'){
     const p=intelligenceActionInputs['tarot.start'].parse(command.input);
     if(!options.features.tarot_history||p.kind&&p.kind!=='single'&&!options.features.spreads)throw new FoundationError(404,'spreads_unavailable','This spread is unavailable.');
