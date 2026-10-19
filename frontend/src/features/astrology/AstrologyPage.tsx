@@ -71,7 +71,7 @@ export default function AstrologyPage({language,initData,onBack,registerBackHand
    </section>}
    {chart&&(experience==='natal'||experience==='profiles')&&<section className="luna30-chart-results" data-testid="natal-report">
     <header><h2>{active?.display_label??(en?'Birth chart':'Натальная карта')}</h2><p>{chart.calculation.timePrecision==='unknown'?(en?'Birth time unknown · approximate positions':'Время неизвестно · положения приблизительные'):(en?'Tropical zodiac · Whole Sign houses':'Тропический зодиак · цельнознаковые дома')}</p><button type="button" className="luna32-analysis-secondary" onClick={clear}>{en?'Choose another chart':'Выбрать другую карту'}</button></header>
-    <NatalOverview chart={chart} language={language} onDiscuss={discuss}/>
+    <NatalOverview initData={initData} chart={chart} language={language} onDiscuss={discuss}/>
     <details className="luna3-chart-wheel"><summary>{en?'View the full chart':'Посмотреть полную карту'}</summary><NatalWheel chart={chart.calculation} language={language} chartId={chart.id} initData={initData}/></details>
     <AstrologyShareButton chart={chart} names={[active?.display_label??''].filter(Boolean)} language={language} registerBackHandler={registerBackHandler}/>
     {chart.calculation.timePrecision==='unknown'&&<p className="luna30-astro-note">{en?'Without the exact time, ascendant, houses and precise natal aspects are omitted. Planets crossing a sign boundary show both possible signs.':'Без точного времени асцендент, дома и точные натальные аспекты не рассчитываются. У планет на границе знаков показаны оба варианта.'}</p>}

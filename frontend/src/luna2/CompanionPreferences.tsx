@@ -1,0 +1,8 @@
+import {useRef,useState} from 'react';
+import {writePersonalMemory,type AppLanguage,type PersonalMemory} from '../api';
+import {companionPreference,companionSettingsKey} from '../../../backend/src/companion-policy';
+export function CompanionPreferences({memories,language,initData,onSaved}:{memories:PersonalMemory[];language:AppLanguage;initData?:string;onSaved:()=>void}){
+ const en=language==='en',row=memories.find(m=>m.memory_key===companionSettingsKey),enabled=companionPreference(memories).inAppFollowUps,[busy,setBusy]=useState(false),[error,setError]=useState(''),pending=useRef(false);
+ async function change(value:boolean){if(pending.current)return;pending.current=true;setBusy(true);setError('');try{await writePersonalMemory({category:'preferences',key:companionSettingsKey,value:JSON.stringify({version:1,inAppFollowUps:value}),confirmed:true,kind:'fact',sensitiveConsent:false,...(row?{revision:row.revision}:{})},initData,row?.id);onSaved();}catch{setError(en?'This preference could not be confirmed. Reopen your portrait before retrying.':'Изменение не подтверждено. Открой портрет заново перед повтором.');}finally{pending.current=false;setBusy(false);}}
+ return <section className="portrait-companion-preference"><label><input type="checkbox" checked={enabled} disabled={busy} onChange={e=>void change(e.target.checked)}/><span><strong>{en?'Contextual follow-ups in Luna':'Продолжать важные темы в Luna'}</strong><small>{en?'Only from confirmed goals, with memory permission. At most one starter a day; dismiss any topic. No Telegram notifications.':'Только по подтверждённым целям и с разрешением на память. Не чаще раза в день; тему можно отклонить. Без уведомлений Telegram.'}</small></span></label>{error&&<p role="alert">{error}</p>}</section>;
+}

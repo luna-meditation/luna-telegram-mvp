@@ -11,11 +11,13 @@ import {withAiOperation} from './luna32-ai-accounting.js';
 import {requestLunaResponse,responseOutputText} from './luna/ai-provider.js';
 import {stagingAiMeterRecord} from './staging-ai-meter.js';
 const hash=(value:unknown)=>createHash('sha256').update(JSON.stringify(value)).digest('hex');
-export function deepContextHash(value:Record<string,unknown>,version=2){
- if(version!==1)return hash(value);
+export function deepContextHash(value:Record<string,unknown>,version=3){
+ if(version>=3)return hash(value);
  const personal=value.personal as ReturnType<typeof permittedPersonalContext>;
+ const priorPersonal=personal?Object.fromEntries(Object.entries(personal).filter(([key])=>key!=='knownBirth')):personal;
+ if(version===2)return hash({...value,personal:priorPersonal});
  const legacy=personal?{...personal,...(personal.confirmedMemories?{confirmedMemories:personal.confirmedMemories.map(m=>({category:m.category,key:m.key,value:m.value,updatedAt:m.updatedAt}))}:{}),...(personal.symbolicReflections?{symbolicReflections:personal.symbolicReflections.map(r=>({label:r.label,value:r.value}))}:{})}:personal;
- return hash({...value,personal:legacy});
+ return hash({...value,personal:legacy?Object.fromEntries(Object.entries(legacy).filter(([key])=>key!=='knownBirth')):legacy});
 }
 const unavailable=()=>new FoundationError(503,'seed_products_unavailable','Your saved purchases and balance are preserved.');
 const purchaseFields='id,request_id,product,seeds,quantity,catalog_revision,state,result,created_at,updated_at';
@@ -40,14 +42,27 @@ export function createSeedProducts(db:SupabaseClient,options:{enabled:()=>boolea
   return{language:input.language,question:input.question??'',...(input.topic?{topic:input.topic}:{}),personal,sources};
  }
  return {
+  async get(owner:number,id:string){z.string().uuid().parse(id);const result=await db.from('luna43_seed_purchases').select(purchaseFields).eq('telegram_id',owner).eq('id',id).maybeSingle();if(result.error)throw unavailable();if(!result.data)throw new FoundationError(404,'analysis_not_found','This purchase is not available for this account.');return{purchase:result.data};},
+  async recover(owner:number,id:string,now=new Date()){
+   z.string().uuid().parse(id);const read=await db.from('luna43_seed_purchases').select('id,product,state,lease,updated_at').eq('telegram_id',owner).eq('id',id).eq('product','deep_analysis').maybeSingle();if(read.error)throw unavailable();if(!read.data)throw new FoundationError(404,'analysis_not_found','This analysis is not available for this account.');
+   const p=read.data;if(p.state!=='processing')return{...await this.get(owner,id),recovered:false};
+   // All provider calls have a 45 s timeout. A 15-minute grace period also
+   // covers server disconnects. The existing atomic finish RPC locks the wallet
+   // and purchase, and accepts only this exact still-processing lease. A late
+   // worker and recovery cannot both fulfill/refund or mutate Seeds twice.
+   const age=now.getTime()-Date.parse(p.updated_at);if(!Number.isFinite(age)||age<15*60000||!p.lease)throw new FoundationError(409,'analysis_processing','This report is still within its delivery window. Check the saved purchase later; do not pay again.');
+   const finished=await db.rpc('luna43_finish_deep_analysis',{p_owner:owner,p_purchase:id,p_lease:p.lease,p_result:null});if(finished.error)throw unavailable();
+   const result=await this.get(owner,id);if(!['ready','failed_refunded'].includes(result.purchase.state))throw new FoundationError(503,'analysis_review_required','Delivery needs review; no duplicate generation or debit was attempted.');
+   return{...result,recovered:result.purchase.state==='failed_refunded'};
+  },
   async overview(owner:number){const [cfg,items,quota]=await Promise.all([catalog(),db.from('luna43_seed_purchases').select(purchaseFields).eq('telegram_id',owner).order('created_at',{ascending:false}).limit(20),db.rpc('luna40_quota_available',{p_owner:owner})]);if(items.error||quota.error)throw unavailable();return{...cfg,purchases:items.data??[],additionalMessages:quota.data};},
   async purchase(owner:number,raw:unknown){const input=seedPurchaseSchema.parse(raw);let contextHash:string|null=null;if(input.product==='deep_analysis'){const runtime=await readLuna32Settings(db);if(!runtime.generation_enabled||!runtime.cost_baseline_verified)throw unavailable();contextHash=hash(await context(owner,input));}
-   if(!options.enabled())throw unavailable();const parameters={language:input.language,...(input.topic?{topic:input.topic}:{}),...(input.question?{question:input.question}:{}),...(input.chartId?{chartId:input.chartId}:{}),...(input.personalContextConsent?{personalContextConsent:true}:{}),...(contextHash?{contextHash,contextVersion:2}:{})};
+   if(!options.enabled())throw unavailable();const parameters={language:input.language,...(input.topic?{topic:input.topic}:{}),...(input.question?{question:input.question}:{}),...(input.chartId?{chartId:input.chartId}:{}),...(input.personalContextConsent?{personalContextConsent:true}:{}),...(contextHash?{contextHash,contextVersion:3}:{})};
    const r=await db.rpc('luna43_purchase_seed_product',{p_owner:owner,p_request:input.requestId,p_hash:hash({...input,parameters}),p_product:input.product,p_expected:input.expectedSeeds,p_revision:input.catalogRevision,p_parameters:parameters});
    if(r.error||!r.data)throw unavailable();if(!r.data.purchase)throw new FoundationError(r.data.status==='insufficient'?402:r.data.status==='disabled'?404:409,r.data.status==='insufficient'?'insufficient_seeds':r.data.status,'Refresh the product and balance before confirming again.');return r.data;
   },
   async generate(owner:number,id:string){z.string().uuid().parse(id);const lease=randomUUID(),claim=await db.rpc('luna43_claim_deep_analysis',{p_owner:owner,p_purchase:id,p_lease:lease});if(claim.error||!claim.data)throw unavailable();if(claim.data.status==='ready')return{purchase:claim.data.purchase,cached:true};if(claim.data.status!=='claimed')throw new FoundationError(claim.data.status==='not_found'?404:409,'analysis_'+claim.data.status,'This analysis is saved or still being checked. No duplicate generation was started.');
-   try{return await withAiOperation(db,owner,'deep:'+id,async()=>{const p=claim.data.purchase,params=z.object({language:z.enum(['en','ru']),topic:z.enum(deepAnalysisTopics).optional(),question:z.string().optional(),chartId:z.string().uuid().optional(),personalContextConsent:z.literal(true),contextHash:z.string(),contextVersion:z.union([z.literal(1),z.literal(2)]).default(1)}).parse(p.parameters),selected=await context(owner,params);if(deepContextHash(selected,params.contextVersion)!==params.contextHash)throw new FoundationError(409,'personal_context_changed','Your context changed. Nothing new will be sent.');
+   try{return await withAiOperation(db,owner,'deep:'+id,async()=>{const p=claim.data.purchase,params=z.object({language:z.enum(['en','ru']),topic:z.enum(deepAnalysisTopics).optional(),question:z.string().optional(),chartId:z.string().uuid().optional(),personalContextConsent:z.literal(true),contextHash:z.string(),contextVersion:z.union([z.literal(1),z.literal(2),z.literal(3)]).default(1)}).parse(p.parameters),selected=await context(owner,params);if(deepContextHash(selected,params.contextVersion)!==params.contextHash)throw new FoundationError(409,'personal_context_changed','Your context changed. Nothing new will be sent.');
     const response=await(options.transport??requestLunaResponse)(buildDeepAnalysisRequest(selected),AbortSignal.timeout(45000));if(!response.ok)throw unavailable();const payload=await response.json(),meter=stagingAiMeterRecord(payload),text=responseOutputText(payload);if(!meter||meter.estimated_cost===null||!text)throw unavailable();const result=validateDeepAnalysis(JSON.parse(text),selected.sources);if(deepContextHash(await context(owner,params),params.contextVersion)!==params.contextHash)throw new FoundationError(409,'personal_context_changed','Permission or context changed before this result was saved.');
     const saved={...result,...(params.topic?{topic:params.topic}:{}),sources:selected.sources.map(({id,kind,label})=>({id,kind,label})),language:params.language,usage:{model:meter.model,costUsd:meter.estimated_cost}},finish=await db.rpc('luna43_finish_deep_analysis',{p_owner:owner,p_purchase:id,p_lease:lease,p_result:saved});if(finish.error||finish.data!==true)throw unavailable();return{purchase:{...p,state:'ready',result:saved},cached:false};});}
    catch(error){const refund=await db.rpc('luna43_finish_deep_analysis',{p_owner:owner,p_purchase:id,p_lease:lease,p_result:null});if(refund.error||refund.data!==true)throw new FoundationError(503,'analysis_review_required','The purchase needs review; no repeat generation was started.');throw error instanceof FoundationError?error:unavailable();}

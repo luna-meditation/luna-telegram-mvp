@@ -92,7 +92,7 @@ export async function netlifyStagingHandler(request: Request, context: StagingCo
   // interrupted worker). The worker calls owner-bound services directly with
   // synthetic identities. Production never imports this adapter.
   if(process.env.FEATURE_LUNA_INTELLIGENCE==='true'&&isFiniteAiMutation(request.method,path)){
-    const {supabase}=await import('./db.js');const window=await supabase.from('luna30_qa_report_runs').select('result').in('run_name',['luna-intelligence-1-0-20261018-v1','luna-intelligence-2-0-20261018-v1','luna-intelligence-3-0-20261018-v1']);
+    const {supabase}=await import('./db.js');const window=await supabase.from('luna30_qa_report_runs').select('result').in('run_name',['luna-intelligence-1-0-20261018-v1','luna-intelligence-2-0-20261018-v1','luna-intelligence-3-0-20261018-v1','meet-luna4-20261019-v1']);
     if(window.error||window.data?.some(row=>row.result?.providerWindowOpen))return Response.json({code:'qa_validation_in_progress'},{status:503,headers:{'Cache-Control':'private, no-store'}});
   }
   const query: Record<string,string[]> = {};

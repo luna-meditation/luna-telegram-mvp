@@ -3,7 +3,7 @@ import {getUniverse,removePersonalMemory,setLunaMemoryEnabled,listTarotReadings,
 import {PersonalizationSettings} from './PersonalizationSettings';
 import {PersonalMemoryEditor} from './PersonalMemoryEditor';
 import {featureFlags} from '../config/featureFlags';
-import {MyUniverseOverview} from './MyUniverseOverview';
+import {PersonalPortraitView as MyUniverseOverview} from './PersonalPortraitView';
 import {CosmosOnboarding} from './CosmosOnboarding';
 import {cosmosAreas} from '../../../backend/src/luna41-cosmos-policy';
 import {MeetLuna} from './MeetLuna';
@@ -21,6 +21,7 @@ export function MyUniverse({language,initData,firstName,onBackChange,onAstrology
  useEffect(()=>{onBackChange?.(()=>{if(discoveriesOpen){setDiscoveriesOpen(false);return true;}if(onboarding){setOnboarding(false);return true;}if(editor){setEditor(null);return true;}if(setup){setSetup(false);void refresh();return true;}if(manageMemory&&!startMemory){setManageMemory(false);return true;}return false;});return()=>onBackChange?.(null);},[editor,setup,manageMemory,onboarding,discoveriesOpen,onBackChange,startMemory]);
  useEffect(()=>{let active=true;setData(null);setError(false);getUniverse(initData).then(v=>{if(active)setData(v);}).catch(()=>{if(active)setError(true);});listTarotReadings(0,initData).then(v=>{if(active)setReadings(v.readings);}).catch(()=>{});return()=>{active=false;};},[initData]);
  async function refresh(strict=false){try{setData(await getUniverse(initData));setError(false);}catch(error){setError(true);if(strict)throw error;}}
+ useEffect(()=>{const changed=()=>void refresh();window.addEventListener('luna-personal-data-changed',changed);return()=>window.removeEventListener('luna-personal-data-changed',changed);},[initData]);
  async function remove(id?:string){if(!window.confirm(en?'Delete this saved information? Conversation and Tarot history are managed separately.':'Удалить сохранённые сведения? История разговоров и Таро удаляется отдельно.'))return;setBusy(true);try{await removePersonalMemory(initData,id);await refresh();setNotice(en?'Deleted. It will not be retrieved for future AI requests.':'Удалено. Эти сведения не будут извлекаться для будущих AI-запросов.');}catch{setError(true);}finally{setBusy(false);}}
  const entries=(category:string)=>data?.memories.filter(m=>m.category===category)??[];
  const empty=en?'No confirmed information yet. Add only what you want to share.':'Пока нет подтверждённых сведений. Добавь только то, чем хочешь поделиться.';

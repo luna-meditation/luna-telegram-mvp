@@ -33,7 +33,7 @@ export function TarotReadingTools({session,language,initData,dispatch,onContinue
  useEffect(()=>{if(reading?.status!=='processing')return;let polls=0;const timer=window.setInterval(()=>{if(++polls>14){window.clearInterval(timer);return;}void save(false);},2500);return()=>window.clearInterval(timer);},[reading?.status,currentId]);
  const ai=reading?.status==='ready'?reading.interpretation:null;
  return <section className={ai?'tarot-ai-tools':'tarot-ai-reflection'} data-testid="tarot-reading-tools" aria-busy={busy}>
-  {ai&&reading?<TarotAiInterpretation reading={reading} language={language} onContinue={featureFlags.ai_modes?onContinue:undefined}/>:reading?.status==='safety'?<p role="alert">{t.safety}</p>:<>
+  {ai&&reading?<TarotAiInterpretation initData={initData} reading={reading} language={language} onContinue={featureFlags.ai_modes?onContinue:undefined}/>:reading?.status==='safety'?<p role="alert">{t.safety}</p>:<>
    {featureFlags.tarot_ai&&(!reading||reading.status==='local')&&<><button type="button" className="tarot-draw-button" disabled={busy||!currentId} onClick={()=>void save(true)}><Sparkles size={18}/>{t.ai}</button><details className="tarot-privacy"><summary>{language==='en'?'Privacy':'Приватность'}</summary><p>{t.notice}</p></details></>}
    {reading?.status==='fallback'&&<p role="status">{t.fallback}</p>}
    {reading?.status==='processing'&&<p role="status">{t.pending}</p>}

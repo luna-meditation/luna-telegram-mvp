@@ -26,7 +26,9 @@ test('retry keeps one user turn and reuses its client request id', () => {
 test('quota exhaustion blocks paid replies but keeps deterministic commerce available', () => {
   const source = readFileSync(componentPath, 'utf8');
   assert.match(source, /failedTurn\.state !== 'quota_exhausted'/);
-  assert.match(source, /quotaExhausted&&!meetOpen&&!commerceIntent\(draft\)/);
+  assert.match(source, /quotaExhausted&&!meetOpen/);
+  assert.match(source, /&&!commerceIntent\(draft\)/);
+  assert.match(source, /!personalSpaceControl.current/);
   assert.match(source, /quotaExhausted&&<ChatCommerce view="quota"/);
   assert.match(source, /Квота AI исчерпана/);
 });

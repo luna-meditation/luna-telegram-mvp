@@ -8,8 +8,9 @@ import {PracticePicker} from './PracticePicker';
 import {useBreathAudio} from './useBreathAudio';
 import {BreathAudioModes,BreathingVisual} from '../../luna2/BreathingVisual';
 import './embedded.css';
+import {SourceReflection} from '../../luna2/SourceReflection';
 type BreathMode=BreathPracticeId;
-type Proof={clientId:string;promise?:Promise<{id:string}>;previous?:Promise<unknown>};
+type Proof={clientId:string;id?:string;promise?:Promise<{id:string}>;previous?:Promise<unknown>};
 type CachedSession={mode:BreathMode;minutes:number;elapsed:number;done:boolean;recorded:boolean;sessionStarted:boolean;proof:Proof;practice:BreathPractice};
 const inlineSessions=new Map<string,CachedSession>();
 const breathCopy={en:{categoryBreath:'Breath',breathCircle:'Breath Circle',close:'Close',breathSaveError:'Could not save your practice. Retry saving; no second session is started.',breathComplete:'Breath practice complete',startBreathing:'Start breathing'},ru:{categoryBreath:'Дыхание',breathCircle:'Круг дыхания',close:'Закрыть',breathSaveError:'Не удалось сохранить практику. Повтори сохранение — новая сессия не запускается.',breathComplete:'Дыхательная практика завершена',startBreathing:'Начать дыхание'}};
@@ -79,7 +80,7 @@ export function BreathPracticeSession({
     return()=>{alive=false;window.clearInterval(timer);document.removeEventListener('visibilitychange',hidden);beat(false);};
   },[running,mode,durationSeconds,initData]);
 
-  const saveCompletion=()=>{setSaving(true);setSavingError('');const completedBreaths=Math.max(1,Math.floor(durationSeconds/breathCycleSeconds(practice)));return ensureProof().then(value=>onComplete(mode,durationSeconds,completedBreaths,value.id)).then(()=>setRecorded(true)).catch(()=>setSavingError(breathCopy[language].breathSaveError)).finally(()=>setSaving(false));};
+  const saveCompletion=()=>{setSaving(true);setSavingError('');const completedBreaths=Math.max(1,Math.floor(durationSeconds/breathCycleSeconds(practice)));return ensureProof().then(async value=>{await onComplete(mode,durationSeconds,completedBreaths,value.id);proof.current.id=value.id;}).then(()=>setRecorded(true)).catch(()=>setSavingError(breathCopy[language].breathSaveError)).finally(()=>setSaving(false));};
 
   useEffect(() => {
     if (!running) return;
@@ -193,6 +194,7 @@ export function BreathPracticeSession({
         </div>
       ) : null}
 
+      {recorded&&proof.current.id&&<SourceReflection key={proof.current.id} kind="breath" referenceId={proof.current.id} language={language} initData={initData}/>}
       <div className="breath-circle-actions">
         {embedded&&hasStarted&&<button type="button" className="breath-circle-restart" onClick={restart}>{language==='ru'?'Остановить':'Stop'}</button>}
         {embedded&&onOpenFull&&!hasStarted&&<button type="button" className="breath-circle-restart" onClick={()=>{setRunning(false);onOpenFull(mode,minutes);}}>{language==='ru'?'Открыть полную практику':'Open full practice'}</button>}

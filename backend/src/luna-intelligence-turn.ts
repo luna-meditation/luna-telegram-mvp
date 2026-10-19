@@ -1,6 +1,13 @@
 /** Shared, dependency-free turn boundary. It does not select a tool from model
  * prose. It decides whether an explicitly authorized artifact remains relevant. */
 export type IntelligenceTopic='tarot'|'natal'|'compatibility'|'general';
+/** An explicit explanation of an already calculated attachment needs no new
+ * system/tool. Live transits, lookups and requested actions still use tools. */
+export function answerFromAttachedEvidence(hasChart:boolean,message:string){
+ if(!hasChart||/(?:transit|today|current sky|транзит|сегодня|сейчас на небе)/iu.test(message))return false;
+ if(/(?:\b(?:open|find|save|remember|delete|start|new|another|list|search)\b|открой|найди|сохран|запомни|удали|начн|новый|прошл[ыо])/iu.test(message))return false;
+ return /(?:\b(?:explain|interpret|why|how|what|meaning|understand)\b|объясн|интерпрет|почему|(?<!\p{L})как(?!\p{L})|значит|смысл|разбери)/iu.test(message);
+}
 export function artifactTopic(input:{readingId?:string;chartId?:string;astrology?:{chartId:string;secondChartId?:string}}):IntelligenceTopic{
  return input.astrology?.secondChartId?'compatibility':input.astrology||input.chartId?'natal':input.readingId?'tarot':'general';
 }

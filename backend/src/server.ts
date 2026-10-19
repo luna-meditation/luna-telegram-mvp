@@ -240,6 +240,7 @@ app.use('/api/payments', rateLimit({ windowMs: 60_000, max: 30 }));
 app.use('/api/luna', rateLimit({ windowMs: 60_000, max: 30 }));
 app.get('/api/content/editorial',requireTelegramWebApp,async(_req,res,next)=>{try{res.set('Cache-Control','private, no-store');res.json({entries:await readPublishedEditorial(supabase,env.SUPABASE_URL)});}catch(error){next(error);}});
 const voiceService=createVoiceService(supabase,{key:()=>env.OPENAI_API_KEY,enabled:()=>env.FEATURE_AI_VOICE_INPUT,...(env.STAGING_MODE&&env.STAGING_VOICE_QA_GRANT_ID?{stagingQa:{owner:158467796,grant:env.STAGING_VOICE_QA_GRANT_ID}}:{})});
+app.get('/api/luna/voice/usage',requireTelegramWebApp,async(req,res,next)=>{try{res.set('Cache-Control','private, no-store');res.json(await voiceService.usage((req as AuthenticatedRequest).telegramUser.telegram_id));}catch(error){next(error);}});
 app.post('/api/luna/voice/:requestId',requireTelegramWebApp,express.raw({type:'audio/wav',limit:'1450kb'}),async(req,res,next)=>{try{res.set('Cache-Control','no-store');if(!Buffer.isBuffer(req.body))throw new FoundationError(422,'invalid_voice_audio','Use a supported recording.');const result=await voiceService.transcribe((req as AuthenticatedRequest).telegramUser.telegram_id,{requestId:req.params.requestId,language:req.query.language},req.body);res.json(result);}catch(error){next(error);}finally{req.body=undefined;}});
 app.use('/api/client-events', rateLimit({ windowMs: 60_000, max: 120 }));
 app.use('/api/support', rateLimit({ windowMs: 60_000, max: 8 }));

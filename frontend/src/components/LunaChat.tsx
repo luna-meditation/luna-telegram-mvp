@@ -9,6 +9,7 @@ import {
   getLunaConversations,
   getLunaUsage,
   getUniverse,getMeetLuna,getBirthProfiles,
+  openCompanionStarter,acknowledgeCompanionStarter,
   sendLunaMessage,
   renameLunaConversation,openLunaTarot,attachSavedLunaTarot,savePendingCommerceAction,getPendingCommerceActions,
   resetLunaContext,openLunaAstrology,
@@ -43,11 +44,17 @@ import {LunaVoiceInput} from './LunaVoiceInput';
 import {cosmosAreas} from '../../../backend/src/luna41-cosmos-policy';
 import {ChatMeetLuna,type MeetChatControl} from './ChatMeetLuna';
 import {LunaActionSheet} from './LunaActionSheet';
+import {ChatPersonalSpace,type PersonalSpaceControl} from './ChatPersonalSpace';
+import './meet-luna4-chat.css';
+import {BirthDiscoveryCard} from './BirthDiscoveryCard';
+import {explicitBirthDate} from '../../../backend/src/birth-discovery-policy';
 import {meetSteps,reusableMeetSteps} from '../../../backend/src/luna42-meet-config';
 import {cosmosDomainSummary} from '../../../backend/src/luna42-cosmos-domain';
 import './luna43-chat.css';
 
 type LunaChatProps = {
+  personalReportEntry?:{id:string;key:string};
+  onReportEntryConsumed?:(key:string)=>void;
   meetEntry?:string;
   ambientSound?:{title:string;playing:boolean;onToggle:()=>void;onStop:()=>void};
   firstName: string;
@@ -80,6 +87,8 @@ function requestId() {
 }
 
 type FailedTurn = {
+  personalReportId?:string;
+  personalReportConsent?:true;
   astrologyConsent?:true;
   contextReset?:boolean;
   attachmentSelected?:boolean;
@@ -177,14 +186,14 @@ function historyGroup(value:string,language:AppLanguage){
   return date.getTime()>=week.getTime()?(language==='ru'?'Последние 7 дней':'Last 7 days'):(language==='ru'?'Ранее':'Earlier');
 }
 
-export function LunaChat({ firstName, language, meditations, hasPremium, initData, onOpenMeditation, onTarot, onBreathComplete,redesigned = false,readingContextId,chartContextId,cosmosDiscussion,conversationEntry,tarotSetupKey,meetEntry,onClearReadingContext,registerBackHandler,ambientSound }: LunaChatProps) {
+export function LunaChat({ firstName, language, meditations, hasPremium, initData, onOpenMeditation, onTarot, onBreathComplete,redesigned = false,readingContextId,chartContextId,cosmosDiscussion,conversationEntry,tarotSetupKey,meetEntry,personalReportEntry,onReportEntryConsumed,onClearReadingContext,registerBackHandler,ambientSound }: LunaChatProps) {
   const central=featureFlags.ai_central_experience,en=language==='en';
   const [meetOpen,setMeetOpen]=useState(Boolean(meetEntry)),meetControl=useRef<MeetChatControl|null>(null),attachmentFresh=useRef(Boolean(readingContextId||chartContextId));
   const [welcome,setWelcome]=useState<{name?:string;focus?:string;meetRemaining:boolean;meetStarted:boolean}|null>(null);
   useEffect(()=>{if(!featureFlags.personal_memory)return;let live=true;void Promise.all([getUniverse(initData),getMeetLuna(initData),getBirthProfiles(initData).catch(()=>({profiles:[]}))]).then(([data,meet,birth])=>{if(!live)return;const answered=new Set([...(meet.meet.completed??[]),...(meet.meet.skipped??[]),...reusableMeetSteps(data,birth.profiles.some(p=>p.subject_kind==='self'))]),goal=data.contextConsent&&data.memoryEnabled?data.memories.find(m=>m.confirmation_status==='confirmed'&&m.memory_kind==='fact'&&!m.is_sensitive&&m.category==='goals'):null;setWelcome({name:data.profile.display_name??undefined,focus:goal?cosmosDomainSummary(goal.memory_value).slice(0,100):undefined,meetRemaining:!meet.meet.finishedAt&&meetSteps.some(step=>!answered.has(step)),meetStarted:answered.size>0});}).catch(()=>{if(live)setWelcome(null);});return()=>{live=false;};},[initData,meetOpen]);
   useEffect(()=>{if(meetEntry){setMeetOpen(true);setScreen('chat');onClearReadingContext?.();}},[meetEntry]);
   const cached=useMemo(()=>initData?sessionChatCache.get(initData):undefined,[initData]);
-  const cachedContext=cached?.messages.slice().reverse().find(m=>m.metadata?.contextReset||m.metadata?.astrology||m.metadata?.tarot||m.metadata?.readingId)?.metadata;
+  const cachedContext=cached?.messages.slice().reverse().find(m=>m.metadata?.contextReset||m.metadata?.astrology||m.metadata?.tarot||m.metadata?.readingId||m.metadata?.personalReport)?.metadata;
   const initialChart=typeof chartContextId==='string'?{chartId:chartContextId}:chartContextId??cachedContext?.astrology;
   const initialReading=readingContextId??cachedContext?.tarot?.readingId??cachedContext?.readingId;
   const [mode,setMode]=useState<NonNullable<FailedTurn['mode']>|''>(featureFlags.ai_modes?(initialChart?'astrology':initialReading?'tarot':'companion'):'');
@@ -192,7 +201,9 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
   const [attachedAstrology,setAttachedAstrology]=useState<AstrologyChatAttachment|undefined>(initialChart);
   const [contextDetached,setContextDetached]=useState(Boolean(cachedContext?.contextReset));
   const [contextBusy,setContextBusy]=useState(false);
-  useEffect(()=>{if(!chartContextId)return;const context=typeof chartContextId==='string'?{chartId:chartContextId}:chartContextId;const signature=JSON.stringify(context);if(handledContext.current===signature)return;handledContext.current=signature;setAttachedChartId(context.chartId);setAttachedAstrology(context);setAttachedReadingId(undefined);setContextDetached(false);setMode('astrology');setScreen('chat');setSuggestedPrompt(context.secondChartId?(language==='en'?'Help me reflect on these two calculated charts and their comparison.':'Помоги осмыслить эти две рассчитанные карты и их сопоставление.'):context.aspect?(language==='en'?'Explain the selected calculated aspect in this exact chart.':'Объясни выбранный рассчитанный аспект именно этой карты.'):context.planet?(language==='en'?`Explain ${context.planet} in this calculated chart.`:'Объясни выбранную планету в этой рассчитанной карте.'):(language==='en'?'Help me reflect on my calculated birth chart.':'Помоги осмыслить мою рассчитанную натальную карту.'));},[chartContextId]);
+  useEffect(()=>{if(!chartContextId)return;const context=typeof chartContextId==='string'?{chartId:chartContextId}:chartContextId;const signature=JSON.stringify(context);if(handledContext.current===signature)return;handledContext.current=signature;setReportId(undefined);reportFresh.current=false;setAttachedChartId(context.chartId);setAttachedAstrology(context);setAttachedReadingId(undefined);setContextDetached(false);setMode('astrology');setScreen('chat');setSuggestedPrompt(context.secondChartId?(language==='en'?'Help me reflect on these two calculated charts and their comparison.':'Помоги осмыслить эти две рассчитанные карты и их сопоставление.'):context.aspect?(language==='en'?'Explain the selected calculated aspect in this exact chart.':'Объясни выбранный рассчитанный аспект именно этой карты.'):context.planet?(language==='en'?`Explain ${context.planet} in this calculated chart.`:'Объясни выбранную планету в этой рассчитанной карте.'):(language==='en'?'Help me reflect on my calculated birth chart.':'Помоги осмыслить мою рассчитанную натальную карту.'));},[chartContextId]);
+  const [reportId,setReportId]=useState<string|undefined>(cachedContext?.contextReset?undefined:cachedContext?.personalReport?.id);
+  const reportFresh=useRef(false),handledReport=useRef('');
   const [draft, setDraft] = useState(cached?.draft??'');
   const [suggestedPrompt,setSuggestedPrompt]=useState('');
   const [voiceBusy,setVoiceBusy]=useState(false);
@@ -200,6 +211,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
   const [permissionChecked,setPermissionChecked]=useState(false);
   const handledContext=useRef(cached?.handledContext??'');
   const [conversations, setConversations] = useState<LunaConversationSummary[]>(cached?.conversations??[]);
+  const [historyReady,setHistoryReady]=useState(false),starterOperation=useRef(crypto.randomUUID()),starterAttempted=useRef(false),starterAcks=useRef(new Set<string>());
   const [historySearch,setHistorySearch]=useState('');
   const starter=useMemo(()=>{const conversation=conversations[0];let lastShown=0;try{lastShown=Number(sessionStorage.getItem('luna.intelligence.starter.v1:'+conversation?.id))||0;}catch{/* Storage may be unavailable in WebView. */}return intelligenceStarter({language,name:welcome?.name??firstName,focus:welcome?.focus,now:Date.now(),lastShown,conversation:conversation?{...conversation,title:conversation.title??''}:undefined});},[language,firstName,welcome,conversations[0]?.id]);
   const [activeId, setActiveId] = useState(cached?.activeId??'');
@@ -221,14 +233,18 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
   const [awayFromBottom, setAwayFromBottom] = useState(false);
   const [ideasOpen, setIdeasOpen] = useState(false);
   const handledCosmos=useRef('');
-  useEffect(()=>{const area=cosmosAreas.find(item=>item.id===cosmosDiscussion?.area);if(!area||!cosmosDiscussion||handledCosmos.current===cosmosDiscussion.key)return;handledCosmos.current=cosmosDiscussion.key;setAttachedReadingId(undefined);setAttachedChartId(undefined);setAttachedAstrology(undefined);setContextDetached(true);setPendingAstrology(null);setPermissionChecked(false);setMode('companion');setScreen('chat');setDraft(en?`Let’s explore my ${area.en.toLowerCase()}. Help me find one useful next step.`:`Хочу обсудить сферу «${area.ru}». Помоги найти один полезный следующий шаг.`);setSuggestedPrompt('');onClearReadingContext?.();},[cosmosDiscussion?.key]);
+  useEffect(()=>{const area=cosmosAreas.find(item=>item.id===cosmosDiscussion?.area);if(!area||!cosmosDiscussion||handledCosmos.current===cosmosDiscussion.key)return;handledCosmos.current=cosmosDiscussion.key;setReportId(undefined);reportFresh.current=false;setAttachedReadingId(undefined);setAttachedChartId(undefined);setAttachedAstrology(undefined);setContextDetached(true);setPendingAstrology(null);setPermissionChecked(false);setMode('companion');setScreen('chat');setDraft(en?`Let’s explore my ${area.en.toLowerCase()}. Help me find one useful next step.`:`Хочу обсудить сферу «${area.ru}». Помоги найти один полезный следующий шаг.`);setSuggestedPrompt('');onClearReadingContext?.();},[cosmosDiscussion?.key]);
   const [toolsOpen,setToolsOpen]=useState(false);
+  const [personalSpace,setPersonalSpace]=useState<'journal'|'cosmos'|'numerology'|null>(null),personalSpaceControl=useRef<PersonalSpaceControl|null>(null);
+  const [birthDiscovery,setBirthDiscovery]=useState<string|null>(null);
+  useEffect(()=>{if(!personalReportEntry||handledReport.current===personalReportEntry.key)return;handledReport.current=personalReportEntry.key;onClearReadingContext?.();setReportId(personalReportEntry.id);onReportEntryConsumed?.(personalReportEntry.key);reportFresh.current=true;setAttachedReadingId(undefined);setAttachedChartId(undefined);setAttachedAstrology(undefined);setContextDetached(false);setMode('companion');setScreen('chat');setSuggestedPrompt(en?'Help me explore this saved personal report. What is one useful next step?':'Помоги осмыслить этот сохранённый персональный разбор. Какой следующий шаг будет полезен?');},[personalReportEntry?.key,en]);
+  useEffect(()=>{if(!cosmosDiscussion?.area.startsWith('portrait_')||handledCosmos.current===cosmosDiscussion.key)return;handledCosmos.current=cosmosDiscussion.key;onClearReadingContext?.();setReportId(undefined);setAttachedReadingId(undefined);setAttachedChartId(undefined);setAttachedAstrology(undefined);setContextDetached(true);setMode('companion');setScreen('chat');const sections:Record<string,string>={essence:en?'who I am':'кто я',strengths:en?'my strengths':'мои сильные стороны',motivations:en?'my motivations':'что мной движет',relationships:en?'my relationships':'мои отношения',direction:en?'my direction':'моё направление',growth:en?'my growth':'моё развитие'};const subject=sections[cosmosDiscussion.area.slice(9)];setDraft(subject?(en?`Let’s explore ${subject} using what I have confirmed. Don’t infer traits from my birth chart.`:`Хочу исследовать тему «${subject}» на основе того, что я подтвердил(а). Не делай выводов о характере по дате рождения.`):(en?'Help me understand myself from my confirmed portrait and discoveries.':'Помоги лучше понять себя на основе моего подтверждённого портрета и открытий.'));},[cosmosDiscussion?.key,en]);
   const [actionMenuOpen,setActionMenuOpen]=useState(false);
   const [dreamOpen,setDreamOpen]=useState(false);
   const [moreHistory,setMoreHistory]=useState(false);
   const [tarotComposer,setTarotComposer]=useState(false),[tarotKind,setTarotKind]=useState<'single'|'three'|'five'>('single'),[tarotIntention,setTarotIntention]=useState<'general'|'love'|'career'|'growth'>('general'),[tarotQuestion,setTarotQuestion]=useState('');
   const [tarotStep,setTarotStep]=useState<TarotSetupStep>('kind');
-  const beginTarotSetup=()=>{setMeetOpen(false);setSuggestedPrompt('');setPendingAstrology(null);setDreamOpen(false);setToolsOpen(false);if(featureFlags.luna_intelligence){setTarotComposer(false);void submit(en?'Let’s start a Tarot reading.':'Давай начнём расклад Таро.',undefined,undefined,'tarot');return;}setTarotStep('kind');setTarotComposer(true);};
+  const beginTarotSetup=()=>{setReportId(undefined);reportFresh.current=false;setMeetOpen(false);setSuggestedPrompt('');setPendingAstrology(null);setDreamOpen(false);setToolsOpen(false);if(featureFlags.luna_intelligence){setTarotComposer(false);void submit(en?'Let’s start a Tarot reading.':'Давай начнём расклад Таро.',undefined,undefined,'tarot');return;}setTarotStep('kind');setTarotComposer(true);};
   useEffect(()=>{if(central&&tarotSetupKey){if(featureFlags.luna_intelligence)beginTarotSetup();else{setTarotStep('kind');setTarotComposer(true);setToolsOpen(false);}}},[central,tarotSetupKey]);
   const [renaming,setRenaming]=useState<string|null>(null),[renameTitle,setRenameTitle]=useState('');
   const [attachedReadingId,setAttachedReadingId]=useState<string|undefined>(initialReading);
@@ -236,7 +252,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
   const attachedCardCount=contextMessage?.metadata?.tarot?.reading?.cards?.length??1;
   const tarotPending=useRef(false),turnPending=useRef(false),tarotClientId=useRef(''),autoDiscuss=useRef(new Set<string>());
   const uiEpoch=useRef(0);
-  useEffect(()=>{if(!central)return;const handler=actionMenuOpen?()=>setActionMenuOpen(false):meetOpen?()=>setMeetOpen(false):dreamOpen?()=>setDreamOpen(false):renaming?()=>setRenaming(null):tarotComposer?()=>tarotStep==='question'?setTarotStep('intention'):tarotStep==='intention'?setTarotStep('kind'):setTarotComposer(false):toolsOpen?()=>setToolsOpen(false):screen==='overview'?()=>setScreen('chat'):null;registerBackHandler?.(handler);return()=>registerBackHandler?.(null);},[central,actionMenuOpen,meetOpen,dreamOpen,renaming,tarotComposer,tarotStep,toolsOpen,screen,registerBackHandler]);
+  useEffect(()=>{if(!central)return;const handler=actionMenuOpen?()=>setActionMenuOpen(false):birthDiscovery?()=>setBirthDiscovery(null):personalSpace?()=>setPersonalSpace(null):meetOpen?()=>setMeetOpen(false):dreamOpen?()=>setDreamOpen(false):renaming?()=>setRenaming(null):tarotComposer?()=>tarotStep==='question'?setTarotStep('intention'):tarotStep==='intention'?setTarotStep('kind'):setTarotComposer(false):toolsOpen?()=>setToolsOpen(false):screen==='overview'?()=>setScreen('chat'):null;registerBackHandler?.(handler);return()=>registerBackHandler?.(null);},[central,actionMenuOpen,birthDiscovery,personalSpace,meetOpen,dreamOpen,renaming,tarotComposer,tarotStep,toolsOpen,screen,registerBackHandler]);
   const listRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const nearBottomRef = useRef(true);
@@ -259,6 +275,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
       const next = await getLunaConversations(initData);
       getLunaUsage(initData).then(usage=>{setUsageRemaining(usage.remaining);setUsageResetAt(usage.resetAt);setQuotaExhausted(usage.remaining===0);}).catch(()=>{});
       setConversations(next);
+      setHistoryReady(true);
       setMoreHistory(next.length===20);
       setError('');
       return next;
@@ -279,12 +296,17 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
       onClearReadingContext?.();
       setActiveId(conversationId);
       setMessages(result.messages);
-      const latestContext=result.messages.slice().reverse().find(m=>m.metadata?.contextReset||m.metadata?.astrology||m.metadata?.tarot||m.metadata?.readingId)?.metadata;
-      setContextDetached(Boolean(latestContext?.contextReset));
-      const savedChart=latestContext?.astrology;setAttachedChartId(savedChart?.chartId);setAttachedAstrology(savedChart);
-      const savedReading=latestContext?.tarot?.readingId??latestContext?.readingId;setAttachedReadingId(savedReading);setMode(savedChart?'astrology':savedReading?'tarot':featureFlags.ai_modes?'companion':'');
+      const latestContext=result.messages.slice().reverse().find(m=>m.metadata?.contextReset||m.metadata?.astrology||m.metadata?.tarot||m.metadata?.readingId||m.metadata?.personalReport)?.metadata;
+      // A newly selected paid report wins over a slower history fetch. Never
+      // restore an old chart alongside it or silently switch its discussion mode.
+      if(!reportFresh.current){
+        setContextDetached(Boolean(latestContext?.contextReset));
+        setReportId(latestContext?.contextReset?undefined:latestContext?.personalReport?.id);
+        const savedChart=latestContext?.astrology;setAttachedChartId(savedChart?.chartId);setAttachedAstrology(savedChart);
+        const savedReading=latestContext?.tarot?.readingId??latestContext?.readingId;setAttachedReadingId(savedReading);setMode(savedChart?'astrology':savedReading?'tarot':featureFlags.ai_modes?'companion':'');
+      }
       setScreen('chat');
-      setSuggestedPrompt('');
+      if(!reportFresh.current)setSuggestedPrompt('');
       window.localStorage.setItem(activeConversationKey, conversationId);
       requestAnimationFrame(() => {
         const list = listRef.current;
@@ -323,6 +345,9 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
     })();
     return () => { alive = false; };
   }, [openConversation, refreshConversations,readingContextId,chartContextId,conversationEntry]);
+  useEffect(()=>{if(!central||!featureFlags.personal_memory||!historyReady||loading||thinking||turnPending.current||meetOpen||personalSpace||birthDiscovery||tarotComposer||draft.trim()||readingContextId||chartContextId||personalReportEntry||attachedReadingId||attachedChartId||reportId||starterAttempted.current)return;starterAttempted.current=true;const epoch=uiEpoch.current;let live=true;openCompanionStarter(starterOperation.current,language,initData,activeId||undefined).then(result=>{if(!live||epoch!==uiEpoch.current||!result.message||!result.conversationId)return;setActiveId(result.conversationId);setMessages(current=>current.some(m=>m.id===result.message!.id)?current:[...current,result.message!]);window.localStorage.setItem(activeConversationKey,result.conversationId);}).catch(()=>{/* No paid fallback or duplicate greeting. Existing chat is unchanged. */});return()=>{live=false;};},[central,historyReady,loading,thinking,activeId,messages.length,meetOpen,personalSpace,birthDiscovery,tarotComposer,draft,readingContextId,chartContextId,personalReportEntry,attachedReadingId,attachedChartId,reportId,language,initData]);
+  useEffect(()=>{for(const message of messages){if(message.metadata?.companionStarter?.state==='selected'&&!starterAcks.current.has(message.id)){starterAcks.current.add(message.id);void acknowledgeCompanionStarter(message.id,'displayed',initData).then(()=>setMessages(current=>current.map(m=>m.id===message.id?{...m,metadata:{...m.metadata,companionStarter:{...m.metadata!.companionStarter!,state:'displayed'}}}:m))).catch(()=>{});}}},[messages,initData]);
+  async function acknowledgeStarter(message:LunaMessage,state:'responded'|'dismissed'){try{await acknowledgeCompanionStarter(message.id,state,initData);setMessages(current=>current.map(m=>m.id===message.id&&m.metadata?.companionStarter?{...m,metadata:{...m.metadata,companionStarter:{...m.metadata.companionStarter,state}}}:m));}catch{/* The stored starter remains; no private state is invented. */}}
 
   const scrollToLatest = useCallback((smooth = true) => {
     const list = listRef.current;
@@ -360,6 +385,10 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
 
   const beginConversation = (seed = '') => {
     setMeetOpen(false);
+    setPersonalSpace(null);
+    setBirthDiscovery(null);
+    starterOperation.current=crypto.randomUUID();starterAttempted.current=false;
+    setReportId(undefined);reportFresh.current=false;
     uiEpoch.current++;setLoading(false);
     setContextDetached(false);
     setDreamOpen(false);
@@ -375,13 +404,18 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
     window.localStorage.removeItem(activeConversationKey);
   };
 
-  const detachContext=async()=>{if(thinking||contextBusy)return;setContextBusy(true);turnPending.current=true;const resetId=requestId();try{if(activeId){const result=await resetLunaContext(activeId,resetId,language,initData);setMessages(current=>current.some(m=>m.id===result.message.id)?current:[...current,result.message]);}onClearReadingContext?.();setAttachedReadingId(undefined);setAttachedChartId(undefined);setAttachedAstrology(undefined);setMode('companion');setContextDetached(true);setSuggestedPrompt('');setPendingAstrology(null);setFailedTurn(null);}catch{setError(en?'Could not remove the context. Your saved conversation is unchanged.':'Не удалось убрать контекст. Сохранённый разговор не изменён.');}finally{setContextBusy(false);turnPending.current=false;}};
+  const detachContext=async()=>{if(thinking||contextBusy)return;setContextBusy(true);turnPending.current=true;const resetId=requestId();try{if(activeId){const result=await resetLunaContext(activeId,resetId,language,initData);setMessages(current=>current.some(m=>m.id===result.message.id)?current:[...current,result.message]);}setReportId(undefined);reportFresh.current=false;onClearReadingContext?.();setAttachedReadingId(undefined);setAttachedChartId(undefined);setAttachedAstrology(undefined);setMode('companion');setContextDetached(true);setSuggestedPrompt('');setPendingAstrology(null);setFailedTurn(null);}catch{setError(en?'Could not remove the context. Your saved conversation is unchanged.':'Не удалось убрать контекст. Сохранённый разговор не изменён.');}finally{setContextBusy(false);turnPending.current=false;}};
 
   const submit = async (text: string, retry?: FailedTurn,contextReadingId?:string,modeOverride?:FailedTurn['mode'],contextAstrology?:AstrologyChatAttachment,grantAstrologyConsent?:true) => {
     const clean = text.trim();
+    const explicitDate=!retry&&!modeOverride&&featureFlags.personal_memory?explicitBirthDate(clean):null;
+    if(explicitDate){setBirthDiscovery(explicitDate);if(clean===draft.trim())setDraft('');return;}
     if(meetOpen&&!retry&&!modeOverride){if(clean&&await meetControl.current?.submit(clean))setDraft(current=>current.trim()===clean?'':current);return;}
+    if(personalSpace&&!retry&&!modeOverride&&personalSpaceControl.current){if(clean&&await personalSpaceControl.current.submit(clean))setDraft(current=>current.trim()===clean?'':current);return;}
+    if(!retry&&!modeOverride){setPersonalSpace(null);setBirthDiscovery(null);}
     const commercial=commerceIntent(clean);
     const command=featureFlags.luna_intelligence?resolveIntelligenceCommand(clean,attachedChartId?{type:attachedAstrology?.secondChartId?'compatibility_report':'natal_chart'}:attachedReadingId?{type:'tarot_reading'}:undefined):null;
+    if(!retry&&central&&(command?.action==='journal.open'||command?.action==='cosmos.open')){setPersonalSpace(command.action==='journal.open'?'journal':'cosmos');if(clean===draft.trim())setDraft('');return;}
     const unmetered=Boolean(commercial||command);
     if (!clean || thinking || turnPending.current || quotaExhausted&&!unmetered || clean.length > 2000) return;
     const targetMode=modeOverride??(contextReadingId?'tarot':retry?retry.mode:mode||undefined);
@@ -419,10 +453,13 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
     const readingId=contextReadingId??(retry?retry.readingId:selectedMode==='tarot'?readingContextId??attachedReadingId:undefined);
     const chartId=retry?retry.chartId:selectedMode==='astrology'?contextAstrology?.chartId??attachedChartId:undefined;
     const astrology=retry?retry.astrology:selectedMode==='astrology'?contextAstrology??attachedAstrology:undefined;
-    const contextReset=retry?.contextReset??(!readingId&&!chartId&&!astrology&&(contextDetached||Boolean(modeOverride)));
+    const targetReportId=retry?.personalReportId??(!command&&!commercial&&!readingId&&!chartId&&!modeOverride?reportId:undefined);
+    const personalReportConsent=retry?.personalReportConsent??(reportFresh.current?true:undefined);
+    const contextReset=retry?.contextReset??(!readingId&&!chartId&&!astrology&&!targetReportId&&(contextDetached||Boolean(modeOverride)));
     try {
-      const result = await sendLunaMessage({ ...(featureFlags.luna_intelligence?{intelligenceVersion:1 as const}:{}),conversationId: activeId || undefined, message: clean, language, requestId: clientRequestId,contextReset,attachmentSelected:retry?.attachmentSelected??(attachmentFresh.current||Boolean(contextReadingId||contextAstrology)),...(astrologyConsent?{astrologyConsent}:{}),...(selectedMode?{mode:selectedMode}:{}),...(readingId?{readingId}:{}),...(chartId?{chartId}:{}),...(astrology?{astrology}:{}) }, initData);
-      attachmentFresh.current=false;
+      const result = await sendLunaMessage({ ...(featureFlags.luna_intelligence?{intelligenceVersion:1 as const}:{}),conversationId: activeId || undefined, message: clean, language, requestId: clientRequestId,...(targetReportId?{personalReportId:targetReportId,...(personalReportConsent?{personalReportConsent}:{})}:{}),contextReset,attachmentSelected:retry?.attachmentSelected??(attachmentFresh.current||Boolean(contextReadingId||contextAstrology)),...(astrologyConsent?{astrologyConsent}:{}),...(selectedMode?{mode:selectedMode}:{}),...(readingId?{readingId}:{}),...(chartId?{chartId}:{}),...(astrology?{astrology}:{}) }, initData);
+      attachmentFresh.current=false;reportFresh.current=false;
+      if(result.message.metadata?.personalReport)setReportId(result.message.metadata.personalReport.id);else if(result.message.metadata?.contextReset)setReportId(undefined);
       const recommendationId = recommendationIdForMessage(result.message);
       if(result.message.metadata?.contextReset){onClearReadingContext?.();setAttachedReadingId(undefined);setAttachedChartId(undefined);setAttachedAstrology(undefined);setContextDetached(true);setMode(result.message.metadata?.resolvedIntent==='breathing'?'wellbeing':result.message.metadata?.resolvedIntent==='recommend_meditation'?'meditation':'companion');}
       if(result.message.metadata?.astrologyWorkflow?.state==='ready'&&result.message.metadata.astrology){const context=result.message.metadata.astrology;setAttachedReadingId(undefined);setAttachedChartId(context.chartId);setAttachedAstrology(context);setContextDetached(false);setMode('astrology');}
@@ -443,11 +480,12 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
       setActiveId(result.conversationId);
       window.localStorage.setItem(activeConversationKey, result.conversationId);
       setMessages((current) => current.some(m=>m.id===result.message.id)?current:[...current, result.message]);
+      const starterMessage=messages.find(m=>m.metadata?.companionStarter&&['selected','displayed'].includes(m.metadata.companionStarter.state));if(starterMessage)void acknowledgeStarter(starterMessage,'responded');
       await refreshConversations();
     } catch (sendError) {
       const details = errorDetails(sendError, language);
       setQuotaExhausted(details.state === 'quota_exhausted');
-      setFailedTurn({ ...details, clientRequestId, text: clean, optimisticMessageId: optimistic.id,mode:selectedMode,readingId,chartId,astrology,contextReset,astrologyConsent,attachmentSelected:attachmentFresh.current||Boolean(contextReadingId||contextAstrology) });
+      setFailedTurn({ ...details, clientRequestId, text: clean, optimisticMessageId: optimistic.id,mode:selectedMode,readingId,chartId,astrology,contextReset,astrologyConsent,personalReportId:targetReportId,personalReportConsent,attachmentSelected:attachmentFresh.current||Boolean(contextReadingId||contextAstrology) });
     } finally {
       turnPending.current=false;
       setThinking(false);
@@ -457,14 +495,14 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
   async function attachReading(id:string){
     if(thinking)return;attachmentFresh.current=true;autoDiscuss.current.add(id);setThinking(true);setError('');
     uiEpoch.current++;setLoading(false);
-    try{const result=await attachSavedLunaTarot(id,initData,activeId||undefined);const saved=await getLunaConversation(result.conversationId,initData);setActiveId(result.conversationId);window.localStorage.setItem(activeConversationKey,result.conversationId);setMessages(saved.messages);setAttachedReadingId(id);setAttachedChartId(undefined);setAttachedAstrology(undefined);setContextDetached(false);setMode('tarot');setScreen('chat');onClearReadingContext?.();await refreshConversations();}
+    try{const result=await attachSavedLunaTarot(id,initData,activeId||undefined);const saved=await getLunaConversation(result.conversationId,initData);setActiveId(result.conversationId);window.localStorage.setItem(activeConversationKey,result.conversationId);setMessages(saved.messages);setReportId(undefined);reportFresh.current=false;setAttachedReadingId(id);setAttachedChartId(undefined);setAttachedAstrology(undefined);setContextDetached(false);setMode('tarot');setScreen('chat');onClearReadingContext?.();await refreshConversations();}
     catch{autoDiscuss.current.delete(id);setError(en?'Could not attach the saved reading. No new AI request was sent.':'Не удалось прикрепить сохранённый расклад. Новый AI-запрос не отправлялся.');}
     finally{setThinking(false);}
   }
   useEffect(()=>{if(!central||loading||thinking||!readingContextId||autoDiscuss.current.has(readingContextId))return;void attachReading(readingContextId);},[central,loading,readingContextId]);
   const updateTarotMessage=useCallback((next:LunaMessage)=>setMessages(current=>current.map(m=>m.id===next.id?next:m)),[]);
 
-  async function startChatTarot(){if(tarotPending.current||thinking)return;tarotPending.current=true;setThinking(true);setError('');tarotClientId.current||=crypto.randomUUID();const clientReadingId=tarotClientId.current;try{const result=await openLunaTarot({clientReadingId,...(activeId?{conversationId:activeId}:{}),kind:tarotKind,intention:tarotIntention,question:tarotQuestion,language},initData);setActiveId(result.conversationId);window.localStorage.setItem(activeConversationKey,result.conversationId);setMessages(current=>current.some(m=>m.id===result.message.id)?current:[...current,result.message]);setAttachedReadingId(result.message.metadata?.tarot?.readingId);setMode('tarot');setTarotComposer(false);setTarotQuestion('');setPendingCommerce(false);tarotClientId.current='';await refreshConversations();}catch(error){if(error instanceof ApiRequestError&&error.status===402){try{const conversationId=activeId||clientReadingId;await savePendingCommerceAction({id:clientReadingId,conversationId,language,action:{type:'tarot',kind:tarotKind,intention:tarotIntention,question:tarotQuestion}},initData);setActiveId(conversationId);window.localStorage.setItem(activeConversationKey,conversationId);setTarotComposer(false);setPendingCommerce(true);}catch{setError(en?'Could not save this action. Nothing was charged; retry the same reading.':'Не удалось сохранить действие. Списания не было — повторите тот же расклад.');}}else setError(en?'Could not open the reading. Your history is unchanged; retry the same request.':'Не удалось открыть расклад. История не изменена — можно повторить запрос.');}finally{tarotPending.current=false;setThinking(false);}}
+  async function startChatTarot(){if(tarotPending.current||thinking)return;tarotPending.current=true;setThinking(true);setError('');tarotClientId.current||=crypto.randomUUID();const clientReadingId=tarotClientId.current;try{const result=await openLunaTarot({clientReadingId,...(activeId?{conversationId:activeId}:{}),kind:tarotKind,intention:tarotIntention,question:tarotQuestion,language},initData);setActiveId(result.conversationId);window.localStorage.setItem(activeConversationKey,result.conversationId);setMessages(current=>current.some(m=>m.id===result.message.id)?current:[...current,result.message]);setReportId(undefined);reportFresh.current=false;setAttachedReadingId(result.message.metadata?.tarot?.readingId);setMode('tarot');setTarotComposer(false);setTarotQuestion('');setPendingCommerce(false);tarotClientId.current='';await refreshConversations();}catch(error){if(error instanceof ApiRequestError&&error.status===402){try{const conversationId=activeId||clientReadingId;await savePendingCommerceAction({id:clientReadingId,conversationId,language,action:{type:'tarot',kind:tarotKind,intention:tarotIntention,question:tarotQuestion}},initData);setActiveId(conversationId);window.localStorage.setItem(activeConversationKey,conversationId);setTarotComposer(false);setPendingCommerce(true);}catch{setError(en?'Could not save this action. Nothing was charged; retry the same reading.':'Не удалось сохранить действие. Списания не было — повторите тот же расклад.');}}else setError(en?'Could not open the reading. Your history is unchanged; retry the same request.':'Не удалось открыть расклад. История не изменена — можно повторить запрос.');}finally{tarotPending.current=false;setThinking(false);}}
   async function rename(){if(!renaming||thinking)return;setThinking(true);setError('');try{await renameLunaConversation(renaming,renameTitle,initData);setRenaming(null);await refreshConversations();}catch{setError(en?'Could not rename this conversation.':'Не удалось переименовать разговор.');}finally{setThinking(false);}}
 
   const removeConversation = async () => {
@@ -481,12 +519,12 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
     }
   };
 
-  const useAstrologyContext=useCallback((context:AstrologyChatAttachment)=>{attachmentFresh.current=true;setPendingAstrology(null);onClearReadingContext?.();setAttachedReadingId(undefined);setAttachedChartId(context.chartId);setAttachedAstrology(current=>JSON.stringify(current)===JSON.stringify(context)?current:context);setMode('astrology');setContextDetached(false);setSuggestedPrompt('');},[onClearReadingContext]);
+  const useAstrologyContext=useCallback((context:AstrologyChatAttachment)=>{setReportId(undefined);reportFresh.current=false;attachmentFresh.current=true;setPendingAstrology(null);onClearReadingContext?.();setAttachedReadingId(undefined);setAttachedChartId(context.chartId);setAttachedAstrology(current=>JSON.stringify(current)===JSON.stringify(context)?current:context);setMode('astrology');setContextDetached(false);setSuggestedPrompt('');},[onClearReadingContext]);
   const updateAstrologyMessage=(next:LunaMessage)=>{setMessages(current=>current.map(m=>m.id===next.id?next:m));if(next.metadata?.astrology)useAstrologyContext(next.metadata.astrology);};
   const discussAstrology=(context:AstrologyChatAttachment,focus?:string)=>{useAstrologyContext(context);const prompt=focus?(en?'Using this exact calculated context, answer my original question: ':'На основе именно этого расчёта ответь на мой исходный вопрос: ')+focus.slice(0,1800):(en?'Help me understand the most relevant themes in these exact calculations.':'Помоги понять основные темы именно этих расчётов.');void submit(prompt,undefined,undefined,'astrology',context);};
   async function beginAstrology(kind:'natal'|'compatibility'){
     if(thinking||turnPending.current)return;turnPending.current=true;setThinking(true);setToolsOpen(false);setTarotComposer(false);setDreamOpen(false);setSuggestedPrompt('');setError('');const id=requestId();
-    try{const result=await openLunaAstrology({requestId:id,kind,language,...(activeId?{conversationId:activeId}:{})},initData);onClearReadingContext?.();setAttachedReadingId(undefined);setAttachedChartId(undefined);setAttachedAstrology(undefined);setContextDetached(true);setMode('companion');if(result.message.metadata?.astrologyWorkflow?.state==='ready'&&result.message.metadata.astrology)useAstrologyContext(result.message.metadata.astrology);setActiveId(result.conversationId);window.localStorage.setItem(activeConversationKey,result.conversationId);setMessages(current=>current.some(m=>m.id===result.message.id)?current:[...current,result.message]);setScreen('chat');await refreshConversations();}
+    try{const result=await openLunaAstrology({requestId:id,kind,language,...(activeId?{conversationId:activeId}:{})},initData);onClearReadingContext?.();setReportId(undefined);reportFresh.current=false;setAttachedReadingId(undefined);setAttachedChartId(undefined);setAttachedAstrology(undefined);setContextDetached(true);setMode('companion');if(result.message.metadata?.astrologyWorkflow?.state==='ready'&&result.message.metadata.astrology)useAstrologyContext(result.message.metadata.astrology);setActiveId(result.conversationId);window.localStorage.setItem(activeConversationKey,result.conversationId);setMessages(current=>current.some(m=>m.id===result.message.id)?current:[...current,result.message]);setScreen('chat');await refreshConversations();}
     catch{setError(en?'Could not open the profile selector. Your history is unchanged; no AI request was sent.':'Не удалось открыть выбор профилей. История не изменена, AI-запрос не отправлялся.');}
     finally{turnPending.current=false;setThinking(false);}
   }
@@ -495,7 +533,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
   const activeTitle = displayConversationTitle(conversations.find((conversation) => conversation.id === activeId)?.title, language);
   const visibleMessages = useMemo(() => messages.filter((message) => message.role === 'user' || message.role === 'assistant'), [messages]);
   const fulfilledActions=useMemo(()=>new Set(messages.flatMap(m=>m.metadata?.intelligence?.originActionId?[m.metadata.intelligence.originActionId]:[])),[messages]);
-  const acceptAttachmentResult=(result:{conversationId:string;message:LunaMessage})=>{setActiveId(result.conversationId);window.localStorage.setItem(activeConversationKey,result.conversationId);setMessages(current=>current.some(m=>m.id===result.message.id)?current.map(m=>m.id===result.message.id?result.message:m):[...current,result.message]);setPendingCommerce(false);if(result.message.metadata?.tarot){setAttachedReadingId(result.message.metadata.tarot.readingId);setAttachedChartId(undefined);setAttachedAstrology(undefined);setContextDetached(false);setMode('tarot');}else if(result.message.metadata?.astrology)useAstrologyContext(result.message.metadata.astrology);void refreshConversations();};
+  const acceptAttachmentResult=(result:{conversationId:string;message:LunaMessage})=>{setActiveId(result.conversationId);window.localStorage.setItem(activeConversationKey,result.conversationId);setMessages(current=>current.some(m=>m.id===result.message.id)?current.map(m=>m.id===result.message.id?result.message:m):[...current,result.message]);setPendingCommerce(false);if(result.message.metadata?.tarot){setReportId(undefined);reportFresh.current=false;setAttachedReadingId(result.message.metadata.tarot.readingId);setAttachedChartId(undefined);setAttachedAstrology(undefined);setContextDetached(false);setMode('tarot');}else if(result.message.metadata?.astrology)useAstrologyContext(result.message.metadata.astrology);void refreshConversations();};
 
   useEffect(() => {
     visibleMessages.forEach((message) => {
@@ -547,7 +585,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
         <div><BrandLogo size={28} eager /><span><h2>{central?'Luna':activeTitle}</h2><p>{thinking ? (language === 'ru' ? 'Luna думает...' : 'Luna is reflecting...') : (language === 'ru' ? 'Рядом и слушает' : 'Here and listening')}</p></span></div>
         {central?<><button type="button" onClick={()=>beginConversation()} disabled={thinking} aria-label={en?'New conversation':'Новый разговор'}><Pencil size={19}/></button><button type="button" onClick={()=>setToolsOpen(v=>!v)} aria-expanded={toolsOpen} aria-label={en?'More conversation tools':'Другие действия'}><MoreHorizontal size={20}/></button></>:<button type="button" onClick={() => void removeConversation()} disabled={!activeId} aria-label={language === 'ru' ? 'Удалить разговор' : 'Delete conversation'}><Trash2 size={17} /></button>}
       </header>
-      {central&&(attachedChartId||readingContextId||attachedReadingId)&&<div className="luna32-context"><span>{attachedChartId?(attachedAstrology?.secondChartId?(en?'Compatibility · 2 charts':'Совместимость · 2 карты'):(en?'Natal chart':'Натальная карта')):(en?`Tarot · ${attachedCardCount} card${attachedCardCount===1?'':'s'}`:`Таро · ${attachedCardCount} ${attachedCardCount===1?'карта':attachedCardCount===3?'карты':'карт'}`)}</span>{contextMessage&&<button type="button" onClick={()=>{const node=[...listRef.current?.querySelectorAll<HTMLElement>('[data-message-id]')??[]].find(el=>el.dataset.messageId===contextMessage.id);node?.scrollIntoView({block:'start',behavior:'instant'});}}>{en?'View':'Смотреть'}</button>}<button type="button" disabled={thinking||contextBusy} onClick={()=>void detachContext()}>{contextBusy?(en?'Removing…':'Убираем…'):(en?'Remove':'Убрать')}</button></div>}
+      {central&&(reportId||attachedChartId||readingContextId||attachedReadingId)&&<div className="luna32-context"><span>{reportId?(en?'Saved personal report':'Сохранённый персональный разбор'):attachedChartId?(attachedAstrology?.secondChartId?(en?'Compatibility · 2 charts':'Совместимость · 2 карты'):(en?'Natal chart':'Натальная карта')):(en?`Tarot · ${attachedCardCount} card${attachedCardCount===1?'':'s'}`:`Таро · ${attachedCardCount} ${attachedCardCount===1?'карта':attachedCardCount===3?'карты':'карт'}`)}</span>{contextMessage&&<button type="button" onClick={()=>{const node=[...listRef.current?.querySelectorAll<HTMLElement>('[data-message-id]')??[]].find(el=>el.dataset.messageId===contextMessage.id);node?.scrollIntoView({block:'start',behavior:'instant'});}}>{en?'View':'Смотреть'}</button>}<button type="button" disabled={thinking||contextBusy} onClick={()=>void detachContext()}>{contextBusy?(en?'Removing…':'Убираем…'):(en?'Remove':'Убрать')}</button></div>}
 
       {/* The attachment banner above manages context. Legacy mode state is
           retained for saved-session compatibility, never shown as a selector. */}
@@ -567,7 +605,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
           setAwayFromBottom(!nearBottom);
         }}
       >
-        {meetOpen?<ChatMeetLuna language={language} initData={initData} control={meetControl} onClose={()=>setMeetOpen(false)}/>:dreamOpen?<DreamExplorer language={language} initData={initData} onClose={()=>setDreamOpen(false)} onDiscuss={text=>{setDreamOpen(false);setSuggestedPrompt(text);setAttachedChartId(undefined);setAttachedAstrology(undefined);setAttachedReadingId(undefined);onClearReadingContext?.();setMode('dream');setContextDetached(true);textareaRef.current?.focus();}}/>:loading ? (
+        {birthDiscovery?<BirthDiscoveryCard key={birthDiscovery} date={birthDiscovery} language={language} initData={initData} onClose={()=>setBirthDiscovery(null)} onSaved={()=>window.dispatchEvent(new Event('luna-personal-data-changed'))}/>:personalSpace?<ChatPersonalSpace key={personalSpace} kind={personalSpace} language={language} initData={initData} control={personalSpaceControl} onClose={()=>setPersonalSpace(null)}/>:meetOpen?<ChatMeetLuna language={language} initData={initData} control={meetControl} onClose={()=>setMeetOpen(false)}/>:dreamOpen?<DreamExplorer language={language} initData={initData} onClose={()=>setDreamOpen(false)} onDiscuss={text=>{setDreamOpen(false);setSuggestedPrompt(text);setAttachedChartId(undefined);setAttachedAstrology(undefined);setAttachedReadingId(undefined);onClearReadingContext?.();setMode('dream');setContextDetached(true);textareaRef.current?.focus();}}/>:loading ? (
           <div className="space-y-3 px-2" aria-label={language === 'ru' ? 'Загрузка разговора' : 'Loading conversation'}>
             <BrandLogo size={48} className="mx-auto" eager />
             <div className="luna-ai-loading-line" />
@@ -575,7 +613,8 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
             <div className="luna-ai-loading-line max-w-[86%]" />
           </div>
         ) : !visibleMessages.length&&!tarotComposer ? (
-          <div className="luna-live-empty">
+          <div className={central?'luna4-chat-welcome':'luna-live-empty'}>
+            {central?<><div className="luna-live-message-row luna-live-message-assistant"><span className="luna-message-orb" aria-hidden="true"/><div className="luna-live-message-content"><div className="luna-message-bubble"><p>{starter.greeting}</p><p>{!welcome?.meetStarted&&!conversations.length?(en?'I’m Luna. We can explore what matters to you, reflect through Tarot or your birth chart, or simply talk. Where would you like to begin?':'Я Луна. Можем разобраться в том, что тебя волнует, исследовать Таро или твою карту рождения — или просто поговорить. С чего начнём?'):starter.question}</p></div><div className="luna4-welcome-replies">{featureFlags.personal_memory&&welcome?.meetRemaining&&<button type="button" onClick={()=>setMeetOpen(true)}>{welcome.meetStarted?(en?'Continue our introduction':'Продолжить знакомство'):(en?'Let’s get acquainted':'Давай познакомимся')}</button>}<button type="button" onClick={()=>textareaRef.current?.focus()}>{en?'Just talk':'Просто поговорим'}</button></div>{starter.continuation&&<button type="button" className="luna4-continuation" onClick={()=>void openConversation(starter.continuation!.id)}>{starter.continuation.label} · {displayConversationTitle(starter.continuation.title,language)} →</button>}</div></div></>:<>
             <BrandLogo size={88} alt={language === 'ru' ? 'Логотип Luna Meditation' : 'Luna Meditation logo'} eager />
             {!central&&redesigned && <span className="luna2-ai-kicker">{luna2Copy[language].aiKicker}</span>}
             <h3>{featureFlags.luna_intelligence?starter.greeting:language === 'ru' ? `Я рядом, ${firstName || 'друг'}.` : `I'm here, ${firstName || 'friend'}.`}</h3>
@@ -584,7 +623,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
             {featureFlags.personal_memory&&welcome?.meetRemaining&&<button type="button" className="luna32-personalize" onClick={()=>{setMeetOpen(true);setIdeasOpen(false);}}>{welcome.meetStarted?(en?'Continue our introduction · optional':'Продолжить знакомство · необязательно'):(en?'Get to know Luna · optional':'Познакомиться с Луной · необязательно')} →</button>}
             {featureFlags.luna_intelligence&&starter.continuation&&<button type="button" className="luna32-personalize" onClick={()=>void openConversation(starter.continuation!.id)}>{starter.continuation.label} · {displayConversationTitle(starter.continuation.title,language)} →</button>}
             {central&&<button type="button" className="luna2-ideas-toggle" aria-haspopup="dialog" onClick={()=>setActionMenuOpen(true)}>{en?'Explore with Luna':'Исследовать с Луной'} →</button>}
-            {!central&&(redesigned ? <LunaQuickActions language={language} onAstrology={kind=>void beginAstrology(kind)} onDream={()=>{setSuggestedPrompt('');setDreamOpen(true);setIdeasOpen(false);}} onTarot={onTarot} disabled={thinking} onPrompt={prompt=>{setIdeasOpen(false);if(prompt===luna2Copy[language].recommendPrompt)handleAction('meditation');else void submit(prompt);}} /> : <div className="luna-quick-prompts" aria-label={language === 'ru' ? 'Быстрые темы' : 'Quick prompts'}>{prompts.map((prompt) => <button key={prompt} type="button" onClick={() => void submit(prompt)}>{prompt}</button>)}</div>)}
+            {!central&&(redesigned ? <LunaQuickActions language={language} onAstrology={kind=>void beginAstrology(kind)} onDream={()=>{setSuggestedPrompt('');setDreamOpen(true);setIdeasOpen(false);}} onTarot={onTarot} disabled={thinking} onPrompt={prompt=>{setIdeasOpen(false);if(prompt===luna2Copy[language].recommendPrompt)handleAction('meditation');else void submit(prompt);}} /> : <div className="luna-quick-prompts" aria-label={language === 'ru' ? 'Быстрые темы' : 'Quick prompts'}>{prompts.map((prompt) => <button key={prompt} type="button" onClick={() => void submit(prompt)}>{prompt}</button>)}</div>)}</>}
           </div>
         ) : visibleMessages.map((message) => {
           const recommendationId = recommendationIdForMessage(message);
@@ -596,6 +635,7 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
               {message.role === 'assistant' && !(central&&message.metadata?.tarot) ? <span className="luna-message-orb" aria-hidden="true" /> : null}
               <div className="luna-live-message-content">
                 {!(central&&(attachments.some(a=>a.type==='tarot_reading')||message.metadata?.tarot||(message.metadata?.commerce&&!message.metadata?.consultation)))&&<div className="luna-message-bubble"><MessageText text={message.content} assistant={message.role==='assistant'} language={language}/></div>}
+                {message.metadata?.companionStarter&&['selected','displayed'].includes(message.metadata.companionStarter.state)&&<div className="luna4-welcome-replies">{message.metadata.companionStarter.reason==='confirmed_goal'?<><button type="button" disabled={thinking} onClick={()=>void submit(en?'Let’s discuss my current goal.':'Обсудим мою текущую цель.')}>{en?'Return to my goal':'Вернуться к цели'}</button><button type="button" disabled={thinking} onClick={()=>void acknowledgeStarter(message,'dismissed')}>{en?'A different topic':'Другая тема'}</button></>:<>{featureFlags.personal_memory&&welcome?.meetRemaining&&<button type="button" onClick={()=>{void acknowledgeStarter(message,'responded');setMeetOpen(true);}}>{en?'Let’s get acquainted':'Давай познакомимся'}</button>}<button type="button" onClick={()=>{void acknowledgeStarter(message,'responded');textareaRef.current?.focus();}}>{en?'Just talk':'Просто поговорим'}</button></>}</div>}
                 {attachments.filter(attachment=>central||attachment.type==='meditation').map(attachment=><LunaAttachmentRenderer key={attachment.id} attachment={attachment} message={message} conversationId={activeId} language={language} initData={initData} meditations={meditations} hasPremium={hasPremium} fulfilled={fulfilledActions} disabled={thinking} onUpdate={message.metadata?.astrologyWorkflow?updateAstrologyMessage:updateTarotMessage} onResult={acceptAttachmentResult} onPending={()=>setPendingCommerce(true)} onOpenMeditation={meditation=>onOpenMeditation(meditation,{messageId:message.id,referenceId:meditation.id})} onDiscuss={discussAstrology} onFollowUp={(prompt,context)=>{useAstrologyContext(context);void submit(prompt,undefined,undefined,'astrology',context);}} onCompleteBreath={onBreathComplete} registerBackHandler={registerBackHandler}/>)}
                 {central&&!executableWorkflow&&message.id===visibleMessages[visibleMessages.length-1]?.id&&message.metadata?.consultation&&(message.metadata.consultation.quickReplies?.length||message.metadata.consultation.actions.length)? <div className="luna24-context-actions" aria-label={en?'Continue your consultation':'Продолжить консультацию'}>{message.metadata.consultation.quickReplies?.length?message.metadata.consultation.quickReplies.slice(0,3).map(prompt=><button type="button" key={prompt} disabled={thinking||quotaExhausted||Boolean(failedTurn)} onClick={()=>void submit(prompt)}>{prompt}</button>):message.metadata.consultation.actions.slice(0,3).map(action=><button type="button" key={action} disabled={thinking||quotaExhausted||Boolean(failedTurn)} onClick={()=>handleAction(action)}>{({continue:en?'Explore further':'Разобраться глубже',alternative:en?'Another perspective':'Другой взгляд',tarot:en?'Start a Tarot reading':'Начать расклад',natal_chart:en?'Open astrology':'Открыть астрологию',compatibility:en?'Open compatibility':'Открыть совместимость',meditation:en?'Find a meditation':'Подобрать медитацию',breathing:en?'Start breathing':'Начать дыхание',journal:en?'Open journal':'Открыть дневник',history:en?'Conversation history':'История разговоров'})[action]}</button>)}</div>:null}
                 {central&&!executableWorkflow&&message.id===visibleMessages[visibleMessages.length-1]?.id&&!message.metadata?.consultation&&message.role==='assistant'&&message.metadata?.contextualActions?.length? <div className="luna24-context-actions">{message.metadata.contextualActions.slice(0,3).map(action=><button type="button" key={action} disabled={thinking} onClick={()=>{if(action==='tarot'){setTarotQuestion(messages.filter(m=>m.role==='user').slice(-1)[0]?.content.slice(0,240)??'');beginTarotSetup();}else if(action==='journal')window.dispatchEvent(new Event('luna-open-activity'));else if(action==='birth_profile')window.dispatchEvent(new Event(featureFlags.astrology?'luna-open-astrology':featureFlags.personal_memory?'luna-open-universe':'luna-open-astrology'));else{setMode('meditation');practiceMode();void submit(luna2Copy[language].recommendPrompt,undefined,undefined,'meditation');}}}>{({tarot:en?'Explore with Tarot':'Посмотреть через Таро',journal:en?'Open journal':'Открыть дневник',birth_profile:en?'My birth profile':'Мои данные рождения',meditation:en?'Find a meditation':'Подобрать медитацию'})[action]}</button>)}</div>:null}
@@ -649,9 +689,9 @@ export function LunaChat({ firstName, language, meditations, hasPremium, initDat
           placeholder={quotaExhausted ? (language === 'ru' ? 'Баланс, покупки и история доступны' : 'Balance, purchases and history are available') : (language === 'ru' ? 'Напишите Luna...' : 'Message Luna...')}
         />
         {featureFlags.ai_voice_input&&<LunaVoiceInput language={language} initData={initData} disabled={thinking||contextBusy||Boolean(draft.trim())} onBusy={setVoiceBusy} onTranscript={text=>{setDraft(text);requestAnimationFrame(()=>textareaRef.current?.focus());}}/>}
-        <button type="submit" disabled={!draft.trim() || thinking || contextBusy || voiceBusy || quotaExhausted&&!meetOpen&&!commerceIntent(draft)&&!(featureFlags.luna_intelligence&&resolveIntelligenceCommand(draft))} aria-label={language === 'ru' ? 'Отправить' : 'Send'}><Send size={17} /></button>
+        <button type="submit" disabled={!draft.trim() || thinking || contextBusy || voiceBusy || quotaExhausted&&!meetOpen&&!personalSpaceControl.current&&!(featureFlags.personal_memory&&explicitBirthDate(draft))&&!commerceIntent(draft)&&!(featureFlags.luna_intelligence&&resolveIntelligenceCommand(draft))} aria-label={language === 'ru' ? 'Отправить' : 'Send'}><Send size={17} /></button>
       </form>
-      {central&&actionMenuOpen&&<LunaActionSheet language={language} availability={{tarot:featureFlags.tarot_daily,astrology:featureFlags.astrology,cosmos:featureFlags.personal_memory}} onClose={()=>setActionMenuOpen(false)} onAction={action=>{setToolsOpen(false);setIdeasOpen(false);if(action==='tarot')beginTarotSetup();else if(action==='natal'||action==='compatibility')void beginAstrology(action);else if(action==='breathing')handleAction('breathing');else if(action==='dream'){setSuggestedPrompt('');setDreamOpen(true);}else window.dispatchEvent(new CustomEvent('luna-open-destination',{detail:{destination:action==='meditation'?'meditations':action}}));}}/>}
+      {central&&actionMenuOpen&&<LunaActionSheet language={language} availability={{tarot:featureFlags.tarot_daily,astrology:featureFlags.astrology,cosmos:featureFlags.personal_memory}} onClose={()=>setActionMenuOpen(false)} onAction={action=>{setToolsOpen(false);setIdeasOpen(false);setPersonalSpace(null);if(action==='journal'||action==='cosmos'||action==='numerology'){setMeetOpen(false);setDreamOpen(false);setPersonalSpace(action);}else if(action==='tarot')beginTarotSetup();else if(action==='natal'||action==='compatibility')void beginAstrology(action);else if(action==='breathing')handleAction('breathing');else if(action==='meditation')handleAction('meditation');else if(action==='dream'){setSuggestedPrompt('');setDreamOpen(true);}else window.dispatchEvent(new CustomEvent('luna-open-destination',{detail:{destination:action==='meditation'?'meditations':action}}));}}/>}
     </section>
   );
 }

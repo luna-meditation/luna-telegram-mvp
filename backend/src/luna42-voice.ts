@@ -1,7 +1,13 @@
 import {createHash} from 'node:crypto';import type {SupabaseClient} from '@supabase/supabase-js';
 import {FoundationError} from './foundation-error.js';import {validateVoiceWav,voiceMetadata,transcriptionModel,transcriptionUsage} from './luna42-voice-policy.js';
 export function createVoiceService(db:SupabaseClient,config:{key:()=>string|undefined;enabled:()=>boolean;transport?:typeof fetch;stagingQa?:{owner:number;grant:string}}){
- return {async transcribe(owner:number,input:unknown,wav:Buffer){
+ return {async usage(owner:number,now=new Date()){
+  if(!Number.isSafeInteger(owner)||owner<=0)throw new FoundationError(403,'owner_required','Open Luna inside Telegram.');
+  const start=new Date(now);start.setUTCHours(0,0,0,0);const reset=new Date(start.getTime()+86400000);
+  const r=await db.from('luna42_voice_requests').select('request_id',{count:'exact',head:true}).eq('telegram_id',owner).gte('created_at',start.toISOString());
+  if(r.error||r.count===null)throw new FoundationError(503,'voice_budget_unavailable','Voice allowance could not be verified.');
+  return{enabled:config.enabled()&&Boolean(config.key()),limit:5,used:r.count,remaining:Math.max(0,5-r.count),resetAt:reset.toISOString(),scope:'utc_day' as const,policy:'recording_attempts' as const,maxSeconds:45};
+ },async transcribe(owner:number,input:unknown,wav:Buffer){
   if(!config.enabled())throw new FoundationError(404,'feature_disabled','Voice input is unavailable.');const key=config.key();if(!key)throw new FoundationError(503,'voice_unavailable','Voice input is unavailable.');const v=voiceMetadata.parse(input);let audio;try{audio=validateVoiceWav(wav);}catch(e){throw new FoundationError(422,e instanceof Error?e.message:'invalid_voice_audio','Use a clear recording of up to 45 seconds.');}
   const qa=config.stagingQa?.owner===owner?config.stagingQa:undefined;
   const hash=createHash('sha256').update(wav).digest('hex');const reserve=await db.rpc(qa?'luna42_reserve_voice_qa':'luna42_reserve_voice',{p_owner:owner,p_request:v.requestId,p_hash:hash,p_language:v.language,p_duration:audio.durationMs,...(qa?{p_grant:qa.grant}:{})});if(reserve.error||!reserve.data)throw new FoundationError(503,'voice_budget_unavailable','Voice usage could not be reserved.');

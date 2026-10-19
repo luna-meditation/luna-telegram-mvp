@@ -45,6 +45,7 @@ export function resolveIntelligenceCommand(message:string,active?:{type:string;k
  if(/(?:\b(?:where|open|change|switch|select).{0,35}(?:language|russian|english)\b|(?:где|откр|смен|помен|измен|переключ).{0,30}(?:язык|русск|английск))/iu.test(text))return {action:'settings.language',input:{},reason:'actual_language_settings'};
  if(/\b(?:open|show).{0,25}(?:my universe|my cosmos)\b|(?:открой|покажи).{0,20}(?:(?:мой )?космос|мо[её] созвездие)/iu.test(text))return{action:'cosmos.open',input:{},reason:'actual_cosmos_destination'};
  if(/\b(?:open|show).{0,20}journal\b|(?:открой|покажи).{0,20}дневник/iu.test(text)&&!/прошл|недел|месяц|last|previous/iu.test(text))return{action:'journal.open',input:{},reason:'actual_journal_destination'};
+ if(/\b(?:want to|let'?s)\s+(?:save|write|keep)\s+(?:a\s+)?(?:thought|reflection|note)|хочу\s+(?:записать|сохранить)\s+(?:мысль|заметку|размышление)/iu.test(text))return{action:'journal.open',input:{},reason:'explicit_journal_creation'};
  if(/^(?:please |luna[, ]+|луна[, ]+)?(?:open|show|открой|покажи)\s+(?:(?:my|the|мои|мой|раздел)\s+)?(?:moon garden|garden|achievements|journey|support|settings|лунный сад|сад|достижения|мой путь|поддержку|помощь|настройки)[.!?]?$/iu.test(text.split(/[,;]/u)[0].trim())){
   const destination=/garden|сад/iu.test(text)?'garden':/achievements|достижения/iu.test(text)?'achievements':/journey|путь/iu.test(text)?'journey':/support|поддержку|помощь/iu.test(text)?'support':'settings';
   return{action:'navigation.open',input:{destination},reason:'explicit_existing_destination'};

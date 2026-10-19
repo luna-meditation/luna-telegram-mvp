@@ -32,6 +32,21 @@ export type PersonalMemory={id:string;category:string;memory_key:string;memory_v
 export type UniverseData={memories:PersonalMemory[];profile:PersonalProfile;identity:{firstName:string;language:string;goals:string[]}|null;memoryEnabled:boolean;contextConsent:boolean};
 export type PersonalMemoryInput={category:PersonalMemoryCategory;key:string;value:string;confirmed:boolean;kind:'fact'|'symbolic';sourceMessageId?:string;revision?:number;sensitiveConsent:boolean};
 export const getUniverse=(initData?:string)=>request<UniverseData>('/api/universe',undefined,initData);
+export type PersonalPortrait=import('../../backend/src/personal-portrait-policy').PersonalPortrait&{birth:{available:boolean;selectionRequired:boolean;hasTime?:boolean;hasPlace?:boolean};numerology:DateNumerology;chart:{id:string;facts:{precision:string;planets:Array<{planet:string;signs:string[]}>;ascendant:string|null;houseSigns:string[];aspects:Array<{from:string;to:string;type:string}>;warnings:string[]}}|null};
+export const getPersonalPortrait=(initData?:string)=>request<PersonalPortrait>('/api/universe/portrait',undefined,initData);
+export type WeeklyReflection={version:number;from:string;to:string;completed:{meditations:number;breathing:number;minutes:number;durationSampleTruncated:boolean};updatedGoals:Array<{id:string;text:string;at:string}>;savedReflections:number;discoveries:Array<{id:string;text:string;at:string}>;feedbackCount:number};
+export const getWeeklyReflection=(initData?:string)=>request<WeeklyReflection>('/api/universe/weekly-reflection',undefined,initData);
+export type ReflectionKind='breath'|'meditation'|'natal'|'tarot';
+export type ReflectionChoice='calmer'|'unchanged'|'alternative'|'resonates'|'partly'|'not_me';
+export type ReflectionState={kind:ReflectionKind;referenceId:string;memory:{id:string;revision:number;choice:ReflectionChoice|null}|null};
+export const readSourceReflection=(kind:ReflectionKind,referenceId:string,initData?:string)=>request<ReflectionState>('/api/universe/reflection/read',{method:'POST',body:JSON.stringify({kind,referenceId})},initData);
+export const saveSourceReflection=(input:{kind:ReflectionKind;referenceId:string;choice:ReflectionChoice;confirmed:true;expectedRevision:number|null;language:AppLanguage},initData?:string)=>request<ReflectionState>('/api/universe/reflection',{method:'POST',body:JSON.stringify(input)},initData);
+export const getPersonalNumerology=(initData?:string)=>request<DateNumerology>('/api/universe/numerology',undefined,initData);
+export type BirthDiscoveryPreview={date:string;sun:{precision:string;sunSigns:number[];hasAscendant:false;hasHouses:false;hasPreciseMoon:false};numerology:Extract<DateNumerology,{calculated:true}>|{version:string;asOf:string;lifePath:number;birthday:number;personalYear:number;personalMonth:number;personalDay:number};saved:boolean;requiresCorrection:boolean;expectedUpdatedAt:string|null};
+export const previewBirthDiscovery=(date:string,initData?:string)=>request<BirthDiscoveryPreview>('/api/universe/birth/preview',{method:'POST',body:JSON.stringify({date})},initData);
+export const confirmBirthDiscovery=(date:string,expectedUpdatedAt:string|null,initData?:string)=>request<{saved:true;alreadySaved:boolean}>('/api/universe/birth/date',{method:'POST',body:JSON.stringify({date,expectedUpdatedAt,confirmed:true})},initData);
+export const openCompanionStarter=(operationId:string,language:AppLanguage,initData?:string,conversationId?:string)=>request<{conversationId:string|null;message:LunaMessage|null;cached?:boolean;cooldownUntil?:string}>('/api/universe/companion/starter',{method:'POST',body:JSON.stringify({operationId,language,...(conversationId?{conversationId}:{})})},initData);
+export const acknowledgeCompanionStarter=(id:string,state:'displayed'|'responded'|'dismissed',initData?:string)=>request<{state:string}>(`/api/universe/companion/starter/${encodeURIComponent(id)}`,{method:'POST',body:JSON.stringify({state})},initData);
 export type Discovery=import('../../backend/src/luna42-discoveries').Discovery;
 export const getDiscoveries=(initData?:string)=>request<{discoveries:Discovery[]}>('/api/universe/discoveries',undefined,initData);
 export const saveDiscovery=(kind:Discovery['kind'],referenceId:string,title:string,requestId:string,initData?:string)=>request<{discovery:Discovery}>('/api/universe/discoveries',{method:'POST',body:JSON.stringify({kind,referenceId,title,requestId})},initData);
@@ -41,6 +56,8 @@ export const openDiscovery=(id:string,initData?:string)=>request<{kind:Discovery
 export type MemoryProposal=import('../../backend/src/luna42-memory-proposal').MemoryProposal;
 export const decideMemoryProposal=(messageId:string,proposalId:string,confirmed:boolean,initData?:string)=>request<{proposal:MemoryProposal}>(`/api/universe/proposals/${encodeURIComponent(messageId)}`,{method:'POST',body:JSON.stringify({proposalId,confirmed})},initData);
 export async function transcribeLunaVoice(wav:Blob,requestId:string,language:AppLanguage,initData?:string){const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),55000);try{return await request<{text:string;requestId:string;cached:boolean;costMicrousd:number}>(`/api/luna/voice/${requestId}?language=${language}`,{method:'POST',headers:{'Content-Type':'audio/wav'},body:wav,signal:controller.signal},initData);}finally{clearTimeout(timeout);}}
+export type VoiceAllowance={enabled:boolean;limit:number;used:number;remaining:number;resetAt:string;scope:'utc_day';policy:'recording_attempts';maxSeconds:number};
+export const getVoiceAllowance=(initData?:string)=>request<VoiceAllowance>('/api/luna/voice/usage',undefined,initData);
 export type CosmosOnboardingState={skipped:string[];revision:number;updatedAt:string|null};
 export type MeetLunaState={meet:{version?:1;completed?:string[];skipped?:string[];finishedAt?:string;consentVersion?:string;consentedAt?:string};revision:number;updatedAt:string|null};
 export const getMeetLuna=(initData?:string)=>request<MeetLunaState>('/api/universe/meet',undefined,initData);
@@ -424,6 +441,8 @@ export type LunaMessage = {
     navigation?:{destination:import('../../backend/src/luna41-navigation').LunaDestinationId;operationId?:string};
     commerce?:{version:1;view:import('../../backend/src/luna35-commerce-policy').CommerceView;language:AppLanguage;checkedAt:string};
     contextReset?:boolean;
+    personalReport?:{id:string;consented:true};
+    companionStarter?:{version:1;operationId:string;state:'selected'|'displayed'|'responded'|'dismissed'|'expired';reason:'welcome'|'confirmed_goal';sourceId:string|null;sourceRevision:number|null;selectedAt:string;expiresAt:string};
     astrology?:AstrologyChatAttachment;
     astrologyWorkflow?:AstrologyWorkflow;
     astrologyConsent?:{version:1;chartId:string;secondChartId?:string};
@@ -649,9 +668,11 @@ export const getMembershipOverview=(initData?:string)=>request<MembershipOvervie
 export type DeepPersonalAnalysis={version:1;topic?:'personality'|'relationships'|'career'|'money_goals'|'emotional_patterns'|'growth';summary:string;sections:Array<{title:string;insight:string;basis:string[]}>;takeaway:string;question:string;limitations:string;sources:Array<{id:string;kind:'confirmed'|'calculated_symbolic';label:string}>;language:AppLanguage;usage:{model:string;costUsd:number}};
 export type DateNumerology={calculated:false;requiresConsent?:boolean;requiresPersonalProfile?:boolean}|{calculated:true;version:string;asOf:string;lifePath:number;birthday:number;personalYear:number;personalMonth:number;personalDay:number};
 export const getDateNumerology=(chartId:string,initData?:string)=>request<DateNumerology>(`/api/astrology/charts/${encodeURIComponent(chartId)}/numerology`,undefined,initData);
-export type SeedProductPurchase={id:string;request_id:string;product:'ai_messages'|'deep_analysis';seeds:number;quantity:number;state:'entitled'|'processing'|'ready'|'failed_refunded';result:DeepPersonalAnalysis|{quantity:number;expiresAt:null}|null;created_at:string};
+export type SeedProductPurchase={id:string;request_id:string;product:'ai_messages'|'deep_analysis';seeds:number;quantity:number;state:'entitled'|'processing'|'ready'|'failed_refunded';result:DeepPersonalAnalysis|{quantity:number;expiresAt:null}|null;created_at:string;updated_at?:string};
 export type SeedProductsOverview={enabled:boolean;revision:number;products:{aiMessages:{seeds:number;quantity:number;enabled:boolean};deepAnalysis:{seeds:number;enabled:boolean}};additionalMessages:number;purchases:SeedProductPurchase[]};
 export const getSeedProducts=(initData?:string)=>request<SeedProductsOverview>('/api/luna43/seed-products',undefined,initData);
+export const getSeedPurchase=(id:string,initData?:string)=>request<{purchase:SeedProductPurchase}>(`/api/luna43/seed-products/${encodeURIComponent(id)}`,undefined,initData);
+export const recoverSeedPurchase=(id:string,initData?:string)=>request<{purchase:SeedProductPurchase;recovered:boolean}>(`/api/luna43/seed-products/${encodeURIComponent(id)}/recover`,{method:'POST',body:'{"confirmed":true}'},initData);
 export const purchaseSeedProduct=(input:{requestId:string;product:'ai_messages'|'deep_analysis';expectedSeeds:number;catalogRevision:number;confirmed:true;language:AppLanguage;topic?:DeepPersonalAnalysis['topic'];question?:string;chartId?:string;personalContextConsent?:true},initData?:string)=>request<{purchase:SeedProductPurchase}>('/api/luna43/seed-products/purchases',{method:'POST',body:JSON.stringify(input)},initData);
 export const generateDeepAnalysis=(id:string,initData?:string)=>request<{purchase:SeedProductPurchase;cached:boolean}>(`/api/luna43/seed-products/${encodeURIComponent(id)}/generate`,{method:'POST',body:'{"confirmed":true}'},initData);
 export const createCommercialOrder=(input:{requestId:string;product:string;expectedStars:number;confirmed:true;termsAccepted:true},initData?:string)=>request<{order:{id:string;state:string};invoiceUrl:string|null}>('/api/luna30/commerce/orders',{method:'POST',body:JSON.stringify(input)},initData);
@@ -834,6 +855,8 @@ export const getLunaUsage=(initData?:string)=>request<{remaining:number;limit:nu
 
 export async function sendLunaMessage(input: {
   intelligenceVersion?:1;
+  personalReportId?:string;
+  personalReportConsent?:true;
   attachmentSelected?:boolean;
   contextReset?:boolean;
   astrologyConsent?:true;

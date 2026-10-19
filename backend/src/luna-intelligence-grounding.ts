@@ -15,6 +15,22 @@ export function assertGroundedNumerologyProse(text:string,facts:ReturnType<typeo
  if(!detailed&&text.trim().split(/\s+/u).length>200)throw new Error('numerology_overview_too_long');
 }
 export type GroundedChartContext={first:Chart;second?:Chart;synastry?:{aspects:Array<{from:string;to:string;type:string}>}};
+/** Failed user requests remain visible in history, but are not competing live
+ * questions when the owner explicitly selects a calculated artifact. */
+export function answeredArtifactTurns<T extends {role:string;request_id?:string|null}>(messages:T[]){
+ const answered=new Set(messages.filter(m=>m.role==='assistant'&&m.request_id).map(m=>m.request_id));
+ let current=-1;for(let i=messages.length-1;i>=0;i--)if(messages[i].role==='user'){current=i;break;}
+ return messages.filter((m,i)=>m.role!=='user'||!m.request_id||i===current||answered.has(m.request_id));
+}
+/** A verified attachment needs an answer, not another permission loop. Pure
+ * acknowledgement and privacy/navigation requests do not need chart prose. */
+export function assertSubstantiveAstrologyAnswer(text:string,context:GroundedChartContext,request:string){
+ if(/(?:predict|scientific|limitations?|науч|предсказ|ограничени|достовер)/iu.test(request))return;
+ if(!/(?:\b(?:explain|interpret|why|how|what|meaning|understand)\b|объясн|интерпрет|почему|(?<!\p{L})как(?!\p{L})|значит|смысл|разбери)/iu.test(request))return;
+ const planets=text.match(/(?<!\p{L})(?:sun|moon|mercury|venus|mars|jupiter|saturn|uranus|neptune|pluto|солнц\p{L}*|лун[аыоуе]|меркур\p{L}*|венер\p{L}*|марс\p{L}*|юпитер\p{L}*|сатурн\p{L}*|уран\p{L}*|нептун\p{L}*|плутон\p{L}*)(?!\p{L})/giu)??[];
+ const detail=/(?:conjunction|sextile|square|trine|opposition|соединен|секстил|квадрат|трин|тригон|оппозиц|aries|taurus|gemini|cancer|leo|virgo|libra|scorpio|sagittarius|capricorn|aquarius|pisces|овен|овн|телец|тельц|близнец|рак|льв|лев|дев[аыеоу]|вес[ыо]|скорпион|стрелец|стрельц|козерог|водоле|рыб)/iu.test(text);
+ if(planets.length<(context.second?2:1)||!detail)throw new Error('incomplete_calculated_interpretation');
+}
 const planetAliases:Record<string,string>={sun:'sun',солнц:'sun',moon:'moon',лун:'moon',mercury:'mercury',меркур:'mercury',venus:'venus',венер:'venus',mars:'mars',марс:'mars',jupiter:'jupiter',юпитер:'jupiter',saturn:'saturn',сатурн:'saturn',uranus:'uranus',уран:'uranus',neptune:'neptune',нептун:'neptune',pluto:'pluto',плутон:'pluto',ascendant:'ascendant',асцендент:'ascendant'};
 const signs=['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'];
 const signPatterns=['aries|овен|овн\\p{L}*','taurus|телец|тельц\\p{L}*','gemini|близнец\\p{L}*','cancer|рак(?:а|е|ом|у)?','leo|лев|льв\\p{L}*','virgo|дев(?:а|ы|е|ой|у)','libra|вес(?:ы|ов|ах|ами)','scorpio|скорпион\\p{L}*','sagittarius|стрелец|стрельц\\p{L}*','capricorn|козерог\\p{L}*','aquarius|водоле\\p{L}*','pisces|рыб\\p{L}*'];
