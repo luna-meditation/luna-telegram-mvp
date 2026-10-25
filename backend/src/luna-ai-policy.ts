@@ -175,7 +175,7 @@ export function sanitizeVisibleAssistantMessage(message: string, language: LunaL
 }
 
 export function hasInternalDataLeak(message: string) {
-  return internalDataPatterns.some((pattern) => {
+  return /\b(?:source_type|source_message_id|memory_key|memory_value|user_entered|user_saved_ai_reflection|confirmation_status)\b/i.test(message)||internalDataPatterns.some((pattern) => {
     pattern.lastIndex = 0;
     return pattern.test(message);
   });

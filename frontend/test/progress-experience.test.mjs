@@ -84,7 +84,7 @@ test('Journey status hero includes all ten permanent status names and localized 
   assert.match(progressSource, /next\.remaining\.slice\(0, 3\)/);
 });
 
-test('Journey factual typography follows the Home Inter system', () => {
+test('Journey factual typography follows the shared UI font system', () => {
   assert.match(homeStyles, /font-family: var\(--font-sans\)/);
   assert.match(stylesSource, /\.journey-hub \.progress-v3-section-heading h3/);
   assert.match(stylesSource, /\.progress-v4-achievement-copy h4[^}]*font-family: var\(--font-sans\)/s);

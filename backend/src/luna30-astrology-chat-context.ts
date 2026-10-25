@@ -1,3 +1,4 @@
+import {verifiedChartSource} from './luna30-astrology-source.js';
 import type {SupabaseClient} from '@supabase/supabase-js';
 import {FoundationError} from './foundation-error.js';
 import {symbolicChartFacts,astrologyReportSchema} from './luna30-astrology-report-policy.js';
@@ -9,7 +10,7 @@ export async function verifiedAstrologyChatContext(db:SupabaseClient,owner:numbe
  const attachment=astrologyAttachmentSchema.parse(typeof input==='string'?{chartId:input}:input);
  const gate=await db.from('luna30_release_settings').select('astrology_enabled,astrology_ai_enabled').eq('id',true).single();
  if(gate.error||!gate.data?.astrology_enabled||!gate.data?.astrology_ai_enabled)throw new FoundationError(503,'astrology_unavailable','Calculated astrology is unavailable.');
- async function chart(id:string){const {data,error}=await db.from('luna30_chart_cache').select('id,profile_id,calculation').eq('telegram_id',owner).eq('id',id).maybeSingle();if(error||!data)throw new FoundationError(404,'chart_not_found','Reopen your calculated chart.');const profile=await db.from('luna30_birth_profiles').select('display_label,subject_kind').eq('telegram_id',owner).eq('id',data.profile_id).maybeSingle();if(profile.error||!profile.data)throw new FoundationError(404,'profile_not_found','Reopen the saved birth profile.');return {...data,subject:{label:String(profile.data.display_label).slice(0,80),kind:profile.data.subject_kind==='self'?'self':'other'}};}
+ const chart=(id:string)=>verifiedChartSource(db,owner,id,Boolean(attachment.reportId||attachment.comparisonId));
  const first=await chart(attachment.chartId),second=attachment.secondChartId?await chart(attachment.secondChartId):null;
  const selectedAspect=attachment.aspect?(first.calculation as NatalCalculation).aspects.find(a=>a.from===attachment.aspect!.from&&a.to===attachment.aspect!.to&&a.type===attachment.aspect!.type):null;
  if(attachment.aspect&&!selectedAspect)throw new FoundationError(422,'aspect_not_found','Select an aspect actually calculated for this chart.');
@@ -26,7 +27,7 @@ export async function verifiedAstrologyChatContext(db:SupabaseClient,owner:numbe
  if(attachment.comparisonId){const saved=await db.from('ai_messages').select('metadata').eq('telegram_id',owner).eq('id',attachment.comparisonId).eq('role','assistant').maybeSingle();const snapshot=saved.data?.metadata?.astrologyWorkflow?.compatibilitySnapshot;
   if(saved.error||!snapshot||snapshot.firstChartId!==first.id||snapshot.secondChartId!==second?.id||snapshot.reflection?.relationship!==attachment.relationship)throw new FoundationError(404,'report_not_found','Reopen your saved comparison.');reflection=snapshot.reflection;
  }
- return focusedCompatibilityEvidence({reference:intelligenceReference({astrology:attachment}),calculationVersion:(first.calculation as {engineVersion?:string}).engineVersion??'astronomy-engine',first:compact(first.calculation,first.subject),...(second&&synastry?{second:compact(second.calculation,second.subject),synastry:{...synastry,aspects:synastry.aspects.sort((a,b)=>a.orb-b.orb).slice(0,5)}}:{}),relationship:attachment.relationship??null,relationshipClarificationRequired:Boolean(second&&!attachment.relationship),compatibilityReflection:reflection,comparisonId:attachment.comparisonId??null,selectedPlanet:attachment.planet??null,selectedAspect:selectedAspect??null,savedReport:report});
+ return focusedCompatibilityEvidence({sourceValidity:{first:first.sourceValidity,...(second?{second:second.sourceValidity}:{})},reference:intelligenceReference({astrology:attachment}),calculationVersion:(first.calculation as {engineVersion?:string}).engineVersion??'astronomy-engine',first:compact(first.calculation,first.subject),...(second&&synastry?{second:compact(second.calculation,second.subject),synastry:{...synastry,aspects:synastry.aspects.sort((a,b)=>a.orb-b.orb).slice(0,5)}}:{}),relationship:attachment.relationship??null,relationshipClarificationRequired:Boolean(second&&!attachment.relationship),compatibilityReflection:reflection,comparisonId:attachment.comparisonId??null,selectedPlanet:attachment.planet??null,selectedAspect:selectedAspect??null,savedReport:report});
 }
 /** A compatibility answer has one explicit source of angular links. Natal
  * aspects and repeated dimension lists previously leaked into pair prose.

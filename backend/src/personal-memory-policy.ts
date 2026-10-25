@@ -14,7 +14,17 @@ export const memoryWriteSchema=z.object({
  category:z.enum(personalMemoryCategories),key:z.string().trim().min(2).max(64).regex(/^[\p{L}\p{N} _-]+$/u),value:z.string().trim().min(2).max(500),confirmed:z.boolean(),kind:z.enum(['fact','symbolic']).default('fact'),sourceMessageId:z.string().uuid().optional(),revision:z.number().int().positive().optional(),sensitiveConsent:z.boolean().default(false)
 }).strict().refine(v=>v.category!=='birth_information','Use the canonical optional birth profile, not a second copy.').refine(v=>v.kind!=='symbolic'||v.category==='reflections','Symbolic interpretations are reflections, never personal facts.');
 export type MemoryWrite=z.infer<typeof memoryWriteSchema>;
-export type PersonalMemory={id:string;category:string;memory_key:string;memory_value:string;confirmation_status:'pending'|'confirmed';memory_kind:'fact'|'symbolic';is_sensitive:boolean;source_type:string;source_message_id:string|null;revision:number;created_at:string;updated_at:string;confirmed_at:string|null};
+export type PersonalMemory={id:string;category:string;memory_key:string;memory_value:string;confirmation_status:'pending'|'confirmed';memory_kind:'fact'|'symbolic';is_sensitive:boolean;source_type:string;source_message_id:string|null;revision:number;created_at:string;updated_at:string;confirmed_at:string|null;is_active?:boolean};
+/** This turn can withhold personalization without changing durable consent. */
+export function declinesMemoryUse(query:string){return /(?:\b(?:do not|don't|don’t|stop)\s+(?:use|using|access|accessing)\s+(?:my\s+)?(?:saved\s+|personal\s+)?(?:memor(?:y|ies)|personal (?:data|context))\b|не\s+(?:используй|используйте|обращайся к)\s+(?:мо[юийеё]\s+)?(?:сохран[её]нн\p{L}*\s+|личн\p{L}*\s+)?(?:памят\p{L}*|воспоминан\p{L}*|данн\p{L}*|контекст\p{L}*))/iu.test(query);}
+export function validMemorySource(row:PersonalMemory){
+ if(row.is_active===false||row.confirmation_status!=='confirmed')return false;
+ const created=Date.parse(row.created_at),updated=Date.parse(row.updated_at),confirmed=row.confirmed_at?Date.parse(row.confirmed_at):NaN;
+ if(!Number.isFinite(created)||!Number.isFinite(updated)||!Number.isFinite(confirmed)||created>updated+60000||confirmed>updated+60000||confirmed<created-60000)return false;
+ if(row.source_type==='user_entered')return true;
+ if(row.source_type==='user_message')return Boolean(row.source_message_id);
+ return row.memory_kind==='symbolic'&&row.source_type==='user_saved_ai_reflection'&&Boolean(row.source_message_id);
+}
 export const canonicalMemoryKey=(key:string)=>key.normalize('NFKC').trim().toLowerCase().replace(/[\s-]+/gu,'_');
 export const normalizedMemoryValue=(value:string)=>value.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu,' ').trim();
 export function containsCredential(value:string){return /(?:\bsk-(?:proj-)?[A-Za-z0-9_-]{16,}|-----BEGIN [\w ]*PRIVATE KEY-----|\beyJ[\w-]{16,}\.[\w-]+\.[\w-]+|(?:password|api[ _-]?key|пароль|токен)\s*(?:[:=]|\bis\b|\bwas\b|это|—)\s*\S{4,})/iu.test(value);}
@@ -43,8 +53,9 @@ export function cosmosAreaRelevant(key:string,query:string){
  const area=key.slice('cosmos_'.length);return Boolean(domains[area]?.test(query)||area==='dreams'&&/spiritual|self-discover|духов|самопознан/i.test(query));
 }
 export function selectRelevantMemories(rows:PersonalMemory[],query:string,maxChars=1600){
+ if(declinesMemoryUse(query))return [];
  const tokens=normalizedMemoryValue(query).split(' ').filter(t=>t.length>3);
- const eligible=rows.filter(r=>r.confirmation_status==='confirmed'&&r.memory_kind==='fact'&&!r.is_sensitive&&r.category!=='birth_information'&&r.memory_key!=='companion_settings'&&cosmosAreaRelevant(r.memory_key,query)&&!potentiallySensitive(r.memory_key+' '+r.memory_value));
+ const eligible=rows.filter(r=>validMemorySource(r)&&r.memory_kind==='fact'&&!r.is_sensitive&&r.category!=='birth_information'&&r.memory_key!=='companion_settings'&&cosmosAreaRelevant(r.memory_key,query)&&!potentiallySensitive(r.memory_key+' '+r.memory_value));
  const counts=new Map<string,number>();for(const r of eligible){const k=r.category+':'+canonicalMemoryKey(r.memory_key);counts.set(k,(counts.get(k)??0)+1);}
  const overview=personalMemoryOverview(query),specific=goalContentTerms(query),scored=eligible.map(r=>{const matches=tokens.filter(t=>normalizedMemoryValue(r.memory_value+' '+r.memory_key).includes(t)).length;
   // "a goal" alone is not permission to send an unrelated saved goal. Keep
@@ -54,4 +65,4 @@ export function selectRelevantMemories(rows:PersonalMemory[],query:string,maxCha
  }).filter(x=>x.score>0&&counts.get(x.r.category+':'+canonicalMemoryKey(x.r.memory_key))===1).sort((a,b)=>b.score-a.score||b.r.updated_at.localeCompare(a.r.updated_at));
  const selected:Array<{id:string;category:string;key:string;value:string;source:string;createdAt:string;updatedAt:string}>=[];let length=0;const seen=new Set<string>();for(const {r}of scored){const value=normalizedMemoryValue(r.memory_value);if(seen.has(value))continue;const item={id:r.id,category:r.category,key:r.memory_key,value:r.memory_key.startsWith('cosmos_')?cosmosDomainContext(r.memory_value):r.memory_value,source:r.source_type,createdAt:r.created_at,updatedAt:r.updated_at};const size=JSON.stringify(item).length;if(length+size>maxChars)continue;selected.push(item);length+=size;seen.add(value);if(selected.length===6)break;}return selected;
 }
-export function selectRelevantReflections(rows:PersonalMemory[],query:string){if(!hints.reflections.test(query))return [];return rows.filter(r=>r.confirmation_status==='confirmed'&&r.memory_kind==='symbolic'&&!r.is_sensitive&&!potentiallySensitive(r.memory_value)).slice(0,2).map(r=>({label:'symbolic_reflection' as const,value:r.memory_value.slice(0,240),id:r.id,source:r.source_type,updatedAt:r.updated_at}));}
+export function selectRelevantReflections(rows:PersonalMemory[],query:string){if(declinesMemoryUse(query)||!hints.reflections.test(query))return [];return rows.filter(r=>validMemorySource(r)&&r.memory_kind==='symbolic'&&r.category==='reflections'&&!r.is_sensitive&&!potentiallySensitive(r.memory_key+' '+r.memory_value)).sort((a,b)=>b.updated_at.localeCompare(a.updated_at)).slice(0,2).map(r=>({label:'symbolic_reflection' as const,value:r.memory_value.slice(0,240),id:r.id,source:r.source_type,updatedAt:r.updated_at}));}

@@ -229,10 +229,7 @@ export function HomeV2(props: HomeV2Props) {
       {soundExpanded && <SoundscapeSheet scenes={props.scenes} selectedId={props.selectedScene?.id} playing={props.scenePlaying} language={props.language} hasPremium={props.hasPremium} onSelect={id=>{const scene=props.scenes.find(item=>item.id===id);if(scene)props.onSoundSelect(scene);}} onToggle={props.onSoundToggle} onClose={()=>setSoundExpanded(false)} registerBackHandler={props.registerBackHandler}/>}
       </section>
 
-      {props.newNavigation && <button type="button" onClick={props.onAddHome} className="home-v2-home-action luna30-install">
-        <BrandLogo size={28} alt="Luna" />
-        <span><strong>{props.labels.addHomeTitle}</strong>{props.homeScreenMessage&&<small role="status">{props.homeScreenMessage}</small>}</span>
-      </button>}
+
       </div>
 
 

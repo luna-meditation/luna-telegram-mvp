@@ -1,0 +1,13 @@
+{
+  "checkedAt": "2026-10-25T05:39:59.405Z",
+  "projectId": "vkcdtasbdoeilgfucoax",
+  "tables": 16,
+  "rlsEnabled": 16,
+  "missingServiceCrud": 0,
+  "appliedMigrationPresent": true,
+  "browserPrivilegeMismatches": 0,
+  "unexpectedExplicitBrowserColumnGrants": 0,
+  "productionWrites": 0,
+  "providerGenerationCalls": 0,
+  "localDetailedEvidenceSha256": "d85644da5cffe2dc5d250bb04808f6e5bf503c814c2f5b76e6bdcde87a36fc46"
+}

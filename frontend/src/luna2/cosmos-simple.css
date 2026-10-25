@@ -1,0 +1,78 @@
+/* Focused Cosmos: a single threshold, then one purpose per screen. */
+.cosmos-simple{gap:20px;padding-bottom:calc(22px + var(--safe-area-bottom,0px));--cosmos-line:#aaa0c52b}
+.cosmos-simple:before{display:none}
+.cosmos-quiet-header{text-align:center;padding:12px 16px 0}
+.cosmos-quiet-header>p{font-size:12px;line-height:1.5;letter-spacing:.04em;color:var(--portrait-gold);margin:0 0 8px}
+.cosmos-quiet-header h1{font-family:var(--font-display);font-size:33px;font-weight:400;line-height:1.18;letter-spacing:-.025em;overflow-wrap:anywhere;margin:0}
+.cosmos-universe-entry{display:grid;justify-items:center;position:relative;width:100%;max-width:370px;margin:-2px auto 0;padding:8px 5px 0;border:0;background:none;color:var(--text-primary);border-radius:50% 50% 12px 12px}
+.cosmos-universe-entry>.natal-orbit{width:100%;max-width:300px;pointer-events:none;opacity:.88}
+.cosmos-entry-caption{display:flex;align-items:center;justify-content:center;gap:7px;min-height:44px;font-size:12px;color:var(--portrait-gold);line-height:1.5;padding:9px 0 0}
+.cosmos-three-doors{display:grid;gap:0;padding:0 4px}
+.cosmos-simple .cosmos-three-doors>button{display:grid;grid-template-columns:25px minmax(0,1fr) 20px;align-items:center;gap:15px;width:100%;min-height:77px;padding:15px 5px;background:none;border:0;border-top:1px solid var(--cosmos-line);border-radius:0;box-shadow:none;color:var(--portrait-gold);text-align:left}
+.cosmos-three-doors>button:last-child{border-bottom:1px solid var(--cosmos-line)}
+.cosmos-three-doors>button>span{display:grid;gap:4px;min-width:0}
+.cosmos-three-doors strong{font-family:var(--font-display);font-size:22px;font-weight:400;line-height:1.2;color:var(--text-primary)}
+.cosmos-three-doors small{font-size:11px;line-height:1.4;color:var(--text-secondary)}
+.cosmos-neutral-sky{position:relative;display:grid;place-items:center;width:min(286px,80vw);aspect-ratio:1;border:1px solid #cdb99c33;border-radius:50%;background:radial-gradient(circle,#8e739b0d,transparent 68%);color:var(--portrait-gold)}
+.cosmos-neutral-sky>span{font-family:var(--font-display);font-size:57px;line-height:1}
+.cosmos-neutral-sky i{position:absolute;inset:20px;border:1px solid #b7a4cf22;border-radius:50%}
+.cosmos-neutral-sky i:nth-of-type(2){inset:56px;transform:rotate(-28deg) scaleX(.72)}
+.cosmos-neutral-sky i:nth-of-type(3){inset:56px;transform:rotate(28deg) scaleX(.72)}
+.cosmos-neutral-sky b{position:absolute;top:13px;left:76px;font-size:21px;font-weight:400;background:var(--bg-secondary);border-radius:50%}
+.cosmos-detail-heading h1,.cosmos-simple .cosmos-section-heading h2{font-family:var(--font-display);font-size:29px;line-height:1.2;font-weight:400;margin:7px 0}
+.cosmos-simple .cosmos-section-heading{margin-bottom:20px}
+.cosmos-simple .cosmos-chart-stage{margin:0 auto}
+.cosmos-simple .cosmos-chart-caption{display:none}
+.cosmos-simple .cosmos-chart-hint{font-size:11px!important;margin:10px 0 14px}
+.cosmos-simple .cosmos-core-placements{margin:0 0 18px}
+.cosmos-simple .cosmos-placement-detail{min-height:0;border-block:1px solid var(--cosmos-line);background:none;padding:18px 0}
+.cosmos-simple .cosmos-placement-title small{font-size:9px;letter-spacing:.06em;text-transform:none}
+.cosmos-simple .cosmos-placement-detail>p{font-size:14px}
+.cosmos-simple .cosmos-detail-note{font-size:11px;opacity:1}
+.cosmos-simple .cosmos-chart-actions{padding:8px 0}
+.cosmos-simple .cosmos-chart-actions>button{font-size:13px}
+.cosmos-simple .cosmos-chart-actions details>summary{font-size:12px}
+.cosmos-simple .cosmos-more-placements>summary,.cosmos-simple .cosmos-source-detail>summary{display:flex;justify-content:space-between;align-items:center;gap:9px;min-height:48px;font-size:13px;font-weight:400;color:var(--text-secondary);cursor:pointer;list-style:none}
+.cosmos-more-placements{border-top:1px solid var(--cosmos-line)}
+.cosmos-planet-selector{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px 12px}
+.cosmos-planet-selector>button{display:flex;align-items:center;gap:8px;min-width:0;min-height:62px;background:none;text-align:left;color:var(--text-primary);font-size:13px;border-bottom:1px solid var(--cosmos-line);padding:8px 0}
+.cosmos-planet-selector>button>span:first-child{font-size:22px;color:var(--portrait-gold);flex:0 0 24px}
+.cosmos-planet-selector>button>span:nth-child(2){flex:1;min-width:0}
+.cosmos-planet-selector small{display:block;font-size:10px;line-height:1.5;overflow-wrap:anywhere}
+.cosmos-simple .cosmos-more-placements .celestial-center{position:static;inset:auto;transform:none;width:auto;display:flex;text-align:left;margin:6px 0;justify-content:start}
+.cosmos-simple .signature-number{font-family:var(--font-display);font-size:24px;margin-left:6px}
+.cosmos-simple .cosmos-discovery-list{display:grid;gap:0}
+.cosmos-simple button.cosmos-discovery-card{display:grid;grid-template-columns:22px minmax(0,1fr) 16px;align-items:center;gap:13px;width:100%;padding:18px 0;border:0;border-bottom:1px solid var(--cosmos-line);border-radius:0;background:none;box-shadow:none;color:var(--text-primary);text-align:left}
+.cosmos-discovery-row-icon{align-self:start;padding-top:3px;color:var(--portrait-gold)}
+.cosmos-discovery-row-copy{display:grid;gap:6px;min-width:0}
+.cosmos-discovery-row-copy>strong{font-family:var(--font-display);font-size:21px;font-weight:400;line-height:1.3;overflow-wrap:anywhere}
+.cosmos-discovery-row-copy>.cosmos-discovery-preview{font-size:13px;line-height:1.65;color:var(--text-secondary);-webkit-line-clamp:2}
+.cosmos-discovery-row-copy time{font-size:10px;color:var(--text-secondary);line-height:1.5}
+.cosmos-discovery-detail{padding:0;min-width:0;overflow-wrap:anywhere}
+.cosmos-discovery-detail>h3{font-family:var(--font-display);font-size:29px;line-height:1.25;font-weight:400;margin:15px 0}
+.cosmos-discovery-detail>p{font-size:16px;line-height:1.85;margin:0 0 22px;white-space:pre-wrap}
+.cosmos-discovery-toolbar{display:flex;justify-content:flex-end;align-items:start;gap:10px;margin:-5px 0 15px}
+.cosmos-discovery-toolbar .cosmos-text-link{font-size:12px;color:var(--text-secondary)}
+.cosmos-overflow{position:relative;flex:0 0 44px}
+.cosmos-simple .cosmos-overflow>summary{display:grid;place-items:center;min-height:44px;width:44px;font-size:14px;color:var(--text-secondary);list-style:none;cursor:pointer;border-radius:50%;border:1px solid var(--cosmos-line)}
+.cosmos-overflow>div{position:absolute;right:0;top:49px;z-index:4;min-width:210px;padding:5px 12px;border-radius:15px;border:1px solid var(--cosmos-line);background:var(--bg-secondary,#11192c);box-shadow:0 12px 26px #0003}
+.cosmos-overflow button{display:block;width:100%;min-height:48px;font-size:13px;background:none;text-align:left;color:var(--text-primary)}
+.cosmos-discovery-detail>.cosmos-record-meta{display:flex;justify-content:start;align-items:center;font-size:11px;gap:5px}
+.cosmos-source-detail{border-top:1px solid var(--cosmos-line)}
+.cosmos-source-detail p,.cosmos-source-detail time{font-size:12px;line-height:1.65;color:var(--text-secondary)}
+.cosmos-discovery-reflect{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:50px;width:100%;padding:10px 0;margin-top:20px;border-block:1px solid #c8af7f55;background:none;color:var(--portrait-gold);font-size:14px;text-align:left}
+.cosmos-simple:has(.cosmos-discovery-detail)>.cosmos-portrait-chapters,.cosmos-simple:has(.cosmos-discovery-detail)>.portrait-privacy,.cosmos-simple:has(.cosmos-discovery-editor)>.cosmos-portrait-chapters,.cosmos-simple:has(.cosmos-discovery-editor)>.portrait-privacy{display:none}
+.cosmos-simple .cosmos-portrait-chapters{margin-top:18px}
+.cosmos-simple .portrait-editorial-chapters>button{min-height:55px;padding:11px 0}
+.cosmos-simple .portrait-editorial-chapters>button>span{display:block}
+.cosmos-simple .portrait-editorial-chapters strong{font-size:18px}
+.cosmos-simple .portrait-focused-chapter{border:0;background:none;border-radius:0;padding:0}
+.cosmos-simple .portrait-focused-chapter .portrait-kicker{display:none}
+.cosmos-simple .cosmos-journey li{min-height:78px}
+.cosmos-simple .cosmos-journey li>button{min-height:70px}
+.cosmos-simple .cosmos-journey li>button>span{font-size:14px;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.cosmos-simple .cosmos-journey li>button>small,.cosmos-simple .cosmos-journey time{font-size:11px}
+:root[data-theme=light] .cosmos-simple{--cosmos-line:#65557633}
+@media(max-width:374px){.cosmos-quiet-header h1{font-size:30px}.cosmos-three-doors>button{min-height:72px}.cosmos-three-doors strong{font-size:21px}.cosmos-universe-entry>.natal-orbit{max-width:278px}.cosmos-planet-selector{grid-template-columns:1fr}}
+
+.cosmos-neutral-sky>img{position:absolute;inset:28px;width:calc(100% - 56px);height:auto;object-fit:contain;z-index:1}.profile-simple .profile-cosmos-jewel{width:66px;height:66px;flex:0 0 66px;object-fit:contain}

@@ -1,0 +1,53 @@
+{
+  "node": "v22.23.3",
+  "syntheticConfiguration": true,
+  "externalNetworkBlocked": true,
+  "productionDeploy": false,
+  "results": [
+    {
+      "check": "backend-lint",
+      "exitCode": 0,
+      "seconds": 9.91
+    },
+    {
+      "check": "frontend-tests",
+      "exitCode": 0,
+      "seconds": 10.78
+    },
+    {
+      "check": "frontend-lint",
+      "exitCode": 0,
+      "seconds": 6.11
+    },
+    {
+      "check": "backend-typecheck",
+      "exitCode": 0,
+      "seconds": 18.32
+    },
+    {
+      "check": "backend-tests",
+      "exitCode": 0,
+      "seconds": 18.89
+    },
+    {
+      "check": "website-build",
+      "exitCode": 0,
+      "seconds": 0.43
+    },
+    {
+      "check": "frontend-build",
+      "exitCode": 0,
+      "seconds": 6.74
+    },
+    {
+      "check": "frontend-typecheck",
+      "exitCode": 0,
+      "seconds": 15.69
+    },
+    {
+      "check": "backend-build",
+      "exitCode": 0,
+      "seconds": 8.91
+    }
+  ]
+}

@@ -1,6 +1,11 @@
 import {z} from 'zod';
 import type {SupabaseClient} from '@supabase/supabase-js';
 import {FoundationError} from './foundation-error.js';
+import {resolveResponseLanguage} from './luna-ai-policy.js';
+
+export function resolveConversationLanguage(message:string,interfaceLanguage:'ru'|'en',recent:Array<{role?:string|null;content?:string|null}>,mode:'auto'|'ru'|'en'){
+ return resolveResponseLanguage(message,mode==='auto'?interfaceLanguage:mode,recent,mode!=='auto');
+}
 
 export const languagePreferenceInput=z.object({mode:z.enum(['auto','en','ru']),expectedRevision:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),requestId:z.string().uuid()}).strict();
 export function createLanguagePreferences(db:SupabaseClient){
@@ -8,7 +13,7 @@ export function createLanguagePreferences(db:SupabaseClient){
   async read(owner:number){
    const result=await db.from('luna40_language_preferences').select('mode,revision,updated_at').eq('telegram_id',owner).maybeSingle();
    if(result.error)throw new FoundationError(503,'language_preference_unavailable','Your device language choice is preserved.');
-   return {mode:result.data?.mode??'auto',revision:result.data?.revision??0,updatedAt:result.data?.updated_at??null};
+   return {mode:z.enum(['auto','en','ru']).parse(result.data?.mode??'auto'),revision:result.data?.revision??0,updatedAt:result.data?.updated_at??null};
   },
   async update(owner:number,body:unknown){
    const input=languagePreferenceInput.parse(body);

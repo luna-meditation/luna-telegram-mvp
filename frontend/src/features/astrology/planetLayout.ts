@@ -13,3 +13,15 @@ export function planetLabelAngles(planets:Array<{id:string;longitude:number}>){
  }
  return result;
 }
+
+/** Touch labels occupy distinct 30 degree slots. Only label positions move;
+ * the diagram's anchor dots and aspect lines always use calculated longitude. */
+export function planetTouchAngles(planets:Array<{id:string;longitude:number}>){
+ const slots=Array.from({length:12},(_,i)=>i*30+15),result:Record<string,number>={};
+ const distance=(a:number,b:number)=>Math.abs((a-b+540)%360-180);
+ for(const planet of [...planets].sort((a,b)=>a.longitude-b.longitude||a.id.localeCompare(b.id))){
+  const index=slots.reduce((best,angle,i)=>distance(angle,planet.longitude)<distance(slots[best],planet.longitude)?i:best,0);
+  result[planet.id]=slots.splice(index,1)[0];
+ }
+ return result;
+}

@@ -1,6 +1,6 @@
 import type {PersonalMemory} from './personal-memory-policy.js';
 import type {PersonalProfile} from './personalization-policy.js';
-import {containsCredential} from './personal-memory-policy.js';
+import {containsCredential,validMemorySource} from './personal-memory-policy.js';
 import {cosmosDomainSummary} from './luna42-cosmos-domain.js';
 
 export const portraitSections=['essence','strengths','motivations','relationships','direction','growth','discoveries'] as const;
@@ -8,7 +8,7 @@ export type PortraitSection=typeof portraitSections[number];
 export type PortraitPersistence={state:'saved';revision:number;sourceEpoch:number;createdAt:string;cached:boolean;sectionDigests:Record<string,string>}|{state:'unavailable'};
 export type PortraitEvidence={id:string;text:string;kind:'user_fact'|'user_reflection'|'symbolic_reflection';source:string;createdAt:string;updatedAt:string;private:boolean};
 export type PersonalPortrait={version:1;sections:Record<PortraitSection,PortraitEvidence[]>;interests:string[];completion:{provided:number;total:number};timeline:Array<{id:string;at:string;kind:PortraitEvidence['kind'];source:string;text:string}>;memoryPermission:boolean};
-const eligible=(row:PersonalMemory)=>row.confirmation_status==='confirmed'&&!containsCredential(row.memory_value);
+const eligible=(row:PersonalMemory)=>validMemorySource(row)&&!containsCredential(row.memory_value);
 const portraitText=(row:PersonalMemory)=>row.memory_key.startsWith('cosmos_')?cosmosDomainSummary(row.memory_value):row.memory_key.startsWith('luna_feedback_')?row.memory_value.replace(/ \[(?:breath|meditation|natal|tarot):[a-f0-9-]+;[a-z_]+\]$/i,''):row.memory_value;
 /** A traceable projection, not a psychological classifier. Strengths are only
  * explicit user-labelled observations; zodiac signs never assign traits. */

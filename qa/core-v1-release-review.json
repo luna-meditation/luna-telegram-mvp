@@ -1,0 +1,83 @@
+{
+  "release": "luna-intelligence-core-v1-ux",
+  "status": "PASS",
+  "preparedAt": "2026-10-25T08:25:02.150Z",
+  "baseCommit": "d68968805e4f52f78dd108025c87f55664f03e00",
+  "projectId": "vkcdtasbdoeilgfucoax",
+  "stagingProjectId": "funvzpmpbgazsisehiru",
+  "productionModel": "gpt-5-mini",
+  "aiCapUsd": 100,
+  "modelChanged": false,
+  "aiCapChanged": false,
+  "financialPolicyChanged": false,
+  "customerDataMutatedByTests": false,
+  "newProviderGenerations": 0,
+  "realFinancialOperations": 0,
+  "additionalProductionMigrations": 0,
+  "aiQuality": "historical-exploratory-with-known-limitations",
+  "historicalEvaluation": {
+    "attempts": 80,
+    "costUsd": 0.053901,
+    "blindedHumanReview": false
+  },
+  "physicalTelegramAcceptance": "pending-owner-review",
+  "backendTests": 979,
+  "frontendTests": 297,
+  "evidence": {
+    "commands": {
+      "path": "qa/core-release/commands.json",
+      "sha256": "c98562b7b9e3cd776915e590fb48dccb85541c1619212398eeb31039974b6f18"
+    },
+    "dependency-audit": {
+      "path": "qa/core-release/dependency-audit.json",
+      "sha256": "4da0f15a9f8e42e99015ed3325294fcc0a1e130e3af5f15077f542d9bb7014e1"
+    },
+    "native-full": {
+      "path": "qa/core-release/native-full.json",
+      "sha256": "d74be5b2da46199ace7f6129c1bf547a8b98c5ab6a6dbab2bb6a07ae9d919b1e"
+    },
+    "hosted-sql": {
+      "path": "qa/core-release/hosted-sql.json",
+      "sha256": "d78c85b7bf8ab56709ebc703b50506cdcadced418af6cd1ed2e2e9482d10a765"
+    },
+    "candidate-http": {
+      "path": "qa/core-release/candidate-http.json",
+      "sha256": "92fcaa5aefb8a7824f4f4c13a06554ea932739039a799807c0032caef2f703fe"
+    },
+    "production-acl": {
+      "path": "qa/core-release/production-acl.json",
+      "sha256": "13c17585a03919605c7631070f9ba266c7ce025481f0fbbfecb50cbb5e538d15"
+    },
+    "telegram-auth": {
+      "path": "qa/core-release/telegram-auth.json",
+      "sha256": "65138e7169f6ebd41d8fb674889a6b1c3fa951f1e76dbe5dbd71f4543d90724a"
+    },
+    "credential-retirement": {
+      "path": "qa/core-release/credential-retirement.json",
+      "sha256": "ef196cb10aefae856f5eba07587a63d4bf28dd920bcb7b042822f2d9c312f5e9"
+    },
+    "recovery": {
+      "path": "qa/core-release/recovery.json",
+      "sha256": "8677d04e14891a47f45b460376a31dc4aebb423c7c55dab512fefcef1f59a42e"
+    },
+    "mobile": {
+      "path": "qa/core-release/mobile.json",
+      "sha256": "5b8eb9129deeb9e51c7e29ff8c7e978b65ac79823b79fc14371e750190561d87"
+    },
+    "performance": {
+      "path": "qa/core-release/performance.json",
+      "sha256": "ee782c04275b4819e5ebb8c20962ee1131b30d4bfa7652395a1fb98778fa77c1"
+    }
+  },
+  "sourceDigest": "bca714c4178a1008d23616d4d66d0f25f12e3669837f7e1a09c60af0867ea738",
+  "criticalBlockers": [],
+  "knownLimitations": [
+    "Fresh provider prose was not generated in this release run. The historical 80-attempt exploratory comparison is not final-source or statistical proof; Russian phrasing, inference and symbolic certainty limitations remain.",
+    "Discoveries require explicit user confirmation. Automatic personal discovery quality and full cross-domain synthesis are not accepted capabilities.",
+    "Chat finalization spans existing writes and is not a new all-or-nothing transaction. Existing immutable retries and tested idempotency are preserved.",
+    "The full product currently uses dark theme. A CSS light fallback is diagnostic, not a complete selectable light theme.",
+    "Browser mobile emulation does not prove physical iPhone/Telegram GPU, power, keyboard or suspension behavior.",
+    "Direct administrative parent-account cascade deletion can hit the existing portrait-state FK trigger. No user-facing full-account delete route exists; supported memory/profile deletion was verified. Maintenance cleanup must delete owned source records before the parent. A schema fix is deferred for separate reviewed migration.",
+    "Supabase leaked-password protection is off; default ACLs for future objects in the shared project need a scoped follow-up. Current Luna browser access and all 16 corrected tables are verified."
+  ]
+}

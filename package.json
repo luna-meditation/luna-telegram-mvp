@@ -13,6 +13,24 @@
     "build": "pnpm --filter @luna/frontend build && pnpm --filter @luna/backend build && pnpm --filter @luna/website build",
     "lint": "pnpm --filter @luna/frontend lint && pnpm --filter @luna/backend lint",
     "test": "pnpm --filter @luna/frontend test && pnpm --filter @luna/backend test",
-    "typecheck": "pnpm --filter @luna/frontend typecheck && pnpm --filter @luna/backend typecheck"
+    "typecheck": "pnpm --filter @luna/frontend typecheck && pnpm --filter @luna/backend typecheck",
+    "verify:intelligence-core": "node scripts/verify-intelligence-core-v1.mjs"
+  },
+  "pnpm": {
+    "overrides": {
+      "proxy-addr@<2.0.8": "2.0.8",
+      "body-parser@<1.20.9": "1.20.9",
+      "qs@<6.16.0": "6.16.0",
+      "postcss@<8.5.23": "8.5.23",
+      "nanoid@<3.3.18": "3.3.18",
+      "browserslist@<4.28.7": "4.28.7",
+      "baseline-browser-mapping@<2.11.0": "2.11.0",
+      "source-map-js@<1.2.2": "1.2.2",
+      "vite@6.4.3": "6.4.4",
+      "brace-expansion@<1.1.21": "1.1.21",
+      "brace-expansion@>=5.0.0 <5.0.12": "5.0.12",
+      "js-yaml@>=4.0.0 <4.3.2": "4.3.2",
+      "postcss-selector-parser@<7.1.6": "7.1.6"
+    }
   }
 }

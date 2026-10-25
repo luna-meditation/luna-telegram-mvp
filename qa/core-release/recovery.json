@@ -1,0 +1,47 @@
+{
+  "status": "PASS",
+  "projectId": "vkcdtasbdoeilgfucoax",
+  "capturedAt": "2026-10-25T07:12:48.533862+00:00",
+  "verifiedAt": "2026-10-25T07:27:50.025Z",
+  "backupOutsideSyncedDocuments": true,
+  "coverage": {
+    "tables": 91,
+    "functions": 127,
+    "rows": 3126,
+    "triggers": 16,
+    "constraints": 507,
+    "indexes": 77,
+    "views": 1
+  },
+  "passes": [
+    {
+      "pass": 1,
+      "status": "PASS",
+      "mode": "parameterized-json",
+      "allRowsCompared": true,
+      "allTableAndFunctionAclsCompared": true,
+      "functionDefinitionsCompared": true,
+      "rlsCompared": true,
+      "networkListener": false
+    },
+    {
+      "pass": 2,
+      "status": "PASS",
+      "mode": "decrypted-portable-sql",
+      "allRowsCompared": true,
+      "allTableAndFunctionAclsCompared": true,
+      "functionDefinitionsCompared": true,
+      "rlsCompared": true,
+      "networkListener": false
+    }
+  ],
+  "temporaryPlaintextRemoved": true,
+  "media": {
+    "status": "PASS",
+    "sourceVersionsVerified": true,
+    "objects": 28,
+    "allArchivesDecryptedAndContentHashesVerified": true
+  },
+  "productionWrites": 0,
+  "localDetailedEvidenceSha256": "b73d699d1866cb3d8580d0120adbe894b5a5fb0f22870886c9fd154e1db7afcc"
+}
