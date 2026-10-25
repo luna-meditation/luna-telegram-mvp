@@ -21,100 +21,51 @@ type ErrorContext = {
   expected?: boolean;
 };
 
-function asRecord(value: unknown): Record<string, unknown> | null {
-  return value !== null && typeof value === 'object' ? value as Record<string, unknown> : null;
+/** Only inspect data properties; do not evaluate getters or custom inspect. */
+function own(value:unknown,key:string):unknown {
+  if(value===null||(typeof value!=='object'&&typeof value!=='function'))return undefined;
+  try{const d=Object.getOwnPropertyDescriptor(value,key);return d&&'value' in d?d.value:undefined;}catch{return undefined;}
 }
-
-function errorMessage(error: unknown) {
-  const record = asRecord(error);
-  if (error instanceof Error && error.message) return error.message;
-  if (typeof record?.message === 'string' && record.message) return record.message;
-  return String(error);
+function fingerprint(value:unknown){
+  return typeof value==='string'&&value.length>0?'ref-'+crypto.createHash('sha256').update(value.slice(0,1024)).digest('hex').slice(0,24):null;
 }
-
-function errorStack(error: unknown) {
-  return error instanceof Error && error.stack
-    ? error.stack
-    : asRecord(error)?.stack ?? null;
+const safeCodes=new Set(['23505','23503','23514','40001','42501','42P01','42883','42702','P0001','P0002','57014','ECONNREFUSED','ECONNRESET','ETIMEDOUT','ENOTFOUND','insufficient_quota','rate_limit_exceeded','invalid_api_key','chart_source_changed','context_unavailable','memory_unavailable','owner_required','malformed_response']);
+function codeFrom(error:unknown){
+  const code=own(error,'code')??own(own(error,'error'),'code');
+  return typeof code==='string'&&(safeCodes.has(code)||/^PGRST\d{3}$/.test(code))?code:null;
 }
-
-function requestIdFrom(req?: RequestWithId) {
-  if (req?.requestId) return req.requestId;
-  const header = req?.headers['x-request-id'];
-  return Array.isArray(header) ? header[0] ?? null : header ?? null;
+const routeWords=new Set('api profile me avatar luna tools chat conversations history memory memories universe discoveries astrology tarot daily breathing breath-sessions meditations progress garden seeds wallet subscription payments orders status health ready webhook telegram admin v4'.split(' '));
+function endpointFrom(value:unknown){
+  if(typeof value!=='string'||value.length>500)return 'backend';
+  const match=/^(GET|POST|PATCH|PUT|DELETE|OPTIONS) (\/[^?\s]*)/.exec(value);
+  if(!match)return 'backend';
+  return match[1]+' '+match[2].split('/').slice(0,9).map(part=>!part?'':routeWords.has(part)?part:':value').join('/');
 }
-
-function telegramIdFrom(req?: RequestWithId) {
-  const authenticated = asRecord(req)?.telegramUser;
-  const authenticatedTelegramId = asRecord(authenticated)?.telegram_id;
-  if (typeof authenticatedTelegramId === 'number' || typeof authenticatedTelegramId === 'string') {
-    return authenticatedTelegramId;
-  }
-
-  const bodyTelegramId = asRecord(req?.body)?.telegram_id;
-  return typeof bodyTelegramId === 'number' || typeof bodyTelegramId === 'string' ? bodyTelegramId : null;
-}
-
-function supabaseErrorFrom(error: unknown) {
-  const record = asRecord(error);
-  const candidate = asRecord(record?.error) ?? record;
-  const code = candidate?.code;
-  const details = candidate?.details;
-  const hint = candidate?.hint;
-  if (typeof code !== 'string' && typeof details !== 'string' && typeof hint !== 'string') return null;
-  return {
-    code: typeof code === 'string' ? code : null,
-    message: typeof candidate?.message === 'string' ? candidate.message : null,
-    details: typeof details === 'string' ? details : null,
-    hint: typeof hint === 'string' ? hint : null
-  };
-}
-
-function openAiErrorFrom(error: unknown) {
-  const record = asRecord(error);
-  const response = asRecord(record?.response);
-  const code = record?.code;
-  const type = record?.type;
-  const status = record?.status ?? response?.status;
-  const requestId = record?.request_id ?? record?.requestId ?? response?.request_id;
-  const name = record?.name;
-  const isOpenAiError = typeof name === 'string' && name.toLowerCase().includes('openai')
-    || typeof code === 'string' && (code.startsWith('openai_') || code.includes('quota'))
-    || typeof requestId === 'string';
-  if (!isOpenAiError && status === undefined && code === undefined && type === undefined) return null;
-  return {
-    name: typeof name === 'string' ? name : null,
-    status: typeof status === 'number' || typeof status === 'string' ? status : null,
-    code: typeof code === 'string' ? code : null,
-    type: typeof type === 'string' ? type : null,
-    requestId: typeof requestId === 'string' ? requestId : null,
-    message: typeof record?.message === 'string' ? record.message : null
-  };
-}
-
+/** Schema v2 drops raw exception compatibility because even diagnostic text
+ * can contain secrets or personal data. The caller still owns error handling. */
 export function logBackendError(error: unknown, context: ErrorContext = {}) {
-  const req = context.req;
-  const endpoint = context.endpoint ?? (req ? `${req.method} ${req.originalUrl || req.path}` : 'backend');
-  const requestId = context.requestId ?? requestIdFrom(req) ?? `internal-${crypto.randomUUID()}`;
-  const payload = {
-    errorMessage: errorMessage(error),
-    stack: errorStack(error),
-    endpoint,
-    requestId,
-    telegramId: context.telegramId ?? telegramIdFrom(req),
-    plan: context.plan ?? null,
-    stage: context.stage ?? null,
-    reminderType: context.reminderType ?? null,
-    deliveryId: context.deliveryId ?? null,
-    telegramApiError: context.telegramApiError ?? null,
-    rpcName: context.rpcName ?? null,
-    expectedParameterContract: context.expectedParameterContract ?? null,
-    supabaseError: supabaseErrorFrom(error),
-    openaiError: openAiErrorFrom(error),
-    expected: context.expected ?? false,
-    originalException: error
+  const req=own(context,'req'),headers=own(req,'headers');
+  const request=own(context,'requestId')??own(req,'requestId')??own(headers,'x-request-id');
+  const actor=own(context,'telegramId')??own(own(req,'telegramUser'),'telegram_id');
+  const actorNumber=typeof actor==='number'?actor:typeof actor==='string'&&/^\d{1,16}$/.test(actor)?Number(actor):NaN;
+  const status=own(error,'status')??own(own(error,'response'),'status'),code=codeFrom(error);
+  const payload={
+    schemaVersion:2,
+    errorCategory:code&&/^(?:PGRST|[0-9]|P000)/.test(code)?'database_error':error instanceof TypeError?'type_error':error instanceof RangeError?'range_error':error instanceof Error?'application_error':'external_error',
+    errorCode:code,
+    httpStatus:typeof status==='number'&&Number.isInteger(status)&&status>=100&&status<=599?status:null,
+    endpoint:endpointFrom(own(context,'endpoint')),
+    requestId:fingerprint(request)??'internal-'+crypto.randomUUID(),
+    actorHash:Number.isSafeInteger(actorNumber)&&actorNumber>0?fingerprint(String(actorNumber)):null,
+    stageHash:fingerprint(own(context,'stage')),
+    operationHash:fingerprint(own(context,'rpcName')),
+    deliveryHash:fingerprint(own(context,'deliveryId')),
+    expected:own(context,'expected')===true
   };
-  if (context.level === 'info') console.info('[Luna backend exception]', payload);
-  else if (context.level === 'warn') console.warn('[Luna backend exception]', payload);
-  else console.error('[Luna backend exception]', payload);
+  try{
+    const level=own(context,'level');
+    if(level==='info')console.info('[Luna backend exception]',payload);
+    else if(level==='warn')console.warn('[Luna backend exception]',payload);
+    else console.error('[Luna backend exception]',payload);
+  }catch{/* Logging must not break the request's existing failure handling. */}
 }

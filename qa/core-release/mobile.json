@@ -1,0 +1,122 @@
+{
+  "status": "PASS",
+  "totalChecks": 704,
+  "variants": [
+    {
+      "engine": "chromium",
+      "width": 360,
+      "language": "en",
+      "checks": 44,
+      "status": "PASS"
+    },
+    {
+      "engine": "chromium",
+      "width": 360,
+      "language": "ru",
+      "checks": 44,
+      "status": "PASS"
+    },
+    {
+      "engine": "chromium",
+      "width": 375,
+      "language": "en",
+      "checks": 44,
+      "status": "PASS"
+    },
+    {
+      "engine": "chromium",
+      "width": 375,
+      "language": "ru",
+      "checks": 44,
+      "status": "PASS"
+    },
+    {
+      "engine": "chromium",
+      "width": 390,
+      "language": "en",
+      "checks": 44,
+      "status": "PASS"
+    },
+    {
+      "engine": "chromium",
+      "width": 390,
+      "language": "ru",
+      "checks": 44,
+      "status": "PASS"
+    },
+    {
+      "engine": "chromium",
+      "width": 393,
+      "language": "en",
+      "checks": 44,
+      "status": "PASS"
+    },
+    {
+      "engine": "chromium",
+      "width": 393,
+      "language": "ru",
+      "checks": 44,
+      "status": "PASS"
+    },
+    {
+      "engine": "webkit",
+      "width": 360,
+      "language": "en",
+      "checks": 44,
+      "status": "PASS"
+    },
+    {
+      "engine": "webkit",
+      "width": 360,
+      "language": "ru",
+      "checks": 44,
+      "status": "PASS"
+    },
+    {
+      "engine": "webkit",
+      "width": 375,
+      "language": "en",
+      "checks": 44,
+      "status": "PASS"
+    },
+    {
+      "engine": "webkit",
+      "width": 375,
+      "language": "ru",
+      "checks": 44,
+      "status": "PASS"
+    },
+    {
+      "engine": "webkit",
+      "width": 390,
+      "language": "en",
+      "checks": 44,
+      "status": "PASS"
+    },
+    {
+      "engine": "webkit",
+      "width": 390,
+      "language": "ru",
+      "checks": 44,
+      "status": "PASS"
+    },
+    {
+      "engine": "webkit",
+      "width": 393,
+      "language": "en",
+      "checks": 44,
+      "status": "PASS"
+    },
+    {
+      "engine": "webkit",
+      "width": 393,
+      "language": "ru",
+      "checks": 44,
+      "status": "PASS"
+    }
+  ],
+  "productionWrites": 0,
+  "providerCalls": 0,
+  "scope": "Local UI and in-process synthetic records; not live Supabase/provider prose or physical Telegram",
+  "localDetailedEvidenceSha256": "b4170d1d315319c98912ec14971aa608cfa7b894dce94f0a957e4ed8e5a4389d"
+}

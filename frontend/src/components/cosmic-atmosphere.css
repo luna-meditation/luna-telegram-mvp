@@ -1,0 +1,16 @@
+.cosmic-atmosphere{position:fixed;inset:0;z-index:0;pointer-events:none!important;overflow:hidden;contain:strict;background:radial-gradient(ellipse 110% 65% at 83% 10%,#28234255,transparent 75%),linear-gradient(175deg,#080e1d,#070d19 55%,#080b16);color:#eee3d4}
+.cosmic-atmosphere:before{content:'';position:absolute;inset:0;opacity:.22;background:radial-gradient(ellipse 65% 52% at 80% 48%,#62407c60,transparent 85%),radial-gradient(ellipse 95% 35% at 20% 25%,#30467470,transparent);transition:opacity 800ms ease}
+.cosmic-depth{position:absolute;inset:-16px;width:calc(100% + 32px);height:calc(100% + 32px);fill:currentColor;opacity:.36;animation:cosmic-drift 96s ease-in-out infinite alternate;transform:translate3d(0,0,0)}
+.cosmic-depth.depth-1{opacity:.28;animation:cosmic-drift 123s ease-in-out -41s infinite alternate,cosmic-breathe 13s ease-in-out -5s infinite alternate}
+.cosmic-depth.depth-2{opacity:.38;animation:cosmic-drift 79s ease-in-out -23s infinite alternate,cosmic-breathe 19s ease-in-out -9s infinite alternate}
+.app-root:has([data-profile-view="universe"]) .cosmic-atmosphere:before{opacity:.85}
+.app-root:has([data-profile-view="universe"]) .cosmic-depth.depth-0{opacity:.48}
+.app-root:has([data-profile-view="universe"]) .cosmic-depth.depth-2{--cosmic-bright:.8}
+.cosmic-atmosphere[data-paused=true] *{animation-play-state:paused!important}
+.cosmic-atmosphere[data-mode=low] .cosmic-depth{animation:none;opacity:.3}
+.app-root>.app-shell{position:relative;z-index:1}
+@keyframes cosmic-drift{from{transform:translate3d(-3px,5px,0)}to{transform:translate3d(5px,-7px,0)}}
+@keyframes cosmic-breathe{from{opacity:.19}to{opacity:var(--cosmic-bright,.44)}}
+:root[data-theme=light] .cosmic-atmosphere{background:radial-gradient(ellipse at 80% 15%,#e8e1f0,transparent),#f7f4ef;color:#675475}
+:root[data-theme=light] .cosmic-atmosphere:before{background:radial-gradient(ellipse at 70% 50%,#b6a5c233,transparent 85%)}
+@media(prefers-reduced-motion:reduce){.cosmic-atmosphere *{animation:none!important;transition:none!important}.cosmic-atmosphere:before{transition:none}}

@@ -1,0 +1,102 @@
+{
+  "release": "luna-intelligence-core-v1",
+  "status": "PASS",
+  "capturedAt": "2026-10-25T07:52:45.723Z",
+  "stagingProjectId": "funvzpmpbgazsisehiru",
+  "sourceBaseCommit": "d68968805e4f52f78dd108025c87f55664f03e00",
+  "compiledServerSha256": "df5681859a7d41305ce7026c1023d1d9fcea7b62934f3539db51d8deaeaaa383",
+  "realHttp": true,
+  "realSupabaseSdk": true,
+  "syntheticOwnersOnly": true,
+  "productionWrites": 0,
+  "providerCalls": 0,
+  "realFinancialOperations": 0,
+  "cleanup": "PASS",
+  "requests": {
+    "local": 53,
+    "staging": 237,
+    "blocked": 0
+  },
+  "checks": [
+    {
+      "name": "isolated-project-key-and-clean-fixture-precondition",
+      "status": "PASS"
+    },
+    {
+      "name": "signed-auth-expiry-tampering-and-staging-allowlist",
+      "status": "PASS"
+    },
+    {
+      "name": "real-http-user-bootstrap",
+      "status": "PASS"
+    },
+    {
+      "name": "explicit-ai-context-and-memory-consent",
+      "status": "PASS"
+    },
+    {
+      "name": "pending-memory-excluded-from-saved-portrait",
+      "status": "PASS"
+    },
+    {
+      "name": "confirmed-memory-persisted-and-portrait-cache-reused",
+      "status": "PASS"
+    },
+    {
+      "name": "actual-sdk-memory-relevance-and-turn-level-refusal",
+      "status": "PASS"
+    },
+    {
+      "name": "cross-owner-memory-read-and-edit-denied",
+      "status": "PASS"
+    },
+    {
+      "name": "contextual-luna-navigation-persisted-idempotent-and-private",
+      "status": "PASS"
+    },
+    {
+      "name": "memory-correction-stale-write-and-context-replay-invalidation",
+      "status": "PASS"
+    },
+    {
+      "name": "saved-discovery-create-list-source-open-and-owner-isolation",
+      "status": "PASS"
+    },
+    {
+      "name": "discovery-correction-and-russian-contextual-reflection",
+      "status": "PASS"
+    },
+    {
+      "name": "changed-and-deleted-discovery-source-cannot-be-replayed",
+      "status": "PASS"
+    },
+    {
+      "name": "real-natal-calculation-cache-and-cross-owner-privacy",
+      "status": "PASS"
+    },
+    {
+      "name": "my-cosmos-uses-verified-owned-chart-and-numerology",
+      "status": "PASS"
+    },
+    {
+      "name": "unknown-birth-time-shows-incomplete-calculation",
+      "status": "PASS"
+    },
+    {
+      "name": "real-ru-en-profile-persistence",
+      "status": "PASS"
+    },
+    {
+      "name": "deletion-and-consent-revocation-invalidate-personal-context",
+      "status": "PASS"
+    },
+    {
+      "name": "financial-routes-disabled-in-isolated-test",
+      "status": "PASS"
+    },
+    {
+      "name": "all-owned-staging-fixtures-removed",
+      "status": "PASS"
+    }
+  ]
+}

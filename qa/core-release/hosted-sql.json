@@ -1,0 +1,83 @@
+{
+  "checkedAt": "2026-10-25T05:39:59.404Z",
+  "sourceCommit": "d68968805e4f52f78dd108025c87f55664f03e00",
+  "projectId": "funvzpmpbgazsisehiru",
+  "scope": "Actual hosted PostgreSQL functions, triggers and role boundaries. Separate from REST SDK / full candidate HTTP / mobile acceptance.",
+  "status": "PASS",
+  "checks": [
+    {
+      "name": "reviewed function definitions and service-only execution match",
+      "status": "PASS"
+    },
+    {
+      "name": "both synthetic owner IDs initially absent",
+      "status": "PASS"
+    },
+    {
+      "name": "pending observation stays unconfirmed",
+      "status": "PASS"
+    },
+    {
+      "name": "explicit confirmation persists and advances source epoch",
+      "status": "PASS"
+    },
+    {
+      "name": "owner predicates block foreign correction and deletion",
+      "status": "PASS"
+    },
+    {
+      "name": "snapshot replay returns one exact owner revision",
+      "status": "PASS"
+    },
+    {
+      "name": "correction advances revision and rejects stale snapshot",
+      "status": "PASS"
+    },
+    {
+      "name": "deletion removes own memory, preserves other owner and rejects stale projection",
+      "status": "PASS"
+    },
+    {
+      "name": "context opening and replay persist one conversation and one source-bound message",
+      "status": "PASS"
+    },
+    {
+      "name": "foreign owner cannot replay an existing context operation",
+      "status": "PASS"
+    },
+    {
+      "name": "stale context source epoch is rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "memory consent change invalidates prior source epoch",
+      "status": "PASS"
+    },
+    {
+      "name": "anon cannot read private memory or invoke RPC despite forged role claim",
+      "status": "PASS"
+    },
+    {
+      "name": "authenticated cannot read private memory or invoke RPC despite forged role claim",
+      "status": "PASS"
+    }
+  ],
+  "rollbackPostcheck": {
+    "fixtureUsers": 0,
+    "fixtureMemories": 0,
+    "fixtureMessages": 0,
+    "fixtureWalletRows": 0,
+    "fixtureDiscoveries": 0,
+    "fixtureConversations": 0,
+    "fixturePortraitState": 0,
+    "fixturePortraitSnapshots": 0
+  },
+  "rollbackVerified": true,
+  "committedFixtureRows": 0,
+  "productionWrites": 0,
+  "providerGenerationCalls": 0,
+  "financialOperations": 0,
+  "schemaChanges": 0,
+  "concurrency": "Not measured in hosted transaction; prior 12-way native checks remain separate evidence",
+  "fullCandidateHttpAcceptance": "pending"
+}

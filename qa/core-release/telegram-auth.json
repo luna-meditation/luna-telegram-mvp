@@ -1,0 +1,52 @@
+{
+  "checkedAt": "2026-10-25T05:27:13.563921+00:00",
+  "telegramReadOnlyApi": {
+    "botUsername": "myluna_app",
+    "identityMatches": true,
+    "webhookMatches": true,
+    "pendingUpdates": 0,
+    "webhookErrorPresent": false,
+    "miniAppUrlMatches": true
+  },
+  "deployedAuthChecks": [
+    {
+      "name": "valid_signature",
+      "httpStatus": 200,
+      "providerAvailable": true,
+      "model": "gpt-5-mini",
+      "errorClass": null
+    },
+    {
+      "name": "tampered_user",
+      "httpStatus": 401
+    },
+    {
+      "name": "expired",
+      "httpStatus": 401
+    },
+    {
+      "name": "future",
+      "httpStatus": 401
+    },
+    {
+      "name": "duplicate_field",
+      "httpStatus": 401
+    },
+    {
+      "name": "missing_webhook_secret",
+      "httpStatus": 403
+    },
+    {
+      "name": "invalid_webhook_secret",
+      "httpStatus": 403
+    }
+  ],
+  "providerMetadataProbe": {
+    "model": "gpt-5-mini",
+    "available": true,
+    "errorClass": null
+  },
+  "providerGenerationCalls": 0,
+  "databaseWritesByProbe": 0,
+  "localDetailedEvidenceSha256": "2eb1aa2f03386382b071f9759620743f96fccb770cf3e8b717f11e951a7d5378"
+}

@@ -1,0 +1,29 @@
+{
+  "status": "PASS",
+  "productionWrites": 0,
+  "providerCalls": 0,
+  "limits": [
+    "Headless desktop browsers; no physical-phone GPU, power, thermal or Telegram acceptance claimed.",
+    "Comparative frame measurements and DOM/heap samples cannot prove absence of all leaks.",
+    "Light fallback is a forced diagnostic. The actual product currently supports dark theme."
+  ],
+  "results": [
+    {
+      "engine": "chromium",
+      "status": "PASS",
+      "stars": 72,
+      "lowPowerStars": 36,
+      "activeAnimations": 5,
+      "backgroundRemounts": 0
+    },
+    {
+      "engine": "webkit",
+      "status": "PASS",
+      "stars": 72,
+      "lowPowerStars": 36,
+      "activeAnimations": 5,
+      "backgroundRemounts": 0
+    }
+  ],
+  "localDetailedEvidenceSha256": "055a9d964869c8f2e07822383f1f88430ad5615ccf1740d3f42ed36e129e5301"
+}

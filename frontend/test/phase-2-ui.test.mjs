@@ -71,9 +71,10 @@ test('Phase 2.1 uses original bundled illustrations without broken remote assets
   assert.doesNotMatch(src('luna2/ProfileOverview.tsx'), /hero-light\.png|https:\/\//);
 });
 
-test('Profile highlights the real balance and keeps the garden inside Journey rather than duplicating it', () => {
+test('Profile keeps the real balance in its account group and Garden in Wallet', () => {
   const profile = src('luna2/ProfileOverview.tsx');
-  assert.match(profile, /premium-profile-stats/);
+  assert.match(profile, /profile-quiet-groups/);
+  assert.doesNotMatch(profile, /premium-profile-stats/);
   assert.match(profile, /onWallet/);
   assert.doesNotMatch(profile, /luna2-garden-entry|premium-profile-link[^>]*onClick=\{onGarden\}/);
   assert.match(profile, /onJourney/);

@@ -2,6 +2,7 @@ import type {SupabaseClient} from '@supabase/supabase-js';
 import {FoundationError} from './foundation-error.js';
 import {calculateCurrentTransits,type NatalCalculation} from './luna30-astrology-engine.js';
 import {zodiacFactNames} from './luna30-astrology-report-policy.js';
+import {verifiedChartSource} from './luna30-astrology-source.js';
 import {resolvePersonalBirth,numerologyFromBirth} from './personal-context-engine.js';
 /** A calculated supplement to the existing consented personal-context service,
  * never a second profile or a model-inferred birth date. */
@@ -11,12 +12,10 @@ export async function verifiedNumerologyContext(db:SupabaseClient,owner:number,o
  return numerologyFromBirth(await resolvePersonalBirth(db,owner,options.chartId),options.asOf??new Date().toISOString().slice(0,10));
 }
 export async function verifiedCurrentTransits(db:SupabaseClient,owner:number,chartId:string,now=new Date()){
- const result=await db.from('luna30_chart_cache').select('calculation').eq('telegram_id',owner).eq('id',chartId).maybeSingle();
- if(result.error)throw new FoundationError(503,'context_unavailable','Could not retrieve the selected chart.');
- if(!result.data)throw new FoundationError(404,'chart_not_found','Reopen your calculated chart.');
+ const chart=await verifiedChartSource(db,owner,chartId);
  // Ten-minute snapshots are stable within a turn/retry and disclosed explicitly.
  const at=new Date(Math.floor(now.getTime()/600000)*600000).toISOString();
- return namedTransitFacts(calculateCurrentTransits(result.data.calculation as NatalCalculation,at));
+ return namedTransitFacts(calculateCurrentTransits(chart.calculation as NatalCalculation,at));
 }
 /** Numeric zodiac indices are for renderers, not for a language model to
  * reinterpret. Localized labels are derived from the very same engine values. */

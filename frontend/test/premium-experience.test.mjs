@@ -13,7 +13,7 @@ test('all responsive assets are present, content-addressed and preserve source d
 test('the visible Home theme alone loads, with eager responsive artwork and no new flags',()=>{
  const hero=read('src/v2/components/V2Hero.tsx');assert.match(hero,/filter\(\(\[theme\]\)=>theme===resolvedTheme\)/);assert.match(hero,/fetchPriority="high"/);assert.match(hero,/OptimizedImage/);
  const css=read('src/premium-experience.css');assert.match(css,/data-app-active="false"/);assert.match(css,/prefers-reduced-motion/);assert.match(css,/aspect-ratio: 4\/3/);
- assert.match(read('src/main.tsx'),/AmbientSky/);
+ assert.match(read('src/App.tsx'),/<AmbientSky \/>/);assert.doesNotMatch(read('src/main.tsx'),/<AmbientSky/);
 });
 test('AI interpretation reuses saved result with progressive disclosure and no generation calls',()=>{
  const source=read('src/features/tarot/TarotAiInterpretation.tsx');assert.match(source,/ai.summary/);assert.match(source,/details className="tarot-ai-details luna251-reading-details"/);assert.match(source,/ai.context/);assert.match(source,/ai.question/);assert.doesNotMatch(source,/fetch\(|saveTarot|openDailyTarot|createInvoice/);

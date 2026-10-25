@@ -1,0 +1,144 @@
+{
+  "status": "PASS",
+  "schemaSha256": "797e7575ec799f798502b590d2feec439979ee763b5dba47d9c4dd693ed86b8d",
+  "migrationSha256": "4eb6ffa3c924b6fbdf9d8692c4e5c52394989ba3a46268c34c373fec58a9a455",
+  "tables": 91,
+  "functions": 127,
+  "triggers": 16,
+  "constraints": 507,
+  "indexes": 77,
+  "checks": [
+    {
+      "name": "real pgcrypto matches standard SHA-256 and HMAC-SHA256 test vectors",
+      "status": "PASS"
+    },
+    {
+      "name": "all 91 Luna tables, constraints, indexes and full trigger set restore with no customer rows",
+      "status": "PASS"
+    },
+    {
+      "name": "all 127 authoritative Luna function definitions exactly match fresh production hashes",
+      "status": "PASS"
+    },
+    {
+      "name": "rollback-default grant proposal leaves all rows, policies and table ACLs unchanged",
+      "status": "PASS"
+    },
+    {
+      "name": "tested least-privilege fix applies twice while preserving all 91 tables and existing service CRUD",
+      "status": "PASS"
+    },
+    {
+      "name": "unexpected column ACLs, policy changes or lost service rights abort the migration atomically",
+      "status": "PASS"
+    },
+    {
+      "name": "achievements: public SELECT contract retained; browser mutation and admin privileges denied",
+      "status": "PASS"
+    },
+    {
+      "name": "ai_chat_requests: public SELECT contract retained; browser mutation and admin privileges denied",
+      "status": "PASS"
+    },
+    {
+      "name": "ai_usage: public SELECT contract retained; browser mutation and admin privileges denied",
+      "status": "PASS"
+    },
+    {
+      "name": "breath_sessions: public SELECT contract retained; browser mutation and admin privileges denied",
+      "status": "PASS"
+    },
+    {
+      "name": "daily_checkins: public SELECT contract retained; browser mutation and admin privileges denied",
+      "status": "PASS"
+    },
+    {
+      "name": "favorites: public SELECT contract retained; browser mutation and admin privileges denied",
+      "status": "PASS"
+    },
+    {
+      "name": "history: public SELECT contract retained; browser mutation and admin privileges denied",
+      "status": "PASS"
+    },
+    {
+      "name": "moon_gardens: public SELECT contract retained; browser mutation and admin privileges denied",
+      "status": "PASS"
+    },
+    {
+      "name": "payments: public SELECT contract retained; browser mutation and admin privileges denied",
+      "status": "PASS"
+    },
+    {
+      "name": "practice_days: public SELECT contract retained; browser mutation and admin privileges denied",
+      "status": "PASS"
+    },
+    {
+      "name": "progress: public SELECT contract retained; browser mutation and admin privileges denied",
+      "status": "PASS"
+    },
+    {
+      "name": "streaks: public SELECT contract retained; browser mutation and admin privileges denied",
+      "status": "PASS"
+    },
+    {
+      "name": "users: public SELECT contract retained; browser mutation and admin privileges denied",
+      "status": "PASS"
+    },
+    {
+      "name": "categories: public SELECT contract retained; browser mutation and admin privileges denied",
+      "status": "PASS"
+    },
+    {
+      "name": "meditations: public SELECT contract retained; browser mutation and admin privileges denied",
+      "status": "PASS"
+    },
+    {
+      "name": "practices: public SELECT contract retained; browser mutation and admin privileges denied",
+      "status": "PASS"
+    },
+    {
+      "name": "confirmed memory correction/deletion retain explicit owner isolation with real foreign keys and triggers",
+      "status": "PASS"
+    },
+    {
+      "name": "twelve concurrent real chart snapshots persist one exact source revision",
+      "status": "PASS"
+    },
+    {
+      "name": "real memory invalidation trigger rejects stale saved-chart snapshots",
+      "status": "PASS"
+    },
+    {
+      "name": "twelve contextual openings persist one conversation and reject another owner replay",
+      "status": "PASS"
+    },
+    {
+      "name": "twelve package preparations create one order with immutable current catalog terms",
+      "status": "PASS"
+    },
+    {
+      "name": "existing acceptance RPC rejects foreign-owner and changed-price callbacks",
+      "status": "PASS"
+    },
+    {
+      "name": "twelve synthetic duplicate payment callbacks credit once through actual receipt/provenance/reconciliation logic",
+      "status": "PASS"
+    },
+    {
+      "name": "deferred reconciliation trigger exists and historical Lifetime/financial settings are unchanged",
+      "status": "PASS"
+    },
+    {
+      "name": "all function bodies and non-target table privileges remain unchanged after the full native workflow",
+      "status": "PASS"
+    }
+  ],
+  "productionWrites": 0,
+  "copiedCustomerRows": 0,
+  "providerCalls": 0,
+  "realFinancialOperations": 0,
+  "listenAddresses": "",
+  "clusterStopped": true,
+  "plaintextRemoved": true,
+  "scope": "Full Luna relational metadata; 27 unrelated application tables excluded and not touched. Native service-role/SQL execution is separate from positive hosted HTTP/Telegram acceptance."
+}

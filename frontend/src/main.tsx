@@ -10,11 +10,11 @@ import './luna30-experience.css';
 import './luna31-experience.css';
 import './luna32-experience.css';
 import './luna-design3.css';
-import {AmbientSky} from './design-system/components/AmbientSky';
+import './design-system/manrope.css';
+import './design-system/luna-typography.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <AmbientSky />
     <App />
   </React.StrictMode>
 );
