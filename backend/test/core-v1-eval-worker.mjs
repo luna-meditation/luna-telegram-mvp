@@ -10,8 +10,10 @@ const {item,turn,history}=input,message=item.turns[turn],recent=[...history,{rol
 // Reproduce the actual pre-Core central-chat call site, including its explicit
 // interface-language flag; do not accidentally evaluate the policy's default.
 const language=languageModule.resolveConversationLanguage?languageModule.resolveConversationLanguage(message,item.interfaceLanguage,recent,'auto'):languagePolicy.resolveResponseLanguage(message,item.interfaceLanguage,recent,true);
-const rows=memoryRows(item,turn),personal=personalPolicy.permittedPersonalContext({...personalPolicy.emptyPersonalProfile,ai_context_consent:true,confirmed_memories:memoryPolicy.selectRelevantMemories(rows,message),saved_reflections:memoryPolicy.selectRelevantReflections(rows,message)});
+const rows=input.memoryRows??memoryRows(item,turn),personal=personalPolicy.permittedPersonalContext({...personalPolicy.emptyPersonalProfile,ai_context_consent:true,confirmed_memories:memoryPolicy.selectRelevantMemories(rows,message),saved_reflections:memoryPolicy.selectRelevantReflections(rows,message)});
 const context={personalContext:personal,runtimeDecision:{intent:'general_chat',action:'none',confidence:1},previousQuickReplies:[]};
+if(input.guidedEntry)context.guidedEntry=input.guidedEntry;
+if(input.freshEntry)context.freshEntry=input.freshEntry;
 let groundTruth={family:item.family,confirmedMemoryIds:personal?.confirmedMemories?.map(row=>row.id)??[],forbidden:['PRIVATE_MEMORY_CANARY_47','UNSOURCED_MEMORY_CANARY_48']};
 if(input.selectedOpening&&item.family==='discovery'&&turn===1){
  const [{buildPersonalPortrait},{portraitDiscussionOpening}]=await Promise.all([module('personal-portrait-policy'),module('portrait-discussion-policy')]);

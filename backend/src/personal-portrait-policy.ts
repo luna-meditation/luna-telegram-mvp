@@ -14,7 +14,7 @@ const portraitText=(row:PersonalMemory)=>row.memory_key.startsWith('cosmos_')?co
  * explicit user-labelled observations; zodiac signs never assign traits. */
 export function buildPersonalPortrait(input:{memories:PersonalMemory[];profile:Pick<PersonalProfile,'interests'|'ai_context_consent'>;memoryEnabled:boolean;hasBirth:boolean}):PersonalPortrait{
  const sections:PersonalPortrait['sections']={essence:[],strengths:[],motivations:[],relationships:[],direction:[],growth:[],discoveries:[]};
- const rows=input.memories.filter(eligible).filter(row=>row.memory_key!=='companion_settings'&&row.memory_key!=='meet_interests').sort((a,b)=>b.updated_at.localeCompare(a.updated_at)||a.id.localeCompare(b.id));
+ const rows=input.memories.filter(eligible).filter(row=>!row.memory_key.startsWith('luna_feedback_')&&row.memory_key!=='companion_settings'&&row.memory_key!=='meet_interests').sort((a,b)=>b.updated_at.localeCompare(a.updated_at)||a.id.localeCompare(b.id));
  for(const row of rows){
   const item:PortraitEvidence={id:row.id,text:portraitText(row),kind:row.memory_kind==='symbolic'?(row.source_type==='user_saved_ai_reflection'?'symbolic_reflection':'user_reflection'):'user_fact',source:row.source_type,createdAt:row.created_at,updatedAt:row.updated_at,private:row.is_sensitive};
   const key=row.memory_key.toLocaleLowerCase();let section:PortraitSection;

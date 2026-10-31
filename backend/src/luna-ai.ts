@@ -1,3 +1,5 @@
+import {conversationEntryRows,guidedDirection,guidedTopics} from './product-experience.js';
+import {toolOperationId} from './luna40-actions.js';
 import {retrieveInterpretationKnowledge} from './symbolic-interpretation-knowledge.js';
 import {declinesMemoryUse} from './personal-memory-policy.js';
 import {createLanguagePreferences,resolveConversationLanguage} from './luna40-language.js';
@@ -151,7 +153,9 @@ const tolerantModelResultSchema = z.object({
 });
 
 export const lunaChatInputSchema = z.object({
-  entryContext:z.object({key:z.string().regex(/^[a-f0-9]{64}$/),timeZone:z.string().max(100),dismissed:z.boolean()}).strict().optional(),
+  guidedTopic:z.enum(guidedTopics).optional(),
+  guidedLanguage:z.enum(['en','ru']).optional(),
+  entryContext:z.object({key:z.string().regex(/^[a-f0-9]{64}$/),timeZone:z.string().max(100),language:z.enum(['en','ru']).optional(),dismissed:z.boolean()}).strict().optional(),
   workflowReply:z.object({id:z.string().max(80),option:z.string().regex(/^option-[123]$/)}).strict().optional(),
   intelligenceVersion:z.literal(1).optional(),
   mode:lunaModeSchema.optional(),
@@ -848,7 +852,7 @@ async function loadContext(telegramId: number, conversationId: string, currentMe
   ]);
 
   const memoryDeclined=declinesMemoryUse(currentMessage);
-  const recentMessages = resetAttachment||memoryDeclined?[{role:'user',content:currentMessage,metadata:null,request_id:null,created_at:new Date().toISOString()}]:messagesAfterContextReset([...messagesAfterMemoryBoundary(recent ?? [],memoryBoundary)].reverse());
+  const recentMessages = resetAttachment||memoryDeclined?[{role:'user',content:currentMessage,metadata:null,request_id:null,created_at:new Date().toISOString()}]:messagesAfterContextReset([...messagesAfterMemoryBoundary((recent ?? []).filter(message=>!message.metadata?.entryOpening?.excludeFromAi),memoryBoundary)].reverse());
   // Same-millisecond timestamps are conservatively excluded; the authenticated
   // current request is always explicit context, never recovered historical memory.
   if((recentMessages.at(-1)?.role!=='user'||recentMessages.at(-1)?.content!==currentMessage)){
@@ -1103,7 +1107,8 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
   }
   const personalStarted=performance.now();
   let entry:DailyPersonalEntry|null=null;
-  if(input.entryContext&&!input.conversationId&&!input.readingId&&!input.chartId&&!input.personalReportId&&env.FEATURE_PERSONAL_MEMORY){const current=await createCompanionEngine(supabase,getUniverse,{portrait:(owner,day)=>readPersonalPortrait(supabase,owner,()=>getUniverse(owner),day)}).open(telegramId,{operationId:crypto.randomUUID(),entryOnly:true,timeZone:input.entryContext.timeZone,language:input.language});if(current.entry?.key===input.entryContext.key)entry=current.entry;}
+  let entryChanged=false;
+  if(input.entryContext&&!input.conversationId&&!input.readingId&&!input.chartId&&!input.personalReportId&&env.FEATURE_PERSONAL_MEMORY){const current=await createCompanionEngine(supabase,getUniverse,{portrait:(owner,day)=>readPersonalPortrait(supabase,owner,()=>getUniverse(owner),day)}).open(telegramId,{operationId:crypto.randomUUID(),entryOnly:true,timeZone:input.entryContext.timeZone,language:input.entryContext.language??input.language});if(current.entry?.key!==input.entryContext.key)entryChanged=true;else entry=current.entry;}
   const entryQuestion=entry?(input.entryContext?.dismissed||entry.reflection&&!entry.contextReflectionAllowed?(responseLanguage==='ru'?'Что для тебя сейчас важно?':'What matters to you today?'):entry.question||entry.reflection?.text||''):'';
   const entryWorkflow=entryQuestion?personalWorkflowReply(input.message,personalWorkflowFromAnswer(entryQuestion,[],'personal_entry')):null;
   const personalOptions={calculatedOverview:true,artifact:input.readingId?{kind:'tarot' as const,id:input.readingId}:input.chartId&&!input.astrology?.secondChartId?{kind:'natal' as const,id:input.chartId}:undefined};
@@ -1157,6 +1162,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
   try {
     const storedRequest = await chatRequest(telegramId, input.requestId);
     conversationId = conversationId ?? storedRequest?.conversation_id ?? undefined;
+    if(entryChanged&&!conversationId)throw new LunaAiError('entry_changed','Your personal context changed. Start a fresh conversation.',409,false);
     if (conversationId) {
       const conversation = await ownedConversation(telegramId, conversationId);
       conversationTitle = conversation.title ?? '';
@@ -1178,6 +1184,20 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
           status: 'completed', assistant_message_id: duplicateAssistant.id, completed_at: new Date().toISOString(), error_code: null
         });
         return { conversationId: resolvedConversationId, message: duplicateAssistant, duplicate: true, remaining: reservation.remaining, requestState: 'completed' as const };
+      }
+    }
+
+    if(entryChanged)throw new LunaAiError('entry_changed','Your personal context changed. Start a fresh conversation.',409,false);
+    if (!input.conversationId && (entry || input.guidedTopic)) {
+      const rows=conversationEntryRows(entry,input.language,input.entryContext?.dismissed,input.guidedTopic,input.guidedLanguage??input.language);
+      if(rows.length){
+        const savedOpening=await supabase.from('ai_messages').upsert(rows.map((row,index)=>({
+          id:toolOperationId(telegramId,resolvedConversationId,'entry.'+(entry?.key??input.requestId)+'.'+index,'v2'),
+          telegram_id:telegramId,conversation_id:resolvedConversationId,role:row.role,content:row.content,
+          metadata:{entryOpening:{version:2,key:entry?.key??input.requestId,index:row.index,excludeFromAi:row.excludeFromAi,...('basis' in row?{basis:row.basis}:{})}},
+          created_at:new Date(Date.now()-rows.length+index).toISOString()
+        })),{onConflict:'id',ignoreDuplicates:true});
+        if(savedOpening.error)throw new LunaAiError('conversation_entry_unavailable','Could not preserve the conversation opening.',503,true);
       }
     }
 
@@ -1345,6 +1365,7 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
     });
     const selectedDiscovery=personal&&memoryEnabled?discoveryReferenceFromRecent(recent):null;
     const modelContext = {
+      ...(!input.conversationId&&input.guidedTopic?{guidedEntry:{topic:input.guidedTopic,...guidedDirection(input.guidedTopic,responseLanguage)}}:{}),
       ...context,
       ...(entry?{freshEntry:{question:entryQuestion,localDate:entry.localDate,basis:input.entryContext?.dismissed||!entry.contextReflectionAllowed?null:entry.reflection?.basis??null}}:{}),
       ...(personalReportContext?{personalReportContext}:{}),

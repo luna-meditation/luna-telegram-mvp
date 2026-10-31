@@ -1,0 +1,309 @@
+{
+  "release": "product-experience-v2",
+  "status": "PASS",
+  "preparedAt": "2026-10-31T04:04:36.704650+00:00",
+  "baseCommit": "6faafbd7093611b1a357d1a980f7194a5d44739e",
+  "projectId": "vkcdtasbdoeilgfucoax",
+  "staging": "omitted-by-explicit-owner-instruction-2026-10-31",
+  "criticalBlockers": [],
+  "productionModel": "gpt-5-mini",
+  "aiCapUsd": 100,
+  "financialPolicyChanged": false,
+  "modelChanged": false,
+  "aiCapChanged": false,
+  "customerDataMutatedByTests": false,
+  "realFinancialOperations": 0,
+  "productionMigrations": 0,
+  "commands": {
+    "nodeMajor": 22,
+    "externalNetworkBlocked": true,
+    "results": [
+      {
+        "name": "backend-tests",
+        "exitCode": 0,
+        "logSha256": "801f7b69483f02bb0f35c30671537fe391e2bca4748f98dfd12c9a6179bb306c"
+      },
+      {
+        "name": "frontend-tests",
+        "exitCode": 0,
+        "logSha256": "c8f0fd91807ca150500cd744060798fc9b66b42b6ed6613fc4821daaaed88684"
+      },
+      {
+        "name": "backend-lint",
+        "exitCode": 0,
+        "logSha256": "5176f62461ef3e9213822868a449fe490db821562ed126e2235116842fb534dd"
+      },
+      {
+        "name": "frontend-lint",
+        "exitCode": 0,
+        "logSha256": "2452a9ddca3adab41feec5c92e192c56e69a15e9bf70e131fe1eb839d9f28d3a"
+      },
+      {
+        "name": "backend-type",
+        "exitCode": 0,
+        "logSha256": "019928fd442a92138e6066c3066027c7fd9b166a1096b87c85f734122ae79e7a"
+      },
+      {
+        "name": "frontend-type",
+        "exitCode": 0,
+        "logSha256": "88dac549f617c488dd0291fd5ad0a895a138d407c02004c49846123d4240be23"
+      },
+      {
+        "name": "backend-build",
+        "exitCode": 0,
+        "logSha256": "2c1059c102365bd2e701b39de27194a2aaafdd5d5e7fe7d397e8e4e09b374feb"
+      },
+      {
+        "name": "frontend-build",
+        "exitCode": 0,
+        "logSha256": "24d041400af308f97a41320bebb31facffc9037671e5ea9e48d9a4f9c3b1fb06"
+      }
+    ],
+    "backendTests": 983,
+    "frontendTests": 301
+  },
+  "dependencies": {
+    "productionVulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0
+    },
+    "developmentOnlyAdvisories": [
+      {
+        "id": "GHSA-g3hv-75wg-m249",
+        "module": "minimatch",
+        "severity": "moderate",
+        "versions": [
+          "3.1.5",
+          "10.2.5"
+        ]
+      }
+    ],
+    "otherAdvisories": 0,
+    "fixDeferredReason": "major-only-fix-in-development-glob-tooling"
+  },
+  "database": {
+    "native": {
+      "status": "PASS",
+      "checks": 31,
+      "reportSha256": "b62231e4e180dcbdc01d2492657db5065f179bb7f2c2f0c9179068392fc2ce4e"
+    },
+    "functionDefinitionsCompared": 127,
+    "changedFunctions": 0,
+    "sixteenTables": {
+      "rlsEnabled": 16,
+      "missingServiceCrud": 0,
+      "browserPrivilegeMismatches": 0,
+      "unexpectedExplicitBrowserColumnGrants": 0
+    },
+    "privateTablesBrowserPrivileges": 0,
+    "financialSettingsUnchanged": true,
+    "productionNegativeAuthChecks": 9
+  },
+  "recovery": {
+    "status": "PASS",
+    "projectId": "vkcdtasbdoeilgfucoax",
+    "capturedAt": "2026-10-31 03:40:49.556651+00",
+    "verifiedAt": "2026-10-31T04:03:28.050Z",
+    "backupOutsideSyncedDocuments": true,
+    "encryptedExport": true,
+    "coverage": {
+      "tables": 91,
+      "functions": 127
+    },
+    "passes": [
+      {
+        "status": "PASS",
+        "method": "recordset",
+        "tables": 91,
+        "functions": 127,
+        "allRowsCompared": true,
+        "allTableAndFunctionAclsCompared": true,
+        "functionDefinitionsCompared": true,
+        "rlsCompared": true,
+        "triggersRestored": 16,
+        "policiesRestored": 4
+      },
+      {
+        "status": "PASS",
+        "method": "individual-records",
+        "tables": 91,
+        "functions": 127,
+        "allRowsCompared": true,
+        "allTableAndFunctionAclsCompared": true,
+        "functionDefinitionsCompared": true,
+        "rlsCompared": true,
+        "triggersRestored": 16,
+        "policiesRestored": 4
+      }
+    ],
+    "media": {
+      "status": "PASS",
+      "objects": 28,
+      "bytes": 239528218,
+      "sourceVersionsVerified": true,
+      "allArchivesDecryptedAndContentHashesVerified": true
+    },
+    "productionWrites": 0,
+    "networkListener": false,
+    "temporaryPlaintextRemoved": true,
+    "plaintextExportFilesCreated": 0,
+    "temporaryDatabaseFilesCreated": true,
+    "temporaryDatabaseFilesRemoved": true
+  },
+  "mobile": {
+    "status": "PASS",
+    "variants": [
+      {
+        "engine": "chromium",
+        "width": 360,
+        "language": "en",
+        "checks": 26,
+        "status": "PASS"
+      },
+      {
+        "engine": "chromium",
+        "width": 360,
+        "language": "ru",
+        "checks": 26,
+        "status": "PASS"
+      },
+      {
+        "engine": "chromium",
+        "width": 375,
+        "language": "en",
+        "checks": 26,
+        "status": "PASS"
+      },
+      {
+        "engine": "chromium",
+        "width": 375,
+        "language": "ru",
+        "checks": 26,
+        "status": "PASS"
+      },
+      {
+        "engine": "chromium",
+        "width": 390,
+        "language": "en",
+        "checks": 26,
+        "status": "PASS"
+      },
+      {
+        "engine": "chromium",
+        "width": 390,
+        "language": "ru",
+        "checks": 26,
+        "status": "PASS"
+      },
+      {
+        "engine": "chromium",
+        "width": 393,
+        "language": "en",
+        "checks": 26,
+        "status": "PASS"
+      },
+      {
+        "engine": "chromium",
+        "width": 393,
+        "language": "ru",
+        "checks": 26,
+        "status": "PASS"
+      },
+      {
+        "engine": "webkit",
+        "width": 360,
+        "language": "en",
+        "checks": 26,
+        "status": "PASS"
+      },
+      {
+        "engine": "webkit",
+        "width": 360,
+        "language": "ru",
+        "checks": 26,
+        "status": "PASS"
+      },
+      {
+        "engine": "webkit",
+        "width": 375,
+        "language": "en",
+        "checks": 26,
+        "status": "PASS"
+      },
+      {
+        "engine": "webkit",
+        "width": 375,
+        "language": "ru",
+        "checks": 26,
+        "status": "PASS"
+      },
+      {
+        "engine": "webkit",
+        "width": 390,
+        "language": "en",
+        "checks": 26,
+        "status": "PASS"
+      },
+      {
+        "engine": "webkit",
+        "width": 390,
+        "language": "ru",
+        "checks": 26,
+        "status": "PASS"
+      },
+      {
+        "engine": "webkit",
+        "width": 393,
+        "language": "en",
+        "checks": 26,
+        "status": "PASS"
+      },
+      {
+        "engine": "webkit",
+        "width": 393,
+        "language": "ru",
+        "checks": 26,
+        "status": "PASS"
+      }
+    ],
+    "totalChecks": 416,
+    "detailedEvidenceSha256": "6835750bd2a15d3bf800a0b0cfb61c88d44beac3d01018f552be9d05ee1417cf",
+    "returningSequentialMessagesRuEn": "PASS"
+  },
+  "performance": {
+    "status": "PASS",
+    "visibleFrameChangeVerified": true,
+    "reducedMotionVerified": true,
+    "lowPowerVerified": true,
+    "reportSha256": "ab76ef907433a46183f0ede667c676a6dcb3a35552cb755f1366eef131a2049f"
+  },
+  "ai": {
+    "scenarios": 10,
+    "completed": 60,
+    "failed": 0,
+    "requestReplayMatches": 60,
+    "costUsd": 0.051075,
+    "scope": "request-construction-and-raw-provider-prose",
+    "independentHumanReview": false,
+    "resultsSha256": "13c654712210cce81a4a23cd1c9d9a6a72a231c13fc95739d9c49bae60c96bec"
+  },
+  "physicalTelegramAcceptance": "pending-owner-review",
+  "rollback": {
+    "commit": "6faafbd7093611b1a357d1a980f7194a5d44739e",
+    "railwayDeployment": "87a6548d-3266-492c-93ea-99fecc77a1e7",
+    "netlifyDeployment": "6addc0607b5026b0c6b2bea7"
+  },
+  "knownLimitations": [
+    "Real provider evaluation covers ten synthetic conversations and raw prose, not statistical proof or every live tool workflow; inference and extra follow-up questions remain.",
+    "Discoveries require explicit review and confirmation; a generated draft may add an unsupported inference.",
+    "Physical iPhone/Telegram WebView, GPU, power and keyboard acceptance remains pending owner review.",
+    "Daily reflections use a confirmed goal or saved natal Sun; they are not daily transit forecasts and may repeat across days.",
+    "Chat finalization retains existing multiple writes; this release adds no new transactional RPC or migration.",
+    "Two moderate development-only minimatch advisory instances need a separately verified major tooling update. Production dependency audit is clean.",
+    "Future-object default ACLs and Supabase leaked-password protection remain follow-up items; Telegram authorization, current RLS and current private-table privileges were verified."
+  ],
+  "sourceDigest": "a727454948e4189d432a8e6001afdf755c92916dde693c7ae5598e05014f0a97"
+}

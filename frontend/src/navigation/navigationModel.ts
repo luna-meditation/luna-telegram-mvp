@@ -12,6 +12,7 @@ export type AppPage =
   | 'progress'
   | 'favorites'
   | 'profile'
+  | 'cosmos'
   | 'pricing'
   | 'player'
   | 'scenePlayer'
@@ -21,8 +22,8 @@ export type AppPage =
   | 'admin';
 
 export type PrimaryNavigationItem = {
-  page: Extract<AppPage, 'home' | 'library' | 'explore' | 'luna' | 'progress' | 'profile'>;
-  labelKey: 'home' | 'explore' | 'lunaAi' | 'journey' | 'profile';
+  page: Extract<AppPage, 'home' | 'library' | 'explore' | 'luna' | 'progress' | 'profile' | 'cosmos'>;
+  labelKey: 'home' | 'explore' | 'lunaAi' | 'journey' | 'profile' | 'cosmos';
 };
 
 export const legacyPrimaryNavigation: readonly PrimaryNavigationItem[] = [
@@ -36,7 +37,7 @@ export const legacyPrimaryNavigation: readonly PrimaryNavigationItem[] = [
 export const luna2PrimaryNavigation: readonly PrimaryNavigationItem[] = [
   { page: 'home', labelKey: 'home' },
   { page: 'luna', labelKey: 'lunaAi' },
-  { page: 'profile', labelKey: 'profile' }
+  { page: 'cosmos', labelKey: 'cosmos' }
 ];
 
 export function primaryNavigation(newNavigation: boolean) {
@@ -48,6 +49,8 @@ export function isPrimaryPage(page: AppPage, newNavigation: boolean) {
 }
 
 export function fallbackPage(page: AppPage, newNavigation: boolean): AppPage {
+  if (newNavigation && ['profile', 'wallet', 'activity', 'achievements', 'progress', 'moonGarden', 'pricing'].includes(page)) return 'cosmos';
+  if (!newNavigation && page === 'cosmos') return 'profile';
   if (newNavigation && (page === 'explore' || page === 'library' || page === 'tarot' || page === 'astrology')) return 'home';
   if (page === 'wallet' || page === 'activity' || page === 'achievements') return 'profile';
   if (page === 'favorites' || page === 'player' || page === 'scenePlayer' || page === 'mantraPlayer' || page === 'breathCircle') {
@@ -60,7 +63,7 @@ export function fallbackPage(page: AppPage, newNavigation: boolean): AppPage {
 
 export function pageFromStartParam(startParam: string, newNavigation = false): AppPage {
   const launch=parseLaunchDestination(startParam);
-  const destinations:Record<string,AppPage>={daily:'tarot',natal:'astrology',compatibility:'astrology',membership:'pricing',seeds:'wallet',invite:'profile',meet:'profile',cosmos:'profile'};
+  const destinations:Record<string,AppPage>={daily:'tarot',natal:'astrology',compatibility:'astrology',membership:'pricing',seeds:'wallet',invite:'profile',meet:'luna',cosmos:'cosmos'};
   if(newNavigation&&destinations[launch.destination])return destinations[launch.destination];
   if(launch.referral)return pageFromStartParam(launch.destination,newNavigation);
   const normalized = startParam.trim().toLowerCase();

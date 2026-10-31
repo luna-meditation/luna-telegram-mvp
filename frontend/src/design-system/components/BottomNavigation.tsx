@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import { useLayoutEffect, useRef } from 'react';
-import { BookOpen, Compass, Home, MessageCircle, Route, Sparkles, User } from 'lucide-react';
+import { BookOpen, Compass, Home, MessageCircle, Orbit, Route, Sparkles, User } from 'lucide-react';
 import { primaryNavigation, primaryParent, type AppPage } from '../../navigation/navigationModel';
 
 export type NavigationPage = AppPage;
@@ -8,17 +8,18 @@ export type NavigationPage = AppPage;
 type BottomNavigationProps = {
   active: NavigationPage;
   onChange: (page: NavigationPage) => void;
-  labels: { home: string; luna: string; library: string; progress: string; profile: string; explore: string; lunaAi: string; journey: string };
+  labels: { home: string; luna: string; library: string; progress: string; profile: string; cosmos: string; explore: string; lunaAi: string; journey: string };
   newNavigation?: boolean;
 };
 
-const icons: Record<'home' | 'library' | 'explore' | 'luna' | 'progress' | 'profile', LucideIcon> = {
+const icons: Record<'home' | 'library' | 'explore' | 'luna' | 'progress' | 'profile' | 'cosmos', LucideIcon> = {
   home: Home,
   library: BookOpen,
   explore: Compass,
   luna: MessageCircle,
   progress: Route,
-  profile: User
+  profile: User,
+  cosmos: Orbit
 };
 
 export function BottomNavigation({ active, onChange, labels, newNavigation = false }: BottomNavigationProps) {

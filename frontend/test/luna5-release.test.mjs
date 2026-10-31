@@ -14,5 +14,5 @@ test('Luna 5 gate keeps one publication, no staging/provider suite and unchanged
 test('Core v1 cannot reuse a historical Luna 5 publication receipt',()=>{assert.throws(()=>verifyLuna5ReleaseEvidence(fixture(),root),error=>error.status===1&&String(error.message).includes('git diff'));});
 
 test('production packaging explicitly supports the current source-bound Luna 5 receipt without replaying old paid evidence',()=>{
- const s=readFileSync('scripts/build-production.mjs','utf8'),digest=readFileSync('scripts/release-source-digest.mjs','utf8');assert.match(s,/if\(profile==='luna5'\)/);assert.match(s,/verifyLuna5ReleaseEvidence/);assert.match(digest,/frontend\/vite.config.ts/);assert.match(digest,/supabase\/migrations/);assert.match(readFileSync('../netlify.toml','utf8'),/LUNA_RELEASE_PROFILE = "core-v1"/);
+ const s=readFileSync('scripts/build-production.mjs','utf8'),digest=readFileSync('scripts/release-source-digest.mjs','utf8');assert.match(s,/if\(profile==='luna5'\)/);assert.match(s,/verifyLuna5ReleaseEvidence/);assert.match(digest,/frontend\/vite.config.ts/);assert.match(digest,/supabase\/migrations/);assert.match(readFileSync('../netlify.toml','utf8'),/LUNA_RELEASE_PROFILE = "product-v2"/);
 });

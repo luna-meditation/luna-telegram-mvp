@@ -1,0 +1,24 @@
+.cosmos-quiet-header{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;text-align:left}
+.cosmos-quiet-header p{font-size:12px;margin:0 0 6px;color:var(--text-secondary)}
+.cosmos-account-entry{flex:0 0 auto;display:grid;place-items:center;width:44px;height:44px;color:var(--portrait-gold);border:1px solid var(--cosmos-line);border-radius:50%}
+.cosmos-overview-summary{max-width:34ch;margin:0;font-size:14px!important;line-height:1.6!important}
+.cosmos-simple[data-cosmos-view=overview] .cosmos-universe-entry>.natal-orbit{max-width:200px}
+.cosmos-simple[data-cosmos-view=overview] .cosmos-neutral-sky{width:200px}
+.cosmos-portrait-summary{display:grid;gap:24px}
+.cosmos-portrait-summary h2{margin:0 0 10px;font-size:20px}
+.cosmos-portrait-summary h3{margin:0;font-size:14px;color:var(--text-secondary)}
+.cosmos-portrait-summary p{margin:7px 0;font-size:14px;line-height:1.65}
+.cosmos-portrait-summary blockquote{margin:10px 0;padding:4px 0 4px 15px;border-left:2px solid var(--portrait-gold);font-size:16px;line-height:1.6}
+.cosmos-readable-chart>div{display:grid;gap:14px;margin:16px 0}
+.cosmos-readable-chart article{border-top:1px solid var(--cosmos-line);padding-top:14px}
+.cosmos-readable-chart strong{display:block;margin-top:4px;font-size:20px;font-weight:500;color:var(--portrait-gold)}
+.cosmos-portrait-numbers>summary{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.cosmos-portrait-discuss{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:48px;border-block:1px solid var(--cosmos-line);border-radius:0!important;text-align:left;color:var(--portrait-gold)}
+.luna-guided-entry{padding:4px 8px 16px 30px}
+.luna-guided-directions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.luna-guided-directions button,.luna-guided-actions button{min-height:48px;padding:11px 13px;text-align:left;font-size:14px;line-height:1.4;color:var(--text-primary);background:var(--surface-subtle);border:1px solid var(--border-subtle);border-radius:16px}
+.luna-guided-actions{display:grid;gap:8px}
+.luna-entry-pending{padding:24px 10px;display:grid;gap:12px;justify-items:start;color:var(--text-secondary);font-size:14px}
+.luna-entry-pending button{min-height:44px;display:block;color:var(--color-gold-soft)}
+
+.luna-entry-basis{display:block;margin:5px 4px 0;color:var(--text-secondary,#a8b2c7);font-size:11px;line-height:1.45;max-width:32em}

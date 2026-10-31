@@ -1,17 +1,39 @@
-/** A deterministic, source-labelled daily reflection. This is not a transit
- * forecast, an LLM answer, a confirmed personality fact or a second memory store. */
-export const dailyEntryVersion='luna5-solar-reflection-v1';
-export type DailyPersonalEntry={version:1;key:string;localDate:string;timeZone:string;greeting:string;question:string;reflection:null|{text:string;basis:string;source:'saved_chart'|'date_only_sun';calculationVersion:string};birthAvailable:boolean;hasBirthTime:boolean;contextReflectionAllowed:boolean};
+/** A deterministic personal reflection, never a current-transit forecast. */
+export const dailyEntryVersion='luna-product-v2-reflection-v1';
+export type DailyPersonalEntry={version:1;key:string;localDate:string;timeZone:string;language?:'en'|'ru';greeting:string;question:string;audience?:'new'|'returning';reflection:null|{text:string;basis:string;source:'saved_chart'|'date_only_sun'|'confirmed_goal';calculationVersion:string};birthAvailable:boolean;hasBirthTime:boolean;contextReflectionAllowed:boolean};
 export function localCalendarDate(now:Date,timeZone:string){
  const parts=new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(now);
  return ['year','month','day'].map(name=>parts.find(p=>p.type===name)!.value).join('-');
 }
-const signs={en:['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'],ru:['Овен','Телец','Близнецы','Рак','Лев','Дева','Весы','Скорпион','Стрелец','Козерог','Водолей','Рыбы']};
-const themes={en:['initiative without rushing','steadiness without getting stuck','curiosity without scattering your attention','care without carrying everything alone','self-expression without needing applause','careful attention without demanding perfection','cooperation without losing your own voice','depth without forcing an answer','exploration without making promises too soon','structure without excessive pressure','independence while staying connected','imagination with a little grounding'],ru:['инициатива без спешки','устойчивость без застоя','любопытство без рассеянности','забота без необходимости нести всё в одиночку','самовыражение без обязательных аплодисментов','внимание к деталям без требования идеала','сотрудничество без потери своего голоса','глубина без необходимости немедленно найти ответ','исследование без поспешных обещаний','структура без лишнего давления','самостоятельность с сохранением связи','воображение с небольшой опорой на реальность']};
+const reflections={en:[
+ 'You could begin one thing you have been putting off with a step small enough to take today. Starting does not commit you to doing everything at once.',
+ 'Give one useful routine a little room today. It could be eating without rushing or leaving a pause between tasks.',
+ 'If several ideas are competing for your attention, choose one to explore for ten minutes. You can return to the others later.',
+ 'It is possible to care about someone without taking responsibility for everything they feel. Leave a little room for what you need, too.',
+ 'Try giving one idea a voice before deciding whether anyone will approve of it. You could first share it with someone you trust or write it down for yourself.',
+ 'Choose one thing that would be good enough for today. Finishing a small useful task can matter more than getting every detail right.',
+ 'In one conversation, you could say what you need before trying to find a compromise. Listening and having your own voice can go together.',
+ 'There may be a question you do not need to settle immediately. You can notice what you feel without forcing a final answer today.',
+ 'A small experiment can tell you more than another long list of possibilities. Try something you can easily change your mind about.',
+ 'Make one plan a little kinder to yourself: fewer steps, a realistic time, or permission to ask for help. A plan should support you.',
+ 'You can make room for an idea of your own without working everything out alone. Consider who could help you think it through.',
+ 'Give one feeling or idea a concrete place: a few written lines, a sketch, or a quiet walk. You do not need to explain it perfectly.'
+],ru:[
+ 'Можно начать одно отложенное дело с шага, который реально сделать сегодня. Начало не обязывает сразу доводить всё до конца.',
+ 'Оставь немного места для простой привычки, которая тебя поддерживает: поесть без спешки или сделать паузу между делами.',
+ 'Если идей много, выбери одну и удели ей десять минут. К остальным можно вернуться позже.',
+ 'Можно заботиться о близком человеке, не отвечая за все его чувства. Пусть останется немного места и для твоих потребностей.',
+ 'Попробуй дать своей идее прозвучать до того, как решишь, одобрят ли её другие. Можно сначала записать её для себя или поделиться с тем, кому доверяешь.',
+ 'Выбери одно дело, которое сегодня достаточно сделать хорошо, без требования идеала. Небольшой законченный шаг тоже имеет значение.',
+ 'В одном разговоре можно сначала назвать свою потребность, а потом искать компромисс. Слышать другого и сохранять свой голос вполне совместимо.',
+ 'Не на каждый вопрос нужен окончательный ответ прямо сейчас. Можно заметить свои чувства и оставить решение до более ясного момента.',
+ 'Небольшая проба может дать больше ясности, чем ещё один список возможностей. Выбери то, что легко попробовать и так же легко изменить.',
+ 'Сделай один план бережнее к себе: меньше шагов, реалистичный срок или возможность попросить о помощи. План должен тебя поддерживать.',
+ 'Для собственной идеи не обязательно разбираться во всём в одиночку. Подумай, с кем можно спокойно её обсудить.',
+ 'Дай одному чувству или замыслу конкретное место: несколько строк, рисунок или спокойную прогулку. Необязательно сразу находить идеальные слова.'
+]};
 export function solarDailyReflection(input:{language:'en'|'ru';localDate:string;sunSigns:number[];source:'saved_chart'|'date_only_sun'}){
  const indices=[...new Set(input.sunSigns)].filter(n=>Number.isInteger(n)&&n>=0&&n<12);if(indices.length!==1)return null;
- const en=input.language==='en',index=indices[0],theme=themes[input.language][index],name=signs[input.language][index];
- const variations=en?[`Where might “${theme}” be useful today?`,`Is there a situation today where “${theme}” feels worth exploring?`,`What does “${theme}” mean in your actual day, if anything?`]:[`Где сегодня может пригодиться тема «${theme}»?`,`Есть ли сегодня ситуация, в которой стоит исследовать тему «${theme}»?`,`Как тема «${theme}» соотносится с твоим сегодняшним днём — если вообще соотносится?`];
- const variant=Array.from(input.localDate).reduce((total,char)=>total+char.charCodeAt(0),0)%variations.length;
- return{text:(en?`Sun in ${name}: a traditional symbolic theme is ${theme}. `:`Солнце: ${name}. Традиционная символическая тема — ${theme}. `)+variations[variant],basis:en?(input.source==='saved_chart'?'From your saved calculated Sun placement. A reflection, not a current-transit forecast.':'General Sun-sign reflection from the saved date only; not a full natal or transit reading.'):(input.source==='saved_chart'?'По положению Солнца в сохранённой рассчитанной карте. Размышление, не прогноз текущих транзитов.':'Общее размышление о знаке Солнца по сохранённой дате; не полная натальная карта и не транзитный прогноз.'),source:input.source,calculationVersion:dailyEntryVersion};
+ const en=input.language==='en';
+ return {text:reflections[input.language][indices[0]],basis:en?(input.source==='saved_chart'?'A reflection inspired by your saved birth chart, not a forecast.':'A reflection from your saved birth date, not a full chart or forecast.'):(input.source==='saved_chart'?'Размышление по сохранённой карте рождения, не прогноз.':'Размышление по сохранённой дате рождения, не полная карта и не прогноз.'),source:input.source,calculationVersion:dailyEntryVersion};
 }

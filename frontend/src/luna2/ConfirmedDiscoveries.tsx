@@ -4,8 +4,8 @@ import {writePersonalMemory,removePersonalMemory,type AppLanguage,type PersonalM
 import {cosmosPosition} from './cosmosNavigation';
 import {validMemorySource} from '../../../backend/src/personal-memory-policy';
 
-export const discoveryTitle=(memory:PersonalMemory)=>memory.memory_key.replace(/^discovery_/,'').replace(/_/g,' ');
-export const confirmedDiscoveries=(memories:PersonalMemory[])=>memories.filter(memory=>memory.category==='reflections'&&validMemorySource(memory)).sort((a,b)=>b.updated_at.localeCompare(a.updated_at));
+export const discoveryTitle=(memory:PersonalMemory)=>{const title=memory.memory_key.startsWith('discovery_')?memory.memory_key.slice(10).replace(/_/g,' '):'';return title&&!/[a-f0-9]{8,}/i.test(title)?title:memory.memory_value.replace(/\s+/g,' ').slice(0,52);};
+export const confirmedDiscoveries=(memories:PersonalMemory[])=>memories.filter(memory=>memory.category==='reflections'&&!memory.memory_key.startsWith('luna_feedback_')&&validMemorySource(memory)).sort((a,b)=>b.updated_at.localeCompare(a.updated_at));
 
 /** A view and editor of canonical user_memories, never a second discovery store. */
 export function ConfirmedDiscoveries({data,language,initData,onCollection,onBackChange}:{data:UniverseData;language:AppLanguage;initData?:string;onCollection?:()=>void;onBackChange?:(handler:(()=>boolean)|null)=>void}){

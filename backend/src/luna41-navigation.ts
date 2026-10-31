@@ -20,7 +20,7 @@ export const lunaDestinations=[
  {id:'journal',page:'activity',en:'Journal & activity',ru:'Дневник и активность'},
  {id:'membership',page:'pricing',en:'Membership',ru:'Подписка'},
  {id:'seeds',page:'wallet',en:'Moon Seeds',ru:'Moon Seeds'},
- {id:'cosmos',page:'profile',profileView:'universe',feature:'personal_memory',en:'My Universe',ru:'Мой космос'},
+ {id:'cosmos',page:'cosmos',feature:'personal_memory',en:'My Cosmos',ru:'Мой космос'},
  {id:'meet',page:'luna',feature:'personal_memory',en:'Meet Luna',ru:'Познакомиться с Луной'},
  {id:'memory',page:'profile',profileView:'memory',feature:'personal_memory',en:'Personalization & memory',ru:'Персонализация и память'},
  {id:'settings',page:'profile',profileView:'settings',en:'Settings',ru:'Настройки'},

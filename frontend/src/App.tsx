@@ -150,7 +150,7 @@ import { HomeV2 } from './v2/pages/HomeV2';
 import { ExplorePage, FeaturePreview, SectionBack, type ExploreCategory } from './luna2/ExplorePage';
 import { ProfileOverview } from './luna2/ProfileOverview';
 import {BetaNotice} from './luna2/BetaNotice';
-import { MyUniverse } from './luna2/MyUniverse';
+const MyUniverse = lazy(() => import('./luna2/MyUniverse').then(module => ({default:module.MyUniverse})));
 import {luna34Achievements} from '../../backend/src/luna34-achievements';
 import {MembershipPage} from './features/membership/MembershipPage';
 import {ProgressMilestone} from './components/progress/ProgressMilestone';
@@ -1838,11 +1838,15 @@ function App() {
     const previous=tarotBackHandlerRef.current;tarotBackHandlerRef.current=handler;setNestedBack(Boolean(handler));
     if(handler)return()=>{if(tarotBackHandlerRef.current===handler){tarotBackHandlerRef.current=previous;setNestedBack(Boolean(previous));}};
   }, []);
+  const cosmosBackRef = useRef<(() => boolean) | null>(null);
+  const [cosmosBackActive, setCosmosBackActive] = useState(false);
+  const registerCosmosBack = useCallback((handler: (() => boolean) | null) => { cosmosBackRef.current = handler; setCosmosBackActive(Boolean(handler)); }, []);
   const initialPage = initialPageFromLaunch(window.location.pathname, window.location.hash, launchStartParam, featureFlags.new_navigation);
   const { page, setPage, navigatePrimary, goBack } = useAppRouteState(initialPage, {
     newNavigation: featureFlags.new_navigation,
-    nestedBack: featureFlags.ai_central_experience&&nestedBack,
+    nestedBack: (featureFlags.ai_central_experience&&nestedBack)||cosmosBackActive,
     beforeBack: () => {
+      if (cosmosBackRef.current?.()) return true;
       const handler = tarotBackHandlerRef.current;
       if (!handler) return false;
       handler();
@@ -1890,7 +1894,7 @@ function App() {
   const [profileNestedActive, setProfileNestedActive] = useState(false);
   const [profileEntry, setProfileEntry] = useState<ProfileSettingsView>(launchDestination==='invite'?'invite':launchDestination==='meet'?'meet':launchDestination==='cosmos'?'universe':'main');
   useDestinationObservation(initData);
-  useEffect(()=>{const open=(event:Event)=>{const destination=resolveLunaDestination((event as CustomEvent).detail?.destination,featureFlags);if(!destination)return;if(destination.id==='meet')setMeetEntry(crypto.randomUUID());if(destination.page==='profile'){setProfileEntry('profileView' in destination?destination.profileView:'main');navigatePrimary('profile');return;}if(destination.page==='astrology')setAstrologyEntry('astrologySection' in destination?destination.astrologySection:undefined);if('tarotScreen' in destination)tarotDispatch({type:'screen',value:destination.tarotScreen});if(destination.id==='daily')tarotDispatch({type:'screen',value:'daily'});setPage(destination.page);};window.addEventListener('luna-open-destination',open);return()=>window.removeEventListener('luna-open-destination',open);},[setPage,navigatePrimary]);
+  useEffect(()=>{const open=(event:Event)=>{const destination=resolveLunaDestination((event as CustomEvent).detail?.destination,featureFlags);if(!destination)return;if(destination.id==='meet')setMeetEntry(crypto.randomUUID());if(destination.page==='profile'){setProfileEntry('profileView' in destination?destination.profileView:'main');setPage('profile');return;}if(destination.page==='astrology')setAstrologyEntry('astrologySection' in destination?destination.astrologySection:undefined);if('tarotScreen' in destination)tarotDispatch({type:'screen',value:destination.tarotScreen});if(destination.id==='daily')tarotDispatch({type:'screen',value:'daily'});setPage(destination.page);};window.addEventListener('luna-open-destination',open);return()=>window.removeEventListener('luna-open-destination',open);},[setPage,navigatePrimary]);
   useEffect(()=>{if(!featureFlags.ai_central_experience)return;const activity=()=>setPage('activity'),astrology=(event:Event)=>{const value=(event as CustomEvent).detail?.section;setAstrologyEntry(value==='natal'||value==='compatibility'?value:undefined);setPage('astrology');},report=(event:Event)=>{const id=(event as CustomEvent).detail?.id;if(typeof id==='string'&&/^[a-f0-9-]{36}$/i.test(id)){setPersonalReportEntry({id,key:crypto.randomUUID()});setPage('luna');}},portrait=(event:Event)=>{const detail=(event as CustomEvent).detail,section=detail?.section,memory=detail?.memory;if(memory&&(typeof memory.id!=='string'||!/^[-a-f0-9]{36}$/i.test(memory.id)||typeof memory.updatedAt!=='string'||!Number.isFinite(Date.parse(memory.updatedAt))))return;setCosmosDiscussion({area:'portrait_'+(typeof section==='string'?section:'overview'),key:crypto.randomUUID(),...(memory?{memory:{id:memory.id,updatedAt:memory.updatedAt}}:{})});setPage('luna');};window.addEventListener('luna-open-activity',activity);window.addEventListener('luna-open-astrology',astrology);window.addEventListener('luna-discuss-personal-report',report);window.addEventListener('luna-portrait-discuss',portrait);return()=>{window.removeEventListener('luna-open-activity',activity);window.removeEventListener('luna-open-astrology',astrology);window.removeEventListener('luna-discuss-personal-report',report);window.removeEventListener('luna-portrait-discuss',portrait);};},[setPage]);
   useEffect(()=>{const open=()=>{if(!featureFlags.personal_memory)return;setProfileEntry('universe');navigatePrimary('profile');};window.addEventListener('luna-open-universe',open);return()=>window.removeEventListener('luna-open-universe',open);},[navigatePrimary]);
   useEffect(()=>{const discuss=(event:Event)=>{const area=(event as CustomEvent).detail?.area;if(!featureFlags.cosmos_v2||!cosmosAreas.some(item=>item.id===area))return;setAiReadingId(undefined);setAiChartId(undefined);setCosmosDiscussion({area,key:crypto.randomUUID()});navigatePrimary('luna');};window.addEventListener('luna-discuss-cosmos',discuss);return()=>window.removeEventListener('luna-discuss-cosmos',discuss);},[navigatePrimary]);
@@ -2947,10 +2951,10 @@ function App() {
   }, [initData, scenePlaying, selectedScene]);
 
   return (
-    <main className={`app-root overflow-x-clip bg-night text-cream ${page === 'home' ? 'home-v2-shell' : ''} ${featureFlags.new_navigation ? 'luna2-shell' : ''}`}>
+    <main data-destination={page} className={`app-root overflow-x-clip bg-night text-cream ${page === 'home' ? 'home-v2-shell' : ''} ${featureFlags.new_navigation ? 'luna2-shell' : ''}`}>
       <AmbientSky />
       <ProgressMilestone owner={user.id} profile={accountLoading||accountUnavailable?null:profile} language={language} initData={initData} allowed={['home','journey','profile','achievements'].includes(page)&&!selectedMeditation&&!selectedMantra&&!selectedScene&&!showCheckin&&!profileNestedActive}/>
-      <section ref={appShellRef} data-page={page} className={`app-shell ${page === 'luna' ? 'app-shell-chat' : ''} ${page === 'admin' || (page === 'profile' && profileNestedActive) ? 'app-shell-no-nav' : ''}`}>
+      <section ref={appShellRef} data-page={page} className={`app-shell ${page === 'luna' ? 'app-shell-chat' : ''} ${page === 'admin' ? 'app-shell-no-nav' : ''}`}>
         {page !== 'luna' && !(admin40Enabled&&page==='admin') && !(featureFlags.new_navigation && page==='breathCircle') && <AppHeader statusLabel={(profile?.currentStreak ?? 0) > 0 ? streakLabel(profile?.currentStreak ?? 0, language) : planLabel(access.plan, language)} language={language} languageLabel={copy[language].language} onLanguageChange={changeLanguage} showSeeds={featureFlags.new_navigation} moonSeeds={profile ? availableMoonSeeds(profile) : undefined} onWallet={() => setPage('wallet')} />}
         {appNotice && <div className="theme-floating fixed left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+12px)] z-50 mx-auto max-w-md rounded-full border border-gold/20 px-4 py-3 text-center text-xs font-semibold text-cream shadow-glow backdrop-blur-xl luna-fade" role="status">{appNotice}</div>}
 
@@ -3152,7 +3156,17 @@ function App() {
           <MoonGardenPage registerBackHandler={registerTarotBackHandler} profile={profile} onPlant={async (element) => { const result = await plantMoonGardenElement(element.id, initData); setProfile(result.profile); return result.profile; }} isAdmin={adminStatus === 'allowed'} ambiencePlaying={moonGardenAmbiencePlaying} ambienceVolume={moonGardenVolume} ambienceError={moonGardenAmbienceError} onToggleAmbience={toggleMoonGardenAmbience} onAmbienceVolume={changeMoonGardenVolume} onDevAction={runMoonGardenDevAction} language={language} />
         </>}
 
-        {page === 'profile' && (
+        {page === 'cosmos' && <Suspense fallback={<PageSkeleton rows={3}/>}>
+          {cosmosBackActive && <SectionBack language={language} onBack={() => cosmosBackRef.current?.()} />}
+          <MyUniverse language={language} initData={initData} firstName={personalDisplayName ?? user.first_name ?? 'friend'}
+            onBackChange={registerCosmosBack} goalOptions={profileGoalOptions}
+            onSettings={() => { setProfileEntry('main'); setPage('profile'); }}
+            onAstrology={() => { setAstrologyEntry('natal'); setPage('astrology'); }}
+            onReading={id => { setAiReadingId(id); setPage('luna'); }}
+            onPractice={id => { const practice=decoratedMeditations.find(item=>item.id===id); if(practice)openMeditation(practice); else setPage('activity'); }} />
+        </Suspense>}
+
+        {page === 'profile' && (<Suspense fallback={<PageSkeleton rows={3}/>} >
           <ProfilePage
             onPractice={id=>{const practice=decoratedMeditations.find(item=>item.id===id);if(practice)openMeditation(practice);else setPage('activity');}}
             initialView={profileEntry}
@@ -3194,7 +3208,7 @@ function App() {
             telegramUserId={user.id}
             onRefreshDiagnostics={refreshProductionDiagnostics}
           />
-        )}
+        </Suspense>)}
 
         {page === 'player' && selectedMeditation && (
           <PlayerPage
@@ -3304,7 +3318,11 @@ function App() {
             language={language}
           />
         )}
-        {page !== 'admin' && !(page === 'profile' && profileNestedActive) && (
+        {showCheckin && page !== 'admin' && (
+          <DailyCheckinSheet onClose={dismissCheckin} onSave={saveCheckin} initialMood={wellness?.todayCheckin?.mood??moodChipToCheckinMood(mood)} language={language} registerBackHandler={registerTarotBackHandler} />
+        )}
+      </section>
+        {page !== 'admin' && (
           <BottomNavigation
             active={page}
             onChange={navigatePrimaryPage}
@@ -3315,16 +3333,13 @@ function App() {
               library: copy[language].navLibrary,
               progress: copy[language].navProgress,
               profile: copy[language].navProfile,
+              cosmos: language === 'en' ? 'My Cosmos' : 'Мой космос',
               explore: luna2Copy[language].explore,
               lunaAi: luna2Copy[language].lunaAi,
               journey: copy[language].navProgress
             }}
           />
         )}
-        {showCheckin && page !== 'admin' && (
-          <DailyCheckinSheet onClose={dismissCheckin} onSave={saveCheckin} initialMood={wellness?.todayCheckin?.mood??moodChipToCheckinMood(mood)} language={language} registerBackHandler={registerTarotBackHandler} />
-        )}
-      </section>
     </main>
   );
 }
@@ -5717,7 +5732,7 @@ function ProfilePage({
         <ProfileSettingsRow icon={CreditCard} title={language === 'en' ? 'Membership & Moon Seeds' : 'Подписка и Moon Seeds'} value={localizedPlanStatus} onClick={() => setView('subscription')} />
         <ProfileSettingsRow icon={Gift} title={language==='en'?'Invite a friend':'Пригласить друга'} value="" onClick={()=>setView('invite')}/>
       </section>}
-      {showJourneyEntry && <ProfileOverview language={language} profile={profile} onWallet={onWallet} onJourney={onJourney} onGarden={onGarden} onActivity={onActivity} onAchievements={onAchievements} onCosmos={featureFlags.personal_memory?()=>setView('universe'):undefined} onMembership={()=>setView('subscription')} onInvite={()=>setView('invite')} onSettings={()=>setView('settings')} onPersonal={featureFlags.personalization?()=>setView('personalization'):undefined} onStatus={()=>setStatusProgressionOpen(true)}/>}
+      {showJourneyEntry && <ProfileOverview language={language} profile={profile} onWallet={onWallet} onJourney={onJourney} onGarden={onGarden} onActivity={onActivity} onAchievements={onAchievements} onCosmos={featureFlags.personal_memory&&!featureFlags.new_navigation?()=>setView('universe'):undefined} onMembership={()=>setView('subscription')} onInvite={()=>setView('invite')} onSettings={()=>setView('settings')} onPersonal={featureFlags.personalization?()=>setView('personalization'):undefined} onStatus={()=>setStatusProgressionOpen(true)}/>}
       {!showJourneyEntry&&<section className="luna-surface rounded-[22px] p-2"><ProfileSettingsRow icon={Settings} title={language==='en'?'Settings':'Настройки'} value={languageLabel} onClick={()=>setView('settings')}/></section>}
 
       {!showJourneyEntry&&<section className="luna-surface profile-secondary-action rounded-[22px] p-2">

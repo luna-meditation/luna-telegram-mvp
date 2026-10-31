@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import {viewportGeometry} from './viewportPolicy';
 
 type TelegramViewport = {
   viewportHeight?: number;
@@ -22,35 +23,41 @@ export function useAppViewport(active = true) {
     const telegram = window.Telegram?.WebApp as TelegramViewport | undefined;
 
     const update = () => {
-      const viewportHeight = Math.min(visualViewport?.height ?? window.innerHeight, telegram?.viewportHeight || window.innerHeight);
-      const stableHeight = telegram?.viewportStableHeight ?? window.innerHeight;
-      const offsetTop = visualViewport?.offsetTop ?? 0;
-      const keyboardInset = Math.max(0, stableHeight - viewportHeight - offsetTop);
+      const focused=document.activeElement;
+      const editable=focused instanceof HTMLElement&&(focused.isContentEditable||focused.matches('textarea:not([readonly]):not([disabled]),input:not([type=checkbox]):not([type=radio]):not([type=button]):not([type=submit]):not([type=file]):not([type=range]):not([readonly]):not([disabled])'));
+      const geometry=viewportGeometry({visualHeight:visualViewport?.height??window.innerHeight,innerHeight:window.innerHeight,telegramHeight:telegram?.viewportHeight,stableHeight:telegram?.viewportStableHeight,offsetTop:visualViewport?.offsetTop??0,scale:visualViewport?.scale??1,editableFocused:editable});
 
-      root.style.setProperty('--app-viewport-height', `${Math.round(viewportHeight)}px`);
-      root.style.setProperty('--app-viewport-offset-top', `${Math.round(offsetTop)}px`);
-      root.style.setProperty('--app-keyboard-inset', `${Math.round(keyboardInset)}px`);
-      root.dataset.keyboardOpen = keyboardInset > 120 ? 'true' : 'false';
+      root.style.setProperty('--app-viewport-height', `${geometry.height}px`);
+      root.style.setProperty('--app-viewport-offset-top', `${geometry.offsetTop}px`);
+      root.style.setProperty('--app-keyboard-inset', `${geometry.keyboardInset}px`);
+      root.dataset.keyboardOpen = geometry.keyboardOpen ? 'true' : 'false';
       for (const edge of ['top', 'right', 'bottom', 'left'] as const) {
         const inset = Math.max(0, telegram?.safeAreaInset?.[edge] ?? 0, telegram?.contentSafeAreaInset?.[edge] ?? 0);
         root.style.setProperty(`--luna-safe-${edge}`, `${inset}px`);
       }
     };
 
+    let focusFrame=0;
+    const focusChanged=()=>{update();cancelAnimationFrame(focusFrame);focusFrame=requestAnimationFrame(update);};
     update();
     visualViewport?.addEventListener('resize', update);
     visualViewport?.addEventListener('scroll', update);
     window.addEventListener('resize', update);
     window.addEventListener('orientationchange', update);
+    document.addEventListener('focusin', focusChanged);
+    document.addEventListener('focusout', focusChanged);
     telegram?.onEvent?.('viewportChanged', update);
     telegram?.onEvent?.('safeAreaChanged', update);
     telegram?.onEvent?.('contentSafeAreaChanged', update);
 
     return () => {
+      cancelAnimationFrame(focusFrame);
       visualViewport?.removeEventListener('resize', update);
       visualViewport?.removeEventListener('scroll', update);
       window.removeEventListener('resize', update);
       window.removeEventListener('orientationchange', update);
+      document.removeEventListener('focusin', focusChanged);
+      document.removeEventListener('focusout', focusChanged);
       telegram?.offEvent?.('viewportChanged', update);
       telegram?.offEvent?.('safeAreaChanged', update);
       telegram?.offEvent?.('contentSafeAreaChanged', update);

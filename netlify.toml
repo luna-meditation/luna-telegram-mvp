@@ -11,9 +11,9 @@
   command = "pnpm --filter @luna/frontend build:production"
 
 [context.production.environment]
-  LUNA_RELEASE_PROFILE = "core-v1"
+  LUNA_RELEASE_PROFILE = "product-v2"
   VITE_BOT_USERNAME = "myluna_app"
-  LUNA_RELEASE_DB_REVIEW = "../qa/core-v1-release-review.json"
+  LUNA_RELEASE_DB_REVIEW = "../qa/product-v2-release-review.json"
   VITE_FEATURE_LUNA_INTELLIGENCE = "true"
   VITE_FEATURE_ADMIN_V4 = "true"
   VITE_FEATURE_COSMOS_V2 = "true"

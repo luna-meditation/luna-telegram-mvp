@@ -1,6 +1,6 @@
 export const luna2Copy = {
   en: {
-    home: 'Home', explore: 'Explore', lunaAi: 'Luna AI', profile: 'Profile',
+    cosmos: 'My Cosmos', home: 'Home', explore: 'Explore', lunaAi: 'Luna AI', profile: 'Profile',
     exploreTitle: 'A little closer to yourself', exploreBody: 'Find your own way to pause, reflect and reconnect.',
     tarot: 'Tarot', astrology: 'Astrology', meditations: 'Meditations', breathwork: 'Breathwork',
     tarotBody: 'A new perspective, one card at a time', astrologyBody: 'The sky as a starting point for reflection',
@@ -30,7 +30,7 @@ export const luna2Copy = {
     ready: 'Ready', finished: 'Complete', session: 'Session', seconds: 'seconds',
   },
   ru: {
-    home: 'Главная', explore: 'Открытия', lunaAi: 'Луна ИИ', profile: 'Профиль',
+    cosmos: 'Мой космос', home: 'Главная', explore: 'Открытия', lunaAi: 'Луна ИИ', profile: 'Профиль',
     exploreTitle: 'Чуть ближе к себе', exploreBody: 'Найди свой способ остановиться, услышать себя и вернуться в момент.',
     tarot: 'Таро', astrology: 'Астрология', meditations: 'Медитации', breathwork: 'Дыхание',
     tarotBody: 'Новый взгляд — одна карта за раз', astrologyBody: 'Звёздное небо как повод для размышлений',

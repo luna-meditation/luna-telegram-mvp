@@ -444,6 +444,7 @@ export type LunaMessage = {
   role: 'user' | 'assistant';
   content: string;
   metadata?: {
+    entryOpening?:{version:2;key:string;index:number;basis?:string;excludeFromAi?:boolean};
     intelligence?:import('../../backend/src/luna-intelligence-contract').IntelligenceMetadata;
     navigation?:{destination:import('../../backend/src/luna41-navigation').LunaDestinationId;operationId?:string};
     commerce?:{version:1;view:import('../../backend/src/luna35-commerce-policy').CommerceView;language:AppLanguage;checkedAt:string};
@@ -863,7 +864,9 @@ export async function getLunaConversation(conversationId: string, initData?: str
 export const getLunaUsage=(initData?:string)=>request<{remaining:number;limit:number;resetAt:string}>('/api/luna/usage',undefined,initData);
 
 export async function sendLunaMessage(input: {
-  entryContext?:{key:string;timeZone:string;dismissed:boolean};
+  guidedTopic?:import('../../backend/src/product-experience').GuidedTopic;
+  guidedLanguage?:AppLanguage;
+  entryContext?:{key:string;timeZone:string;language?:AppLanguage;dismissed:boolean};
   workflowReply?:{id:string;option:string};
   intelligenceVersion?:1;
   personalReportId?:string;
