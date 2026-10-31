@@ -37,7 +37,7 @@ export const legacyPrimaryNavigation: readonly PrimaryNavigationItem[] = [
 export const luna2PrimaryNavigation: readonly PrimaryNavigationItem[] = [
   { page: 'home', labelKey: 'home' },
   { page: 'luna', labelKey: 'lunaAi' },
-  { page: 'cosmos', labelKey: 'cosmos' }
+  { page: 'profile', labelKey: 'profile' }
 ];
 
 export function primaryNavigation(newNavigation: boolean) {
@@ -49,7 +49,7 @@ export function isPrimaryPage(page: AppPage, newNavigation: boolean) {
 }
 
 export function fallbackPage(page: AppPage, newNavigation: boolean): AppPage {
-  if (newNavigation && ['profile', 'wallet', 'activity', 'achievements', 'progress', 'moonGarden', 'pricing'].includes(page)) return 'cosmos';
+  if (newNavigation && ['cosmos', 'wallet', 'activity', 'achievements', 'progress', 'moonGarden', 'pricing'].includes(page)) return 'profile';
   if (!newNavigation && page === 'cosmos') return 'profile';
   if (newNavigation && (page === 'explore' || page === 'library' || page === 'tarot' || page === 'astrology')) return 'home';
   if (page === 'wallet' || page === 'activity' || page === 'achievements') return 'profile';

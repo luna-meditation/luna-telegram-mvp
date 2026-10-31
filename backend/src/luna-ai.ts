@@ -1,4 +1,4 @@
-import {conversationEntryRows,guidedDirection,guidedTopics} from './product-experience.js';
+import {conversationEntryRows,conversationEntryQuestion,guidedDirection,guidedTopics} from './product-experience.js';
 import {toolOperationId} from './luna40-actions.js';
 import {retrieveInterpretationKnowledge} from './symbolic-interpretation-knowledge.js';
 import {declinesMemoryUse} from './personal-memory-policy.js';
@@ -10,7 +10,7 @@ import { getUserAccess, supabase, upsertUser, type TelegramUserInput } from './d
 import { logBackendError } from './error-logging.js';
 import { buildLunaSystemPrompt, detectedIntents, recommendationGoals } from './luna/prompts/index.js';
 import {requestLunaResponse} from './luna/ai-provider.js';
-import {conciseNumerologyRequest,conciseArtifactRequest,scopedNumerologyEvidence} from './luna-numerology-response.js';
+import {conciseNumerologyRequest,conciseArtifactRequest,conciseCompanionRequest,scopedNumerologyEvidence} from './luna-numerology-response.js';
 import {lunaModeSchema,boundedModeContext,attachmentGrounding} from './luna/modes.js';
 import {attachmentMode,automaticConversationInstructions,readyMeditationCopy} from './luna41-conversation.js';
 import {resolveLunaDestination} from './luna41-navigation.js';
@@ -664,7 +664,7 @@ export function buildLunaOpenAiRequest(input: {
   };
   const numeric=(input.context as {numerology?:{system?:string}}|null)?.numerology;
   const current=input.recent.at(-1)?.content??'';
-  return input.intelligence&&numeric?.system==='pythagorean_date'?conciseNumerologyRequest(body,current):isolated&&!isLongFormRequest(current)?conciseArtifactRequest(body):body;
+  return input.intelligence&&numeric?.system==='pythagorean_date'?conciseNumerologyRequest(body,current):isolated&&!isLongFormRequest(current)?conciseArtifactRequest(body):input.intelligence&&env.AI_PROMPT_VERSION==='meet-luna4'&&!isLongFormRequest(current)?conciseCompanionRequest(body):body;
 }
 
 async function callOpenAiResponses(input: {
@@ -1108,8 +1108,8 @@ async function sendLunaMessageInternal(user: TelegramUserInput, rawInput: unknow
   const personalStarted=performance.now();
   let entry:DailyPersonalEntry|null=null;
   let entryChanged=false;
-  if(input.entryContext&&!input.conversationId&&!input.readingId&&!input.chartId&&!input.personalReportId&&env.FEATURE_PERSONAL_MEMORY){const current=await createCompanionEngine(supabase,getUniverse,{portrait:(owner,day)=>readPersonalPortrait(supabase,owner,()=>getUniverse(owner),day)}).open(telegramId,{operationId:crypto.randomUUID(),entryOnly:true,timeZone:input.entryContext.timeZone,language:input.entryContext.language??input.language});if(current.entry?.key!==input.entryContext.key)entryChanged=true;else entry=current.entry;}
-  const entryQuestion=entry?(input.entryContext?.dismissed||entry.reflection&&!entry.contextReflectionAllowed?(responseLanguage==='ru'?'Что для тебя сейчас важно?':'What matters to you today?'):entry.question||entry.reflection?.text||''):'';
+  if(input.entryContext&&!input.conversationId&&!input.readingId&&!input.chartId&&!input.personalReportId&&env.FEATURE_PERSONAL_MEMORY){const current=await createCompanionEngine(supabase,getUniverse,{birthAvailability:true,portrait:(owner,day)=>readPersonalPortrait(supabase,owner,()=>getUniverse(owner),day)}).open(telegramId,{operationId:crypto.randomUUID(),entryOnly:true,timeZone:input.entryContext.timeZone,language:input.entryContext.language??input.language});if(current.entry?.key!==input.entryContext.key)entryChanged=true;else entry=current.entry;}
+  const entryQuestion=entry?conversationEntryQuestion(entry,entry.language??responseLanguage,input.entryContext?.dismissed):'';
   const entryWorkflow=entryQuestion?personalWorkflowReply(input.message,personalWorkflowFromAnswer(entryQuestion,[],'personal_entry')):null;
   const personalOptions={calculatedOverview:true,artifact:input.readingId?{kind:'tarot' as const,id:input.readingId}:input.chartId&&!input.astrology?.secondChartId?{kind:'natal' as const,id:input.chartId}:undefined};
   let personal=(input.mode||env.FEATURE_PERSONAL_MEMORY)&&env.FEATURE_PERSONALIZATION?permittedPersonalContext(await getAiPersonalProfile(telegramId,personalContextQuery(input.message,entryWorkflow),personalOptions)):null;

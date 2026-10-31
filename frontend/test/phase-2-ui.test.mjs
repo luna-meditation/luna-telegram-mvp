@@ -19,8 +19,8 @@ const styles = src('luna2/luna2.css');
 
 test('Luna 2.5 keeps legacy five tabs and enables exactly three in approved order', () => {
   assert.deepEqual(nav.primaryNavigation(false).map(x => x.page), ['home','library','luna','progress','profile']);
-  assert.deepEqual(nav.primaryNavigation(true).map(x => x.page), ['home','luna','cosmos']);
-  for(const [locale,labels] of [['en',['Home','Luna AI','My Cosmos']],['ru',['Главная','Луна ИИ','Мой космос']]]) {
+  assert.deepEqual(nav.primaryNavigation(true).map(x => x.page), ['home','luna','profile']);
+  for(const [locale,labels] of [['en',['Home','Luna AI','Profile']],['ru',['Главная','Луна ИИ','Профиль']]]) {
     assert.deepEqual(nav.primaryNavigation(true).map(x => luna2Copy[locale][x.labelKey]),labels);
   }
   assert.match(styles,/\.bottom-navigation-luna2 \.luna2-nav-ai/);
@@ -36,7 +36,7 @@ test('new route hierarchy and deep links fail closed without new_navigation', ()
   assert.equal(nav.pageFromStartParam('library',true),'library');
   assert.equal(nav.pageFromStartParam('saved',true),'library');
   assert.equal(nav.fallbackPage('library',true),'home');
-  for(const page of ['progress','moonGarden','wallet','activity','achievements','pricing']) assert.equal(nav.primaryParent(page,true),'cosmos');
+  for(const page of ['progress','moonGarden','wallet','activity','achievements','pricing']) assert.equal(nav.primaryParent(page,true),'profile');
   let state = nav.reduceRouteState({current:'home',trail:[]},{type:'navigate',page:'tarot'},true);
   state = nav.reduceRouteState(state,{type:'navigate',page:'library'},true);
   state = nav.reduceRouteState(state,{type:'navigate',page:'player'},true);
@@ -98,7 +98,9 @@ test('Home preserves mood hero and recommendations while new dashboard is opt-in
 test('Profile uses existing balances/history and has no local reward or charge mutations', () => {
   const profile=src('luna2/ProfileOverview.tsx');
   assert.match(profile,/profile\.moonSeedsAvailable \?\? profile\.moonSeeds/);
-  for(const field of ['currentStreak','achievements']) assert.ok(profile.includes(field));
+  assert.match(profile,/onMembership/);
+  assert.match(profile,/onCosmos/);
+  const cosmos=src('luna2/PersonalPortraitView.tsx');assert.match(cosmos,/CosmosJourney/);assert.match(cosmos,/ConfirmedDiscoveries/);
   const journal=src('luna2/JournalPage.tsx');for(const field of ['weeklyCheckins','meditation_id'])assert.ok(journal.includes(field));
   assert.doesNotMatch(profile,/localStorage|fetch\(|createInvoice|saveHistory|setProfile|moonSeeds\s*[+-]=/);
   assert.match(app,/showJourneyEntry && <ProfileOverview/);

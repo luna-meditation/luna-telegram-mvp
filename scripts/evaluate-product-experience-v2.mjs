@@ -5,11 +5,13 @@ import {createHash} from 'node:crypto';
 import {readFile,readdir,writeFile,mkdir,rename,open,rm,stat} from 'node:fs/promises';
 import {resolve,dirname} from 'node:path';
 import {fileURLToPath} from 'node:url';
+import {companionRefinementCases} from '../backend/test/companion-refinement-cases.mjs';
 import {productV2Cases} from '../backend/test/product-v2-eval-cases.mjs';
 import {memoryRows} from '../backend/test/core-v1-eval-cases.mjs';
 import {EvaluationBudget} from '../backend/test/core-v1-eval-budget.mjs';
 
 const root=fileURLToPath(new URL('../',import.meta.url)),arg=name=>process.argv.find(value=>value.startsWith(name+'='))?.slice(name.length+1);
+const companion=arg('--suite')==='companion-refinement',approval=companion?'companion_60_attempts_0_50_usd_synthetic_only':'v2_80_attempts_1_usd_synthetic_only';
 const live=process.argv.includes('--live'),followup=false,out=resolve(arg('--out')??resolve(root,'../product-v2-evaluation-offline'));
 const baseline=resolve(arg('--baseline')??resolve(root,'../luna-v2-baseline-6faafbd')),candidate=resolve(arg('--candidate')??root);
 const keyFile=arg('--key-file');
@@ -20,9 +22,9 @@ async function sourceDigest(folder){const rows=[];async function walk(path){for(
 const sourceDigests={baseline:await sourceDigest(baseline),candidate:await sourceDigest(candidate)};
 await mkdir(out,{recursive:true});
 const lock=await open(resolve(out,'run.lock'),'wx');await lock.close();
-const dataset=productV2Cases;
+const dataset=companion?companionRefinementCases:productV2Cases;
 const turnNumbers=item=>followup&&item.family==='deletion'?[1]:item.turns.map((_,index)=>index);
-const budget=new EvaluationBudget(1000000,80),results=[],turns=dataset.reduce((sum,item)=>sum+turnNumbers(item).length,0),startedAt=new Date().toISOString();
+const budget=new EvaluationBudget(companion?500000:1000000,companion?60:80),results=[],turns=dataset.reduce((sum,item)=>sum+turnNumbers(item).length,0),startedAt=new Date().toISOString();
 let campaignBudgetPath=null;
 if(live&&followup){
  const priorPath=resolve(arg('--prior-results')??resolve(root,'../phase2-evaluation-live/results.json')),prior=JSON.parse(await readFile(priorPath,'utf8'));
@@ -32,7 +34,7 @@ if(live&&followup){
 }
 let key;
 const atomic=async(name,value)=>{const path=resolve(out,name);await writeFile(path+'.tmp',JSON.stringify(value,null,2)+'\n');await rename(path+'.tmp',path);};
-const persist=async()=>{await atomic('results.json',{version:2,approval:'v2_80_attempts_1_usd_synthetic_only',mode:live?'live_provider':'offline_request_fixtures',followupMemory:followup,startedAt,sourceRoots:{baseline,candidate},sourceDigests,datasetSha256:hash(dataset),config:{model:'gpt-5-mini-2025-08-07',appModel:'gpt-5-mini',promptVersion:'meet-luna4',centralChat:true,reasoningEffort:'minimal',generalOutputTokens:800,structuredOutputTokens:2600,store:false,serviceTier:'default'},budget:budget.snapshot(),scenarios:dataset.length,visibleTurnsPerVariant:turns,results,productionWrites:0,appProviderEvaluationScope:followup?'Candidate-only targeted follow-up against recorded initial outputs. Selected discovery cases now include the actual zero-provider opening used by the new UI; these are capability checks, not a same-input paired baseline score.':'Request construction and generated prose only; DB mutations and UI are verified separately with synthetic fixtures.',subjectiveHumanScores:null,pairedComparison:'Same user inputs, model snapshot, configuration and synthetic source projections; each variant receives its own real previous replies. Real guided opening and persistence are tested separately.'});if(campaignBudgetPath)await atomic(campaignBudgetPath,budget.snapshot());};
+const persist=async()=>{await atomic('results.json',{version:2,approval,mode:live?'live_provider':'offline_request_fixtures',followupMemory:followup,startedAt,sourceRoots:{baseline,candidate},sourceDigests,datasetSha256:hash(dataset),config:{model:'gpt-5-mini-2025-08-07',appModel:'gpt-5-mini',promptVersion:'meet-luna4',centralChat:true,reasoningEffort:'minimal',generalOutputTokens:800,structuredOutputTokens:2600,store:false,serviceTier:'default'},budget:budget.snapshot(),scenarios:dataset.length,visibleTurnsPerVariant:turns,results,productionWrites:0,appProviderEvaluationScope:followup?'Candidate-only targeted follow-up against recorded initial outputs. Selected discovery cases now include the actual zero-provider opening used by the new UI; these are capability checks, not a same-input paired baseline score.':'Request construction and generated prose only; DB mutations and UI are verified separately with synthetic fixtures.',subjectiveHumanScores:null,pairedComparison:'Same user inputs, model snapshot, configuration and synthetic source projections; each variant receives its own real previous replies. Real guided opening and persistence are tested separately.'});if(campaignBudgetPath)await atomic(campaignBudgetPath,budget.snapshot());};
 async function construct(sourceRoot,item,turn,history,variant){
  const name=`${item.id}-${turn}-${variant}`,inputPath=resolve(out,name+'.input.json'),output=resolve(out,name+'.request.json');
  await writeFile(inputPath,JSON.stringify({sourceRoot,item,turn,history,output,selectedOpening:true,memoryRows:item.family==='correction'&&turn===2?[]:memoryRows(item,turn),...(item.topic?{guidedEntry:{topic:item.topic,questionContext:'The user chose this direction; their situation is in the current message.'}}:{}),...(item.id==='return-reflection-ru'?{freshEntry:{question:'How could making one plan kinder help today?',basis:'A clearly framed reflection inspired by saved natal information, not a transit forecast.'}}:{})}));
@@ -51,7 +53,7 @@ function observations(item,turn,text,request){
 }
 try{
  if(live){
-  assert.equal(arg('--approval'),'v2_80_attempts_1_usd_synthetic_only','explicit_approval_required');assert.ok(keyFile,'approved_key_file_required');
+  assert.equal(arg('--approval'),approval,'explicit_approval_required');assert.ok(keyFile,'approved_key_file_required');
   const permission=await stat(keyFile);assert.equal(permission.mode&0o077,0,'key_file_must_be_private');key=(await readFile(keyFile,'utf8')).trim();assert.match(key,/^sk-[A-Za-z0-9_-]{20,}$/);
  }
  await atomic('dataset.json',dataset);await persist();

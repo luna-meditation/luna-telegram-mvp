@@ -6,9 +6,11 @@ import {cosmosDomainSummary} from './luna42-cosmos-domain.js';
 import {potentiallySensitive,containsCredential,type PersonalMemory} from './personal-memory-policy.js';
 import {companionSettingsKey,companionPreference} from './companion-policy.js';
 import {createHash} from 'node:crypto';
-import {dailyEntryVersion,localCalendarDate,solarDailyReflection,type DailyPersonalEntry} from './daily-personal-entry.js';
+import {dailyEntryVersion,localCalendarDate,solarDailyReflection,transitDailyReflection,type DailyPersonalEntry} from './daily-personal-entry.js';
 import type {readPersonalPortrait} from './personal-portrait.js';
-import {astrologyEngineMetadata} from './luna30-astrology-engine.js';
+import {astrologyEngineMetadata,calculateCurrentTransits} from './luna30-astrology-engine.js';
+import {resolvePersonalBirth,birthContextAvailability} from './personal-context-engine.js';
+import {companionEntryQuestion,companionGreeting} from './product-experience.js';
 export {companionSettingsKey,companionPreference} from './companion-policy.js';
 type Data={profile:{display_name?:string|null;ai_context_consent:boolean};memoryEnabled:boolean;memories:PersonalMemory[]};
 type StarterMeta={version:1;operationId:string;state:'selected'|'displayed'|'responded'|'dismissed'|'expired';reason:'welcome'|'confirmed_goal';sourceId:string|null;sourceRevision:number|null;selectedAt:string;expiresAt:string};
@@ -24,7 +26,7 @@ export function companionMessage(language:'en'|'ru',name:string|null,candidate:P
 }
 /** Reuse existing owner-bound conversation/message storage. No second memory
  * store, no private text in telemetry, no provider call and no external push. */
-export function createCompanionEngine(db:SupabaseClient,load:(owner:number)=>Promise<Data>,options?:{portrait:(owner:number,localDate:string)=>ReturnType<typeof readPersonalPortrait>}){
+export function createCompanionEngine(db:SupabaseClient,load:(owner:number)=>Promise<Data>,options?:{portrait:(owner:number,localDate:string)=>ReturnType<typeof readPersonalPortrait>;birthAvailability?:boolean}){
  return{
   async open(owner:number,raw:unknown,now=new Date()){
    const input=z.object({operationId:z.string().uuid(),language:z.enum(['en','ru']),conversationId:z.string().uuid().optional(),entryOnly:z.boolean().optional(),timeZone:z.string().max(100).refine(value=>{try{localCalendarDate(new Date(),value);return true;}catch{return false;}},'Use a valid IANA timezone.').default('UTC')}).strict().parse(raw);
@@ -38,8 +40,15 @@ export function createCompanionEngine(db:SupabaseClient,load:(owner:number)=>Pro
     const localDate=localCalendarDate(now,input.timeZone),en=input.language==='en';
     const allowed=data.memoryEnabled&&data.profile.ai_context_consent,settings=companionPreference(data.memories);
     const portrait=allowed&&options?await options.portrait(owner,localDate):null;
+    // Availability prevents a repeated question without retrieving personal
+    // portrait content or granting provider permission. No raw values escape.
+    const availableBirth=!portrait&&options?.birthAvailability?await resolvePersonalBirth(db,owner):null;
+    const birth=portrait?.birth??(availableBirth?birthContextAvailability(availableBirth):null);
     const sun=portrait?.chart?.facts.planets.find(p=>p.planet.toLowerCase()==='sun'),english=['Aries','Taurus','Gemini','Cancer','Leo','Virgo','Libra','Scorpio','Sagittarius','Capricorn','Aquarius','Pisces'];
-    const chartReflection=portrait&&settings.dailyAstrology?solarDailyReflection({language:input.language,localDate,sunSigns:sun?sun.signs.map(value=>english.indexOf(value)):portrait.dateOnlySun?.sunSigns??[],source:sun?'saved_chart':'date_only_sun'}):null;
+    // One stable, declared UTC snapshot per local calendar date. It is never
+    // passed off as an aspect-peak time or a prediction of personal events.
+    const transitReflection=portrait?.chart?.calculation&&settings.dailyAstrology?transitDailyReflection(calculateCurrentTransits(portrait.chart.calculation,localDate+'T12:00:00.000Z'),input.language):null;
+    const chartReflection=transitReflection??(portrait&&settings.dailyAstrology?solarDailyReflection({language:input.language,localDate,sunSigns:sun?sun.signs.map(value=>english.indexOf(value)):portrait.dateOnlySun?.sunSigns??[],source:sun?'saved_chart':'date_only_sun'}):null);
     const name=allowed?data.profile.display_name?.trim().slice(0,60):null;
     let candidate=selectCompanionCandidate(data,[],now.getTime());
     if(candidate){const past=await db.from('ai_messages').select('metadata').eq('telegram_id',owner).eq('role','assistant').contains('metadata',{companionStarter:{sourceId:candidate.id}}).order('created_at',{ascending:false}).limit(20);if(past.error)throw new FoundationError(503,'companion_unavailable','Could not verify your follow-up preference.');candidate=selectCompanionCandidate(data,(past.data??[]).map(row=>row.metadata.companionStarter as StarterMeta),now.getTime());}
@@ -48,10 +57,10 @@ export function createCompanionEngine(db:SupabaseClient,load:(owner:number)=>Pro
       text:en?`You saved this goal: “${cosmosDomainSummary(candidate.memory_value).slice(0,140)}”. You could choose one small part to make room for today, rather than trying to solve it all.`:`У тебя есть сохранённая цель: «${cosmosDomainSummary(candidate.memory_value).slice(0,140)}». Можно выбрать одну небольшую часть, для которой сегодня найдётся место, вместо того чтобы решать всё сразу.`,
       basis:en?'Your confirmed goal. You can correct or remove it in My Cosmos.':'Твоя подтверждённая цель. Её можно исправить или удалить в «Моём космосе».',source:'confirmed_goal',calculationVersion:dailyEntryVersion
     }:chartReflection;
-    const key=createHash('sha256').update(JSON.stringify({owner,localDate,timeZone:input.timeZone,language:input.language,epoch:portrait?.persistence.state==='saved'?portrait.persistence.sourceEpoch:null,birthVersion:portrait?.persistence.state==='saved'?portrait.persistence.sectionDigests.astrology:null,version:dailyEntryVersion,calculationVersion:astrologyEngineMetadata.version,goal:candidate?{id:candidate.id,revision:candidate.revision}:null,allowed,settings})).digest('hex');
-    const question=audience==='new'?(en?'What would you like to understand a little better?':'В чём тебе хочется немного разобраться?'):candidate?(en?'What would be a manageable step toward it today?':'Какой шаг к этой цели будет сегодня посильным?'):reflection?(en?'Is there a situation today where this could help?':'Есть ли сегодня ситуация, в которой это может помочь?'):(en?'What matters most to you today?':'Что для тебя сейчас важнее всего?');
-    const greeting=audience==='new'?(en?'Hi, I’m Luna. We can make sense of what is on your mind, one step at a time.':'Привет, я Луна. Можем вместе разобраться в том, что тебя волнует, шаг за шагом.'):en?`Hi${name?', '+name:''}. I’m here.`:`Привет${name?', '+name:''}. Я рядом.`;
-    const entry:DailyPersonalEntry={version:1,key,localDate,timeZone:input.timeZone,language:input.language,audience,greeting,question,reflection,birthAvailable:Boolean(portrait?.birth.available),hasBirthTime:Boolean(portrait?.birth.hasTime),contextReflectionAllowed:allowed&&(reflection?.source==='confirmed_goal'||settings.symbolicAiContext)};
+    const key=createHash('sha256').update(JSON.stringify({owner,localDate,timeZone:input.timeZone,language:input.language,epoch:portrait?.persistence.state==='saved'?portrait.persistence.sourceEpoch:null,birthAvailability:birth,birthAvailabilityRevision:availableBirth?.selected?.revision??null,birthVersion:portrait?.persistence.state==='saved'?portrait.persistence.sectionDigests.astrology:null,version:dailyEntryVersion,calculationVersion:astrologyEngineMetadata.version,goal:candidate?{id:candidate.id,revision:candidate.revision}:null,allowed,settings})).digest('hex');
+    const question=candidate?(en?'What part of this feels most important to you today?':'Что в этой цели сегодня важнее всего для тебя?'):companionEntryQuestion(input.language,Boolean(birth?.available));
+    const greeting=companionGreeting(input.language,audience,name);
+    const entry:DailyPersonalEntry={version:1,key,localDate,timeZone:input.timeZone,language:input.language,audience,greeting,question,reflection,birthAvailable:Boolean(birth?.available),hasBirthTime:Boolean(birth?.hasTime),contextReflectionAllowed:allowed&&(reflection?.source==='confirmed_goal'||settings.symbolicAiContext&&!transitReflection)};
     return{conversationId:null,message:null,entry};
    }
    const day=now.toISOString().slice(0,10),id=toolOperationId(owner,day,'companion.daily','v1');

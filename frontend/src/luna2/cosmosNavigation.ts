@@ -1,6 +1,6 @@
 // A bounded in-memory view position. No personal text or browser storage.
 export type CosmosChapter='essence'|'strengths'|'growth'|'relationships'|'direction'|'discoveries'|'astrology';
-export type CosmosView='overview'|'portrait'|'chart'|'discoveries'|'journey';
+export type CosmosView='overview'|'portrait'|'birth'|'chart'|'discoveries'|'journey';
 type Position={scrollTop:number;chapter:CosmosChapter|null;expandedDiscovery:string|null;view:CosmosView;scroll:Partial<Record<CosmosView,number>>;journeyVisible:number};
 const positions=new Map<string,Position>();
 export function cosmosPosition(scope:string){

@@ -14,7 +14,9 @@ export function productV2SourceDigest(root){
 }
 export function verifyProductV2Evidence(r,root,{now=Date.now()}={}){
  assert.equal(r.release,'product-experience-v2');assert.equal(r.status,'PASS');
- assert.equal(r.baseCommit,'6faafbd7093611b1a357d1a980f7194a5d44739e');
+ const companion=r.revision==='companion-refinement-20261031';
+ assert.ok(r.revision===undefined||companion,'Unknown release evidence revision');
+ assert.equal(r.baseCommit,companion?'8f5570e9d006be9ef9287b8c889b0cf648567c85':'6faafbd7093611b1a357d1a980f7194a5d44739e');
  assert.equal(r.projectId,'vkcdtasbdoeilgfucoax');assert.deepEqual(r.criticalBlockers,[]);
  assert.equal(r.staging,'omitted-by-explicit-owner-instruction-2026-10-31');
  assert.equal(r.productionModel,'gpt-5-mini');assert.equal(r.aiCapUsd,100);
@@ -38,7 +40,29 @@ export function verifyProductV2Evidence(r,root,{now=Date.now()}={}){
  const mobile=r.mobile;assert.equal(mobile.status,'PASS');assert.equal(mobile.variants.length,16);
  for(const engine of ['chromium','webkit'])for(const width of [360,375,390,393])for(const language of ['ru','en']){const v=mobile.variants.filter(c=>c.engine===engine&&c.width===width&&c.language===language);assert.equal(v.length,1);assert.equal(v[0].status,'PASS');assert.ok(v[0].checks>=26);}
  assert.equal(r.performance.status,'PASS');assert.equal(r.performance.visibleFrameChangeVerified,true);assert.equal(r.performance.reducedMotionVerified,true);assert.equal(r.performance.lowPowerVerified,true);
- assert.equal(r.ai.scenarios,10);assert.equal(r.ai.completed,60);assert.equal(r.ai.failed,0);assert.equal(r.ai.requestReplayMatches,60);assert.ok(r.ai.costUsd>0&&r.ai.costUsd<=1);
+ assert.equal(r.ai.scenarios,10);assert.equal(r.ai.failed,0);
+ if(companion){
+  // The initial paired campaign preceded the final prompt correction. Do not
+  // present its 60 requests as a final-source replay or a new paired rerun.
+  assert.equal(r.ai.method,'paired-baseline-with-targeted-final-followup');
+  assert.equal(r.ai.completed,72);assert.equal(r.ai.initialPaired.completed,60);
+  assert.equal(r.ai.initialPaired.baselineResponses,30);assert.equal(r.ai.initialPaired.candidateResponses,30);
+  assert.equal(r.ai.initialPaired.scenarios,10);assert.equal(r.ai.initialPaired.turnsPerConversation,3);
+  assert.equal(r.ai.followup.completed,12);assert.equal(r.ai.followup.finalRequestReplayMatches,12);
+  assert.equal(r.ai.followup.actualFreeHandlerMatches,3);assert.equal(r.ai.followup.runtimeChecks,12);
+  assert.deepEqual(r.ai.followup.fullConversationTurns,[3,3]);
+  assert.equal(r.ai.followup.partialConversationTurns,2);assert.equal(r.ai.followup.recordedPrefixContinuations,4);
+  assert.equal(r.ai.finalFullPairedRerun,false);assert.equal(r.ai.criticalSafetyFailures,0);
+  assert.ok(r.ai.costUsd>0&&r.ai.costUsd<=0.5);
+  for(const evidence of [r.ai.initialPaired,r.ai.followup])assert.match(evidence.resultsSha256,/^[a-f0-9]{64}$/);
+  const maintenance=r.database.maintenance;
+  assert.equal(maintenance.status,'PASS');assert.equal(maintenance.postgresVersionNum,170011);
+  assert.equal(maintenance.ownerAuthorized,true);assert.equal(maintenance.backendRecovered,true);
+  assert.equal(maintenance.preUpgradeRecoveryVerified,true);assert.equal(maintenance.postUpgradeCriticalAdvisories,0);
+  assert.equal(r.decision,'CONDITIONAL GO');
+ }else{
+  assert.equal(r.ai.completed,60);assert.equal(r.ai.requestReplayMatches,60);assert.ok(r.ai.costUsd>0&&r.ai.costUsd<=1);
+ }
  assert.equal(r.ai.scope,'request-construction-and-raw-provider-prose');assert.equal(r.ai.independentHumanReview,false);assert.ok(r.knownLimitations.length>=5);
  assert.equal(r.physicalTelegramAcceptance,'pending-owner-review');
  assert.equal(r.sourceDigest,productV2SourceDigest(root),'Source changed after Product v2 verification');

@@ -52,7 +52,7 @@ test('all Luna 2.0 feature flags are disabled unless explicitly enabled', () => 
 
 test('legacy navigation stays active while the three-tab Luna 2.5 model is ready behind its flag', () => {
   assert.deepEqual(navigation.primaryNavigation(false).map((item) => item.page), ['home', 'library', 'luna', 'progress', 'profile']);
-  assert.deepEqual(navigation.primaryNavigation(true).map((item) => item.page), ['home', 'luna', 'cosmos']);
+  assert.deepEqual(navigation.primaryNavigation(true).map((item) => item.page), ['home', 'luna', 'profile']);
   assert.match(app, /newNavigation:\s*featureFlags\.new_navigation/);
   assert.match(bottomNavigation, /newNavigation = false/);
   const copy = readFileSync(resolve(source, 'luna2/copy.ts'), 'utf8');
@@ -74,7 +74,7 @@ test('route state preserves contextual back navigation and moves Journey under P
 
   const luna2Journey = navigation.reduceRouteState({ current: 'profile', trail: [] }, { type: 'navigate', page: 'progress' }, true);
   assert.deepEqual(luna2Journey, { current: 'progress', trail: ['profile'] });
-  assert.equal(navigation.fallbackPage('moonGarden', true), 'cosmos');
+  assert.equal(navigation.fallbackPage('moonGarden', true), 'profile');
 
   assert.match(routeHook, /WebApp\?\.BackButton/);
   assert.match(routeHook, /backButton\.onClick/);

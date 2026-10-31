@@ -19,7 +19,7 @@ export const personalMemoryRouter=Router();
 const cosmos=createCosmosStateService(supabase);
 const meet=createMeetLunaService(supabase);
 const discoveries=createDiscoveryService(supabase);
-const companion=createCompanionEngine(supabase,getUniverse,{portrait:(owner,day)=>readPersonalPortrait(supabase,owner,()=>getUniverse(owner),day)});
+const companion=createCompanionEngine(supabase,getUniverse,{birthAvailability:true,portrait:(owner,day)=>readPersonalPortrait(supabase,owner,()=>getUniverse(owner),day)});
 const birthDiscovery=createBirthDiscovery(supabase);
 const reflections=createPersonalReflection(supabase,{list:listPersonalMemories,write:writePersonalMemory});
 const portraitDiscussion=createPortraitDiscussion(supabase,getUniverse);

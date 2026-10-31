@@ -10,7 +10,7 @@ const {item,turn,history}=input,message=item.turns[turn],recent=[...history,{rol
 // Reproduce the actual pre-Core central-chat call site, including its explicit
 // interface-language flag; do not accidentally evaluate the policy's default.
 const language=languageModule.resolveConversationLanguage?languageModule.resolveConversationLanguage(message,item.interfaceLanguage,recent,'auto'):languagePolicy.resolveResponseLanguage(message,item.interfaceLanguage,recent,true);
-const rows=input.memoryRows??memoryRows(item,turn),personal=personalPolicy.permittedPersonalContext({...personalPolicy.emptyPersonalProfile,ai_context_consent:true,confirmed_memories:memoryPolicy.selectRelevantMemories(rows,message),saved_reflections:memoryPolicy.selectRelevantReflections(rows,message)});
+const rows=input.memoryRows??memoryRows(item,turn),personal=personalPolicy.permittedPersonalContext({...personalPolicy.emptyPersonalProfile,ai_context_consent:true,...(item.knownBirth?{known_birth:item.knownBirth}:{}),confirmed_memories:memoryPolicy.selectRelevantMemories(rows,message),saved_reflections:memoryPolicy.selectRelevantReflections(rows,message)});
 const context={personalContext:personal,runtimeDecision:{intent:'general_chat',action:'none',confidence:1},previousQuickReplies:[]};
 if(input.guidedEntry)context.guidedEntry=input.guidedEntry;
 if(input.freshEntry)context.freshEntry=input.freshEntry;
@@ -32,4 +32,14 @@ if(item.family==='astrology'){
  context.modeContext={mode:'astrology',personalContext:personal,chartContext:chart};groundTruth={...groundTruth,chart,calculation};
 }
 const body=buildLunaOpenAiRequest({language,catalog:[],context,recent,intelligence:true,answerFromSelectedEvidence:Boolean(context.modeContext),maxOutputTokens:2600});
-await writeFile(input.output,JSON.stringify({language,body,groundTruth,scope:'actual request builder with synthetic source projections; not full chat persistence or tool execution'},null,2)+'\n');
+let directReply=null;
+if(input.verifyDirectAction){
+ const [{resolveIntelligenceCommand},{createIntelligenceActionService},{createClient}]=await Promise.all([module('luna-intelligence-command'),module('luna-intelligence-actions'),import('@supabase/supabase-js')]);
+ const command=resolveIntelligenceCommand(message);
+ if(command&&(command.action==='capability.unavailable'&&['personal_companion','date_only_chart'].includes(command.input.capability)||command.action==='navigation.open'&&command.input.destination==='memory')){
+  const db=createClient('https://synthetic.invalid','synthetic-only',{auth:{persistSession:false},global:{fetch:async()=>{throw Error('evaluation_direct_action_must_not_read_database');}}});
+  const service=createIntelligenceActionService(db,{features:{central:true,spreads:true,tarot_history:true,tarot_daily:true,astrology:true,personal_memory:true},usage:async()=>{throw Error('quota_read_not_expected');},eligibility:async()=>{throw Error('financial_read_not_expected');}});
+  directReply={command,...await service.prepare(880000002,'00000000-0000-4000-8000-000000000099',language,command),scope:'Actual free action preparation; no DB reads, persistence, provider call or financial operation'};
+ }
+}
+await writeFile(input.output,JSON.stringify({language,body,groundTruth,...(input.verifyDirectAction?{directReply}:{}),scope:'actual request builder with synthetic source projections; not full chat persistence or tool execution'},null,2)+'\n');

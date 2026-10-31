@@ -1,7 +1,10 @@
 /* Luna 2.5: a compact celestial Home. Existing theme, safe-area and mood logic remain shared. */
-.bottom-navigation-luna2 .luna2-nav-ai[aria-current="page"]{background:transparent;border-color:transparent;box-shadow:none;color:var(--accent-gold-text)}
-.bottom-navigation-luna2 .luna2-nav-ai svg{padding:0;filter:drop-shadow(0 0 7px #a08ade66)}
-.bottom-navigation-luna2 .luna2-nav-ai:after{content:'';position:absolute;bottom:5px;width:17px;height:2px;border-radius:3px;background:#b7a1e766;box-shadow:0 0 8px #9172cf44}
+.bottom-navigation-luna2 .luna2-nav-ai[aria-current="page"]{background:radial-gradient(ellipse at 50% 45%,#1678ff30,transparent 75%);border-color:transparent;box-shadow:none;color:#68b8ff}
+.bottom-navigation-luna2 .luna2-nav-ai svg{padding:0}
+.bottom-navigation-luna2 .luna2-nav-ai[aria-current="page"] svg{filter:drop-shadow(0 0 5px #178aff) drop-shadow(0 0 13px #1277ff70)}
+.bottom-navigation-luna2 .luna2-nav-ai:after{content:'';position:absolute;bottom:4px;width:19px;height:2px;border-radius:3px;background:transparent}
+.bottom-navigation-luna2 .luna2-nav-ai[aria-current="page"]:after{background:#45a9ff;box-shadow:0 0 9px #168aff}
+:root[data-theme=light] .bottom-navigation-luna2 .luna2-nav-ai[aria-current="page"]{color:#0969cb}
 .luna2-home{gap:16px}
 .luna2-home .luna25-hero{min-height:318px;display:flex;flex-direction:column;isolation:isolate;background:#171d3b;border:1px solid #c2a2de24;border-radius:25px;box-shadow:0 10px 30px #05081818}
 .luna2-home .luna25-hero .home-v2-hero-image{display:block;object-fit:cover;object-position:35% 50%;opacity:1;filter:none}

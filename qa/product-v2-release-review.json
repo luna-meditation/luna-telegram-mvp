@@ -1,8 +1,8 @@
 {
   "release": "product-experience-v2",
   "status": "PASS",
-  "preparedAt": "2026-10-31T04:04:36.704650+00:00",
-  "baseCommit": "6faafbd7093611b1a357d1a980f7194a5d44739e",
+  "preparedAt": "2026-10-31T09:46:01.550282+00:00",
+  "baseCommit": "8f5570e9d006be9ef9287b8c889b0cf648567c85",
   "projectId": "vkcdtasbdoeilgfucoax",
   "staging": "omitted-by-explicit-owner-instruction-2026-10-31",
   "criticalBlockers": [],
@@ -19,48 +19,48 @@
     "externalNetworkBlocked": true,
     "results": [
       {
-        "name": "backend-tests",
+        "name": "backend-tests-release",
         "exitCode": 0,
-        "logSha256": "801f7b69483f02bb0f35c30671537fe391e2bca4748f98dfd12c9a6179bb306c"
+        "logSha256": "5aa27519375f05ad1d45241ab25de55b68c28f42cc739ca5fb45b5a01bcc7b05"
       },
       {
-        "name": "frontend-tests",
+        "name": "frontend-tests-release",
         "exitCode": 0,
-        "logSha256": "c8f0fd91807ca150500cd744060798fc9b66b42b6ed6613fc4821daaaed88684"
+        "logSha256": "7e71550b6644be7409a4f222a073fe3425b28412bc5e0a6d6ef46556362051b8"
       },
       {
-        "name": "backend-lint",
+        "name": "backend-lint-release",
         "exitCode": 0,
         "logSha256": "5176f62461ef3e9213822868a449fe490db821562ed126e2235116842fb534dd"
       },
       {
-        "name": "frontend-lint",
+        "name": "frontend-lint-release",
         "exitCode": 0,
         "logSha256": "2452a9ddca3adab41feec5c92e192c56e69a15e9bf70e131fe1eb839d9f28d3a"
       },
       {
-        "name": "backend-type",
+        "name": "backend-type-release",
         "exitCode": 0,
         "logSha256": "019928fd442a92138e6066c3066027c7fd9b166a1096b87c85f734122ae79e7a"
       },
       {
-        "name": "frontend-type",
+        "name": "frontend-type-release",
         "exitCode": 0,
         "logSha256": "88dac549f617c488dd0291fd5ad0a895a138d407c02004c49846123d4240be23"
       },
       {
-        "name": "backend-build",
+        "name": "backend-build-release",
         "exitCode": 0,
         "logSha256": "2c1059c102365bd2e701b39de27194a2aaafdd5d5e7fe7d397e8e4e09b374feb"
       },
       {
-        "name": "frontend-build",
+        "name": "frontend-build-release",
         "exitCode": 0,
-        "logSha256": "24d041400af308f97a41320bebb31facffc9037671e5ea9e48d9a4f9c3b1fb06"
+        "logSha256": "3b097ce85a4d4996b7be841dab69fd6381e1c316b5a61690bbd522c6e0059ba3"
       }
     ],
-    "backendTests": 983,
-    "frontendTests": 301
+    "backendTests": 992,
+    "frontendTests": 305
   },
   "dependencies": {
     "productionVulnerabilities": {
@@ -87,8 +87,10 @@
   "database": {
     "native": {
       "status": "PASS",
-      "checks": 31,
-      "reportSha256": "b62231e4e180dcbdc01d2492657db5065f179bb7f2c2f0c9179068392fc2ce4e"
+      "checks": 33,
+      "postgresVersion": "17.11",
+      "reportSha256": "2fbb4cbd1d9a53a2aa2f2ab017f9acc208f01860ef0c154f4a26ea267c977706",
+      "scope": "Current captured privileges, no migration simulation. Full Luna relational metadata; 27 unrelated application tables excluded and not touched. Native service-role/SQL execution is separate from positive hosted HTTP/Telegram acceptance."
     },
     "functionDefinitionsCompared": 127,
     "changedFunctions": 0,
@@ -100,13 +102,24 @@
     },
     "privateTablesBrowserPrivileges": 0,
     "financialSettingsUnchanged": true,
-    "productionNegativeAuthChecks": 9
+    "productionNegativeAuthChecks": 5,
+    "maintenance": {
+      "status": "PASS",
+      "postgresVersionNum": 170011,
+      "providerVersion": "17.11.0.011",
+      "ownerAuthorized": true,
+      "backendRecovered": true,
+      "preUpgradeRecoveryVerified": true,
+      "postUpgradeCriticalAdvisories": 0,
+      "verifiedAt": "2026-10-31T09:37:57.765Z",
+      "reportSha256": "ee3322b4e3cb6f56ddf87bb7ff0866d68706d3fd5d3ec74f705bca61b5019061"
+    }
   },
   "recovery": {
     "status": "PASS",
     "projectId": "vkcdtasbdoeilgfucoax",
-    "capturedAt": "2026-10-31 03:40:49.556651+00",
-    "verifiedAt": "2026-10-31T04:03:28.050Z",
+    "capturedAt": "2026-10-31 09:19:49.155335+00",
+    "verifiedAt": "2026-10-31T09:28:29.777Z",
     "backupOutsideSyncedDocuments": true,
     "encryptedExport": true,
     "coverage": {
@@ -270,40 +283,91 @@
       }
     ],
     "totalChecks": 416,
-    "detailedEvidenceSha256": "6835750bd2a15d3bf800a0b0cfb61c88d44beac3d01018f552be9d05ee1417cf",
-    "returningSequentialMessagesRuEn": "PASS"
+    "detailedEvidenceSha256": "a4a7dd7375f8fa343e2715cdc54c5eb3e92fd1fadf9455b671eb936b50b8d698",
+    "birthFlow": {
+      "status": "PASS",
+      "checks": 176,
+      "reportSha256": "d599a9c27b15a69dfdd305228ccd1b6ccc8fc2faddc91aebe9fc52a2b8a9d76b",
+      "scope": "Real browser rendering and real astrology calculation; synthetic local persistence; no provider calls"
+    },
+    "contextualNavigation": {
+      "status": "PASS",
+      "checks": 20,
+      "reportSha256": "ea397908923765655aa5ff8b5efa98c3baba07a831d4cb86f298c3306379a2a6",
+      "scope": "Actual mobile rendering, synthetic local backend records only; no provider calls or production writes"
+    },
+    "dailyRendering": {
+      "status": "PASS",
+      "checks": 4,
+      "reportSha256": "f45e25ee3c4a3e4cf20a73d44aed750dfe4a3a1c0e00a839316b7b57adf17aa3",
+      "scope": "Actual rendering with a recorded synthetic entry calculated by the existing Astrology Engine; separate from hosted production persistence"
+    }
   },
   "performance": {
     "status": "PASS",
     "visibleFrameChangeVerified": true,
     "reducedMotionVerified": true,
     "lowPowerVerified": true,
-    "reportSha256": "ab76ef907433a46183f0ede667c676a6dcb3a35552cb755f1366eef131a2049f"
+    "reportSha256": "ee9955ec1f747db79a5158ffc5e2d1b565a19524b4a3b0a1e695037c908ac574",
+    "frameEvidenceSha256": "cc65623f597ffd532f9ad0a706438e3e5081bf36a175942819dee0fd446503fb",
+    "physicalTelegramMeasured": false,
+    "scope": "Local Chrome/WebKit rendering; no network-throttled or physical-device performance claim"
   },
   "ai": {
+    "method": "paired-baseline-with-targeted-final-followup",
     "scenarios": 10,
-    "completed": 60,
+    "completed": 72,
     "failed": 0,
-    "requestReplayMatches": 60,
-    "costUsd": 0.051075,
+    "costUsd": 0.058875,
     "scope": "request-construction-and-raw-provider-prose",
     "independentHumanReview": false,
-    "resultsSha256": "13c654712210cce81a4a23cd1c9d9a6a72a231c13fc95739d9c49bae60c96bec"
+    "criticalSafetyFailures": 0,
+    "safetyReviewScope": "Self-review of authorized-source use, calculation guards and no unconfirmed persistence; not independent clinical or personality validity review",
+    "finalFullPairedRerun": false,
+    "initialPaired": {
+      "completed": 60,
+      "baselineResponses": 30,
+      "candidateResponses": 30,
+      "scenarios": 10,
+      "turnsPerConversation": 3,
+      "resultsSha256": "f6bd296e644bfe37fd9e34a4140f51b37d5e1398ad4756aac51ca30227462859"
+    },
+    "followup": {
+      "completed": 12,
+      "finalRequestReplayMatches": 12,
+      "actualFreeHandlerMatches": 3,
+      "runtimeChecks": 12,
+      "fullConversationTurns": [
+        3,
+        3
+      ],
+      "partialConversationTurns": 2,
+      "recordedPrefixContinuations": 4,
+      "resultsSha256": "3a8db1998ae512b9f339f4e1477d1d67e35f57e8748051e725ccdf23641755ce",
+      "replaySha256": "070421545fea1c7411847a1b237dc62e43d73d04ce3a76df19e41b94d9241e8e",
+      "runtimeReviewSha256": "fa01978eff8cd955bccbaa67b5ac05a3c60ad1e5c4d628a94a8f3cfbab206707"
+    },
+    "temporaryProviderKeyRemoved": true
   },
   "physicalTelegramAcceptance": "pending-owner-review",
   "rollback": {
-    "commit": "6faafbd7093611b1a357d1a980f7194a5d44739e",
-    "railwayDeployment": "87a6548d-3266-492c-93ea-99fecc77a1e7",
-    "netlifyDeployment": "6addc0607b5026b0c6b2bea7"
+    "commit": "8f5570e9d006be9ef9287b8c889b0cf648567c85",
+    "railwayDeployment": "159b322e-fc51-40c0-9f95-1ef6958ff856",
+    "netlifyDeployment": "6ae56b0bea75887bc619e2c2",
+    "databaseDowngradeAvailable": false,
+    "strategy": "Revert application source through existing Git deployment; PostgreSQL 17.11 is retained. Encrypted recovery is an emergency owner-controlled data recovery procedure."
   },
   "knownLimitations": [
-    "Real provider evaluation covers ten synthetic conversations and raw prose, not statistical proof or every live tool workflow; inference and extra follow-up questions remain.",
-    "Discoveries require explicit review and confirmation; a generated draft may add an unsupported inference.",
-    "Physical iPhone/Telegram WebView, GPU, power and keyboard acceptance remains pending owner review.",
-    "Daily reflections use a confirmed goal or saved natal Sun; they are not daily transit forecasts and may repeat across days.",
-    "Chat finalization retains existing multiple writes; this release adds no new transactional RPC or migration.",
-    "Two moderate development-only minimatch advisory instances need a separately verified major tooling update. Production dependency audit is clean.",
-    "Future-object default ACLs and Supabase leaked-password protection remain follow-up items; Telegram authorization, current RLS and current private-table privileges were verified."
+    "Initial evaluation: ten paired three-turn RU/EN situations, 60 requests. Final correction: 12 targeted provider requests and three actual free handlers, including two full three-turn conversations, one two-turn astrology conversation and four recorded-prefix continuations. No fresh final ten-conversation paired rerun or independent human study.",
+    "Companion replies can still infer stable traits or causes from one episode, offer unrequested exercises, or sound generic. Symbolic astrology prose can be too assertive and occasionally retains an English technical term in Russian. Generated claims are not authoritative personal history.",
+    "Discoveries require explicit review and confirmation. Memory correction/deletion and source revision checks remain authoritative; prose cannot silently change a saved goal or observation.",
+    "Physical iPhone/Telegram WebView, power, GPU, keyboard and actual mobile network performance remain pending owner acceptance. Browser measurements are local and the fixture chat latency is not provider latency.",
+    "Daily chart guidance is a symbolic reflection using a declared 12:00 UTC snapshot per local day, not a timed transit peak or an event forecast. It falls back to an explicitly framed birth-date reflection when valid transits are unavailable; confirmed goals take priority.",
+    "Chat finalization still uses existing multiple writes. No new transactional infrastructure or production migrations were added.",
+    "Two moderate development-only minimatch instances require a separately verified major tooling update. Production dependencies have zero reported advisories.",
+    "Supabase leaked-password protection remains disabled; Luna uses Telegram authentication. Future-object default ACL hardening remains a separate reviewed migration; all current private-table and sixteen-table privileges were verified after the PostgreSQL security patch."
   ],
-  "sourceDigest": "a727454948e4189d432a8e6001afdf755c92916dde693c7ae5598e05014f0a97"
+  "sourceDigest": "56ce2c5990e0a0deb4f7a1d71a0032a9f45888e1c428d9b07496badc1fa2b8ff",
+  "revision": "companion-refinement-20261031",
+  "decision": "CONDITIONAL GO"
 }

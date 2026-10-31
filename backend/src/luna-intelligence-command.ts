@@ -1,6 +1,7 @@
 import type {IntelligenceActionId,IntelligenceSpread} from './luna-intelligence-contract.js';
 import {requestedBreathOptions} from './luna34-conversation.js';
 import {intelligenceUuid} from './luna-intelligence-contract.js';
+import {companionCapabilityBoundary} from './product-experience.js';
 import {declinesTarot,explicitlyUnselectedReference} from './luna-intelligence-turn.js';
 export type IntelligenceCommand={action:IntelligenceActionId;input:Record<string,unknown>;reason:string};
 const tarot=/\b(?:tarot|spread|cards?)\b|таро|расклад|(?:одн[ауой]|три|тр[её]х|пять|пят[ьи]|[135])\s+карт/iu;
@@ -41,6 +42,9 @@ export function resolveIntelligenceCommand(message:string,active?:{type:string;k
  // to prose that may offer unsupported rectification or alternative houses.
  const missingBirthTime=/\bwithout\s+(?:(?:an?|the|exact|known)\s+){0,3}birth\s+time\b|\bbirth\s+time\s+(?:is\s+)?(?:unknown|missing|not known)\b|\b(?:don'?t|do not) know (?:my |the )?birth time\b|(?:без|нет|не знаю).{0,25}врем\S*.{0,15}рожд|врем\S*.{0,15}рожд\S*.{0,20}(?:неизвест|не знаю|не указан)/iu.test(text);
  if(missingBirthTime&&/\b(?:houses?|ascendant)\b|(?<!\p{L})(?:дом(?:а|ов|ы|ах)?|асцендент\p{L}*)(?!\p{L})/iu.test(text))return{action:'capability.unavailable',input:{capability:'unknown_birth_time'},reason:'verified_birth_time_limitation'};
+ const companionBoundary=companionCapabilityBoundary(text);
+ if(companionBoundary)return{action:'capability.unavailable',input:{capability:companionBoundary},reason:'personal_companion_scope'};
+ if(/\b(?:where|how)\b|где|как/iu.test(text)&&/\b(?:edit|correct|delete|remove|change)\b|исправ|измен|редактир|удал/iu.test(text)&&/\b(?:saved (?:goal|memory|observation|note)|memory entr(?:y|ies))\b|сохран[её]нн\p{L}*.{0,30}(?:цел|запис|наблюдени)|(?:редактор|запис\p{L}*).{0,20}памят/iu.test(text))return{action:'navigation.open',input:{destination:'memory'},reason:'actual_personal_memory_editor'};
  const requested=text.replace(/(?:\b(?:do not|don'?t want|don'?t|not|without)\s+(?:(?:a|an|the|new|another)\s+)*(?:tarot(?:\s+(?:spread|reading))?|spread|reading)\b|(?:не(?:\s+(?:хочу|надо|нужно|делай|начинай))?|без)\s+(?:(?:нов\p{L}*|ещ[её]\s+од\p{L}*)\s+)?(?:таро|расклад\p{L}*))[^,.;!?]*(?:[,.;!?]|$)/giu,' ');
  // A named calculated system takes precedence over the ambiguous word "карта".
  // Opening a report is distinct from interpreting an already active one.

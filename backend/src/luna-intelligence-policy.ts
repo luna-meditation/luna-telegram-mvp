@@ -32,7 +32,7 @@ export const intelligenceActionInputs={
  'premium.entitlements':z.object({}).strict(),
  'ai.allowance':z.object({}).strict(),
  'commerce.options':z.object({view:z.enum(['shop','earn','premium'])}).strict(),
- 'capability.unavailable':z.object({capability:z.enum(['file_generation','unsupported_calculation','unknown_birth_time','private_feelings'])}).strict(),
+ 'capability.unavailable':z.object({capability:z.enum(['file_generation','unsupported_calculation','unknown_birth_time','private_feelings','personal_companion','date_only_chart'])}).strict(),
  'safety.support':z.object({category:z.enum(['self_harm','medical_emergency','violence'])}).strict()
 } satisfies Record<IntelligenceActionId,z.ZodTypeAny>;
 export {resolveIntelligenceCommand,requestedSpread,type IntelligenceCommand} from './luna-intelligence-command.js';

@@ -1,13 +1,13 @@
 .cosmic-atmosphere{position:fixed;inset:0;z-index:0;pointer-events:none!important;overflow:hidden;contain:strict;background:radial-gradient(ellipse 110% 65% at 83% 10%,#28234255,transparent 75%),linear-gradient(175deg,#080e1d,#070d19 55%,#080b16);color:#eee3d4}
 .cosmic-atmosphere:before{content:'';position:absolute;inset:0;opacity:.22;background:radial-gradient(ellipse 65% 52% at 80% 48%,#62407c60,transparent 85%),radial-gradient(ellipse 95% 35% at 20% 25%,#30467470,transparent);transition:opacity 800ms ease}
-.cosmic-depth{position:absolute;inset:-24px;width:calc(100% + 48px);height:calc(100% + 48px);fill:currentColor;opacity:.52;animation:cosmic-drift 42s ease-in-out infinite alternate;transform:translate3d(0,0,0)}
-.cosmic-depth.depth-1{opacity:.36;animation:cosmic-drift 57s ease-in-out -41s infinite alternate,cosmic-breathe 7s ease-in-out -5s infinite alternate}
-.cosmic-depth.depth-2{opacity:.5;animation:cosmic-drift 36s ease-in-out -23s infinite alternate,cosmic-breathe 9s ease-in-out -9s infinite alternate}
+.cosmic-depth{position:absolute;inset:-24px;width:calc(100% + 48px);height:calc(100% + 48px);fill:currentColor;opacity:.78;animation:cosmic-drift 42s ease-in-out infinite alternate;transform:translate3d(0,0,0)}
+.cosmic-depth.depth-1{opacity:.52;animation:cosmic-drift 57s ease-in-out -41s infinite alternate}
+.cosmic-depth.depth-2{opacity:.68;animation:cosmic-drift 36s ease-in-out -23s infinite alternate}
 .app-root:has([data-profile-view="universe"]) .cosmic-atmosphere:before{opacity:.85}
 .app-root:has([data-profile-view="universe"]) .cosmic-depth.depth-0{opacity:.48}
 .app-root:has([data-profile-view="universe"]) .cosmic-depth.depth-2{--cosmic-bright:.8}
 .cosmic-atmosphere[data-paused=true] *{animation-play-state:paused!important}
-.cosmic-atmosphere[data-mode=low] .cosmic-depth{animation:none;opacity:.3}
+.cosmic-atmosphere[data-mode=low] .cosmic-depth{animation:none;opacity:.6}
 /* The sky is the isolated root's background, not a paint layer competing with
    fixed navigation. Page overlays retain their existing stacking order. */
 .app-root{isolation:isolate}
@@ -19,8 +19,11 @@
 :root[data-theme=light] .cosmic-atmosphere:before{background:radial-gradient(ellipse at 70% 50%,#b6a5c233,transparent 85%)}
 @media(prefers-reduced-motion:reduce){.cosmic-atmosphere *{animation:none!important;transition:none!important}.cosmic-atmosphere:before{transition:none}}
 
-.cosmic-depth circle:nth-child(7n){animation:cosmic-twinkle 4.2s ease-in-out -1.5s infinite alternate}
-.cosmic-depth.depth-1 circle:nth-child(7n){animation-delay:-3s;animation-duration:5.4s}
-.cosmic-atmosphere[data-mode=low] *{animation:none!important}
+.cosmic-depth circle:nth-child(4n+1){animation-name:cosmic-twinkle;animation-timing-function:ease-in-out;animation-iteration-count:infinite;animation-direction:alternate;transform-box:fill-box;transform-origin:center}
+/* Low-power hardware keeps six inexpensive opacity twinkles, without drift.
+   Reduced motion remains static in every mode. */
+.cosmic-atmosphere[data-mode=low] circle{animation:none}
+.cosmic-atmosphere[data-mode=low] circle:nth-child(8n+1){animation:cosmic-twinkle 6s ease-in-out infinite alternate}
 .app-root[data-destination=cosmos] .cosmic-atmosphere:before{opacity:.68}
-@keyframes cosmic-twinkle{from{opacity:.2}to{opacity:.95}}
+@keyframes cosmic-twinkle{from{opacity:.12}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){.cosmic-atmosphere *{animation:none!important}}

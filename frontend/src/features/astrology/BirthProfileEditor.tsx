@@ -9,7 +9,8 @@ export function astrologyError(error:unknown,language:AppLanguage){
 }
 export function BirthProfileEditor({profile,profiles,subjectKind,initialDate,language,initData,onSaved,onCancel}:{profile:BirthProfile|null;profiles:BirthProfile[];subjectKind?:'self'|'other';initialDate?:string;language:AppLanguage;initData?:string;onSaved:(profile:BirthProfile)=>void;onCancel:()=>void}){
  const en=language==='en';
- const [draft,setDraft]=useState<Draft>(()=>profile?{subjectKind:profile.subject_kind,label:profile.display_label,date:profile.birth_date,time:profile.birth_time?.slice(0,5)??'',unknown:!profile.birth_time,query:profile.location.label,location:{...profile.location,country:''},consent:false}:{subjectKind:subjectKind==='self'&&!profiles.some(p=>p.subject_kind==='self')?'self':subjectKind==='other'||profiles.some(p=>p.subject_kind==='self')?'other':'self',label:'',date:'',time:'',unknown:true,query:'',location:null,consent:false});
+ const seedSelf=subjectKind!=='other'&&!profiles.some(p=>p.subject_kind==='self');
+ const [draft,setDraft]=useState<Draft>(()=>profile?{subjectKind:profile.subject_kind,label:profile.display_label,date:profile.birth_date,time:profile.birth_time?.slice(0,5)??'',unknown:!profile.birth_time,query:profile.location.label,location:{...profile.location,country:''},consent:false}:{subjectKind:seedSelf?'self':'other',label:seedSelf&&initialDate?(en?'My chart':'Моя карта'):'',date:seedSelf?initialDate??'':'',time:'',unknown:true,query:'',location:null,consent:false});
  const [cities,setCities]=useState<BirthLocationResult[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[searchFailed,setSearchFailed]=useState(false);
  const alive=useRef(true),generation=useRef(0),saving=useRef(false);
  useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);
