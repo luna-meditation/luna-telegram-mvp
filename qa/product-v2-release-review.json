@@ -1,7 +1,7 @@
 {
   "release": "product-experience-v2",
   "status": "PASS",
-  "preparedAt": "2026-10-31T09:46:01.550282+00:00",
+  "preparedAt": "2026-10-31T10:23:42.777129+00:00",
   "baseCommit": "8f5570e9d006be9ef9287b8c889b0cf648567c85",
   "projectId": "vkcdtasbdoeilgfucoax",
   "staging": "omitted-by-explicit-owner-instruction-2026-10-31",
@@ -26,7 +26,7 @@
       {
         "name": "frontend-tests-release",
         "exitCode": 0,
-        "logSha256": "7e71550b6644be7409a4f222a073fe3425b28412bc5e0a6d6ef46556362051b8"
+        "logSha256": "eddee25743dc2ff811e8f4a4484394fc922141bd3b19b1de8bad710362afcdea"
       },
       {
         "name": "backend-lint-release",
@@ -56,7 +56,7 @@
       {
         "name": "frontend-build-release",
         "exitCode": 0,
-        "logSha256": "3b097ce85a4d4996b7be841dab69fd6381e1c316b5a61690bbd522c6e0059ba3"
+        "logSha256": "816a3c899863ba96c7010ce8b760a0feaca2399b8ea8aa6d97ec65837b653e11"
       }
     ],
     "backendTests": 992,
@@ -301,6 +301,13 @@
       "checks": 4,
       "reportSha256": "f45e25ee3c4a3e4cf20a73d44aed750dfe4a3a1c0e00a839316b7b57adf17aa3",
       "scope": "Actual rendering with a recorded synthetic entry calculated by the existing Astrology Engine; separate from hosted production persistence"
+    },
+    "tarotContinuation": {
+      "status": "PASS",
+      "variants": 4,
+      "checks": 20,
+      "baselineDuplicateReproduced": true,
+      "reportSha256": "d7490f546248cd271beccad4f16d55c7d79f7c474c154779d75c41e683e79b12"
     }
   },
   "performance": {
@@ -367,7 +374,7 @@
     "Two moderate development-only minimatch instances require a separately verified major tooling update. Production dependencies have zero reported advisories.",
     "Supabase leaked-password protection remains disabled; Luna uses Telegram authentication. Future-object default ACL hardening remains a separate reviewed migration; all current private-table and sixteen-table privileges were verified after the PostgreSQL security patch."
   ],
-  "sourceDigest": "56ce2c5990e0a0deb4f7a1d71a0032a9f45888e1c428d9b07496badc1fa2b8ff",
+  "sourceDigest": "aad3b9c4f2e434ba96b46c29572798a8dd887b87b49e83ebf3e369f68a2f7139",
   "revision": "companion-refinement-20261031",
   "decision": "CONDITIONAL GO"
 }

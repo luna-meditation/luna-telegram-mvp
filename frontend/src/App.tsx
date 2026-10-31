@@ -3068,6 +3068,7 @@ function App() {
             meetEntry={meetEntry}
             conversationEntry={conversationEntry}
             tarotSetupKey={tarotSetupKey}
+            onTarotSetupConsumed={key=>setTarotSetupKey(current=>current===key?0:current)}
             registerBackHandler={registerTarotBackHandler}
             onClearReadingContext={()=>{setAiReadingId(undefined);setAiChartId(undefined);setCosmosDiscussion(undefined);setConversationEntry(undefined);setMeetEntry(undefined);}}
           />
@@ -3499,6 +3500,7 @@ function LunaPage({
   meetEntry,
   conversationEntry,
   tarotSetupKey,
+  onTarotSetupConsumed,
   onClearReadingContext,
   registerBackHandler
 }: {
@@ -3519,6 +3521,7 @@ function LunaPage({
   meetEntry?:string;
   conversationEntry?:string;
   tarotSetupKey?:number;
+  onTarotSetupConsumed?:(key:number)=>void;
   onClearReadingContext?:()=>void;
   registerBackHandler?:(handler:(()=>void)|null)=>void;
 }) {
@@ -3543,6 +3546,7 @@ function LunaPage({
       meetEntry={meetEntry}
       conversationEntry={conversationEntry}
       tarotSetupKey={tarotSetupKey}
+      onTarotSetupConsumed={onTarotSetupConsumed}
       onClearReadingContext={onClearReadingContext}
       registerBackHandler={registerBackHandler}
     />

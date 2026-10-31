@@ -59,6 +59,9 @@ export function verifyProductV2Evidence(r,root,{now=Date.now()}={}){
   assert.equal(maintenance.status,'PASS');assert.equal(maintenance.postgresVersionNum,170011);
   assert.equal(maintenance.ownerAuthorized,true);assert.equal(maintenance.backendRecovered,true);
   assert.equal(maintenance.preUpgradeRecoveryVerified,true);assert.equal(maintenance.postUpgradeCriticalAdvisories,0);
+  assert.equal(r.mobile.tarotContinuation.status,'PASS');assert.equal(r.mobile.tarotContinuation.variants,4);
+  assert.equal(r.mobile.tarotContinuation.checks,20);assert.equal(r.mobile.tarotContinuation.baselineDuplicateReproduced,true);
+  assert.match(r.mobile.tarotContinuation.reportSha256,/^[a-f0-9]{64}$/);
   assert.equal(r.decision,'CONDITIONAL GO');
  }else{
   assert.equal(r.ai.completed,60);assert.equal(r.ai.requestReplayMatches,60);assert.ok(r.ai.costUsd>0&&r.ai.costUsd<=1);
